@@ -23,7 +23,7 @@ alpha-network/
 │   │   ├── src/
 │   │   │   ├── auth/           → Adolfo Figueiredo
 │   │   │   ├── users/          → Adolfo Figueiredo
-│   │   │   ├── common/         → Bruno Fearless / Claude
+│   │   │   ├── common/         → Bruno Fearless
 │   │   │   └── modes/
 │   │   │       ├── lazer/      → Obed Jorge
 │   │   │       ├── creator/    → Pedro Evaristo
