@@ -64,14 +64,6 @@ cd alpha-network
 # Instalar dependências
 pnpm install
 
-# Copiar variáveis de ambiente
-cp .env.example apps/api/.env.local
-# Preencher JWT_ACCESS_SECRET e JWT_REFRESH_SECRET:
-#   openssl rand -hex 32
-
-# Subir PostgreSQL, Redis e MinIO
-docker compose up -d
-
 # Criar tabelas na base de dados
 pnpm db:migrate
 
@@ -98,7 +90,7 @@ pnpm dev
 | Modo Desenvolvedor | Alexandre Landa  |
 | Modo Comunidade  | Bruno Fearless     |
 | Modo Bot         | Bruno Fearless     |
-| Estrutura base   | Bruno Fearless + Claude |
+| Estrutura base   | Bruno Fearless     |
 
 ## Git Flow
 
