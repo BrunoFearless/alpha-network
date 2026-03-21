@@ -1,0 +1,24 @@
+{
+  "name": "alpha-network",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Alpha Network — Plataforma social adaptativa",
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @alpha/api dev\" \"pnpm --filter @alpha/web dev\"",
+    "build": "pnpm --filter @alpha/api build && pnpm --filter @alpha/web build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @alpha/api db:generate",
+    "db:migrate": "pnpm --filter @alpha/api db:migrate",
+    "db:studio": "pnpm --filter @alpha/api db:studio",
+    "db:seed": "pnpm --filter @alpha/api db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

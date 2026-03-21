@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  # ─── Base de Dados ───────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: alpha_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alpha
+      POSTGRES_PASSWORD: alpha_dev_password
+      POSTGRES_DB: alpha_network
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U alpha -d alpha_network']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Cache / Filas ───────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: alpha_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── Storage de Ficheiros (S3-compatível para dev) ────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: alpha_minio
+    restart: unless-stopped
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: alpha_minio
+      MINIO_ROOT_PASSWORD: alpha_minio_secret
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+# ─── Como usar ───────────────────────────────────────────────────────
+# Subir tudo:        docker compose up -d
+# Parar tudo:        docker compose down
+# Ver logs:          docker compose logs -f postgres
+# Apagar volumes:    docker compose down -v   (CUIDADO — apaga dados)
+#
+# URLs de acesso:
+#   PostgreSQL:  postgresql://alpha:alpha_dev_password@localhost:5432/alpha_network
+#   Redis:       redis://localhost:6379
+#   MinIO UI:    http://localhost:9001  (user: alpha_minio / pass: alpha_minio_secret)

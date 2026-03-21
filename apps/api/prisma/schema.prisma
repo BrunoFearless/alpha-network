@@ -1,0 +1,320 @@
+// ════════════════════════════════════════════════════════════════════
+// ALPHA NETWORK — Schema Prisma
+// ════════════════════════════════════════════════════════════════════
+// Owners por módulo:
+//   User, Profile, Session     → Adolfo Figueiredo
+//   LazerPost, LazerReaction,  → Obed Jorge
+//     LazerComment
+//   CreatorArticle,            → Pedro Evaristo
+//     CreatorPortfolioItem
+//   DevProject, DevMember,     → Alexandre Landa
+//     DevFile, DevTask,
+//     DevMessage
+//   Server, Channel, Message,  → Bruno Fearless
+//     ServerMember, Bot,
+//     BotCommand, ServerBot
+// ════════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AUTH (Adolfo) ───────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String?
+  provider      String    @default("email")   // "email" | "google"
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  profile       Profile?
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Profile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  username    String   @unique
+  displayName String?
+  avatarUrl   String?
+  activeModes String[] @default([])           // ["lazer","developer",...]
+  bio         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── MODO LAZER (Obed) ───────────────────────────────────────────────
+
+model LazerPost {
+  id        String    @id @default(uuid())
+  authorId  String
+  content   String
+  imageUrl  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  reactions LazerReaction[]
+  comments  LazerComment[]
+
+  @@map("lazer_posts")
+}
+
+model LazerReaction {
+  id        String    @id @default(uuid())
+  postId    String
+  userId    String
+  type      String    @default("like")
+  createdAt DateTime  @default(now())
+
+  post      LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("lazer_reactions")
+}
+
+model LazerComment {
+  id        String    @id @default(uuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  post      LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("lazer_comments")
+}
+
+// ─── MODO CRIADOR (Pedro) ────────────────────────────────────────────
+
+model CreatorArticle {
+  id          String    @id @default(uuid())
+  authorId    String
+  title       String
+  content     String
+  slug        String    @unique
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("creator_articles")
+}
+
+model CreatorPortfolioItem {
+  id          String   @id @default(uuid())
+  authorId    String
+  title       String
+  description String?
+  link        String?
+  imageUrl    String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("creator_portfolio_items")
+}
+
+// ─── MODO DESENVOLVEDOR (Alexandre) ─────────────────────────────────
+
+model DevProject {
+  id          String    @id @default(uuid())
+  ownerId     String
+  name        String
+  description String?
+  isPublic    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  members  DevMember[]
+  files    DevFile[]
+  tasks    DevTask[]
+  messages DevMessage[]
+
+  @@map("dev_projects")
+}
+
+model DevMember {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  role      String   @default("member")      // "owner" | "member"
+  joinedAt  DateTime @default(now())
+
+  project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("dev_members")
+}
+
+model DevFile {
+  id        String   @id @default(uuid())
+  projectId String
+  name      String
+  path      String
+  content   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, path])
+  @@map("dev_files")
+}
+
+model DevTask {
+  id          String   @id @default(uuid())
+  projectId   String
+  createdById String
+  title       String
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  project     DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("dev_tasks")
+}
+
+model DevMessage {
+  id        String   @id @default(uuid())
+  projectId String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("dev_messages")
+}
+
+// ─── MODO COMUNIDADE (Bruno) ─────────────────────────────────────────
+
+model Server {
+  id          String    @id @default(uuid())
+  ownerId     String
+  name        String
+  description String?
+  imageUrl    String?
+  inviteCode  String    @unique @default(uuid())
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  channels Channel[]
+  members  ServerMember[]
+  bots     ServerBot[]
+
+  @@map("community_servers")
+}
+
+model Channel {
+  id        String   @id @default(uuid())
+  serverId  String
+  name      String
+  type      String   @default("text")
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@map("community_channels")
+}
+
+model Message {
+  id          String    @id @default(uuid())
+  channelId   String
+  authorId    String
+  authorType  String    @default("user")     // "user" | "bot"
+  content     String
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  channel     Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@map("community_messages")
+}
+
+model ServerMember {
+  id       String   @id @default(uuid())
+  serverId String
+  userId   String
+  role     String   @default("member")      // "admin" | "member"
+  joinedAt DateTime @default(now())
+
+  server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, userId])
+  @@map("community_members")
+}
+
+// ─── MODO BOT (Bruno) ────────────────────────────────────────────────
+
+model Bot {
+  id          String   @id @default(uuid())
+  ownerId     String
+  name        String
+  description String?
+  token       String   @unique @default(uuid())
+  prefix      String   @default("!")
+  createdAt   DateTime @default(now())
+
+  commands BotCommand[]
+  servers  ServerBot[]
+
+  @@map("bots")
+}
+
+model BotCommand {
+  id       String @id @default(uuid())
+  botId    String
+  trigger  String
+  response String
+
+  bot      Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@unique([botId, trigger])
+  @@map("bot_commands")
+}
+
+model ServerBot {
+  id       String   @id @default(uuid())
+  serverId String
+  botId    String
+  addedAt  DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  bot    Bot    @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, botId])
+  @@map("server_bots")
+}

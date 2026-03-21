@@ -1,0 +1,40 @@
+# Dependências
+node_modules/
+.pnp
+.pnp.js
+
+# Ambiente (NUNCA commitar)
+.env
+.env.local
+.env.*.local
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# Prisma
+apps/api/prisma/migrations/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+
+# Cobertura de testes
+coverage/
+
+# Cache
+.turbo/
+.cache/
