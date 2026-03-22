@@ -40,38 +40,54 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   login: async (email, password) => {
     set({ isLoading: true });
-    const res = await fetch(`${API}/api/v1/auth/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message ?? 'Erro ao fazer login.');
-    set({
-      user: data.data.user,
-      accessToken: data.data.accessToken,
-      isAuthenticated: true,
-      isLoading: false,
-    });
+    try {
+      const res = await fetch(`${API}/api/v1/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        set({ isLoading: false });
+        throw new Error(data.error?.message ?? 'Erro ao fazer login.');
+      }
+      set({
+        user: data.data.user,
+        accessToken: data.data.accessToken,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch (err) {
+      set({ isLoading: false });
+      throw err;
+    }
   },
 
   register: async (email, password, username) => {
     set({ isLoading: true });
-    const res = await fetch(`${API}/api/v1/auth/register`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, username }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message ?? 'Erro ao criar conta.');
-    set({
-      user: data.data.user,
-      accessToken: data.data.accessToken,
-      isAuthenticated: true,
-      isLoading: false,
-    });
+    try {
+      const res = await fetch(`${API}/api/v1/auth/register`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, username }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        set({ isLoading: false });
+        throw new Error(data.error?.message ?? 'Erro ao criar conta.');
+      }
+      set({
+        user: data.data.user,
+        accessToken: data.data.accessToken,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch (err) {
+      set({ isLoading: false });
+      throw err;
+    }
   },
 
   logout: async () => {

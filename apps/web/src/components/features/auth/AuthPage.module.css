@@ -1,0 +1,588 @@
+/* ─────────────────────────────────────────
+   Alpha Network — Auth Sliding Panel
+   Variáveis do projecto já definidas em globals.css
+   ───────────────────────────────────────── */
+
+/* Fundo animado atrás do card */
+.bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 65% 55% at 20% 15%, rgba(201,168,76,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 65% at 80% 85%, rgba(90,50,180,0.05) 0%, transparent 55%);
+}
+
+.bgGrid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
+  background-size: 50px 50px;
+  mask-image: radial-gradient(ellipse 85% 85% at 50% 50%, #000 0%, transparent 75%);
+}
+
+/* ─── Card ─── */
+.card {
+  position: relative;
+  z-index: 2;
+  width: 860px;
+  max-width: 95vw;
+  /* altura maior para caber o form de registo sem cortar */
+  height: 560px;
+  border-radius: 26px;
+  overflow: hidden;
+  background: #0D1018;
+  box-shadow:
+    0 0 0 1px rgba(201,168,76,0.22),
+    0 32px 96px rgba(0,0,0,0.8),
+    0 0 80px rgba(201,168,76,0.05);
+  animation: cardIn 0.7s cubic-bezier(0.4,0,0.2,1) both;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(28px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ─── Wrapper dos formulários ─── */
+.forms {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+/* ─── Lados do formulário ─── */
+.formSide {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 36px 44px;
+  /* scroll interno se o conteúdo ultrapassar a altura */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201,168,76,0.15) transparent;
+  transition: opacity 0.45s cubic-bezier(0.4,0,0.2,1),
+              transform 0.45s cubic-bezier(0.4,0,0.2,1);
+}
+
+.formLogin  { left: 0; }
+.formRegister {
+  right: 0;
+  opacity: 0;
+  transform: translateX(16px);
+  pointer-events: none;
+}
+
+/* Modo registo — troca os forms */
+.card.isRegister .formLogin {
+  opacity: 0;
+  transform: translateX(-16px);
+  pointer-events: none;
+}
+.card.isRegister .formRegister {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: all;
+}
+
+/* ─── Painel deslizante ─── */
+.panel {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 50%;
+  z-index: 20;
+  left: auto;
+  right: 0; /* começa à direita */
+  transition: left 0.85s cubic-bezier(0.4,0,0.2,1),
+              right 0.85s cubic-bezier(0.4,0,0.2,1);
+}
+
+.card.isRegister .panel {
+  left: 0;
+  right: auto; /* vai para a esquerda */
+}
+
+.panelInner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 40px;
+  overflow: hidden;
+}
+
+/* ─── Blob com border-radius assimétrico ─── */
+.panelBlob {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(145deg, #1C1400 0%, #0E0B00 40%, #160E00 100%);
+  /* cantos arredondados no lado esquerdo (blob à direita → login) */
+  border-radius: 60% 0 0 60% / 50% 0 0 50%;
+  transition: border-radius 0.85s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* brilho sobre o blob */
+.panelBlob::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 100% 70% at 20% 20%, rgba(201,168,76,0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 100% at 80% 80%, rgba(120,70,220,0.08) 0%, transparent 55%);
+  border-radius: inherit;
+}
+
+/* grid sutil sobre o blob */
+.panelBlob::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 38px 38px;
+  border-radius: inherit;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, #000 0%, transparent 70%);
+}
+
+/* no modo registo — blob inverte o arredondamento */
+.card.isRegister .panelBlob {
+  border-radius: 0 60% 60% 0 / 0 50% 50% 0;
+}
+
+/* ─── Conteúdo do painel ─── */
+.panelContent {
+  position: relative;
+  z-index: 2;
+}
+
+/* conteúdo do registo — sobreposto, aparece depois */
+.panelContentRegister {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 40px;
+  opacity: 0;
+  transform: translateX(20px);
+  pointer-events: none;
+  transition: opacity 0.35s 0.05s, transform 0.35s 0.05s;
+}
+.panelContentRegister.visible {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: all;
+}
+
+.panelContentLogin {
+  transition: opacity 0.3s, transform 0.3s;
+}
+.panelContentLogin.hidden {
+  opacity: 0;
+  transform: translateX(-20px);
+  pointer-events: none;
+}
+
+/* ─── Logo do painel ─── */
+.panelLogo {
+  font-family: 'Cinzel', serif;
+  font-size: 40px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #8B6914 0%, #C9A84C 45%, #E8C97A 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+.panelTagline {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #C9A84C;
+  font-weight: 600;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.panelTagline::before,
+.panelTagline::after {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: rgba(201,168,76,0.3);
+}
+
+.panelHeading {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #FEFCFF;
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+
+.panelSub {
+  font-size: 13px;
+  color: #908AA8;
+  line-height: 1.7;
+  font-weight: 300;
+  max-width: 230px;
+  margin: 0 auto 28px;
+}
+
+/* Botão do painel */
+.panelBtn {
+  padding: 11px 34px;
+  border-radius: 9999px;
+  background: transparent;
+  border: 1.5px solid rgba(201,168,76,0.28);
+  color: #C9A84C;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.22s, border-color 0.22s, box-shadow 0.22s, transform 0.18s;
+}
+.panelBtn:hover {
+  background: rgba(201,168,76,0.14);
+  border-color: rgba(201,168,76,0.5);
+  box-shadow: 0 0 24px rgba(201,168,76,0.18);
+  transform: translateY(-1px);
+}
+.panelBtn:active { transform: none; }
+
+/* Bolinhas dos modos */
+.modeDots {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+  justify-content: center;
+}
+.modeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0.6;
+  cursor: default;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.modeDot:hover {
+  transform: scale(1.4);
+  opacity: 1;
+}
+
+/* ─── Campos do formulário ─── */
+.field { position: relative; margin-bottom: 14px; }
+
+.fieldLabel {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #908AA8;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+}
+
+.fieldWrap { position: relative; }
+
+.inp {
+  width: 100%;
+  padding: 11px 42px 11px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: #EDE9F5;
+  font-family: 'Inter', sans-serif;
+  font-size: 13.5px;
+  outline: none;
+  transition: border 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.inp::placeholder { color: #38334A; font-weight: 300; }
+.inp:focus {
+  border-color: #C9A84C;
+  background: rgba(255,255,255,0.07);
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.08);
+}
+.inp:focus ~ .fieldIcon { color: #C9A84C; }
+
+.fieldIcon {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #605A78;
+  pointer-events: none;
+  transition: color 0.2s;
+}
+
+/* Fields em dois */
+.fields2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Linha lembrar/esquecer */
+.rowSmall {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.checkLabel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.checkBox {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: rgba(201,168,76,0.14);
+  border: 1px solid rgba(201,168,76,0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.checkText { font-size: 11px; color: #908AA8; }
+
+.forgotBtn {
+  font-size: 11px;
+  color: #605A78;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: color 0.18s;
+  padding: 0;
+}
+.forgotBtn:hover { color: #C9A84C; }
+
+/* ─── Botão principal do form ─── */
+.btnMain {
+  width: 100%;
+  padding: 12px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #8B6914 0%, #C9A84C 50%, #B8892A 100%);
+  border: none;
+  color: #07080D;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.18s, box-shadow 0.18s;
+  margin-bottom: 16px;
+}
+.btnMain:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(201,168,76,0.38), 0 0 40px rgba(201,168,76,0.12);
+}
+.btnMain:active { transform: none; }
+.btnMain:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* wrapper do efeito shine — overflow aqui, não no botão */
+.shineWrap {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.55s;
+}
+.btnMain:hover .shine { transform: translateX(100%); }
+
+/* ─── Loader spinner dentro do botão ─── */
+.btnSpinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(7,8,13,0.3);
+  border-top-color: #07080D;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Social ─── */
+.socialSep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.socialSep::before,
+.socialSep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+}
+.socialSepText {
+  font-size: 10px;
+  color: #38334A;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+
+.socialRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.sBtn {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+.sBtn:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* ─── Erro ─── */
+.errorMsg {
+  font-size: 12px;
+  color: #f87171;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+/* ─── Hint do campo ─── */
+.fieldHint {
+  font-size: 10px;
+  color: #504870;
+  margin-top: 4px;
+}
+
+/* ─── Partículas ─── */
+@keyframes rise {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  8%   { opacity: 0.55; }
+  92%  { opacity: 0.15; }
+  100% { transform: translateY(-140px) translateX(var(--dx)); opacity: 0; }
+}
+
+/* ─── Responsive ─── */
+
+/* Tablet */
+@media (max-width: 900px) {
+  .card { width: 98vw; }
+  .formSide { padding: 28px 24px; }
+  .panelInner { padding: 36px 28px; }
+  .panelHeading { font-size: 18px; }
+  .panelLogo { font-size: 32px; }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .card {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: 100svh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .forms {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* painel fica no topo */
+  .panel {
+    position: relative !important;
+    width: 100% !important;
+    height: 230px;
+    left: auto !important;
+    right: auto !important;
+    order: -1;
+    flex-shrink: 0;
+  }
+
+  /* blob arredondado em baixo no mobile */
+  .panelBlob {
+    border-radius: 0 0 50% 50% / 0 0 38% 38% !important;
+  }
+  .card.isRegister .panelBlob {
+    border-radius: 0 0 50% 50% / 0 0 38% 38% !important;
+  }
+
+  /* forms em baixo */
+  .formSide {
+    position: relative !important;
+    width: 100% !important;
+    padding: 36px 24px 52px !important;
+    left: auto !important;
+    right: auto !important;
+  }
+
+  /* esconde o form inactivo no mobile (sem animação de opacidade) */
+  .formLogin  { opacity: 1 !important; transform: none !important; pointer-events: all !important; }
+  .formRegister { display: none !important; }
+  .card.isRegister .formLogin    { display: none !important; }
+  .card.isRegister .formRegister { display: flex !important; opacity: 1 !important; transform: none !important; pointer-events: all !important; }
+
+  .fields2 { grid-template-columns: 1fr; }
+
+  /* painel mobile — tamanhos menores */
+  .panelLogo    { font-size: 28px; margin-bottom: 4px; }
+  .panelTagline { margin-bottom: 12px; font-size: 9px; }
+  .panelHeading { font-size: 18px; margin-bottom: 6px; }
+  .panelSub     { font-size: 12px; margin-bottom: 14px; }
+  .modeDots     { margin-top: 12px; }
+
+  .panelContentRegister { padding: 0 20px !important; }
+}
