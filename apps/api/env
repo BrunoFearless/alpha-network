@@ -1,0 +1,19 @@
+# ─── Base de dados ───────────────────────────────────────────────────
+DATABASE_URL="postgresql://alpha:alpha@localhost:5432/alpha_network"
+
+# ─── JWT ─────────────────────────────────────────────────────────────
+JWT_ACCESS_SECRET="alpha-network-access-secret-dev-2024"
+JWT_REFRESH_SECRET="alpha-network-refresh-secret-dev-2024"
+JWT_ACCESS_EXPIRES_IN="15m"
+JWT_REFRESH_EXPIRES_IN="30d"
+
+# ─── Google OAuth ─────────────────────────────────────────────────────
+# Deixa vazio por agora — obtém em https://console.cloud.google.com/
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+GOOGLE_CALLBACK_URL="http://localhost:3001/api/v1/auth/google/callback"
+
+# ─── App ──────────────────────────────────────────────────────────────
+PORT=3001
+NODE_ENV=development
+FRONTEND_URL="http://localhost:3000"

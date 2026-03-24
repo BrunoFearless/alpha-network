@@ -301,7 +301,7 @@ export default function AuthPage({ initialMode = 'login' }: Props) {
                 <span className={s.socialSepText}>ou entra com</span>
               </div>
               <div className={s.socialRow}>
-                <SocialBtn title="Google"><GoogleIcon /></SocialBtn>
+                <SocialBtn title="Google" onClick={() => alert('Google OAuth ainda não está configurado. Usa email e password por agora.')}><GoogleIcon /></SocialBtn>
                 <SocialBtn title="Facebook"><FacebookIcon /></SocialBtn>
                 <SocialBtn title="GitHub"><GitHubIcon /></SocialBtn>
                 <SocialBtn title="LinkedIn"><LinkedInIcon /></SocialBtn>
@@ -432,7 +432,7 @@ export default function AuthPage({ initialMode = 'login' }: Props) {
                 <span className={s.socialSepText}>ou regista-te com</span>
               </div>
               <div className={s.socialRow}>
-                <SocialBtn title="Google"><GoogleIcon /></SocialBtn>
+                <SocialBtn title="Google" onClick={() => alert('Google OAuth ainda não está configurado. Usa email e password por agora.')}><GoogleIcon /></SocialBtn>
                 <SocialBtn title="Facebook"><FacebookIcon /></SocialBtn>
                 <SocialBtn title="GitHub"><GitHubIcon /></SocialBtn>
                 <SocialBtn title="LinkedIn"><LinkedInIcon /></SocialBtn>
@@ -486,9 +486,9 @@ export default function AuthPage({ initialMode = 'login' }: Props) {
 }
 
 /* ── Botão social helper ── */
-function SocialBtn({ children, title }: { children: React.ReactNode; title: string }) {
+function SocialBtn({ children, title, onClick }: { children: React.ReactNode; title: string; onClick?: () => void }) {
   return (
-    <button type="button" className={s.sBtn} title={title} aria-label={title}>
+    <button type="button" className={s.sBtn} title={title} aria-label={title} onClick={onClick}>
       {children}
     </button>
   );

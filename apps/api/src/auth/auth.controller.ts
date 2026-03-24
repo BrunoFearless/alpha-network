@@ -13,40 +13,57 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // ── Registo ────────────────────────────────────────────────────────
   @Post('register')
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.register(dto);
     this.setRefreshCookie(res, result.refreshToken);
     return { success: true, data: { accessToken: result.accessToken, user: result.user } };
   }
 
+  // ── Login ──────────────────────────────────────────────────────────
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.login(dto);
     this.setRefreshCookie(res, result.refreshToken);
     return { success: true, data: { accessToken: result.accessToken, user: result.user } };
   }
 
+  // ── Refresh Token ──────────────────────────────────────────────────
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const token = req.cookies?.refreshToken;
     const result = await this.authService.refresh(token);
     this.setRefreshCookie(res, result.refreshToken);
     return { success: true, data: { accessToken: result.accessToken } };
   }
 
+  // ── Logout ─────────────────────────────────────────────────────────
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const token = req.cookies?.refreshToken;
     await this.authService.logout(token);
     res.clearCookie('refreshToken');
     return { success: true };
   }
 
+  // ── Utilizador actual ──────────────────────────────────────────────
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() user: { id: string; email: string }) {
@@ -54,6 +71,7 @@ export class AuthController {
     return { success: true, data: profile };
   }
 
+  // ── Helper ─────────────────────────────────────────────────────────
   private setRefreshCookie(res: Response, token: string) {
     res.cookie('refreshToken', token, {
       httpOnly: true,

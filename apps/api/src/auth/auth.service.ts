@@ -19,6 +19,7 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
+  // ── Registo ───────────────────────────────────────────────────────
   async register(dto: RegisterDto) {
     const existing = await this.users.findByEmail(dto.email);
     if (existing) throw new ConflictException('Já existe uma conta com este email.');
@@ -34,6 +35,7 @@ export class AuthService {
     return this.generateSession(user.id, user.email, user.profile);
   }
 
+  // ── Login ─────────────────────────────────────────────────────────
   async login(dto: LoginDto) {
     const user = await this.users.findByEmail(dto.email);
     if (!user || !user.passwordHash) {
@@ -46,6 +48,7 @@ export class AuthService {
     return this.generateSession(user.id, user.email, user.profile);
   }
 
+  // ── Refresh Token ─────────────────────────────────────────────────
   async refresh(refreshToken: string) {
     if (!refreshToken) throw new UnauthorizedException('Sessão expirada.');
 
@@ -58,38 +61,31 @@ export class AuthService {
       throw new UnauthorizedException('Sessão expirada. Faz login novamente.');
     }
 
-    // Gera apenas um novo access token — não toca na sessão existente
-    const accessToken = await this.jwt.signAsync(
-      { sub: session.userId, email: session.user.email },
-      { secret: this.config.get('JWT_ACCESS_SECRET'), expiresIn: '15m' },
-    );
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: session.userId,
-        email: session.user.email,
-        profile: session.user.profile,
-      },
-    };
+    // Rotação do refresh token — invalida o antigo e cria um novo
+    await this.prisma.session.delete({ where: { id: session.id } });
+    return this.generateSession(session.userId, session.user.email, session.user.profile);
   }
 
+  // ── Logout ────────────────────────────────────────────────────────
   async logout(refreshToken: string) {
     if (!refreshToken) return;
     await this.prisma.session.deleteMany({ where: { refreshToken } });
   }
 
+  // ── Dados do utilizador actual ────────────────────────────────────
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { profile: true },
     });
     if (!user) throw new NotFoundException();
-    const { passwordHash, ...safe } = user;
-    return safe;
+
+    // Remover campos sensíveis antes de devolver
+    const { passwordHash, emailVerified, deletedAt, ...safeUser } = user;
+    return safeUser;
   }
 
+  // ── Helpers privados ──────────────────────────────────────────────
   private async generateSession(userId: string, email: string, profile: any) {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(
@@ -114,18 +110,5 @@ export class AuthService {
       refreshToken,
       user: { id: userId, email, profile },
     };
-  }
-
-  private async generateUniqueUsername(name: string): Promise<string> {
-    const base = name.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]/g, '').substring(0, 20) || 'user';
-
-    let candidate = base;
-    let count = 2;
-    while (await this.prisma.profile.findUnique({ where: { username: candidate } })) {
-      candidate = `${base}${count++}`;
-    }
-    return candidate;
   }
 }

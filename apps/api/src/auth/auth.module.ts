@@ -7,9 +7,14 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { PrismaService } from '../prisma.service';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+
+// Google OAuth desactivado — activar quando GOOGLE_CLIENT_ID estiver no .env
+// import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
+    ConfigModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -22,7 +27,13 @@ import { PrismaService } from '../prisma.service';
     UsersModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, PrismaService],
-  exports: [AuthService, JwtModule],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    PrismaService,
+    JwtAuthGuard
+    // JwtAuthGuard não vai nos providers — é um guard, não um serviço injectável
+  ],
+  exports: [AuthService, JwtModule, JwtAuthGuard],
 })
 export class AuthModule {}
