@@ -1,16 +1,10 @@
-// ─────────────────────────────────────────────────────────────────
-//  BotsController — Bruno Fearless
-//  TODO: implementar os endpoints — ver Guia Individual
-// ─────────────────────────────────────────────────────────────────
 import { Controller, UseGuards } from '@nestjs/common';
 import { BotsService } from './bots.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
-// Todos os endpoints deste controller precisam de autenticação
-// @UseGuards(JwtAuthGuard)  ← descomenta quando começares
+// TODO (Bruno Fearless): implementar endpoints — ver guia v2-guia-bruno-fearless.docx
 @Controller('bots')
+@UseGuards(JwtAuthGuard)
 export class BotsController {
-  constructor(private botsService: BotsService) {}
-
-  // TODO (Bruno Fearless): implementar endpoints — ver Guia Individual
+  constructor(private readonly botsService: BotsService) {}
 }

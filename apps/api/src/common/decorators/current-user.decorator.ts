@@ -6,7 +6,7 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
  * Requer @UseGuards(JwtAuthGuard) na rota.
  */
 export const CurrentUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext) => {
+  (_data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
     return request.user;
   },
