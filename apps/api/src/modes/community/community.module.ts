@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { CommunityController } from './community.controller';
 import { CommunityService } from './community.service';
-import { PrismaService } from '../../prisma.service';
+import { CommunityGateway } from './community.gateway';
 
 @Module({
   controllers: [CommunityController],
-  providers: [CommunityService, PrismaService],
+  providers: [CommunityService, CommunityGateway],
 })
 export class CommunityModule {}

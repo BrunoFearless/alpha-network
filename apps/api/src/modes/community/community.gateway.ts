@@ -1,12 +1,10 @@
-// ─────────────────────────────────────────────────────────────────
-//  CommunityGateway — Bruno Fearless
-//  WebSocket para chat em tempo real nos canais
-//  Namespace: /community
-//  TODO: implementar — ver Guia Individual
-// ─────────────────────────────────────────────────────────────────
-import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
+import {
+  WebSocketGateway, WebSocketServer,
+  OnGatewayConnection, OnGatewayDisconnect,
+} from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
+// TODO (Bruno Fearless): implementar eventos — ver guia v2-guia-bruno-fearless.docx Dias 10-11
 @WebSocketGateway({
   namespace: '/community',
   cors: {
@@ -27,7 +25,6 @@ export class CommunityGateway implements OnGatewayConnection, OnGatewayDisconnec
     console.log(`[Community WS] Cliente desconectado: ${client.id}`);
   }
 
-  // TODO (Bruno): implementar eventos — ver Guia Individual
   // @SubscribeMessage('channel.join')
   // @SubscribeMessage('message.send')
 }
