@@ -5,12 +5,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { UsersModule } from '../users/users.module';
-import { PrismaService } from '../prisma.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-
-// Google OAuth desactivado — activar quando GOOGLE_CLIENT_ID estiver no .env
-// import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
@@ -19,8 +17,8 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_ACCESS_SECRET'),
-        signOptions: { expiresIn: config.get('JWT_ACCESS_EXPIRES_IN', '15m') },
+        secret:       config.get('JWT_ACCESS_SECRET'),
+        signOptions:  { expiresIn: config.get('JWT_ACCESS_EXPIRES_IN', '15m') },
       }),
       inject: [ConfigService],
     }),
@@ -30,9 +28,9 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
   providers: [
     AuthService,
     JwtStrategy,
-    PrismaService,
-    JwtAuthGuard
-    // JwtAuthGuard não vai nos providers — é um guard, não um serviço injectável
+    GoogleStrategy,   // ← activado
+    JwtAuthGuard,
+    GoogleAuthGuard,  // ← activado
   ],
   exports: [AuthService, JwtModule, JwtAuthGuard],
 })

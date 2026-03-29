@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { PrismaService } from './prisma.service';
+import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { LazerModule } from './modes/lazer/lazer.module';
@@ -18,6 +18,9 @@ import { BotsModule } from './modes/bots/bots.module';
     // Rate limiting — máximo 100 pedidos por minuto por IP
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
 
+    // Prisma global — disponível em todos os módulos sem importar individualmente
+    PrismaModule,
+
     // Módulos da aplicação
     AuthModule,
     UsersModule,
@@ -27,7 +30,5 @@ import { BotsModule } from './modes/bots/bots.module';
     CommunityModule,
     BotsModule,
   ],
-  providers: [PrismaService],
-  exports: [PrismaService],
 })
 export class AppModule {}

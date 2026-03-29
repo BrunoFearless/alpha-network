@@ -6,7 +6,8 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('auth')
@@ -34,6 +35,40 @@ export class AuthController {
     const result = await this.authService.login(dto);
     this.setRefreshCookie(res, result.refreshToken);
     return { success: true, data: { accessToken: result.accessToken, user: result.user } };
+  }
+
+  // ── Google OAuth — Passo 1: iniciar redirect ───────────────────────
+  // O guard redireciona automaticamente para accounts.google.com
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  googleAuth() {
+    // Este método nunca executa — o GoogleAuthGuard faz o redirect antes
+  }
+
+  // ── Google OAuth — Passo 2: callback do Google ─────────────────────
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  async googleCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    // req.user é preenchido pela GoogleStrategy após autenticação
+    const googleUser = req.user as any;
+
+    try {
+      const result = await this.authService.googleLogin(googleUser);
+
+      // Guarda o refreshToken em cookie HTTP-only (mesmo fluxo do login normal)
+      this.setRefreshCookie(res, result.refreshToken);
+
+      // Redireciona para o frontend com o accessToken na query string
+      // O frontend lê o token, guarda no store e vai para /main
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      res.redirect(`${frontendUrl}/auth/callback?token=${result.accessToken}`);
+    } catch (err) {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      res.redirect(`${frontendUrl}/auth/callback?error=google_failed`);
+    }
   }
 
   // ── Refresh Token ──────────────────────────────────────────────────
@@ -75,9 +110,9 @@ export class AuthController {
   private setRefreshCookie(res: Response, token: string) {
     res.cookie('refreshToken', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure:   process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+      maxAge:   30 * 24 * 60 * 60 * 1000, // 30 dias
     });
   }
 }
