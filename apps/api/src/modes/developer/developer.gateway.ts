@@ -1,13 +1,11 @@
-// ─────────────────────────────────────────────────────────────────
-//  DeveloperGateway — Alexandre Landa
-//  WebSocket para chat em tempo real nos projectos
-//  Namespace: /developer
-//  TODO: implementar — ver Guia Individual
-// ─────────────────────────────────────────────────────────────────
-import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
+import {
+  WebSocketGateway, WebSocketServer,
+  OnGatewayConnection, OnGatewayDisconnect,
+} from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 
+// TODO (Alexandre Landa): implementar eventos — ver guia v2-guia-alexandre-landa.docx Dia 12
 @WebSocketGateway({
   namespace: '/developer',
   cors: {
@@ -19,10 +17,10 @@ export class DeveloperGateway implements OnGatewayConnection, OnGatewayDisconnec
   @WebSocketServer()
   server: Server;
 
-  constructor(private jwtService: JwtService) {}
+  constructor(private readonly jwtService: JwtService) {}
 
   async handleConnection(client: Socket) {
-    // TODO (Alexandre): validar JWT no handshake e guardar userId no client.data
+    // TODO (Alexandre): validar JWT no handshake e guardar userId em client.data
     console.log(`[Developer WS] Cliente conectado: ${client.id}`);
   }
 
@@ -30,7 +28,6 @@ export class DeveloperGateway implements OnGatewayConnection, OnGatewayDisconnec
     console.log(`[Developer WS] Cliente desconectado: ${client.id}`);
   }
 
-  // TODO (Alexandre): implementar eventos — ver Guia Individual
   // @SubscribeMessage('project.join')
   // @SubscribeMessage('message.send')
 }

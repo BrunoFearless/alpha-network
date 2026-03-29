@@ -5,6 +5,7 @@ interface UserProfile {
   displayName?: string | null;
   avatarUrl?: string | null;
   activeModes: string[];
+  bio?: string | null;
 }
 
 interface AuthUser {
@@ -19,11 +20,11 @@ interface AuthStore {
   isAuthenticated: boolean;
   isLoading: boolean;
 
+  setUser: (user: AuthUser, token: string) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, username: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<boolean>;
-  setUser: (user: AuthUser, token: string) => void;
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -34,6 +35,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isAuthenticated: false,
   isLoading:       false,
 
+  // NOTA: api.ts usa useAuthStore.getState().accessToken — funciona porque
+  // o Zustand guarda o estado em memória e getState() devolve o valor actual.
   setUser: (user, accessToken) => {
     set({ user, accessToken, isAuthenticated: true });
   },
@@ -49,8 +52,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
       const data = await res.json();
       if (!res.ok) {
-        set({ isLoading: false });
-        throw new Error(data.error?.message ?? 'Erro ao fazer login.');
+        throw new Error(data?.error?.message ?? 'Erro ao fazer login.');
       }
       set({
         user: data.data.user,
@@ -75,8 +77,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
       const data = await res.json();
       if (!res.ok) {
-        set({ isLoading: false });
-        throw new Error(data.error?.message ?? 'Erro ao criar conta.');
+        throw new Error(data?.error?.message ?? 'Erro ao criar conta.');
       }
       set({
         user: data.data.user,
@@ -91,11 +92,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   logout: async () => {
-    await fetch(`${API}/api/v1/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { Authorization: `Bearer ${get().accessToken}` },
-    });
+    const { accessToken } = get();
+    try {
+      await fetch(`${API}/api/v1/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+    } catch {
+      // ignora erros de rede no logout
+    }
     set({ user: null, accessToken: null, isAuthenticated: false });
   },
 
@@ -105,16 +111,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         method: 'POST',
         credentials: 'include',
       });
-      if (!res.ok) { set({ user: null, accessToken: null, isAuthenticated: false }); return false; }
+      if (!res.ok) {
+        set({ user: null, accessToken: null, isAuthenticated: false });
+        return false;
+      }
       const data = await res.json();
-      // Busca os dados do utilizador com o novo token
+      const newToken: string = data.data.accessToken;
+
       const meRes = await fetch(`${API}/api/v1/auth/me`, {
         credentials: 'include',
-        headers: { Authorization: `Bearer ${data.data.accessToken}` },
+        headers: { Authorization: `Bearer ${newToken}` },
       });
       if (!meRes.ok) return false;
       const me = await meRes.json();
-      set({ user: me.data, accessToken: data.data.accessToken, isAuthenticated: true });
+
+      set({ user: me.data, accessToken: newToken, isAuthenticated: true });
       return true;
     } catch {
       return false;
