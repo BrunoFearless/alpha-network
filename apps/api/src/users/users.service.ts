@@ -14,21 +14,21 @@ interface CreateUserData {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByEmail(email: string): Promise<any> {
+  async findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
       include: { profile: true },
     });
   }
 
-  async findById(id: string): Promise<any> {
+  async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
       include: { profile: true },
     });
   }
 
-  async findByUsername(username: string): Promise<any> {
+  async findByUsername(username: string) {
     return this.prisma.profile.findUnique({
       where: { username },
       include: { user: true },

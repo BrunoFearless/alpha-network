@@ -9,32 +9,51 @@ export class LazerService {
   @Inject()
   private readonly prisma: PrismaService;
 
- async createPost(createLazerDto: CreateLazerDto, authorId: string): Promise<any> {
-  console.log("DTO:", JSON.stringify(createLazerDto));
-  console.log(
-    "content:",
-    createLazerDto.content,
-    typeof createLazerDto.content,
-  );
-  console.log("password:", authorId, typeof authorId);
+  async createPost(
+    createLazerDto: CreateLazerDto,
+    authorId: string,
+  ): Promise<any> {
 
     return await this.prisma.lazerPost.create({
-      data: {authorId,
+      data: {
+        authorId,
         content: createLazerDto.content,
         imageUrl: createLazerDto.imageUrl,
       },
     });
   }
 
-  async findAllPosts(): Promise<any[]> {
-     return await this.prisma.lazerPost.findMany({
-      include: { comments: true },
-    });
-  }
+  async getFeed(cursor?: string, limit = 20) {
 
+  const posts = await this.prisma.lazerPost.findMany({
+    where: { deletedAt: null },
+
+    orderBy: { createdAt: 'desc' },
+
+    take: limit + 1,
+
+    cursor: cursor ? { id: cursor } : undefined,
+
+    skip: cursor ? 1 : 0,
+
+    include: {
+      _count: { select: { reactions: true, comments: true } },
+    },
+  });
+  const hasMore = posts.length > limit;  
+  const data = hasMore ? posts.slice(0, -1) : posts;
+  return {
+  data,
+  meta: {
+    nextCursor: hasMore ? data.at(-1)?.id : null,
+    hasMore
+    }
+  };
+  }
   async findOnePost(id: string): Promise<any> {
     return await this.prisma.lazerPost.findUnique({
-       where: { id } });
+      where: { id },
+    });
   }
 
   async updatePost(id: string, updateLazerDto: UpdateLazerDto) {
