@@ -4,7 +4,7 @@ import { BotsService } from './bots.service';
 
 @Module({
   controllers: [BotsController],
-  providers: [BotsService],
-  exports: [BotsService],
+  providers:   [BotsService],
+  exports:     [BotsService],
 })
 export class BotsModule {}
