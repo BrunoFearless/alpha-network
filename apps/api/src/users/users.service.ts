@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
 
 interface CreateUserData {
   email: string;
@@ -14,21 +14,21 @@ interface CreateUserData {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByEmail(email: string) {
+  async findByEmail(email: string): Promise<any> {
     return this.prisma.user.findUnique({
       where: { email },
       include: { profile: true },
     });
   }
 
-  async findById(id: string) {
+  async findById(id: string): Promise<any> {
     return this.prisma.user.findUnique({
       where: { id },
       include: { profile: true },
     });
   }
 
-  async findByUsername(username: string) {
+  async findByUsername(username: string): Promise<any> {
     return this.prisma.profile.findUnique({
       where: { username },
       include: { user: true },
@@ -40,7 +40,7 @@ export class UsersService {
       data: {
         email: data.email,
         passwordHash: data.passwordHash,
-        provider: data.provider || 'email',
+        provider: data.provider || "email",
         profile: {
           create: {
             username: data.username,
