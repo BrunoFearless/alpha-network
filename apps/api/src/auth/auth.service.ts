@@ -153,14 +153,11 @@ export class AuthService {
   }
 
   private async generateUniqueUsername(base: string): Promise<string> {
-    let candidate = base || 'user';
-    let attempt   = 0;
-
-    while (true) {
-      const name = attempt === 0 ? candidate : `${candidate}${attempt}`;
+    const root = base || 'user';
+    for (let attempt = 0; ; attempt++) {
+      const name = attempt === 0 ? root : `${root}${attempt}`;
       const existing = await this.users.findByUsername(name);
       if (!existing) return name;
-      attempt++;
     }
   }
 }

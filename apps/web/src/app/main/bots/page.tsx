@@ -94,7 +94,7 @@ export default function BotsPage() {
             <input style={S.inp} placeholder="O que faz este bot?" value={desc} onChange={e => setDesc(e.target.value)} maxLength={200} />
             <label style={{ ...S.lbl, marginTop: 12 }}>Prefixo dos comandos</label>
             <input style={{ ...S.inp, width: 80 }} placeholder="!" value={prefix} onChange={e => setPrefix(e.target.value.slice(0, 5))} />
-            <p style={{ color: '#383356', fontSize: 11, marginTop: 4 }}>Ex: com "!" o bot responde a "!ajuda"</p>
+            <p style={{ color: '#383356', fontSize: 11, marginTop: 4 }}>Ex: com {'"'}!{'"'} o bot responde a {'"'}!ajuda{'"'}</p>
             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
               <button onClick={() => setShowCreate(false)} style={S.btnGhost}>Cancelar</button>
               <button onClick={create} disabled={creating || !name.trim()} style={{ ...S.btnPri, opacity: (!name.trim() || creating) ? 0.5 : 1 }}>{creating ? 'A criar…' : 'Criar bot'}</button>

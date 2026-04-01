@@ -4,9 +4,11 @@
   "private": true,
   "description": "Alpha Network — Plataforma social adaptativa",
   "scripts": {
+    "postinstall": "pnpm --filter @alpha/api db:generate",
     "dev": "concurrently \"pnpm --filter @alpha/api dev\" \"pnpm --filter @alpha/web dev\"",
     "build": "pnpm --filter @alpha/api build && pnpm --filter @alpha/web build",
     "lint": "pnpm -r lint",
+    "test": "pnpm --filter @alpha/api test",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "pnpm --filter @alpha/api db:generate",
     "db:migrate": "pnpm --filter @alpha/api db:migrate",

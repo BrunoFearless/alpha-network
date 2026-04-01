@@ -39,3 +39,7 @@ coverage/
 # Cache
 .turbo/
 .cache/
+*.tsbuildinfo
+
+# Cursor (local)
+.cursor/
