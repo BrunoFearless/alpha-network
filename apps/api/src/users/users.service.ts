@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
 
 interface CreateUserData {
   email: string;
@@ -40,7 +40,7 @@ export class UsersService {
       data: {
         email: data.email,
         passwordHash: data.passwordHash,
-        provider: data.provider || 'email',
+        provider: data.provider || "email",
         profile: {
           create: {
             username: data.username,
