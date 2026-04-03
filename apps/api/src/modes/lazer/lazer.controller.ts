@@ -12,9 +12,10 @@ import {
   HttpStatus,
 } from "@nestjs/common";
 import { LazerService } from "./lazer.service";
-import { CreateLazerDto } from "./dto/create-lazer.dto";
-import { UpdateLazerDto } from "./dto/update-lazer.dto";
+import { CreatePostLazerDto } from "./dto/createPost-lazer.dto";
+import { UpdatePostLazerDto } from "./dto/updatePost-lazer.dto";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { ToggleRequestDTO } from "./dto/toggleRequest-lazer.dto";
 
 @Controller("lazer/")
 export class LazerController {
@@ -25,10 +26,10 @@ export class LazerController {
   @HttpCode(HttpStatus.CREATED)
   createPost(
     @Body()
-    createLazerDto: CreateLazerDto,
+    createPostLazerDto: CreatePostLazerDto,
     @Request() req: any,
   ) {
-    return this.lazerService.createPost(createLazerDto, req.user.id);
+    return this.lazerService.createPost(createPostLazerDto, req.user.id);
   }
 
   @Get("feed")
@@ -48,8 +49,11 @@ export class LazerController {
   @Patch("posts/:id")
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  updatePost(@Param("id") id: string, @Body() updateLazerDto: UpdateLazerDto) {
-    return this.lazerService.updatePost(id, updateLazerDto);
+  updatePost(
+    @Param("id") id: string,
+    @Body() updatePostLazerDto: UpdatePostLazerDto,
+  ) {
+    return this.lazerService.updatePost(id, updatePostLazerDto);
   }
 
   @Delete("posts/:id")
@@ -57,5 +61,15 @@ export class LazerController {
   @HttpCode(HttpStatus.NO_CONTENT)
   removePost(@Param("id") id: string) {
     return this.lazerService.removePost(id);
+  }
+
+  @Post("/posts/reactions")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  toggleReaction(
+     @Body() toggleRequest: ToggleRequestDTO,
+    @Request() req: any,
+  ) {
+    return this.lazerService.toggleReaction(toggleRequest, req.user.id);
   }
 }
