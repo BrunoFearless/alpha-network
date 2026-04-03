@@ -229,49 +229,155 @@ model Server {
   createdAt   DateTime  @default(now())
   deletedAt   DateTime?
 
-  channels Channel[]
-  members  ServerMember[]
-  bots     ServerBot[]
+  channels          Channel[]
+  channelCategories ChannelCategory[]
+  members           ServerMember[]
+  bots              ServerBot[]
+  roles             CommunityRole[]
+  bans              CommunityBan[]
+  auditLogs         CommunityAuditLog[]
 
   @@map("community_servers")
 }
 
-model Channel {
+model ChannelCategory {
   id        String   @id @default(uuid())
   serverId  String
   name      String
-  type      String   @default("text")
   position  Int      @default(0)
   createdAt DateTime @default(now())
 
   server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  messages Message[]
+  channels Channel[]
+
+  @@map("community_channel_categories")
+}
+
+model CommunityAuditLog {
+  id        String   @id @default(uuid())
+  serverId  String
+  actorId   String
+  action    String
+  targetId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, createdAt(sort: Desc)])
+  @@map("community_audit_logs")
+}
+
+model CommunityRole {
+  id                String   @id @default(uuid())
+  serverId          String
+  name              String
+  color             String?
+  position          Int      @default(0)
+  canModerate       Boolean  @default(false)
+  canManageServer   Boolean  @default(false)
+  canManageChannels Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  server  Server         @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  members ServerMember[]
+
+  @@unique([serverId, name])
+  @@map("community_roles")
+}
+
+model CommunityBan {
+  id        String   @id @default(uuid())
+  serverId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, userId])
+  @@map("community_bans")
+}
+
+model Channel {
+  id         String   @id @default(uuid())
+  serverId   String
+  categoryId String?
+  name       String
+  type       String   @default("text")
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  server    Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  category  ChannelCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  messages  Message[]
+  pins      PinnedMessage[]
 
   @@map("community_channels")
 }
 
 model Message {
-  id          String    @id @default(uuid())
-  channelId   String
-  authorId    String
-  authorType  String    @default("user")     // "user" | "bot"
-  content     String
-  createdAt   DateTime  @default(now())
-  deletedAt   DateTime?
+  id             String    @id @default(uuid())
+  channelId      String
+  authorId       String
+  authorType     String    @default("user")     // "user" | "bot"
+  content        String
+  messageType    String    @default("text")      // text | image | embed
+  imageUrl       String?
+  embedJson      Json?
+  replyToId      String?
+  editedAt       DateTime?
+  attachmentUrls Json?
+  mentions       Json?
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
 
-  channel     Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channel   Channel            @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  replyTo   Message?           @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[]          @relation("MessageReply")
+  reactions MessageReaction[]
+  pin       PinnedMessage?
 
   @@map("community_messages")
 }
 
-model ServerMember {
-  id       String   @id @default(uuid())
-  serverId String
-  userId   String
-  role     String   @default("member")      // "admin" | "member"
-  joinedAt DateTime @default(now())
+model MessageReaction {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
 
-  server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("community_message_reactions")
+}
+
+model PinnedMessage {
+  id        String   @id @default(uuid())
+  channelId String
+  messageId String   @unique
+  pinnedBy  String
+  pinnedAt  DateTime @default(now())
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, messageId])
+  @@map("community_pinned_messages")
+}
+
+model ServerMember {
+  id              String    @id @default(uuid())
+  serverId        String
+  userId          String
+  role            String    @default("member")      // "admin" | "member"
+  communityRoleId String?
+  mutedUntil      DateTime?
+  joinedAt        DateTime  @default(now())
+
+  server        Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  communityRole CommunityRole?  @relation(fields: [communityRoleId], references: [id], onDelete: SetNull)
 
   @@unique([serverId, userId])
   @@map("community_members")
@@ -280,25 +386,51 @@ model ServerMember {
 // ─── MODO BOT (Bruno) ────────────────────────────────────────────────
 
 model Bot {
-  id          String   @id @default(uuid())
-  ownerId     String
-  name        String
-  description String?
-  token       String   @unique @default(uuid())
-  prefix      String   @default("!")
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  ownerId      String
+  name         String
+  description  String?
+  token        String   @unique @default(uuid())
+  prefix       String   @default("!")
+  /// Fluxo do builder visual (JSON: { version, nodes }).
+  builderFlow  Json?
+  /// Listagem pública (marketplace).
+  isPublic     Boolean  @default(false)
+  /// Incrementa quando o bot é publicado/actualizado para o público.
+  version      Int      @default(1)
+  createdAt    DateTime @default(now())
 
   commands BotCommand[]
   servers  ServerBot[]
+  executionLogs BotExecutionLog[]
 
   @@map("bots")
 }
 
+model BotExecutionLog {
+  id        String   @id @default(uuid())
+  botId     String
+  serverId  String
+  channelId String
+  kind      String
+  ok        Boolean
+  detail    Json?
+  createdAt DateTime @default(now())
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@index([botId, createdAt])
+  @@map("bot_execution_logs")
+}
+
 model BotCommand {
-  id       String @id @default(uuid())
-  botId    String
-  trigger  String
-  response String
+  id           String @id @default(uuid())
+  botId        String
+  trigger      String
+  response     String
+  responseType String @default("text") // text | image | embed
+  imageUrl     String?
+  embedJson    Json?
 
   bot      Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
@@ -307,10 +439,11 @@ model BotCommand {
 }
 
 model ServerBot {
-  id       String   @id @default(uuid())
-  serverId String
-  botId    String
-  addedAt  DateTime @default(now())
+  id         String   @id @default(uuid())
+  serverId   String
+  botId      String
+  isAdminBot Boolean  @default(false)
+  addedAt    DateTime @default(now())
 
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
   bot    Bot    @relation(fields: [botId], references: [id], onDelete: Cascade)

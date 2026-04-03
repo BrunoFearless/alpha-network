@@ -1,9 +1,17 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 
-interface Cmd { id: string; trigger: string; response: string; }
+interface Cmd {
+  id: string;
+  trigger: string;
+  response: string;
+  responseType?: string;
+  imageUrl?: string | null;
+  embedJson?: Record<string, unknown> | null;
+}
 interface SrvEntry { server: { id: string; name: string; }; }
 interface Bot { id: string; name: string; description?: string | null; prefix: string; token: string; commands: Cmd[]; servers: SrvEntry[]; }
 interface MyServer { id: string; name: string; role: string; }
@@ -16,6 +24,9 @@ export default function BotPage() {
   const [loading, setLoading] = useState(true);
   const [trigger, setTrigger] = useState('');
   const [response, setResponse] = useState('');
+  const [resType, setResType] = useState<'text' | 'image' | 'embed'>('text');
+  const [imageUrl, setImageUrl] = useState('');
+  const [embedJsonStr, setEmbedJsonStr] = useState('{"title":"","description":"","color":"#C9A84C"}');
   const [addingCmd, setAddingCmd] = useState(false);
   const [cmdErr, setCmdErr] = useState('');
   const [selServer, setSelServer] = useState('');
@@ -37,10 +48,22 @@ export default function BotPage() {
     if (!trigger.trim() || !response.trim() || !bot) return;
     setAddingCmd(true); setCmdErr('');
     try {
-      const cmd = await api.post<Cmd>(`/bots/${bot.id}/commands`, { trigger: trigger.toLowerCase().trim(), response: response.trim() });
+      let embedJson: Record<string, unknown> | undefined;
+      if (resType === 'embed') {
+        try { embedJson = JSON.parse(embedJsonStr) as Record<string, unknown>; }
+        catch { setCmdErr('JSON do embed inválido.'); setAddingCmd(false); return; }
+      }
+      const body: Record<string, unknown> = {
+        trigger: trigger.toLowerCase().trim(),
+        response: response.trim(),
+        responseType: resType,
+      };
+      if (resType === 'image' && imageUrl.trim()) body.imageUrl = imageUrl.trim();
+      if (resType === 'embed' && embedJson) body.embedJson = embedJson;
+      const cmd = await api.post<Cmd>(`/bots/${bot.id}/commands`, body);
       setBot(p => p ? { ...p, commands: [...p.commands, cmd] } : p);
-      setTrigger(''); setResponse('');
-    } catch (e: any) { setCmdErr(e.message ?? 'Erro.'); }
+      setTrigger(''); setResponse(''); setImageUrl(''); setResType('text');
+    } catch (e: unknown) { setCmdErr(e instanceof Error ? e.message : 'Erro.'); }
     finally { setAddingCmd(false); }
   }
 
@@ -86,6 +109,17 @@ export default function BotPage() {
           {bot.description && <p style={{ color: '#504870', fontSize: 13, margin: '2px 0 0' }}>{bot.description}</p>}
         </div>
         <code style={{ background: '#07080D', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, padding: '6px 12px', color: '#C9A84C', fontSize: 13 }}>{bot.prefix}cmd</code>
+        <Link
+          href={`/main/bots/${botId}/builder`}
+          style={{
+            ...S.btnSec,
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+          }}
+        >
+          Builder visual
+        </Link>
       </div>
 
       {/* Token */}
@@ -106,9 +140,20 @@ export default function BotPage() {
             <span style={{ color: '#C9A84C', fontSize: 13, fontFamily: 'monospace' }}>{bot.prefix}</span>
             <input style={{ ...S.inp, border: 'none', padding: 0, width: 90, fontFamily: 'monospace' }} placeholder="trigger" value={trigger} onChange={e => setTrigger(e.target.value.toLowerCase().replace(/\s+/g, ''))} maxLength={32} />
           </div>
-          <input style={{ ...S.inp, flex: 1, minWidth: 180 }} placeholder="Resposta do bot…" value={response} onChange={e => setResponse(e.target.value)} maxLength={500} onKeyDown={e => e.key === 'Enter' && addCmd()} />
-          <button onClick={addCmd} disabled={addingCmd || !trigger.trim() || !response.trim()} style={{ ...S.btnPri, opacity: (!trigger.trim() || !response.trim()) ? 0.5 : 1 }}>{addingCmd ? '…' : 'Adicionar'}</button>
+          <select value={resType} onChange={e => setResType(e.target.value as 'text' | 'image' | 'embed')} style={{ ...S.inp, minWidth: 100, flexShrink: 0 }}>
+            <option value="text">Texto</option>
+            <option value="image">Imagem</option>
+            <option value="embed">Embed</option>
+          </select>
+          <input style={{ ...S.inp, flex: 1, minWidth: 160 }} placeholder="Resposta / legenda…" value={response} onChange={e => setResponse(e.target.value)} maxLength={2000} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && addCmd()} />
+          <button type="button" onClick={addCmd} disabled={addingCmd || !trigger.trim() || !response.trim()} style={{ ...S.btnPri, opacity: (!trigger.trim() || !response.trim()) ? 0.5 : 1 }}>{addingCmd ? '…' : 'Adicionar'}</button>
         </div>
+        {resType === 'image' && (
+          <input style={{ ...S.inp, width: '100%', marginBottom: 8 }} placeholder="URL da imagem (https://…)" value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
+        )}
+        {resType === 'embed' && (
+          <textarea style={{ ...S.inp, width: '100%', minHeight: 72, marginBottom: 8, fontFamily: 'monospace', fontSize: 11 }} value={embedJsonStr} onChange={e => setEmbedJsonStr(e.target.value)} />
+        )}
         {cmdErr && <p style={{ ...S.err, marginBottom: 12 }}>{cmdErr}</p>}
         {bot.commands.length === 0 ? (
           <p style={{ color: '#383356', fontSize: 13, fontStyle: 'italic' }}>Nenhum comando ainda.</p>
@@ -116,6 +161,7 @@ export default function BotPage() {
           <div key={cmd.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#07080D', border: '1px solid rgba(180,160,255,0.08)', borderRadius: 8, padding: '10px 14px', marginBottom: 6 }}>
             <code style={{ color: '#C9A84C', fontFamily: 'monospace', fontSize: 13, flexShrink: 0 }}>{bot.prefix}{cmd.trigger}</code>
             <span style={{ color: '#504870', fontSize: 12 }}>→</span>
+            <span style={{ color: '#504870', fontSize: 10, marginRight: 6 }}>{cmd.responseType || 'text'}</span>
             <p style={{ color: '#9890B8', fontSize: 13, flex: 1, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cmd.response}</p>
             <button onClick={() => removeCmd(cmd.id)} style={{ background: 'none', border: 'none', color: '#383356', fontSize: 14, cursor: 'pointer', padding: '0 4px', flexShrink: 0 }}>✕</button>
           </div>

@@ -9,6 +9,7 @@ import { CreatorModule } from './modes/creator/creator.module';
 import { DeveloperModule } from './modes/developer/developer.module';
 import { CommunityModule } from './modes/community/community.module';
 import { BotsModule } from './modes/bots/bots.module';
+import { BotPlatformModule } from './modes/bot-platform/bot-platform.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { BotsModule } from './modes/bots/bots.module';
     DeveloperModule,
     CommunityModule,
     BotsModule,
+    BotPlatformModule,
   ],
 })
 export class AppModule {}

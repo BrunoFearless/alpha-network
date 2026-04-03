@@ -20,10 +20,13 @@ export function Sidebar({ activeModes = [], collapsed = false }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className={clsx(
-      'bg-alpha-surface border-r border-alpha-border flex flex-col transition-all duration-200',
-      collapsed ? 'w-14' : 'w-56',
-    )}>
+    <nav
+      aria-label="Navegação de modos"
+      className={clsx(
+        'bg-alpha-surface flex flex-col transition-all duration-200 h-full min-h-0',
+        collapsed ? 'w-14' : 'w-56',
+      )}
+    >
       <div className="flex-1 py-4 space-y-1 overflow-y-auto">
         {MODES.map(mode => {
           const isActive  = pathname.startsWith(mode.href);
@@ -50,6 +53,6 @@ export function Sidebar({ activeModes = [], collapsed = false }: SidebarProps) {
           );
         })}
       </div>
-    </aside>
+    </nav>
   );
 }
