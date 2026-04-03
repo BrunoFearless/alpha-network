@@ -44,9 +44,27 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data.data ?? data;
 }
 
+async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${BASE}/api/v1${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error?.message ?? `Erro ${res.status}`);
+  }
+  return data.data ?? data;
+}
+
 export const api = {
   get:    <T = unknown>(path: string)                  => request<T>('GET',    path),
   post:   <T = unknown>(path: string, body?: unknown)  => request<T>('POST',   path, body),
+  postForm: <T = unknown>(path: string, form: FormData) => postForm<T>(path, form),
   patch:  <T = unknown>(path: string, body?: unknown)  => request<T>('PATCH',  path, body),
   put:    <T = unknown>(path: string, body?: unknown)  => request<T>('PUT',    path, body),
   delete: <T = unknown>(path: string)                  => request<T>('DELETE', path),

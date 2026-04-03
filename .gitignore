@@ -1,5 +1,6 @@
 # Dependências
-node_modules/
+node_modules
+uploads//
 .pnp
 .pnp.js
 
@@ -39,3 +40,7 @@ coverage/
 # Cache
 .turbo/
 .cache/
+*.tsbuildinfo
+
+# Cursor (local)
+.cursor/
