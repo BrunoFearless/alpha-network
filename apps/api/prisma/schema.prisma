@@ -390,6 +390,8 @@ model Bot {
   ownerId      String
   name         String
   description  String?
+  avatarUrl    String?
+  customColor  String   @default("#C9A84C")
   token        String   @unique @default(uuid())
   prefix       String   @default("!")
   /// Fluxo do builder visual (JSON: { version, nodes }).

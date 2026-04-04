@@ -5,10 +5,18 @@ export type BuilderFlowV1 = {
 };
 
 export type BuilderNode =
-  | { id: string; type: 'trigger'; event: 'MESSAGE_CREATE' | 'MEMBER_JOIN' }
+  | { id: string; type: 'trigger'; event: 'MESSAGE_CREATE' | 'MEMBER_JOIN' | 'MEMBER_LEAVE' | 'REACTION_ADD' }
   | { id: string; type: 'condition'; kind: 'contains'; value: string }
   | { id: string; type: 'condition'; kind: 'channel'; channelId: string }
-  | { id: string; type: 'action'; kind: 'reply'; text: string };
+  | { id: string; type: 'condition'; kind: 'admin'; requireAdmin: boolean }
+  | { id: string; type: 'condition'; kind: 'role'; roleId: string }
+  | { id: string; type: 'condition'; kind: 'userId'; userId: string }
+  | { id: string; type: 'action'; kind: 'reply'; text: string }
+  | { id: string; type: 'action'; kind: 'sendMessage'; text: string }
+  | { id: string; type: 'action'; kind: 'deleteMessage' }
+  | { id: string; type: 'action'; kind: 'assignRole'; roleId: string }
+  | { id: string; type: 'action'; kind: 'mute'; durationMs: number }
+  | { id: string; type: 'action'; kind: 'wait'; delayMs: number };
 
 const MAX_NODES = 32;
 const MAX_TEXT = 2000;
@@ -36,18 +44,38 @@ export function validateBuilderFlowJson(raw: unknown): string | null {
     if (ids.has(id)) return `Id duplicado: ${id}.`;
     ids.add(id);
     if (node.type === 'trigger') {
-      if (node.event !== 'MESSAGE_CREATE' && node.event !== 'MEMBER_JOIN') return 'Trigger: event desconhecido.';
+      if (!['MESSAGE_CREATE', 'MEMBER_JOIN', 'MEMBER_LEAVE', 'REACTION_ADD'].includes(node.event as string)) {
+        return 'Trigger: event desconhecido.';
+      }
     } else if (node.type === 'condition') {
       if (node.kind === 'contains') {
         if (typeof node.value !== 'string' || node.value.length > MAX_TEXT) return 'Condição contains: texto demasiado longo.';
       } else if (node.kind === 'channel') {
         if (typeof node.channelId !== 'string' || node.channelId.length > MAX_ID_LEN) return 'Condição canal: channelId inválido.';
+      } else if (node.kind === 'admin') {
+        if (typeof (node as any).requireAdmin !== 'boolean') return 'Condição admin: requireAdmin deve ser boolean.';
+      } else if (node.kind === 'role') {
+        if (typeof (node as any).roleId !== 'string' || (node as any).roleId.length > MAX_ID_LEN) return 'Condição role: roleId inválido.';
+      } else if (node.kind === 'userId') {
+        if (typeof (node as any).userId !== 'string' || (node as any).userId.length > MAX_ID_LEN) return 'Condição userId: userId inválido.';
       } else return 'Condição: kind desconhecido.';
     } else if (node.type === 'action') {
-      if (node.kind !== 'reply') return 'Ação: só reply é suportada.';
-      if (typeof (node as { text?: string }).text !== 'string' || (node as { text: string }).text.length > MAX_TEXT) {
-        return 'Resposta demasiado longa.';
-      }
+      const action = node as any;
+      if (action.kind === 'reply' || action.kind === 'sendMessage') {
+        if (typeof action.text !== 'string' || action.text.length > MAX_TEXT) return `Ação ${action.kind}: texto demasiado longo.`;
+      } else if (action.kind === 'deleteMessage') {
+        // sem parâmetros
+      } else if (action.kind === 'assignRole') {
+        if (typeof action.roleId !== 'string' || action.roleId.length > MAX_ID_LEN) return 'Ação assignRole: roleId inválido.';
+      } else if (action.kind === 'mute') {
+        if (typeof action.durationMs !== 'number' || action.durationMs <= 0 || action.durationMs > 86_400_000) {
+          return 'Ação mute: durationMs deve ser 0 < x <= 24h (ms).';
+        }
+      } else if (action.kind === 'wait') {
+        if (typeof action.delayMs !== 'number' || action.delayMs <= 0 || action.delayMs > 60_000) {
+          return 'Ação wait: delayMs deve ser 0 < x <= 60s (ms).';
+        }
+      } else return 'Ação: kind desconhecido.';
     } else return 'Tipo de nó desconhecido.';
   }
   return null;

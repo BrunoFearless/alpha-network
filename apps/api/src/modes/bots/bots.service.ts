@@ -102,6 +102,7 @@ export class BotsService {
     const data: Prisma.BotUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.description !== undefined) data.description = dto.description;
+    if (dto.customColor !== undefined) data.customColor = dto.customColor;
     if (dto.prefix !== undefined) data.prefix = dto.prefix;
     if (dto.builderFlow !== undefined) {
       if (dto.builderFlow !== null) {
@@ -348,4 +349,120 @@ export class BotsService {
 
     return null;
   }
+
+  async saveAvatarAndUpdate(botId: string, ownerId: string, file: Express.Multer.File, dto: UpdateBotDto) {
+    try {
+      console.log(`\n📤 saveAvatarAndUpdate starting...`);
+      
+      const bot = await this.prisma.bot.findUnique({ where: { id: botId } });
+      if (!bot) throw new NotFoundException('Bot não encontrado.');
+      if (bot.ownerId !== ownerId) throw new ForbiddenException('Sem permissão.');
+
+      // Import fs and path at runtime
+      const fs = await import('fs/promises');
+      const path = await import('path');
+
+      // Create bot avatar directory (relative to process.cwd())
+      const uploadsBase = path.resolve(process.cwd(), 'uploads');
+      const botsDir = path.join(uploadsBase, 'bots');
+      const botUploadDir = path.join(botsDir, botId);
+      
+      console.log(`🔧 Directory setup:`);
+      console.log(`   Base: ${uploadsBase}`);
+      console.log(`   Bots: ${botsDir}`);
+      console.log(`   Bot: ${botUploadDir}`);
+      
+      try {
+        await fs.mkdir(botUploadDir, { recursive: true });
+        console.log(`   ✓ Directories created`);
+      } catch (e) {
+        console.error(`   ✗ Failed to create dirs:`, e.message);
+        throw e;
+      }
+
+      // Generate filename with timestamp to avoid conflicts
+      const ext = path.extname(file.originalname);
+      const filename = `avatar-${Date.now()}${ext}`;
+      const filepath = path.join(botUploadDir, filename);
+
+      // Save file
+      console.log(`📝 Saving file:`);
+      console.log(`   Path: ${filepath}`);
+      console.log(`   Size: ${file.size} bytes`);
+      console.log(`   MIME: ${file.mimetype}`);
+      
+      try {
+        await fs.writeFile(filepath, file.buffer);
+        console.log(`   ✓ File written to disk`);
+      } catch (e) {
+        console.error(`   ✗ Failed to write file:`, e.message, e.code);
+        throw e;
+      }
+
+      // Verify file exists
+      try {
+        const stat = await fs.stat(filepath);
+        console.log(`✓ File verified: ${stat.size} bytes on disk`);
+      } catch (e) {
+        console.error(`⚠️ File verification failed:`, e.message);
+        throw e;
+      }
+
+      // Delete old avatars for this bot (keep only latest)
+      try {
+        const files = await fs.readdir(botUploadDir);
+        let deletedCount = 0;
+        for (const f of files) {
+          if (f.startsWith('avatar-') && f !== filename) {
+            try {
+              await fs.unlink(path.join(botUploadDir, f));
+              deletedCount++;
+              console.log(`🗑️ Deleted: ${f}`);
+            } catch (e) {
+              console.error(`⚠️ Failed to delete ${f}:`, e.message);
+            }
+          }
+        }
+        if (deletedCount === 0) {
+          console.log(`🗑️ No old avatars to delete`);
+        }
+      } catch (e) {
+        console.error(`⚠️ Error checking old files:`, e.message);
+      }
+
+      // Save avatar URL to bot (relative path - served via /uploads prefix)
+      const avatarUrl = `/uploads/bots/${botId}/${filename}`;
+      console.log(`📸 Avatar URL: ${avatarUrl}`);
+      
+      // Update bot with new avatar and other fields
+      const data: Prisma.BotUpdateInput = { avatarUrl };
+      if (dto.name !== undefined) data.name = dto.name;
+      if (dto.description !== undefined) data.description = dto.description;
+      if (dto.customColor !== undefined) data.customColor = dto.customColor;
+      if (dto.prefix !== undefined) data.prefix = dto.prefix;
+      if (dto.builderFlow !== undefined) {
+        if (dto.builderFlow !== null) {
+          const err = validateBuilderFlowJson(dto.builderFlow);
+          if (err) throw new BadRequestException(err);
+        }
+        data.builderFlow = dto.builderFlow === null ? Prisma.JsonNull : (dto.builderFlow as Prisma.InputJsonValue);
+      }
+      if (dto.isPublic !== undefined) data.isPublic = dto.isPublic;
+
+      console.log(`💾 Updating database...`);
+      const updated = await this.prisma.bot.update({
+        where: { id: botId },
+        data,
+        include: { commands: true, servers: { include: { server: { select: { id: true, name: true } } } } },
+      });
+      
+      console.log(`✨ Bot updated with avatar: ${updated.avatarUrl}\n`);
+      return updated;
+    } catch (e) {
+      console.error(`❌ Error in saveAvatarAndUpdate:`, e.message);
+      console.error(e.stack);
+      throw e;
+    }
+  }
 }
+
