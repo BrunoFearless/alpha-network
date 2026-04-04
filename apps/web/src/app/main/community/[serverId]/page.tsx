@@ -31,7 +31,7 @@ interface Member {
   communityRoleId: string | null;
   mutedUntil?: string | null;
   communityRole: CommunityRole | null;
-  profile: { displayName?: string | null; username: string; avatarUrl?: string | null } | null;
+  profile: { displayName?: string | null; username: string; avatarUrl?: string | null; bio?: string | null } | null;
 }
 interface BotRow {
   id: string;
@@ -169,6 +169,10 @@ export default function ServerPage() {
   const [crRole, setCrRole] = useState(false);
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editProfileName, setEditProfileName] = useState('');
+  const [editProfileBio, setEditProfileBio] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const [typingIds, setTypingIds] = useState<Record<string, boolean>>({});
   const [showPins, setShowPins] = useState(false);
   const [pins, setPins] = useState<Msg[]>([]);
@@ -530,6 +534,30 @@ export default function ServerPage() {
   function mname(m: Member) {
     if (m.userId === user?.id) return user.profile?.displayName ?? user.profile?.username ?? 'Tu';
     return m.profile?.displayName ?? m.profile?.username ?? `user_${m.userId.slice(0, 6)}`;
+  }
+
+  async function saveProfile() {
+    if (!editProfileName.trim() || !user) return;
+    setSavingProfile(true);
+    try {
+      await api.patch(`/users/me`, {
+        displayName: editProfileName.trim(),
+        bio: editProfileBio.trim(),
+      });
+      setShowEditProfile(false);
+      refreshServer();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erro ao salvar perfil.');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  function openEditProfile() {
+    if (!user?.profile) return;
+    setEditProfileName(user.profile.displayName ?? user.profile.username ?? '');
+    setEditProfileBio(user.profile.bio ?? '');
+    setShowEditProfile(true);
   }
 
   function openEditSrv() {
@@ -1510,8 +1538,8 @@ export default function ServerPage() {
               const isOwner = menuMember.userId === server.ownerId;
               return (
                 <>
-                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 18 }}>
-                    <div style={{ width: 56, height: 56, flexShrink: 0, position: 'relative' }}>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: 18 }}>
+                    <div style={{ width: 80, height: 80, flexShrink: 0, position: 'relative' }}>
                       {av ? (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1519,8 +1547,8 @@ export default function ServerPage() {
                             src={av}
                             alt=""
                             style={{
-                              width: 56,
-                              height: 56,
+                              width: 80,
+                              height: 80,
                               borderRadius: '50%',
                               objectFit: 'cover',
                               border: `3px solid ${accent}55`,
@@ -1530,15 +1558,15 @@ export default function ServerPage() {
                       ) : (
                         <div
                           style={{
-                            width: 56,
-                            height: 56,
+                            width: 80,
+                            height: 80,
                             borderRadius: '50%',
                             background: `${accent}28`,
                             border: `3px solid ${accent}66`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: 22,
+                            fontSize: 32,
                             fontWeight: 700,
                             color: accent,
                           }}
@@ -1548,20 +1576,34 @@ export default function ServerPage() {
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h2 style={{ margin: 0, color: '#F2F5F8', fontSize: 17, fontWeight: 700, lineHeight: 1.2 }}>{mname(menuMember)}</h2>
-                      <p style={{ color: DISCORD_TEXT_MUTED, fontSize: 13, margin: '6px 0 0', wordBreak: 'break-all' }}>
+                      <h2 style={{ margin: 0, color: '#F2F5F8', fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{mname(menuMember)}</h2>
+                      <p style={{ color: DISCORD_TEXT_MUTED, fontSize: 13, margin: '4px 0 0', wordBreak: 'break-all' }}>
                         @{menuMember.profile?.username ?? menuMember.userId.slice(0, 8)}
                       </p>
-                      {isOwn && (
-                        <span style={{ fontSize: 12, color: UNIGRAM_GREEN, marginTop: 6, display: 'inline-block' }}>Este és tu</span>
+                      {menuMember.profile?.bio && (
+                        <p style={{ color: COLORS.TEXT_SECONDARY, fontSize: 12, margin: '8px 0 0', lineHeight: 1.4, maxHeight: '60px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {menuMember.profile.bio}
+                        </p>
                       )}
-                      {isOwner && (
-                        <span style={{ fontSize: 12, color: ALPHA_BG, marginTop: 6, display: 'block' }}>Dono do servidor</span>
-                      )}
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10, fontSize: 11, flexWrap: 'wrap' }}>
+                        {isOwner && (
+                          <span style={{ background: 'rgba(240,177,50,0.2)', color: '#F0B132', padding: '2px 8px', borderRadius: 6 }}>Dono</span>
+                        )}
+                        {menuMember.communityRole && (
+                          <span style={{ background: `rgba(${parseInt(menuMember.communityRole.color?.slice(1, 3) ?? 'FF', 16)}, ${parseInt(menuMember.communityRole.color?.slice(3, 5) ?? 'FF', 16)}, ${parseInt(menuMember.communityRole.color?.slice(5, 7) ?? 'FF', 16)}, 0.15)`, color: menuMember.communityRole.color ?? COLORS.TEXT_SECONDARY, padding: '2px 8px', borderRadius: 6 }}>
+                            {menuMember.communityRole.name}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   {menuMember.mutedUntil && new Date(menuMember.mutedUntil) > new Date() && (
                     <p style={{ fontSize: 12, color: '#ED4245', marginBottom: 14 }}>🔇 Silenciado neste servidor</p>
+                  )}
+                  {isOwn && (
+                    <button type="button" onClick={() => { setMemberMenuUserId(null); openEditProfile(); }} style={{ ...C.btnPri, width: '100%', marginBottom: 14 }}>
+                      Editar perfil
+                    </button>
                   )}
                   {isAdmin && !isOwner && (
                     <div style={{ marginBottom: 16 }}>
@@ -1898,6 +1940,40 @@ export default function ServerPage() {
               </button>
               <button type="button" onClick={saveEdit} style={C.btnPri}>
                 Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditProfile && (
+        <div style={C.overlay}>
+          <div onClick={() => setShowEditProfile(false)} style={C.obg} />
+          <div style={C.modal}>
+            <h2 style={{ fontSize: 18, color: '#F2F5F8', margin: '0 0 16px' }}>Editar perfil</h2>
+            <label style={{ color: '#6B7785', fontSize: 11, display: 'block', marginBottom: 6 }}>Nome de utilizador</label>
+            <input
+              style={{ width: '100%', boxSizing: 'border-box', marginBottom: 12, background: '#0B121A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#E8EDF2', fontSize: 14 }}
+              value={editProfileName}
+              onChange={e => setEditProfileName(e.target.value)}
+              maxLength={32}
+              placeholder="Seu nome"
+            />
+            <label style={{ color: '#6B7785', fontSize: 11, display: 'block', marginBottom: 6 }}>Bio/Descrição</label>
+            <textarea
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: 72, background: '#0B121A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#E8EDF2', fontSize: 13, resize: 'vertical', marginBottom: 12 }}
+              value={editProfileBio}
+              onChange={e => setEditProfileBio(e.target.value)}
+              maxLength={256}
+              placeholder="Conte-nos sobre você..."
+            />
+            <p style={{ fontSize: 11, color: '#7A8B9C', marginTop: -8, marginBottom: 16 }}>{editProfileBio.length} / 256 caracteres</p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setShowEditProfile(false)} style={C.btnGhost}>
+                Cancelar
+              </button>
+              <button type="button" onClick={saveProfile} disabled={savingProfile || !editProfileName.trim()} style={{ ...C.btnPri, opacity: !editProfileName.trim() || savingProfile ? 0.5 : 1 }}>
+                {savingProfile ? '…' : 'Guardar'}
               </button>
             </div>
           </div>
