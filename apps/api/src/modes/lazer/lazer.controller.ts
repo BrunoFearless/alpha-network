@@ -57,11 +57,11 @@ export class LazerController {
     return this.lazerService.updatePost(id, updatePostLazerDto);
   }
 
-  @Delete("posts/:id")
+  @Post("posts/:id")
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  removePost(@Param("id") id: string) {
-    return this.lazerService.deletePost(id);
+  removePost(@Param("id") id: string, @Request() req: any) {
+    return this.lazerService.deletePost(id, req.user.id);
   }
 
   @Post("/posts/reactions")

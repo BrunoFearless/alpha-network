@@ -16,6 +16,7 @@
     "db:seed": "pnpm --filter @alpha/api db:seed"
   },
   "devDependencies": {
+    "@types/multer": "^2.1.0",
     "concurrently": "^8.2.2",
     "prisma": "^5.22.0",
     "typescript": "^5.3.3"

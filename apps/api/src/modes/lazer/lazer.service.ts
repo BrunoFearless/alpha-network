@@ -63,9 +63,20 @@ export class LazerService {
     });
   }
 
-  async deletePost(id: string) {
-    return await this.prisma.lazerPost.delete({
+  async deletePost(id: string, userId: string) {
+    const exist = await this.prisma.lazerPost.findUnique({where:{id:id}})
+    if (!exist) throw new Error("Post not found");
+    if (exist.authorId!==userId) throw new Error("you cannot delete this post");
+    await this.prisma.lazerComment.updateMany({
+      where: { postId: id },
+      data: { deletedAt: new Date() },
+    });
+    await this.prisma.lazerReaction.deleteMany({
+      where: { postId: id },
+    });
+    return await this.prisma.lazerPost.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
   }
 
