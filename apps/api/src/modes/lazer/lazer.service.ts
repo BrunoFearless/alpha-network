@@ -63,46 +63,102 @@ export class LazerService {
     });
   }
 
-  removePost(id: string) {
-    return this.prisma.lazerPost.delete({
+  async deletePost(id: string) {
+    return await this.prisma.lazerPost.delete({
       where: { id },
     });
   }
 
   async toggleReaction(
-  toggleRequest: ToggleRequestDTO,
-  userId: string,
-): Promise<ToggleResponseDTO> {
+    toggleRequest: ToggleRequestDTO,
+    userId: string,
+  ): Promise<ToggleResponseDTO> {
+    const { postId } = toggleRequest;
 
-  const { postId } = toggleRequest;
-
-  const existing = await this.prisma.lazerReaction.findUnique({
-    where: {
-      postId_userId: { postId, userId },
-    },
-  });
-
-  if (existing) {
-    await this.prisma.lazerReaction.delete({
-      where: { id: existing.id },
+    const existing = await this.prisma.lazerReaction.findUnique({
+      where: {
+        postId_userId: { postId, userId },
+      },
     });
-  } else {
-    await this.prisma.lazerReaction.create({
+
+    if (existing) {
+      await this.prisma.lazerReaction.delete({
+        where: { id: existing.id },
+      });
+    } else {
+      await this.prisma.lazerReaction.create({
+        data: {
+          postId,
+          userId,
+          type: "like",
+        },
+      });
+    }
+
+    const reactionCount = await this.prisma.lazerReaction.count({
+      where: { postId },
+    });
+
+    return {
+      liked: !existing,
+      reactionCount,
+    };
+  }
+
+  async createComment(postId: string, authorId: string, comment: string) {
+    const exist = await this.prisma.lazerPost.findUnique({
+      where: { id: postId },
+    });
+    if (!exist) throw new Error("Post not found");
+    return await this.prisma.lazerComment.create({
       data: {
-        postId,
-        userId,
-        type: 'like',
+        postId: postId,
+        authorId: authorId,
+        content: comment,
       },
     });
   }
 
-  const reactionCount = await this.prisma.lazerReaction.count({
-    where: { postId },
-  });
+  async updateComment(
+    postId: string,
+    authorId: string,
+    comment: string,
+    id: string,
+  ) {
+    return await this.prisma.lazerComment.update({
+      where: {
+        id: id,
+      },
+      data: {
+        postId: postId,
+        authorId: authorId,
+        content: comment,
+      },
+    });
+  }
 
-  return {
-    liked: !existing,
-    reactionCount,
-  };
-}
+  async findComments(postId: string): Promise<any> {
+    return await this.prisma.lazerComment.findMany({
+      where: {
+        postId: postId,
+        deletedAt: null,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  async deleteComment(id: string, userId: string) {
+    const exist = await this.prisma.lazerComment.findUnique({where:{id:id}})
+    if (!exist) throw new Error("commet not found, cannot delete")
+    if (exist.authorId!==userId) throw new Error("you cannot delete this comment");
+    await this.prisma.lazerComment.update({
+      where: {
+        id: id,
+      },
+
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+  }
 }
