@@ -16,6 +16,7 @@ import { CreatePostLazerDto } from "./dto/createPost-lazer.dto";
 import { UpdatePostLazerDto } from "./dto/updatePost-lazer.dto";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { ToggleRequestDTO } from "./dto/toggleRequest-lazer.dto";
+import { CreateCommentsLazerDto } from "./dto/createComments-lazer.dto";
 
 @Controller("lazer/")
 export class LazerController {
@@ -60,16 +61,40 @@ export class LazerController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   removePost(@Param("id") id: string) {
-    return this.lazerService.removePost(id);
+    return this.lazerService.deletePost(id);
   }
 
   @Post("/posts/reactions")
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  toggleReaction(
-     @Body() toggleRequest: ToggleRequestDTO,
+  toggleReaction(@Body() toggleRequest: ToggleRequestDTO, @Request() req: any) {
+    return this.lazerService.toggleReaction(toggleRequest, req.user.id);
+  }
+
+  @Post("/posts/:id/comments")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  createComment(
+    @Param("id") postId: string,
+    @Body()
+    comment: CreateCommentsLazerDto,
     @Request() req: any,
   ) {
-    return this.lazerService.toggleReaction(toggleRequest, req.user.id);
+    
+    return this.lazerService.createComment(postId, req.user.id, comment.content);
+  }
+
+  @Get("/posts/:id/comments")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  getComment(@Param("id") id: string) {
+    return this.lazerService.findComments(id);
+  }
+
+  @Post("/posts/:id/comments/soft-delete")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  softDelete(@Param("id") id: string, @Request() req: any) {
+    return this.lazerService.deleteComment(id, req.user.id);
   }
 }
