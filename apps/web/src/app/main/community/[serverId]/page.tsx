@@ -31,7 +31,7 @@ interface Member {
   communityRoleId: string | null;
   mutedUntil?: string | null;
   communityRole: CommunityRole | null;
-  profile: { displayName?: string | null; username: string; avatarUrl?: string | null } | null;
+  profile: { displayName?: string | null; username: string; avatarUrl?: string | null; bio?: string | null } | null;
 }
 interface BotRow {
   id: string;
@@ -88,13 +88,27 @@ interface Msg {
   pinned?: boolean;
 }
 
-const UNIGRAM_GREEN = '#3DDC84';
-const ALPHA_GOLD = '#C9A84C';
-const ALPHA_BG = '#0E1621';
-const CHAT_BG =
-  'linear-gradient(180deg, rgba(13,20,25,0.97) 0%, rgba(10,15,20,0.99) 100%), repeating-linear-gradient(0deg, transparent, transparent 32px, rgba(255,255,255,0.018) 32px, rgba(255,255,255,0.018) 33px), repeating-linear-gradient(90deg, transparent, transparent 32px, rgba(255,255,255,0.012) 32px, rgba(255,255,255,0.012) 33px), #0d1419';
-const TG_BUBBLE_IN = 'linear-gradient(160deg, rgba(48,56,48,0.96) 0%, rgba(34,40,36,0.98) 100%)';
-const TG_BUBBLE_OUT = 'linear-gradient(160deg, rgba(61,220,132,0.14) 0%, rgba(45,52,48,0.55) 100%)';
+// Verde Palette - Inspired by 7Wise + Discord Design
+const COLORS = {
+  BG_PRIMARY: '#0E0F11',
+  BG_SECONDARY: '#1E1F22',
+  BG_TERTIARY: '#2C2F33',
+  TEXT_PRIMARY: '#FFFFFF',
+  TEXT_SECONDARY: '#B5BAC1',
+  TEXT_MUTED: '#949BA4',
+  GREEN_ACCENT: '#A5E600',
+  GREEN_DARK: '#1B5E20',
+  ROLE_OWNER: '#F0B132',
+  ROLE_ADMIN: '#ED4245',
+};
+
+const UNIGRAM_GREEN = COLORS.GREEN_ACCENT;
+const BOT_GREEN = '#B8E21F';
+const ALPHA_BG = COLORS.BG_PRIMARY;
+const SIDEBAR_BG = COLORS.BG_SECONDARY;
+const CHAT_BG = `linear-gradient(180deg, rgba(14,15,17,0.97) 0%, rgba(14,15,17,0.99) 100%), repeating-linear-gradient(0deg, transparent, transparent 32px, rgba(255,255,255,0.018) 32px, rgba(255,255,255,0.018) 33px), repeating-linear-gradient(90deg, transparent, transparent 32px, rgba(255,255,255,0.012) 32px, rgba(255,255,255,0.012) 33px), ${COLORS.BG_PRIMARY}`;
+const TG_BUBBLE_IN = 'linear-gradient(160deg, rgba(30,31,34,0.95) 0%, rgba(44,47,51,0.92) 100%)';
+const TG_BUBBLE_OUT = 'linear-gradient(160deg, rgba(165,230,0,0.18) 0%, rgba(27,94,32,0.45) 100%)';
 
 function nameColor(seed: string) {
   let h = 0;
@@ -155,6 +169,10 @@ export default function ServerPage() {
   const [crRole, setCrRole] = useState(false);
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editProfileName, setEditProfileName] = useState('');
+  const [editProfileBio, setEditProfileBio] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const [typingIds, setTypingIds] = useState<Record<string, boolean>>({});
   const [showPins, setShowPins] = useState(false);
   const [pins, setPins] = useState<Msg[]>([]);
@@ -164,6 +182,8 @@ export default function ServerPage() {
   const [newCatName, setNewCatName] = useState('');
   const [pendingUrls, setPendingUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   /** categorias colapsadas: id → true = fechada */
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
   /** membro selecionado no painel (clique no avatar) */
@@ -516,6 +536,30 @@ export default function ServerPage() {
     return m.profile?.displayName ?? m.profile?.username ?? `user_${m.userId.slice(0, 6)}`;
   }
 
+  async function saveProfile() {
+    if (!editProfileName.trim() || !user) return;
+    setSavingProfile(true);
+    try {
+      await api.patch(`/users/me`, {
+        displayName: editProfileName.trim(),
+        bio: editProfileBio.trim(),
+      });
+      setShowEditProfile(false);
+      refreshServer();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erro ao salvar perfil.');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  function openEditProfile() {
+    if (!user?.profile) return;
+    setEditProfileName(user.profile.displayName ?? user.profile.username ?? '');
+    setEditProfileBio(user.profile.bio ?? '');
+    setShowEditProfile(true);
+  }
+
   function openEditSrv() {
     if (!server) return;
     setEditName(server.name);
@@ -532,56 +576,121 @@ export default function ServerPage() {
   const C: Record<string, React.CSSProperties> = {
     wrap: { display: 'flex', height: 'calc(100vh - 56px)', background: ALPHA_BG },
     side: {
-      width: 244,
-      background: '#2B2D31',
-      borderRight: '1px solid rgba(0,0,0,0.35)',
+      width: 240,
+      background: SIDEBAR_BG,
+      borderRight: `1px solid ${COLORS.BG_TERTIARY}`,
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
     },
-    sideTop: { padding: '12px 12px 10px', borderBottom: '1px solid rgba(0,0,0,0.25)', boxShadow: '0 1px 0 rgba(255,255,255,0.04)' },
-    backBtn: { background: 'none', border: 'none', color: '#7A8B9C', fontSize: 12, cursor: 'pointer', padding: 0, marginBottom: 8, display: 'block' },
-    srvName: { fontFamily: 'system-ui, sans-serif', color: '#F2F5F8', fontSize: 16, fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+    sideTop: { 
+      padding: '12px 12px 10px', 
+      borderBottom: `1px solid ${COLORS.BG_TERTIARY}`, 
+      boxShadow: `0 1px 0 rgba(255,255,255,0.02)` 
+    },
+    backBtn: { 
+      background: 'none', 
+      border: 'none', 
+      color: COLORS.TEXT_MUTED, 
+      fontSize: 12, 
+      cursor: 'pointer', 
+      padding: 0, 
+      marginBottom: 8, 
+      display: 'block',
+      transition: 'color 0.12s'
+    },
+    srvName: { 
+      fontFamily: 'system-ui, sans-serif', 
+      color: COLORS.TEXT_PRIMARY, 
+      fontSize: 15, 
+      fontWeight: 700, 
+      margin: 0, 
+      overflow: 'hidden', 
+      textOverflow: 'ellipsis', 
+      whiteSpace: 'nowrap' 
+    },
     chList: { flex: 1, overflowY: 'auto', padding: '8px 0' },
-    chSec: { display: 'flex', alignItems: 'center', padding: '0 12px', marginBottom: 4 },
-    chLabel: { color: '#6B7785', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', flex: 1 },
-    addBtn: { background: 'none', border: 'none', color: UNIGRAM_GREEN, fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: 0 },
+    chLabel: { color: COLORS.TEXT_MUTED, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', flex: 1, fontWeight: 600 },
+    addBtn: { background: 'none', border: 'none', color: UNIGRAM_GREEN, fontSize: 16, cursor: 'pointer', lineHeight: 1, padding: 0, transition: 'opacity 0.12s' },
     chat: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: CHAT_BG },
     chHeader: {
       padding: '12px 18px',
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
+      borderBottom: `1px solid ${COLORS.BG_TERTIARY}`,
       display: 'flex',
       alignItems: 'center',
-      gap: 10,
-      background: 'rgba(11,18,26,0.92)',
+      gap: 12,
+      background: COLORS.BG_SECONDARY,
       backdropFilter: 'blur(10px)',
       flexShrink: 0,
     },
-    msgs: { flex: 1, overflowY: 'auto', padding: '16px 18px 12px' },
-    inputWrap: { padding: '10px 16px 16px', flexShrink: 0, background: 'rgba(11,18,26,0.75)' },
+    msgs: { flex: 1, overflowY: 'auto', padding: '16px 20px 12px' },
+    inputWrap: { 
+      padding: '12px 20px 20px', 
+      flexShrink: 0, 
+      background: `${COLORS.BG_SECONDARY}E6`,
+    },
     inputRow: {
       display: 'flex',
       gap: 8,
-      background: '#242F3D',
-      border: '1px solid rgba(255,255,255,0.08)',
+      background: COLORS.BG_TERTIARY,
+      border: `1px solid ${COLORS.BG_TERTIARY}`,
       borderRadius: 28,
-      padding: '8px 12px 8px 14px',
+      padding: '8px 12px 8px 16px',
       alignItems: 'center',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.2)',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
     },
     members: {
       width: 240,
-      background: '#2B2D31',
-      borderLeft: '1px solid rgba(0,0,0,0.35)',
+      background: SIDEBAR_BG,
+      borderLeft: `1px solid ${COLORS.BG_TERTIARY}`,
       overflowY: 'auto',
       flexShrink: 0,
+      display: 'flex',
+      flexDirection: 'column',
     },
     overlay: { position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
     obg: { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' },
-    modal: { position: 'relative', zIndex: 10, background: '#242F3D', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 440 },
-    btnPri: { background: UNIGRAM_GREEN, color: '#0B121A', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
-    btnSec: { background: 'transparent', color: UNIGRAM_GREEN, border: `1px solid ${UNIGRAM_GREEN}`, borderRadius: 10, padding: '9px 18px', fontSize: 13, cursor: 'pointer' },
-    btnGhost: { background: 'transparent', color: '#7A8B9C', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, cursor: 'pointer' },
+    modal: { 
+      position: 'relative', 
+      zIndex: 10, 
+      background: COLORS.BG_SECONDARY, 
+      border: `1px solid ${COLORS.BG_TERTIARY}`, 
+      borderRadius: 12, 
+      padding: 24, 
+      width: '100%', 
+      maxWidth: 440 
+    },
+    btnPri: { 
+      background: UNIGRAM_GREEN, 
+      color: '#000', 
+      border: 'none', 
+      borderRadius: 4, 
+      padding: '8px 16px', 
+      fontSize: 14, 
+      fontWeight: 600, 
+      cursor: 'pointer',
+      transition: 'all 0.2s'
+    },
+    btnSec: { 
+      background: 'transparent', 
+      color: UNIGRAM_GREEN, 
+      border: `1px solid ${UNIGRAM_GREEN}`, 
+      borderRadius: 4, 
+      padding: '8px 16px', 
+      fontSize: 14, 
+      cursor: 'pointer',
+      transition: 'all 0.2s'
+    },
+    btnGhost: { 
+      background: 'transparent', 
+      color: COLORS.TEXT_MUTED, 
+      border: 'none', 
+      borderRadius: 4, 
+      padding: '8px 16px', 
+      fontSize: 14, 
+      cursor: 'pointer',
+      transition: 'color 0.12s'
+    },
   };
 
   function renderDiscordChannelRow(ch: Channel) {
@@ -593,31 +702,36 @@ export default function ServerPage() {
         onClick={() => setChannel(ch)}
         style={{
           width: 'calc(100% - 16px)',
-          margin: '1px 8px',
+          margin: '2px 8px',
           textAlign: 'left',
-          background: active ? DISCORD_CHANNEL_ACTIVE : 'transparent',
+          background: active ? `${UNIGRAM_GREEN}18` : 'transparent',
           border: 'none',
           borderRadius: 4,
-          color: active ? '#FFFFFF' : DISCORD_TEXT_MUTED,
-          padding: '5px 8px',
+          color: active ? UNIGRAM_GREEN : COLORS.TEXT_MUTED,
+          padding: '6px 8px',
           fontSize: 15,
           fontWeight: 500,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           gap: 6,
+          transition: 'all 0.12s ease',
         }}
         onMouseEnter={e => {
-          if (!active) e.currentTarget.style.background = DISCORD_CHANNEL_HOVER;
-          e.currentTarget.style.color = active ? '#fff' : DISCORD_TEXT_BRIGHT;
+          if (!active) {
+            e.currentTarget.style.background = `${COLORS.BG_TERTIARY}80`;
+            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+          }
         }}
         onMouseLeave={e => {
-          if (!active) e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = active ? '#fff' : DISCORD_TEXT_MUTED;
+          if (!active) {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = COLORS.TEXT_MUTED;
+          }
         }}
       >
-        <span style={{ fontSize: 20, opacity: 0.35, fontWeight: 300, lineHeight: 1 }}>#</span>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</span>
+        <span style={{ fontSize: 14, opacity: 0.5, fontWeight: 300, lineHeight: 1 }}>#</span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ch.name}</span>
       </button>
     );
   }
@@ -625,6 +739,7 @@ export default function ServerPage() {
   function renderCollapsibleCategory(catKey: string, headerLabel: string, channelList: Channel[]) {
     if (channelList.length === 0) return null;
     const expanded = collapsedCats[catKey] !== true;
+    
     return (
       <div key={catKey}>
         <button
@@ -633,37 +748,40 @@ export default function ServerPage() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 2,
+            gap: 4,
             width: 'calc(100% - 16px)',
-            margin: '12px 8px 2px',
-            padding: '4px 4px',
+            margin: '8px 8px 2px',
+            padding: '4px 6px',
             background: 'none',
             border: 'none',
             cursor: 'pointer',
             borderRadius: 4,
-            color: DISCORD_TEXT_MUTED,
-            fontSize: 12,
-            fontWeight: 700,
+            color: COLORS.TEXT_MUTED,
+            fontSize: 11,
+            fontWeight: 600,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
             textAlign: 'left',
+            transition: 'color 0.12s ease',
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.color = DISCORD_TEXT_BRIGHT;
+            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            e.currentTarget.style.background = `${COLORS.BG_TERTIARY}50`;
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.color = DISCORD_TEXT_MUTED;
+            e.currentTarget.style.color = COLORS.TEXT_MUTED;
+            e.currentTarget.style.background = 'none';
           }}
         >
           <span
             style={{
               display: 'inline-flex',
-              width: 16,
+              width: 14,
               justifyContent: 'center',
-              fontSize: 11,
+              fontSize: 10,
               transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
               transition: 'transform 0.12s ease',
-              opacity: 0.75,
+              opacity: 0.7,
             }}
           >
             ›
@@ -701,7 +819,7 @@ export default function ServerPage() {
       <div style={C.side}>
         <div style={C.sideTop}>
           <button onClick={() => router.push('/main/community')} style={C.backBtn}>
-            ← Servidores
+            ← Voltar
           </button>
           {canEditServer ? (
             <button
@@ -713,30 +831,50 @@ export default function ServerPage() {
                 alignItems: 'center',
                 gap: 6,
                 width: '100%',
-                padding: '4px 2px 8px',
-                background: 'none',
-                border: 'none',
+                padding: '6px 4px 10px',
+                background: 'rgba(165,230,0,0.08)',
+                border: `1px solid rgba(165,230,0,0.12)`,
                 cursor: 'pointer',
-                borderRadius: 6,
+                borderRadius: 8,
                 textAlign: 'left',
+                transition: 'all 0.12s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(165,230,0,0.15)';
+                e.currentTarget.style.borderColor = `rgba(165,230,0,0.25)`;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(165,230,0,0.08)';
+                e.currentTarget.style.borderColor = `rgba(165,230,0,0.12)`;
               }}
             >
-              <p style={{ ...C.srvName, flex: 1, color: '#F2F3F5', margin: 0 }}>{server.name}</p>
+              <span style={{ fontSize: 16 }}>📍</span>
+              <p style={{ ...C.srvName, flex: 1, color: UNIGRAM_GREEN, margin: 0 }}>{server.name}</p>
               <span style={{ color: DISCORD_TEXT_MUTED, fontSize: 10, opacity: 0.85 }} aria-hidden>
                 ▼
               </span>
             </button>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 2px 8px' }}>
-              <p style={{ ...C.srvName, flex: 1, color: '#F2F3F5', margin: 0 }}>{server.name}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 4px 10px' }}>
+              <span style={{ fontSize: 16 }}>📍</span>
+              <p style={{ ...C.srvName, flex: 1, color: UNIGRAM_GREEN, margin: 0 }}>{server.name}</p>
               <span style={{ color: DISCORD_TEXT_MUTED, fontSize: 10, opacity: 0.85 }} aria-hidden>
                 ▼
               </span>
         </div>
           )}
-          <p style={{ color: DISCORD_TEXT_MUTED, fontSize: 12, margin: '0 0 8px' }}>{server.membersCount} membros</p>
+          <p style={{ color: DISCORD_TEXT_MUTED, fontSize: 11, margin: '8px 0 10px', paddingLeft: 4 }}>👥 {server.membersCount} membros</p>
           {isMod && (
-            <button type="button" onClick={openAudit} style={{ ...C.btnGhost, fontSize: 11, padding: '4px 0', color: DISCORD_TEXT_MUTED }}>
+            <button type="button" onClick={openAudit} style={{ ...C.btnGhost, fontSize: 11, padding: '6px 8px', color: DISCORD_TEXT_MUTED, width: '100%', textAlign: 'left', transition: 'all 0.12s ease' }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.color = UNIGRAM_GREEN;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = DISCORD_TEXT_MUTED;
+              }}
+            >
               📋 Auditoria
             </button>
           )}
@@ -776,31 +914,32 @@ export default function ServerPage() {
           )}
         </div>
         {server.bots.length > 0 && (
-          <div style={{ borderTop: '1px solid rgba(0,0,0,0.25)', padding: '10px 12px' }}>
-            <p style={{ color: DISCORD_TEXT_MUTED, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Bots</p>
+          <div style={{ borderTop: '1px solid rgba(0,0,0,0.25)', padding: '12px 12px 10px', marginBottom: 10 }}>
+            <p style={{ color: UNIGRAM_GREEN, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, fontWeight: 700 }}>🤖 Bots</p>
             {server.bots.map(b => (
-              <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', flexWrap: 'wrap' }}>
+              <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', flexWrap: 'wrap', marginBottom: 6 }}>
                 <div
                   style={{
-                    width: 20,
-                    height: 20,
+                    width: 22,
+                    height: 22,
                     borderRadius: '50%',
-                    background: 'rgba(96,165,250,0.2)',
+                    background: 'linear-gradient(135deg, rgba(165,230,0,0.25), rgba(184,226,31,0.15))',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 8,
-                    color: '#60a5fa',
+                    fontSize: 10,
+                    color: UNIGRAM_GREEN,
                     fontWeight: 700,
                     flexShrink: 0,
+                    border: `1px solid rgba(165,230,0,0.2)`,
                   }}
                 >
                   B
                 </div>
-                <span style={{ color: '#9CA8B8', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.bot.name}</span>
-                <code style={{ color: '#5A6B7D', fontSize: 10 }}>{b.bot.prefix}</code>
+                <span style={{ color: '#9CA8B8', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{b.bot.name}</span>
+                <code style={{ color: '#5A6B7D', fontSize: 9, fontFamily: 'monospace' }}>{b.bot.prefix}</code>
                 {isAdmin && (
-                  <label style={{ fontSize: 9, color: '#5A6B7D', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                  <label style={{ fontSize: 8, color: '#5A6B7D', display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
                     <input type="checkbox" checked={b.isAdminBot} onChange={() => toggleAdminBot(b.bot.id, b.isAdminBot)} />
                     admin
                   </label>
@@ -809,19 +948,30 @@ export default function ServerPage() {
             ))}
           </div>
         )}
-        <div style={{ borderTop: '1px solid rgba(0,0,0,0.25)', padding: 8 }}>
+        <div style={{ borderTop: '1px solid rgba(0,0,0,0.25)', padding: '10px 8px', marginTop: 'auto' }}>
           <button
             onClick={() => setShowInv(true)}
             style={{
               width: '100%',
               textAlign: 'left',
-              background: 'none',
-              border: 'none',
-              color: DISCORD_TEXT_MUTED,
+              background: 'rgba(165,230,0,0.1)',
+              border: `1px solid rgba(165,230,0,0.15)`,
+              color: UNIGRAM_GREEN,
               fontSize: 12,
               cursor: 'pointer',
               padding: '8px 10px',
               borderRadius: 6,
+              fontWeight: 500,
+              transition: 'all 0.12s ease',
+              marginBottom: 8,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(165,230,0,0.18)';
+              e.currentTarget.style.borderColor = `rgba(165,230,0,0.3)`;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(165,230,0,0.1)';
+              e.currentTarget.style.borderColor = `rgba(165,230,0,0.15)`;
             }}
           >
             🔗 Convidar
@@ -832,13 +982,23 @@ export default function ServerPage() {
               style={{
                 width: '100%',
                 textAlign: 'left',
-                background: 'none',
-                border: 'none',
+                background: 'transparent',
+                border: `1px solid ${DISCORD_TEXT_MUTED}33`,
                 color: DISCORD_TEXT_MUTED,
                 fontSize: 12,
                 cursor: 'pointer',
                 padding: '8px 10px',
                 borderRadius: 6,
+                fontWeight: 500,
+                transition: 'all 0.12s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.color = UNIGRAM_GREEN;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = DISCORD_TEXT_MUTED;
               }}
             >
               🤖 Bots
@@ -902,19 +1062,38 @@ export default function ServerPage() {
 
               const bubbleBase: React.CSSProperties = {
                 maxWidth: 'min(78%, 520px)',
-                borderRadius: isOwn ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                padding: '10px 14px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.28)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: isOwn ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
+                padding: '6px 10px',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(255,255,255,0.08)',
                 background: isOwn ? TG_BUBBLE_OUT : TG_BUBBLE_IN,
                 position: 'relative',
               };
 
               const rx = aggregateReactions(msg.reactions, user?.id);
-              const quick = ['👍', '❤️', '😂'];
+              const quick = ['👍', '❤️', '😂', '🙏'];
 
               const bubbleInner = (
                 <>
+                  {!isOwn && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13, color: displayNameColor }}>{msg.authorName}</span>
+                      {isBot && (
+                        <span
+                          style={{
+                            fontSize: 9,
+                            background: 'rgba(96,165,250,0.15)',
+                            color: '#93C5FD',
+                            border: '1px solid rgba(96,165,250,0.35)',
+                            borderRadius: 4,
+                            padding: '2px 6px',
+                          }}
+                        >
+                          BOT
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {msg.replyTo && (
                     <div
                       style={{
@@ -923,94 +1102,107 @@ export default function ServerPage() {
                         marginBottom: 8,
                         opacity: 0.85,
                         fontSize: 12,
-                        color: '#9CA8B8',
+                        color: COLORS.TEXT_SECONDARY,
                       }}
                     >
                       <span style={{ color: UNIGRAM_GREEN, fontWeight: 600 }}>{msg.replyTo.authorName}</span>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.replyTo.content}</div>
-              </div>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11 }}>{msg.replyTo.content}</div>
+                    </div>
                   )}
-                  <MessageBody msg={msg} mt={mt} />
-                  {msg.editedAt && (
-                    <span style={{ fontSize: 10, color: '#5A6570', marginTop: 4, display: 'block' }}>(editado)</span>
-                  )}
-                  {msg.pinned && (
-                    <span style={{ fontSize: 10, color: UNIGRAM_GREEN, marginTop: 2, display: 'block' }}>📌 fixada</span>
-                  )}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8, alignItems: 'center' }}>
-                    {rx.map(r => (
-                      <button
-                        key={r.emoji}
-                        type="button"
-                        onClick={() => toggleReactionLocal(msg, r.emoji)}
-                        style={{
-                          background: r.me ? 'rgba(61,220,132,0.2)' : 'rgba(0,0,0,0.25)',
-                          border: `1px solid ${r.me ? UNIGRAM_GREEN : 'rgba(255,255,255,0.08)'}`,
-                          borderRadius: 12,
-                          padding: '2px 8px',
-                          fontSize: 12,
-                          color: '#E8EDF2',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {r.emoji} {r.count}
-                      </button>
-                    ))}
-                    {quick.map(em => (
-                      <button
-                        key={em}
-                        type="button"
-                        onClick={() => toggleReactionLocal(msg, em)}
-                        style={{
-                          background: 'transparent',
-                          border: '1px dashed rgba(255,255,255,0.12)',
-                          borderRadius: 10,
-                          padding: '2px 6px',
-                          fontSize: 11,
-                          cursor: 'pointer',
-                          opacity: 0.7,
-                        }}
-                      >
-                        {em}
-                      </button>
-                    ))}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1 }}>
+                      <MessageBody msg={msg} mt={mt} />
+                      {msg.editedAt && (
+                        <span style={{ fontSize: 10, color: COLORS.TEXT_MUTED, marginTop: 4, display: 'block', opacity: 0.7 }}>(editado)</span>
+                      )}
+                      {msg.pinned && (
+                        <span style={{ fontSize: 10, color: UNIGRAM_GREEN, marginTop: 2, display: 'block' }}>📌 fixada</span>
+                      )}
+                    </div>
+                    <span style={{ color: COLORS.TEXT_MUTED, fontSize: 11, whiteSpace: 'nowrap' }}>
+                      {new Date(msg.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                    {canDel && (
-                      <button
-                        type="button"
-                        onClick={() => deleteMsg(msg)}
-                        style={{ fontSize: 10, background: 'none', border: 'none', color: '#9CA8B8', cursor: 'pointer', padding: 0 }}
-                      >
-                        apagar
-                      </button>
-                    )}
-                    {isOwn && !isBot && (
-                      <button
-                        type="button"
-                        onClick={() => setEditing({ id: msg.id, text: msg.content })}
-                        style={{ fontSize: 10, background: 'none', border: 'none', color: UNIGRAM_GREEN, cursor: 'pointer', padding: 0 }}
-                      >
-                        editar
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setReplyTo(msg)}
-                      style={{ fontSize: 10, background: 'none', border: 'none', color: '#7A8B9C', cursor: 'pointer', padding: 0 }}
-                    >
-                      responder
-                    </button>
-                    {isMod && (
-                      <button
-                        type="button"
-                        onClick={() => pinMsg(msg)}
-                        style={{ fontSize: 10, background: 'none', border: 'none', color: '#7A8B9C', cursor: 'pointer', padding: 0 }}
-                      >
-                        fixar
-                      </button>
-                    )}
-                  </div>
+                  {(selectedMsgId === msg.id || rx.length > 0) && (
+                    <>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8, alignItems: 'center' }}>
+                        {rx.map(r => (
+                          <button
+                            key={r.emoji}
+                            type="button"
+                            onClick={() => toggleReactionLocal(msg, r.emoji)}
+                            style={{
+                              background: r.me ? 'rgba(61,220,132,0.2)' : 'rgba(0,0,0,0.25)',
+                              border: `1px solid ${r.me ? UNIGRAM_GREEN : 'rgba(255,255,255,0.08)'}`,
+                              borderRadius: 8,
+                              padding: '3px 8px',
+                              fontSize: 11,
+                              color: COLORS.TEXT_PRIMARY,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {r.emoji} {r.count}
+                          </button>
+                        ))}
+                        {selectedMsgId === msg.id && quick.filter(em => !rx.some(r => r.emoji === em)).map(em => (
+                          <button
+                            key={em}
+                            type="button"
+                            onClick={() => toggleReactionLocal(msg, em)}
+                            style={{
+                              background: 'transparent',
+                              border: '1px dashed rgba(255,255,255,0.12)',
+                              borderRadius: 6,
+                              padding: '2px 6px',
+                              fontSize: 11,
+                              cursor: 'pointer',
+                              opacity: 0.6,
+                            }}
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                      {selectedMsgId === msg.id && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6, fontSize: 11 }}>
+                          {canDel && (
+                            <button
+                              type="button"
+                              onClick={() => deleteMsg(msg)}
+                              style={{ background: 'none', border: 'none', color: COLORS.TEXT_MUTED, cursor: 'pointer', padding: 0 }}
+                            >
+                              apagar
+                            </button>
+                          )}
+                          {isOwn && !isBot && (
+                            <button
+                              type="button"
+                              onClick={() => setEditing({ id: msg.id, text: msg.content })}
+                              style={{ background: 'none', border: 'none', color: UNIGRAM_GREEN, cursor: 'pointer', padding: 0 }}
+                            >
+                              editar
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setReplyTo(msg)}
+                            style={{ background: 'none', border: 'none', color: COLORS.TEXT_MUTED, cursor: 'pointer', padding: 0 }}
+                          >
+                            responder
+                          </button>
+                          {isMod && (
+                            <button
+                              type="button"
+                              onClick={() => pinMsg(msg)}
+                              style={{ background: 'none', border: 'none', color: COLORS.TEXT_MUTED, cursor: 'pointer', padding: 0 }}
+                            >
+                              fixar
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </>
               );
 
@@ -1026,7 +1218,14 @@ export default function ServerPage() {
                       paddingRight: isOwn ? 48 : 0,
                     }}
                   >
-                    <div style={bubbleBase}>{bubbleInner}</div>
+                    <div
+                      style={bubbleBase}
+                      onClick={() => setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {bubbleInner}
+                    </div>
                   </div>
                 );
               }
@@ -1083,28 +1282,15 @@ export default function ServerPage() {
                     </div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start', maxWidth: 'calc(100% - 48px)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexDirection: isOwn ? 'row-reverse' : 'row' }}>
-                      <span style={{ fontWeight: 700, fontSize: 13, color: displayNameColor }}>{isOwn ? `${msg.authorName} (tu)` : msg.authorName}</span>
-                      {isBot && (
-                        <span
-                          style={{
-                            fontSize: 9,
-                            background: 'rgba(96,165,250,0.15)',
-                            color: '#93C5FD',
-                            border: '1px solid rgba(96,165,250,0.35)',
-                            borderRadius: 6,
-                            padding: '2px 6px',
-                          }}
-                        >
-                          BOT
-                        </span>
-                      )}
-                      <span style={{ color: '#4A5A6A', fontSize: 11 }}>
-                        {new Date(msg.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                    <div
+                      style={bubbleBase}
+                      onClick={() => setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {bubbleInner}
+                    </div>
                   </div>
-                    <div style={bubbleBase}>{bubbleInner}</div>
-                </div>
               </div>
             );
             })
@@ -1210,19 +1396,24 @@ export default function ServerPage() {
             letterSpacing: '0.06em',
             padding: '14px 12px 10px',
             borderBottom: '1px solid rgba(0,0,0,0.2)',
+            marginBottom: 0,
           }}
         >
-          Membros — {server.members.length}
+          👥 Membros — {server.members.length}
         </p>
         {memberRoleSections.map(section => (
-          <div key={section.title} style={{ marginBottom: 10 }}>
+          <div key={section.title} style={{ marginBottom: 12 }}>
             <div
               style={{
-                padding: '10px 12px 6px',
-                color: DISCORD_TEXT_MUTED,
-                fontSize: 11,
+                padding: '12px 12px 8px',
+                color: section.accent ?? DISCORD_TEXT_MUTED,
+                fontSize: 10,
                 fontWeight: 700,
-                letterSpacing: '0.04em',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                borderTop: '1px solid rgba(0,0,0,0.15)',
+                background: `${section.accent ?? DISCORD_TEXT_MUTED}08`,
+                marginTop: 4,
               }}
             >
               {section.title}
@@ -1232,7 +1423,7 @@ export default function ServerPage() {
               const typing = typingIds[m.userId];
               const showAvatar = m.profile?.avatarUrl;
           return (
-                <div key={m.userId} style={{ padding: '4px 10px 6px 14px' }}>
+                <div key={m.userId} style={{ padding: '6px 10px 8px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                     <button
                       type="button"
@@ -1347,8 +1538,8 @@ export default function ServerPage() {
               const isOwner = menuMember.userId === server.ownerId;
               return (
                 <>
-                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 18 }}>
-                    <div style={{ width: 56, height: 56, flexShrink: 0, position: 'relative' }}>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: 18 }}>
+                    <div style={{ width: 80, height: 80, flexShrink: 0, position: 'relative' }}>
                       {av ? (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1356,8 +1547,8 @@ export default function ServerPage() {
                             src={av}
                             alt=""
                             style={{
-                              width: 56,
-                              height: 56,
+                              width: 80,
+                              height: 80,
                               borderRadius: '50%',
                               objectFit: 'cover',
                               border: `3px solid ${accent}55`,
@@ -1367,15 +1558,15 @@ export default function ServerPage() {
                       ) : (
                         <div
                           style={{
-                            width: 56,
-                            height: 56,
+                            width: 80,
+                            height: 80,
                             borderRadius: '50%',
                             background: `${accent}28`,
                             border: `3px solid ${accent}66`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: 22,
+                            fontSize: 32,
                             fontWeight: 700,
                             color: accent,
                           }}
@@ -1385,20 +1576,34 @@ export default function ServerPage() {
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h2 style={{ margin: 0, color: '#F2F5F8', fontSize: 17, fontWeight: 700, lineHeight: 1.2 }}>{mname(menuMember)}</h2>
-                      <p style={{ color: DISCORD_TEXT_MUTED, fontSize: 13, margin: '6px 0 0', wordBreak: 'break-all' }}>
+                      <h2 style={{ margin: 0, color: '#F2F5F8', fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{mname(menuMember)}</h2>
+                      <p style={{ color: DISCORD_TEXT_MUTED, fontSize: 13, margin: '4px 0 0', wordBreak: 'break-all' }}>
                         @{menuMember.profile?.username ?? menuMember.userId.slice(0, 8)}
                       </p>
-                      {isOwn && (
-                        <span style={{ fontSize: 12, color: UNIGRAM_GREEN, marginTop: 6, display: 'inline-block' }}>Este és tu</span>
+                      {menuMember.profile?.bio && (
+                        <p style={{ color: COLORS.TEXT_SECONDARY, fontSize: 12, margin: '8px 0 0', lineHeight: 1.4, maxHeight: '60px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {menuMember.profile.bio}
+                        </p>
                       )}
-                      {isOwner && (
-                        <span style={{ fontSize: 12, color: ALPHA_GOLD, marginTop: 6, display: 'block' }}>Dono do servidor</span>
-                      )}
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10, fontSize: 11, flexWrap: 'wrap' }}>
+                        {isOwner && (
+                          <span style={{ background: 'rgba(240,177,50,0.2)', color: '#F0B132', padding: '2px 8px', borderRadius: 6 }}>Dono</span>
+                        )}
+                        {menuMember.communityRole && (
+                          <span style={{ background: `rgba(${parseInt(menuMember.communityRole.color?.slice(1, 3) ?? 'FF', 16)}, ${parseInt(menuMember.communityRole.color?.slice(3, 5) ?? 'FF', 16)}, ${parseInt(menuMember.communityRole.color?.slice(5, 7) ?? 'FF', 16)}, 0.15)`, color: menuMember.communityRole.color ?? COLORS.TEXT_SECONDARY, padding: '2px 8px', borderRadius: 6 }}>
+                            {menuMember.communityRole.name}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   {menuMember.mutedUntil && new Date(menuMember.mutedUntil) > new Date() && (
                     <p style={{ fontSize: 12, color: '#ED4245', marginBottom: 14 }}>🔇 Silenciado neste servidor</p>
+                  )}
+                  {isOwn && (
+                    <button type="button" onClick={() => { setMemberMenuUserId(null); openEditProfile(); }} style={{ ...C.btnPri, width: '100%', marginBottom: 14 }}>
+                      Editar perfil
+                    </button>
                   )}
                   {isAdmin && !isOwner && (
                     <div style={{ marginBottom: 16 }}>
@@ -1735,6 +1940,40 @@ export default function ServerPage() {
               </button>
               <button type="button" onClick={saveEdit} style={C.btnPri}>
                 Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditProfile && (
+        <div style={C.overlay}>
+          <div onClick={() => setShowEditProfile(false)} style={C.obg} />
+          <div style={C.modal}>
+            <h2 style={{ fontSize: 18, color: '#F2F5F8', margin: '0 0 16px' }}>Editar perfil</h2>
+            <label style={{ color: '#6B7785', fontSize: 11, display: 'block', marginBottom: 6 }}>Nome de utilizador</label>
+            <input
+              style={{ width: '100%', boxSizing: 'border-box', marginBottom: 12, background: '#0B121A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#E8EDF2', fontSize: 14 }}
+              value={editProfileName}
+              onChange={e => setEditProfileName(e.target.value)}
+              maxLength={32}
+              placeholder="Seu nome"
+            />
+            <label style={{ color: '#6B7785', fontSize: 11, display: 'block', marginBottom: 6 }}>Bio/Descrição</label>
+            <textarea
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: 72, background: '#0B121A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px', color: '#E8EDF2', fontSize: 13, resize: 'vertical', marginBottom: 12 }}
+              value={editProfileBio}
+              onChange={e => setEditProfileBio(e.target.value)}
+              maxLength={256}
+              placeholder="Conte-nos sobre você..."
+            />
+            <p style={{ fontSize: 11, color: '#7A8B9C', marginTop: -8, marginBottom: 16 }}>{editProfileBio.length} / 256 caracteres</p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setShowEditProfile(false)} style={C.btnGhost}>
+                Cancelar
+              </button>
+              <button type="button" onClick={saveProfile} disabled={savingProfile || !editProfileName.trim()} style={{ ...C.btnPri, opacity: !editProfileName.trim() || savingProfile ? 0.5 : 1 }}>
+                {savingProfile ? '…' : 'Guardar'}
               </button>
             </div>
           </div>

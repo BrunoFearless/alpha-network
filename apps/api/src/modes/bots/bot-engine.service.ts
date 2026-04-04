@@ -1,13 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BotTriggerHit } from './bot-trigger.types';
 import { BuilderFlowV1, parseBuilderFlow } from './bot-engine.types';
 import { BotEngineBudgetService } from './bot-engine-budget.service';
 import { BotExecutionLogService } from './bot-execution-log.service';
+import { PlatformEvent } from '../../platform-events/platform-events.types';
+
+export type BotActionResult = {
+  kind: string;
+  executed: boolean;
+  message?: string;
+};
 
 @Injectable()
 export class BotEngineService {
+  private readonly log = new Logger(BotEngineService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
@@ -48,7 +57,7 @@ export class BotEngineService {
       const flow = parseBuilderFlow(row.bot.builderFlow);
       if (!flow?.nodes?.length) continue;
 
-      const hit = this.runMessageCreateChain(flow, {
+      const hit = await this.runMessageCreateChain(flow, {
         channelId,
         serverId,
         content: text,
@@ -77,6 +86,207 @@ export class BotEngineService {
     return null;
   }
 
+  /**
+   * FASE 1.5 — Processa eventos via Event Bus (MESSAGE_CREATE, MEMBER_JOIN, etc.)
+   */
+  async processEvent(event: PlatformEvent): Promise<void> {
+    // Apenas processar eventos de usuário (ignorar eventos de bots para evitar loops)
+    if (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE') {
+      if ((event as any).authorType === 'bot') {
+        return;
+      }
+    }
+
+    // Validar budget apenas para eventos com channelId
+    if ((event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE') && (event as any).channelId) {
+      if (!this.budget.allowChannel((event as any).channelId)) {
+        return;
+      }
+    }
+
+    const serverBots = await this.prisma.serverBot.findMany({
+      where: { serverId: event.serverId },
+      include: { bot: true },
+    });
+
+    for (const row of serverBots) {
+      const flow = parseBuilderFlow(row.bot.builderFlow);
+      if (!flow?.nodes?.length) continue;
+
+      try {
+        await this.executeFlow(flow, event, row.bot.id, row.bot.name);
+      } catch (e) {
+        this.log.warn(`Bot execution error (${row.bot.id}):`, (e as Error)?.message);
+        const channelId = ('channelId' in event) ? (event as any).channelId : 'N/A';
+        await this.execLog.log({
+          botId: row.bot.id,
+          serverId: event.serverId,
+          channelId: channelId as string,
+          kind: 'execution_error',
+          ok: false,
+          detail: { error: (e as Error)?.message },
+        });
+      }
+    }
+  }
+
+  private async executeFlow(
+    flow: BuilderFlowV1,
+    event: PlatformEvent,
+    botId: string,
+    botName: string,
+  ): Promise<void> {
+    const triggerIdx = flow.nodes.findIndex(n => n.type === 'trigger' && this.matchesTrigger(n.event, event.type));
+    if (triggerIdx === -1) return;
+
+    let conditionsPassed = true;
+    let finalAction: any = null;
+
+    for (let i = triggerIdx + 1; i < flow.nodes.length; i++) {
+      const node = flow.nodes[i];
+
+      if (node.type === 'trigger') break; // Next trigger detected
+
+      if (node.type === 'condition') {
+        if (!(await this.evaluateCondition(node, event))) {
+          conditionsPassed = false;
+          break;
+        }
+      } else if (node.type === 'action') {
+        if (conditionsPassed) {
+          finalAction = node;
+          break;
+        }
+      }
+    }
+
+    if (conditionsPassed && finalAction) {
+      await this.executeAction(finalAction, event, botId, botName);
+    }
+  }
+
+  private matchesTrigger(triggerEvent: string, platformEventType: string): boolean {
+    return triggerEvent === platformEventType;
+  }
+
+  private async evaluateCondition(node: any, event: PlatformEvent): Promise<boolean> {
+    if (node.kind === 'contains') {
+      if (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE') {
+        return (event as any).content?.toLowerCase()?.includes(node.value?.toLowerCase() ?? '') ?? false;
+      }
+      return true;
+    }
+
+    if (node.kind === 'channel') {
+      const channelId = (event as any).channelId;
+      return channelId === node.channelId;
+    }
+
+    if (node.kind === 'admin') {
+      const userId = (event as any).userId;
+      if (!userId) return false;
+      const member = await this.prisma.serverMember.findUnique({
+        where: { serverId_userId: { serverId: event.serverId, userId } },
+      });
+      const isAdmin = member?.role === 'admin' || member?.role === 'owner';
+      return node.requireAdmin ? isAdmin : !isAdmin;
+    }
+
+    if (node.kind === 'role') {
+      const userId = (event as any).userId;
+      if (!userId) return false;
+      const member = await this.prisma.serverMember.findUnique({
+        where: { serverId_userId: { serverId: event.serverId, userId } },
+        include: { communityRole: true },
+      });
+      return member?.communityRoleId === node.roleId;
+    }
+
+    if (node.kind === 'userId') {
+      const userId = (event as any).userId;
+      return userId === node.userId;
+    }
+
+    return true;
+  }
+
+  private async executeAction(node: any, event: PlatformEvent, botId: string, botName: string): Promise<void> {
+    const { kind } = node;
+    const channelId = ('channelId' in event) ? (event as any).channelId : 'N/A';
+
+    if (kind === 'reply' || kind === 'sendMessage') {
+      // Será enviado como mensagem de bot na resposta
+      return;
+    }
+
+    if (kind === 'deleteMessage' && (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE')) {
+      const messageId = (event as any).messageId;
+      if (!messageId) return;
+      await this.prisma.message.update({
+        where: { id: messageId },
+        data: { deletedAt: new Date() },
+      });
+      await this.execLog.log({
+        botId,
+        serverId: event.serverId,
+        channelId,
+        kind: 'action_deleteMessage',
+        ok: true,
+      });
+      return;
+    }
+
+    if (kind === 'assignRole' && (event.type === 'MEMBER_JOIN' || event.type === 'MESSAGE_CREATE')) {
+      const userId = (event as any).userId;
+      if (!userId) return;
+      const member = await this.prisma.serverMember.findUnique({
+        where: { serverId_userId: { serverId: event.serverId, userId } },
+      });
+      if (member) {
+        await this.prisma.serverMember.update({
+          where: { id: member.id },
+          data: { communityRoleId: node.roleId },
+        });
+        await this.execLog.log({
+          botId,
+          serverId: event.serverId,
+          channelId,
+          kind: 'action_assignRole',
+          ok: true,
+        });
+      }
+      return;
+    }
+
+    if (kind === 'mute' && (event.type === 'MESSAGE_CREATE' || event.type === 'MESSAGE_UPDATE')) {
+      const userId = (event as any).userId;
+      if (!userId) return;
+      const member = await this.prisma.serverMember.findUnique({
+        where: { serverId_userId: { serverId: event.serverId, userId } },
+      });
+      if (member) {
+        await this.prisma.serverMember.update({
+          where: { id: member.id },
+          data: { mutedUntil: new Date(Date.now() + node.durationMs) },
+        });
+        await this.execLog.log({
+          botId,
+          serverId: event.serverId,
+          channelId,
+          kind: 'action_mute',
+          ok: true,
+          detail: { durationMs: node.durationMs },
+        });
+      }
+      return;
+    }
+
+    if (kind === 'wait') {
+      // Implementar em Fase 5.5 com fila
+      return;
+    }
+  }
+
   /** FASE 8 — contexto leve: últimas mensagens do canal (opcional via env). */
   private async loadContextPreview(channelId: string): Promise<string[] | undefined> {
     const n = Number(this.config.get('BOT_ENGINE_CONTEXT_MESSAGES') ?? 0);
@@ -90,7 +300,8 @@ export class BotEngineService {
     return msgs.reverse().map(m => `${m.authorType}:${m.content.slice(0, 120)}`);
   }
 
-  private runMessageCreateChain(
+
+  private async runMessageCreateChain(
     flow: BuilderFlowV1,
     ctx: {
       channelId: string;
@@ -100,7 +311,7 @@ export class BotEngineService {
       botId: string;
       botName: string;
     },
-  ): BotTriggerHit | null {
+  ): Promise<BotTriggerHit | null> {
     const nodes = flow.nodes;
     const start = nodes.findIndex(
       n => n.type === 'trigger' && n.event === 'MESSAGE_CREATE',
@@ -118,7 +329,7 @@ export class BotEngineService {
           return null;
         }
       } else if (n.type === 'action') {
-        if (n.kind === 'reply') {
+        if (n.kind === 'reply' || n.kind === 'sendMessage') {
           return {
             botId: ctx.botId,
             botName: ctx.botName,

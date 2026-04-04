@@ -31,6 +31,7 @@ export class AddCommandDto {
 export class UpdateBotDto {
   @IsOptional() @IsString() @MinLength(2) @MaxLength(32) name?: string;
   @IsOptional() @IsString() @MaxLength(200) description?: string | null;
+  @IsOptional() @IsString() @Matches(/^#[0-9A-Fa-f]{6}$/, { message: 'Cor hex inválida (ex: #C9A84C)' }) customColor?: string;
   @IsOptional() @IsString() @MaxLength(5) prefix?: string;
   /** Fluxo do builder (`{ version: 1, nodes: [...] }`) ou null para limpar. */
   @IsOptional()
