@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   UseGuards,
   Request,
   HttpCode,
@@ -61,7 +60,7 @@ export class LazerController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   removePost(@Param("id") id: string, @Request() req: any) {
-    return this.lazerService.deletePost(id, req.user.id);
+    return this.lazerService.softDeletePost(id, req.user.id);
   }
 
   @Post("/posts/reactions")
@@ -93,8 +92,8 @@ export class LazerController {
 
   @Post("/posts/:id/comments/soft-delete")
   @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.NO_CONTENT)
   softDelete(@Param("id") id: string, @Request() req: any) {
-    return this.lazerService.deleteComment(id, req.user.id);
+    return this.lazerService.softDeleteComment(id, req.user.id);
   }
 }
