@@ -63,7 +63,7 @@ export class LazerService {
     });
   }
 
-  async deletePost(id: string, userId: string) {
+  async softDeletePost(id: string, userId: string) {
     const exist = await this.prisma.lazerPost.findUnique({where:{id:id}})
     if (!exist) throw new Error("Post not found");
     if (exist.authorId!==userId) throw new Error("you cannot delete this post");
@@ -158,7 +158,7 @@ export class LazerService {
     });
   }
 
-  async deleteComment(id: string, userId: string) {
+  async softDeleteComment(id: string, userId: string) {
     const exist = await this.prisma.lazerComment.findUnique({where:{id:id}})
     if (!exist) throw new Error("commet not found, cannot delete")
     if (exist.authorId!==userId) throw new Error("you cannot delete this comment");
