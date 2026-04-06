@@ -9,6 +9,12 @@ export const PLATFORM_EVENT_TYPES = [
   'MEMBER_JOIN',
   'MEMBER_LEAVE',
   'CHANNEL_CREATE',
+  'CHANNEL_UPDATE',
+  'CHANNEL_DELETE',
+  'CHANNEL_PERMISSION_UPDATE',
+  'CATEGORY_UPDATE',
+  'CATEGORY_DELETE',
+  'CHANNELS_REORDER',
 ] as const;
 
 export type PlatformEventType = (typeof PLATFORM_EVENT_TYPES)[number];
@@ -47,6 +53,40 @@ export type PlatformEvent =
       serverId: string;
       channelId: string;
       name: string;
+    }
+  | {
+      type: 'CHANNEL_UPDATE';
+      serverId: string;
+      channelId: string;
+      channel: any;
+    }
+  | {
+      type: 'CHANNEL_DELETE';
+      serverId: string;
+      channelId: string;
+    }
+  | {
+      type: 'CHANNEL_PERMISSION_UPDATE';
+      serverId: string;
+      channelId: string;
+      isPrivate: boolean;
+      allowedRoles: any[];
+    }
+  | {
+      type: 'CATEGORY_UPDATE';
+      serverId: string;
+      categoryId: string;
+      category: any;
+    }
+  | {
+      type: 'CATEGORY_DELETE';
+      serverId: string;
+      categoryId: string;
+    }
+  | {
+      type: 'CHANNELS_REORDER';
+      serverId: string;
+      positions: { id: string; position: number }[];
     };
 
 export type PlatformEventHandler<T extends PlatformEventType = PlatformEventType> = (

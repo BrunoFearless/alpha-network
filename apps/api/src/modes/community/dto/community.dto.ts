@@ -21,6 +21,44 @@ export class CreateChannelDto {
   @IsOptional()
   @IsUUID()
   categoryId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  icon?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPrivate?: boolean;
+}
+
+export class UpdateChannelDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(32)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  icon?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPrivate?: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string | null;
+}
+
+export class SetChannelPermissionsDto {
+  @IsBoolean()
+  isPrivate: boolean;
+
+  @IsOptional()
+  allowedRoles?: string[] | null; // Array of roleIds
 }
 
 export class CreateCategoryDto {
@@ -34,6 +72,30 @@ export class CreateCategoryDto {
   @Min(0)
   @Max(999)
   position?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  icon?: string;
+}
+
+export class UpdateCategoryDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  icon?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(999)
+  position?: number;
 }
 
 export class EditMessageDto {
@@ -41,6 +103,9 @@ export class EditMessageDto {
   @MinLength(1)
   @MaxLength(4000)
   content: string;
+
+  @IsOptional()
+  embedJson?: any;
 }
 
 export class ToggleReactionDto {
@@ -133,4 +198,76 @@ export class AssignMemberRoleDto {
 export class UpdateServerBotDto {
   @IsBoolean()
   isAdminBot: boolean;
+}
+
+export class CreateCommunityEventDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  title: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  location?: string;
+
+  @IsString()
+  locationType: string;
+
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @IsString()
+  startDate: string;
+
+  @IsString()
+  endDate: string;
+
+  @IsOptional()
+  @IsString()
+  frequency?: string;
+}
+
+export class UpdateCommunityEventDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  location?: string;
+
+  @IsOptional()
+  @IsString()
+  locationType?: string;
+
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsString()
+  endDate?: string;
+
+  @IsOptional()
+  @IsString()
+  frequency?: string;
 }

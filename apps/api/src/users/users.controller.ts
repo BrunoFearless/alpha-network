@@ -1,11 +1,14 @@
 import {
-  Controller, Get, Patch, Delete,
+  Controller, Get, Patch, Delete, Post,
   Body, Param, UseGuards, HttpCode, HttpStatus,
+  UseInterceptors, UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UpdateModesDto } from './dto/update-modes.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('users')
 export class UsersController {
@@ -37,15 +40,25 @@ export class UsersController {
   }
 
   // ── Editar perfil ──────────────────────────────────────────────────
-  // TODO (Adolfo v2): implementar PATCH /users/me com bio, displayName, avatarUrl
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   async updateProfile(
     @CurrentUser() user: { id: string },
-    @Body() body: any,
+    @Body() dto: UpdateProfileDto,
   ) {
-    // Placeholder — Adolfo implementa em v2
-    return { success: true, data: { message: 'Em implementação.' } };
+    const updated = await this.usersService.updateProfile(user.id, dto);
+    return { success: true, data: updated };
+  }
+
+  // ── Upload de foto de perfil ────────────────────────────────────────
+  @Post('me/avatar')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  async uploadAvatar(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return { success: true, data: await this.usersService.saveProfileAvatar(user.id, file) };
   }
 
   // ── Apagar conta ───────────────────────────────────────────────────
