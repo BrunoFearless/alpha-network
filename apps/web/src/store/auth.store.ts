@@ -21,6 +21,7 @@ interface AuthStore {
   isLoading: boolean;
 
   setUser: (user: AuthUser, token: string) => void;
+  updateUserProfile: (profile: Partial<UserProfile>) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, username: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -39,6 +40,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   // o Zustand guarda o estado em memória e getState() devolve o valor actual.
   setUser: (user, accessToken) => {
     set({ user, accessToken, isAuthenticated: true });
+  },
+
+  updateUserProfile: (profileUpdates) => {
+    set(state => {
+      if (!state.user || !state.user.profile) return state;
+      return {
+        user: {
+          ...state.user,
+          profile: {
+            ...state.user.profile,
+            ...profileUpdates,
+          },
+        },
+      };
+    });
   },
 
   login: async (email, password) => {
