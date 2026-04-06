@@ -16,7 +16,7 @@ interface NavbarProps {
 
 export function Navbar({ user, onLogout }: NavbarProps) {
   return (
-    <nav className="h-14 bg-alpha-surface border-b border-alpha-border flex items-center px-6 gap-4 sticky top-0 z-40">
+    <nav className="h-14 bg-black flex items-center px-6 gap-4 sticky top-0 z-40">
       {/* Logo */}
       <Link href="/main" className="font-display text-gold text-lg tracking-widest hover:text-gold-light transition-colors">
         ALPHA
