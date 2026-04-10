@@ -21,6 +21,19 @@ const sizes = {
 
 export function Avatar({ src, name, size = 'md', className }: AvatarProps) {
   if (src) {
+    const isVideo = src.match(/\.(mp4|webm)$/i);
+    if (isVideo) {
+      return (
+        <video
+          src={src}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className={clsx('rounded-full object-cover flex-shrink-0', sizes[size], className)}
+        />
+      );
+    }
     return (
       <img
         src={src}

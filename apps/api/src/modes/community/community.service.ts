@@ -5,6 +5,7 @@ import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventBusService } from '../../platform-events/event-bus.service';
+import { MediaService } from '../../common/services/media.service';
 import {
   CreateServerDto,
   CreateChannelDto,
@@ -53,6 +54,7 @@ export class CommunityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
+    private readonly mediaService: MediaService,
   ) {}
 
   private async logAudit(serverId: string, actorId: string, action: string, targetId?: string | null, metadata?: Record<string, unknown>) {
@@ -321,16 +323,13 @@ export class CommunityService {
 
   async saveCommunityUpload(serverId: string, userId: string, file: Express.Multer.File) {
     await this.requireMember(serverId, userId);
-    if (!file?.buffer?.length) throw new BadRequestException('Ficheiro em falta.');
-    const max = 5 * 1024 * 1024;
-    if (file.size > max) throw new BadRequestException('Ficheiro demasiado grande (máx. 5MB).');
-    const ext = (file.originalname.match(/\.[a-zA-Z0-9]{1,8}$/)?.[0] ?? '').slice(0, 8);
-    const name = `${randomUUID()}${ext || ''}`;
-    const dir = join(process.cwd(), 'uploads', 'community');
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, name), file.buffer);
-    const origin = process.env.API_PUBLIC_ORIGIN ?? `http://localhost:${process.env.API_PORT ?? 3001}`;
-    const url = `${origin.replace(/\/$/, '')}/uploads/community/${name}`;
+    
+    const url = await this.mediaService.saveValidatedMedia(file, 'community', {
+      maxFileSizeMb: 5,
+      allowedMimes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
+      maxVideoDurationSecs: 5,
+    });
+    
     return { url };
   }
 

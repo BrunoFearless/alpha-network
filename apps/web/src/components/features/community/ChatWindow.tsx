@@ -7,30 +7,30 @@ import { useCommunitySocket } from '@/lib/useSocket';
 import { useAuthStore } from '@/store/auth.store';
 
 interface Message {
-  id:              string;
-  channelId:       string;
-  authorId:        string;
-  authorName?:     string;
+  id: string;
+  channelId: string;
+  authorId: string;
+  authorName?: string;
   authorAvatarUrl?: string | null;
-  authorType:      'user' | 'bot';
-  content:         string;
-  createdAt:       string;
+  authorType: 'user' | 'bot';
+  content: string;
+  createdAt: string;
 }
 
 interface Props {
-  channelId:   string;
+  channelId: string;
   channelName: string;
-  serverId:    string;
+  serverId: string;
 }
 
 export function ChatWindow({ channelId, channelName }: Props) {
   const { socket, connected } = useCommunitySocket();
-  const user                  = useAuthStore(s => s.user);
+  const user = useAuthStore(s => s.user);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [text, setText]         = useState('');
-  const [loading, setLoading]   = useState(true);
-  const bottomRef               = useRef<HTMLDivElement>(null);
-  const joinedChannel           = useRef<string | null>(null);
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const joinedChannel = useRef<string | null>(null);
 
   // Carregar histórico ao mudar de canal
   useEffect(() => {
@@ -118,9 +118,9 @@ export function ChatWindow({ channelId, channelName }: Props) {
 
         {messages.map((msg, i) => {
           // Agrupar mensagens consecutivas do mesmo autor
-          const prev       = messages[i - 1];
-          const isGrouped  = prev && prev.authorId === msg.authorId && prev.authorType === msg.authorType;
-          const isOwn      = msg.authorId === user?.id && msg.authorType === 'user';
+          const prev = messages[i - 1];
+          const isGrouped = prev && prev.authorId === msg.authorId && prev.authorType === msg.authorType;
+          const isOwn = msg.authorId === user?.id && msg.authorType === 'user';
 
           return (
             <MessageRow
@@ -136,9 +136,8 @@ export function ChatWindow({ channelId, channelName }: Props) {
 
       {/* Input */}
       <div className="p-4 border-t border-alpha-border flex-shrink-0">
-        <div className={`flex gap-2 bg-alpha-card border rounded-xl px-4 py-2.5 transition-colors ${
-          connected ? 'border-alpha-border focus-within:border-gold/40' : 'border-red-500/20 opacity-70'
-        }`}>
+        <div className={`flex gap-2 bg-alpha-card border rounded-xl px-4 py-2.5 transition-colors ${connected ? 'border-alpha-border focus-within:border-gold/40' : 'border-red-500/20 opacity-70'
+          }`}>
           <input
             value={text}
             onChange={e => setText(e.target.value)}
@@ -171,12 +170,12 @@ function MessageRow({
   isOwn,
   grouped,
 }: {
-  msg:     Message;
-  isOwn:   boolean;
+  msg: Message;
+  isOwn: boolean;
   grouped: boolean;
 }) {
-  const isBot    = msg.authorType === 'bot';
-  const name     = msg.authorName ?? (isBot ? 'Bot' : `user_${msg.authorId.slice(0, 6)}`);
+  const isBot = msg.authorType === 'bot';
+  const name = msg.authorName ?? (isBot ? 'Bot' : `user_${msg.authorId.slice(0, 6)}`);
   const avatarUrl = msg.authorAvatarUrl ?? null;
 
   if (grouped) {
@@ -207,9 +206,8 @@ function MessageRow({
       {/* Conteúdo */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <span className={`text-sm font-semibold leading-none ${
-            isBot ? 'text-blue-400' : isOwn ? 'text-gold' : 'text-text-primary'
-          }`}>
+          <span className={`text-sm font-semibold leading-none ${isBot ? 'text-blue-400' : isOwn ? 'text-gold' : 'text-text-primary'
+            }`}>
             {isOwn ? `${name} (tu)` : name}
           </span>
           {isBot && <Badge variant="blue">Bot</Badge>}

@@ -1,6 +1,7 @@
 # Dependências
 node_modules
-uploads//
+# Uploads (local files)
+**/uploads/
 .pnp
 .pnp.js
 

@@ -38,6 +38,11 @@ function getServerColor(name: string) {
   return colors[h];
 }
 
+function isVideoUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /\.(mp4|webm|ogg)$/i.test(url) || url.startsWith('data:video/');
+}
+
 // ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
 const ACCENT = '#A5E600';
 const ACCENT_DIM = 'rgba(165,230,0,0.12)';
@@ -83,11 +88,12 @@ function ServerCard({ server, onClick }: { server: Server; onClick: () => void }
       {/* Banner */}
       <div style={{
         height: 88,
-        background: server.bannerUrl ? `url(${server.bannerUrl}) center/cover no-repeat` : `linear-gradient(135deg, ${color}cc 0%, ${color}44 50%, transparent 100%)`,
+        background: server.bannerUrl && !isVideoUrl(server.bannerUrl) ? `url(${server.bannerUrl}) center/cover no-repeat` : `linear-gradient(135deg, ${color}cc 0%, ${color}44 50%, transparent 100%)`,
         backgroundColor: color,
         position: 'relative',
         overflow: 'hidden',
       }}>
+        {server.bannerUrl && isVideoUrl(server.bannerUrl) && <video src={server.bannerUrl} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
         {/* Shimmer overlay on hover */}
         <div style={{
           position: 'absolute', inset: 0,
@@ -112,26 +118,27 @@ function ServerCard({ server, onClick }: { server: Server; onClick: () => void }
             👑 Admin
           </div>
         )}
+      </div>
 
-        {/* Server icon */}
-        <div style={{
-          position: 'absolute',
-          bottom: -22, left: 18,
-          width: 48, height: 48,
-          borderRadius: 12,
-          overflow: 'hidden',
-          border: `3px solid ${BG_CARD}`,
-          background: color,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 18, fontWeight: 800, color: '#fff',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          transition: 'transform 0.25s cubic-bezier(.4,0,.2,1)',
-          transform: hovered ? 'scale(1.08)' : 'scale(1)',
-        }}>
-          {server.imageUrl
-            ? <img src={server.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span>{getInitials(server.name)}</span>}
-        </div>
+      {/* Server icon */}
+      <div style={{
+        position: 'absolute',
+        top: 66, left: 18,
+        width: 48, height: 48,
+        borderRadius: 12,
+        overflow: 'hidden',
+        border: `3px solid ${BG_CARD}`,
+        background: color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18, fontWeight: 800, color: '#fff',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+        transition: 'transform 0.25s cubic-bezier(.4,0,.2,1)',
+        transform: hovered ? 'scale(1.08)' : 'scale(1)',
+        zIndex: 10,
+      }}>
+        {server.imageUrl
+          ? (isVideoUrl(server.imageUrl) ? <video src={server.imageUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={server.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />)
+          : <span>{getInitials(server.name)}</span>}
       </div>
 
       {/* Body */}
@@ -544,9 +551,9 @@ export default function CommunityPage() {
                     animation: 'glow 2s ease-in-out infinite',
                   }}>
                     {createdServer.imageUrl
-                      ? <img src={createdServer.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                      ? (isVideoUrl(createdServer.imageUrl) ? <video src={createdServer.imageUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={createdServer.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />)
                       : iconPreview
-                        ? <img src={iconPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                        ? (isVideoUrl(iconPreview) ? <video src={iconPreview} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={iconPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />)
                         : getInitials(createdServer.name)}
                   </div>
 
@@ -678,10 +685,11 @@ export default function CommunityPage() {
                   <div style={{
                     position: 'relative', height: 130, cursor: 'pointer',
                     background: bannerColor,
-                    backgroundImage: bannerPreview ? `url(${bannerPreview})` : 'none',
+                    backgroundImage: bannerPreview && !isVideoUrl(bannerPreview) ? `url(${bannerPreview})` : 'none',
                     backgroundSize: 'cover', backgroundPosition: 'center',
                     overflow: 'visible',
                   }} onClick={() => bannerRef.current?.click()}>
+                    {bannerPreview && isVideoUrl(bannerPreview) && <video src={bannerPreview} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
                     {/* Dark overlay */}
                     <div style={{
                       position: 'absolute', inset: 0,
@@ -699,7 +707,7 @@ export default function CommunityPage() {
                         Clica para definir a capa
                       </span>
                     </div>
-                    <input ref={bannerRef} type="file" accept="image/*" hidden onChange={e => {
+                    <input ref={bannerRef} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={e => {
                       const f = e.target.files?.[0]; if (!f) return;
                       setBannerFile(f); readAsDataURL(f).then(setBannerPreview);
                     }} />
@@ -725,7 +733,7 @@ export default function CommunityPage() {
                         fontSize: 24, position: 'relative', overflow: 'hidden',
                       }}>
                         {iconPreview
-                          ? <img src={iconPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                          ? (isVideoUrl(iconPreview) ? <video src={iconPreview} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={iconPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />)
                           : '📷'}
                         <div style={{
                           position: 'absolute', bottom: -3, right: -3,
@@ -735,7 +743,7 @@ export default function CommunityPage() {
                           fontSize: 11, fontWeight: 700, color: '#000',
                         }}>+</div>
                       </div>
-                      <input ref={iconRef} type="file" accept="image/*" hidden onChange={e => {
+                      <input ref={iconRef} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={e => {
                         const f = e.target.files?.[0]; if (!f) return;
                         setIconFile(f); readAsDataURL(f).then(setIconPreview);
                       }} />

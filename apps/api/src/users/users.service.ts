@@ -4,6 +4,7 @@ import { BadRequestException } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { MediaService } from "../common/services/media.service";
 
 interface CreateUserData {
   email: string;
@@ -16,7 +17,10 @@ interface CreateUserData {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({
@@ -78,24 +82,11 @@ export class UsersService {
   }
 
   async saveProfileAvatar(userId: string, file: Express.Multer.File) {
-    if (!file?.buffer?.length) throw new BadRequestException('Ficheiro em falta.');
-    const max = 5 * 1024 * 1024;
-    if (file.size > max) throw new BadRequestException('Ficheiro demasiado grande (máx. 5MB).');
-    
-    // Validar que é uma imagem
-    const validMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validMimes.includes(file.mimetype)) {
-      throw new BadRequestException('Apenas são permitidas imagens (JPEG, PNG, GIF, WebP).');
-    }
-
-    const ext = (file.originalname.match(/\.[a-zA-Z0-9]{1,8}$/)?.[0] ?? '').slice(0, 8);
-    const name = `${randomUUID()}${ext || '.jpg'}`;
-    const dir = join(process.cwd(), 'uploads', 'profiles');
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, name), file.buffer);
-    
-    const origin = process.env.API_PUBLIC_ORIGIN ?? `http://localhost:${process.env.API_PORT ?? 3001}`;
-    const url = `${origin.replace(/\/$/, '')}/uploads/profiles/${name}`;
+    const url = await this.mediaService.saveValidatedMedia(file, 'profiles', {
+      maxFileSizeMb: 5,
+      allowedMimes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
+      maxVideoDurationSecs: 5,
+    });
     
     // Atualizar avatar na base de dados
     const updated = await this.prisma.profile.update({

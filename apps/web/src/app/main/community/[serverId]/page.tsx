@@ -6,19 +6,19 @@ import { useAuthStore } from '@/store/auth.store';
 import { useCommunitySocket } from '@/lib/socket';
 
 // ─── ACCENT COLOR ────────────────────────────────────────────────────────────
-const ACCENT     = '#A5E600';
+const ACCENT = '#A5E600';
 const ACCENT_DIM = 'rgba(165,230,0,0.15)';
 const ACCENT_MED = 'rgba(165,230,0,0.25)';
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
-const BG_DARKEST    = '#000000ff';
-const BG_DARK       = '#000000ff';
-const BG_MID        = '#000000ff';
-const BG_LIGHT      = '#171717ff';
-const BG_HOVER      = '#2a2b30';
-const TEXT_BRIGHT   = '#e3e5e8';
-const TEXT_NORMAL   = '#b5bac1';
-const TEXT_MUTED    = '#747f8d';
+const BG_DARKEST = '#000000ff';
+const BG_DARK = '#000000ff';
+const BG_MID = '#000000ff';
+const BG_LIGHT = '#171717ff';
+const BG_HOVER = '#2a2b30';
+const TEXT_BRIGHT = '#e3e5e8';
+const TEXT_NORMAL = '#b5bac1';
+const TEXT_MUTED = '#747f8d';
 const BORDER_SUBTLE = 'rgba(255,255,255,0.06)';
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -53,6 +53,7 @@ function aggregateReactions(reactions: ReactionEntry[] | undefined, myId: string
 function fmtTime(d: string) { return new Date(d).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }); }
 function fmtDate(d: string) { const dt = new Date(d); const now = new Date(); const diff = now.getTime() - dt.getTime(); if (diff < 86400000) return 'Hoje às ' + fmtTime(d); if (diff < 172800000) return 'Ontem às ' + fmtTime(d); return dt.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) + ' às ' + fmtTime(d); }
 function fmtEventDate(d: string) { return new Date(d).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+function isVideoUrl(url?: string | null) { return url?.match(/\.(mp4|webm)$/i) || url?.startsWith('data:video/'); }
 function memberAccentColor(m: Member, ownerId: string): string {
   if (m.userId === ownerId) return '#F0B132';
   if (m.communityRole?.color) return m.communityRole.color;
@@ -90,7 +91,7 @@ const BANNER_PRESETS = [
 ];
 
 // ─── EMOJI PICKER ────────────────────────────────────────────────────────────
-const EMOJIS = ['👍','👎','❤️','🔥','😂','😮','😢','😡','🎉','✅','❌','💯','🙏','👀','💀','🤔','😎','🚀','⭐','💪','🤣','😭','🫡','💥','🎯','✨','💫','🌟','👑','🍕','🎮','✍️','💡','🎸','🌈','🦄','🎊','🏆','🫂','🐛'];
+const EMOJIS = ['👍', '👎', '❤️', '🔥', '😂', '😮', '😢', '😡', '🎉', '✅', '❌', '💯', '🙏', '👀', '💀', '🤔', '😎', '🚀', '⭐', '💪', '🤣', '😭', '🫡', '💥', '🎯', '✨', '💫', '🌟', '👑', '🍕', '🎮', '✍️', '💡', '🎸', '🌈', '🦄', '🎊', '🏆', '🫂', '🐛'];
 
 function EmojiPickerPopover({ onSelect, onClose }: { onSelect: (e: string) => void; onClose: () => void }) {
   useEffect(() => {
@@ -118,7 +119,7 @@ function ServerIcon({ server, active, onClick }: { server: MyServer; active: boo
       {(active || hovered) && <div style={{ position: 'absolute', left: -4, width: 4, height: active ? 40 : 22, background: ACCENT, borderRadius: '0 4px 4px 0', transition: 'height 0.25s cubic-bezier(.4,0,.2,1)', boxShadow: `0 0 8px rgba(165,230,0,0.6)` }} />}
       <button type="button" onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} title={server.name}
         style={{ width: 48, height: 48, borderRadius: active ? 16 : hovered ? 14 : '50%', background: server.imageUrl ? 'transparent' : active ? ACCENT_DIM : 'rgba(255,255,255,0.06)', border: active ? `2px solid ${ACCENT}` : '2px solid transparent', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-radius 0.2s cubic-bezier(.4,0,.2,1), border-color 0.15s, transform 0.15s, box-shadow 0.15s', flexShrink: 0, marginLeft: 4, transform: hovered && !active ? 'scale(1.05)' : 'scale(1)', boxShadow: active ? `0 4px 16px rgba(165,230,0,0.25)` : 'none' }}>
-        {server.imageUrl ? <img src={server.imageUrl} alt={server.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: active ? ACCENT : TEXT_NORMAL, fontSize: 14, fontWeight: 700 }}>{label}</span>}
+        {server.imageUrl ? (isVideoUrl(server.imageUrl) ? <video src={server.imageUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={server.imageUrl} alt={server.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: active ? ACCENT : TEXT_NORMAL, fontSize: 14, fontWeight: 700 }}>{label}</span>}
       </button>
     </div>
   );
@@ -158,11 +159,11 @@ function ImageColorPicker({
       <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{label}</label>
       {/* Preview */}
       <div style={{ height: 80, borderRadius: 10, overflow: 'hidden', marginBottom: 10, background: preview ? 'transparent' : (activeColor || '#1a1a2e'), border: `1px solid ${BORDER_SUBTLE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-        {preview ? <img src={preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 12 }}>Pré-visualização</span>}
+        {preview ? (isVideoUrl(preview) ? <video src={preview} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 12 }}>Pré-visualização</span>}
         <button onClick={() => ref.current?.click()} style={{ position: 'absolute', right: 8, bottom: 8, background: 'rgba(0,0,0,0.6)', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_BRIGHT, borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer', backdropFilter: 'blur(4px)' }}>
-          📷 Imagem
+          📷 Mídia
         </button>
-        <input ref={ref} type="file" accept="image/*" hidden onChange={handleFile} />
+        <input ref={ref} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={handleFile} />
       </div>
       {/* Color grid */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -230,16 +231,17 @@ function EditProfileModal({ user, serverId, onClose, onSave }: {
         <div style={{ padding: 24, maxHeight: '75vh', overflowY: 'auto' }}>
           {/* Live preview card */}
           <div style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 24, border: `1px solid ${BORDER_SUBTLE}` }}>
-            <div style={{ height: 90, background: bannerColor, backgroundImage: bannerDisplay ? `url(${bannerDisplay})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+            <div style={{ height: 90, background: bannerColor, backgroundImage: bannerDisplay && !isVideoUrl(bannerDisplay) ? `url(${bannerDisplay})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden' }}>
+              {isVideoUrl(bannerDisplay) && <video src={bannerDisplay!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
               <span style={{ position: 'absolute', bottom: 8, right: 8, fontSize: 11, color: 'rgba(255,255,255,0.5)', background: 'rgba(0,0,0,0.4)', padding: '2px 8px', borderRadius: 4 }}>Pré-visualização</span>
             </div>
             <div style={{ background: '#18191c', padding: '0 16px 16px' }}>
               <div style={{ position: 'relative', display: 'inline-block', marginTop: -28 }}>
                 <div style={{ width: 60, height: 60, borderRadius: '50%', border: '4px solid #18191c', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => avatarRef.current?.click()}>
-                  {avatarPreview ? <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: ACCENT, fontSize: 22, fontWeight: 700 }}>{name[0]?.toUpperCase()}</span>}
+                  {avatarPreview ? (isVideoUrl(avatarPreview) ? <video src={avatarPreview} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: ACCENT, fontSize: 22, fontWeight: 700 }}>{name[0]?.toUpperCase()}</span>}
                 </div>
                 <div onClick={() => avatarRef.current?.click()} style={{ position: 'absolute', right: -2, bottom: -2, width: 22, height: 22, borderRadius: '50%', background: ACCENT, border: '2px solid #18191c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>📷</div>
-                <input ref={avatarRef} type="file" accept="image/*" hidden onChange={handleAvatarFile} />
+                <input ref={avatarRef} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={handleAvatarFile} />
               </div>
               <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 16, margin: '8px 0 2px' }}>{name}</p>
               <p style={{ color: TEXT_MUTED, fontSize: 12, margin: 0 }}>@{user.profile?.username}</p>
@@ -290,13 +292,13 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
   member: Member; server: Server; onClose: () => void; isOwn: boolean; isMod: boolean; isAdmin: boolean;
   onKick: (uid: string) => void; onBan: (uid: string) => void; onAssignRole: (uid: string, roleId: string) => void;
 }) {
-  const accent   = memberAccentColor(member, server.ownerId);
-  const isOwner  = member.userId === server.ownerId;
-  const name     = member.profile?.displayName ?? member.profile?.username ?? 'Utilizador';
+  const accent = memberAccentColor(member, server.ownerId);
+  const isOwner = member.userId === server.ownerId;
+  const name = member.profile?.displayName ?? member.profile?.username ?? 'Utilizador';
   const username = member.profile?.username ?? '';
-  const bio      = member.profile?.bio;
-  const av       = member.profile?.avatarUrl;
-  const bannerUrl   = member.profile?.bannerUrl;
+  const bio = member.profile?.bio;
+  const av = member.profile?.avatarUrl;
+  const bannerUrl = member.profile?.bannerUrl;
   const bannerColor = member.profile?.bannerColor ?? '#1a1a2e';
 
   return (
@@ -304,7 +306,8 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }} />
       <div style={{ position: 'relative', zIndex: 10, width: 360, background: '#0d0e10', borderRadius: 20, overflow: 'hidden', border: `1px solid rgba(255,255,255,0.08)`, boxShadow: '0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(165,230,0,0.06)', animation: 'slideUp 0.2s cubic-bezier(.4,0,.2,1)' }}>
         {/* Banner */}
-        <div style={{ height: 110, background: bannerColor, backgroundImage: bannerUrl ? `url(${bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+        <div style={{ height: 110, background: bannerColor, backgroundImage: bannerUrl && !isVideoUrl(bannerUrl) ? `url(${bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden' }}>
+          {isVideoUrl(bannerUrl) && <video src={bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(13,14,16,0.8) 100%)' }} />
           <button onClick={onClose} style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: `1px solid rgba(255,255,255,0.1)`, color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, backdropFilter: 'blur(8px)', transition: 'all 0.15s' }}
             onMouseEnter={e => { (e.currentTarget as any).style.color = '#fff'; (e.currentTarget as any).style.background = 'rgba(0,0,0,0.8)'; }}
@@ -314,7 +317,7 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
         {/* Avatar */}
         <div style={{ position: 'absolute', top: 64, left: 20 }}>
           <div style={{ width: 84, height: 84, borderRadius: '50%', border: `4px solid #0d0e10`, overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 20px rgba(0,0,0,0.6)`, animation: 'glow 3s ease-in-out infinite' }}>
-            {av ? <img src={av} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: accent, fontSize: 30, fontWeight: 700 }}>{name[0]?.toUpperCase()}</span>}
+            {av ? (isVideoUrl(av) ? <video src={av} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={av} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: accent, fontSize: 30, fontWeight: 700 }}>{name[0]?.toUpperCase()}</span>}
           </div>
         </div>
         <div style={{ padding: '20px 20px 20px', marginTop: 36 }}>
@@ -446,15 +449,17 @@ function ServerSettingsModal({ server, serverId, onClose, onSave, onLeave, onDel
 
               {/* Server preview card */}
               <div style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 28, border: `1px solid ${BORDER_SUBTLE}` }}>
-                <div style={{ height: 110, background: bannerColor, backgroundImage: server.bannerUrl ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                <div style={{ height: 110, background: bannerColor, backgroundImage: server.bannerUrl && !isVideoUrl(server.bannerUrl) ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden' }}>
+                  {isVideoUrl(server.bannerUrl) && <video src={server.bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                </div>
                 <div style={{ background: '#18191c', padding: '0 20px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, marginTop: -28 }}>
                     <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => iconRef.current?.click()}>
                       <div style={{ width: 72, height: 72, borderRadius: 18, overflow: 'hidden', background: BG_LIGHT, border: '4px solid #18191c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {iconPreview ? <img src={iconPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: ACCENT, fontSize: 26, fontWeight: 700 }}>{server.name[0]}</span>}
+                        {iconPreview ? (isVideoUrl(iconPreview) ? <video src={iconPreview} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={iconPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: ACCENT, fontSize: 26, fontWeight: 700 }}>{server.name[0]}</span>}
                       </div>
                       <div style={{ position: 'absolute', right: -4, bottom: -4, width: 24, height: 24, borderRadius: '50%', background: ACCENT, border: '2px solid #18191c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>📷</div>
-                      <input ref={iconRef} type="file" accept="image/*" hidden onChange={handleIconFile} />
+                      <input ref={iconRef} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={handleIconFile} />
                     </div>
                     <div>
                       <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 16, margin: 0 }}>{name}</p>
@@ -567,7 +572,7 @@ function ServerSettingsModal({ server, serverId, onClose, onSave, onLeave, onDel
                 return (
                   <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10, background: BG_DARK, borderRadius: 8, marginBottom: 6, border: `1px solid ${BORDER_SUBTLE}` }}>
                     <div style={{ width: 36, height: 36, borderRadius: '50%', background: BG_HOVER, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                      {m.profile?.avatarUrl ? <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: memberAccentColor(m, server.ownerId), fontWeight: 700 }}>{n[0]}</span>}
+                      {m.profile?.avatarUrl ? (isVideoUrl(m.profile.avatarUrl) ? <video src={m.profile.avatarUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: memberAccentColor(m, server.ownerId), fontWeight: 700 }}>{n[0]}</span>}
                     </div>
                     <div style={{ flex: 1 }}>
                       <p style={{ margin: 0, color: TEXT_BRIGHT, fontSize: 14 }}>{n}</p>
@@ -667,7 +672,7 @@ function ChannelSettingsModal({ channel, onClose, onSave, onDelete }: {
 }
 
 // ─── CREATE EVENT MODAL (MELHORADO) ──────────────────────────────────────────
-const EVENT_COVER_COLORS = ['#1a1a2e','#2d1b69','#0f3460','#1B1B2F','#14532d','#4a0e0e','#0c4a6e','#422006','#1e1b4b','#162447','#3d1a78','#065f46'];
+const EVENT_COVER_COLORS = ['#1a1a2e', '#2d1b69', '#0f3460', '#1B1B2F', '#14532d', '#4a0e0e', '#0c4a6e', '#422006', '#1e1b4b', '#162447', '#3d1a78', '#065f46'];
 
 function CreateEventModal({ serverId, onClose, onCreate }: {
   serverId: string;
@@ -717,11 +722,12 @@ function CreateEventModal({ serverId, onClose, onCreate }: {
   return (
     <SimpleModal title="📅 Criar evento" onClose={onClose} maxWidth={560}>
       {/* Cover preview */}
-      <div style={{ height: 120, borderRadius: 12, marginBottom: 20, background: coverColor, backgroundImage: coverPreview ? `url(${coverPreview})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER_SUBTLE}`, cursor: 'pointer' }} onClick={() => coverRef.current?.click()}>
+      <div style={{ height: 120, borderRadius: 12, marginBottom: 20, background: coverColor, backgroundImage: coverPreview && !isVideoUrl(coverPreview) ? `url(${coverPreview})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER_SUBTLE}`, cursor: 'pointer' }} onClick={() => coverRef.current?.click()}>
+        {isVideoUrl(coverPreview) && <video src={coverPreview!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)', display: 'flex', alignItems: 'flex-end', padding: 12 }}>
           <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Clica para adicionar imagem de capa</span>
         </div>
-        <input ref={coverRef} type="file" accept="image/*" hidden onChange={handleCoverFile} />
+        <input ref={coverRef} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={handleCoverFile} />
       </div>
 
       {/* Cover colors */}
@@ -782,7 +788,7 @@ function EventsPanel({ events, isAdmin, onNew, onRsvp, onClose, onClearPast }: {
   const now = new Date();
   const [confirmClear, setConfirmClear] = useState(false);
   const upcoming = events.filter(e => new Date(e.startsAt) > now).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-  const past     = events.filter(e => new Date(e.startsAt) <= now).sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
+  const past = events.filter(e => new Date(e.startsAt) <= now).sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
 
   return (
     <div style={{ width: 340, background: '#09090b', borderLeft: `1px solid rgba(255,255,255,0.06)`, overflowY: 'auto', flexShrink: 0, display: 'flex', flexDirection: 'column', animation: 'slideLeft 0.2s cubic-bezier(.4,0,.2,1)' }}>
@@ -849,9 +855,10 @@ function EventCard({ ev, onRsvp, past }: { ev: CommunityEvent; onRsvp: (id: stri
     <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 10, border: `1px solid ${hov && !past ? 'rgba(165,230,0,0.25)' : 'rgba(255,255,255,0.06)'}`, opacity: past ? 0.55 : 1, animation: 'fadeIn 0.2s ease', transition: 'all 0.2s', transform: hov && !past ? 'translateY(-2px)' : 'translateY(0)', boxShadow: hov && !past ? '0 8px 24px rgba(0,0,0,0.5)' : 'none' }}>
       {/* Cover */}
-      <div style={{ height: 84, background: ev.coverColor ?? '#1a1a2e', backgroundImage: ev.imageUrl ? `url(${ev.imageUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6) 100%)' }} />
-        {past && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 800, letterSpacing: '0.08em' }}>ENCERRADO</span></div>}
+      <div style={{ height: 84, background: ev.coverColor ?? '#1a1a2e', backgroundImage: ev.imageUrl && !isVideoUrl(ev.imageUrl) ? `url(${ev.imageUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden' }}>
+        {isVideoUrl(ev.imageUrl) && <video src={ev.imageUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6) 100%)', zIndex: 1 }} />
+        {past && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}><span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 800, letterSpacing: '0.08em' }}>ENCERRADO</span></div>}
       </div>
       <div style={{ background: '#0f1012', padding: '10px 12px' }}>
         <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 13, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
@@ -982,7 +989,7 @@ function MsgActions({ canDel, isOwn, isMod, isPinned, showEmojiPicker, onToggleE
 }) {
   return (
     <div className="msg-actions" style={{ position: 'absolute', right: 8, top: -22, background: '#0e0f11', border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 8, display: 'flex', gap: 1, padding: '2px 4px', opacity: 0, transition: 'opacity 0.12s', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
-      {(['👍','❤️','😂','🔥'] as const).map(e => (
+      {(['👍', '❤️', '😂', '🔥'] as const).map(e => (
         <Tooltip key={e} text={e}>
           <button onClick={() => onReact(e)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, padding: '3px 5px', borderRadius: 4 }}
             onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER}
@@ -995,7 +1002,7 @@ function MsgActions({ canDel, isOwn, isMod, isPinned, showEmojiPicker, onToggleE
             onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER}
             onMouseLeave={ev => { if (!showEmojiPicker) ev.currentTarget.style.background = 'none'; }}>😊</button>
         </Tooltip>
-        {showEmojiPicker && <EmojiPickerPopover onSelect={onReact} onClose={() => onToggleEmojiPicker({ stopPropagation: () => {} } as any)} />}
+        {showEmojiPicker && <EmojiPickerPopover onSelect={onReact} onClose={() => onToggleEmojiPicker({ stopPropagation: () => { } } as any)} />}
       </div>
       <div style={{ width: 1, height: 18, background: BORDER_SUBTLE, alignSelf: 'center', margin: '0 1px' }} />
       <Tooltip text="Responder"><button onClick={onReply} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 14, padding: '3px 6px', borderRadius: 4 }} onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER} onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>↩</button></Tooltip>
@@ -1037,23 +1044,17 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
   const bannerBg = server.bannerUrl
     ? `url(${server.bannerUrl})`
     : server.bannerColor
-    ? server.bannerColor
-    : 'linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%)';
+      ? server.bannerColor
+      : 'linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%)';
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', background: '#000', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.25s ease' }}>
       {/* Hero Banner */}
-      <div style={{ position: 'relative', height: 220, background: server.bannerUrl ? 'transparent' : (server.bannerColor ?? '#0d1117'), backgroundImage: server.bannerUrl ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0 }}>
+      <div style={{ position: 'relative', height: 220, background: server.bannerUrl && !isVideoUrl(server.bannerUrl) ? 'transparent' : (server.bannerColor ?? '#0d1117'), backgroundImage: server.bannerUrl && !isVideoUrl(server.bannerUrl) ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0, overflow: 'hidden' }}>
+        {isVideoUrl(server.bannerUrl) && <video src={server.bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
         {/* gradient overlay */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.55) 70%, #000 100%)' }} />
-        {/* floating server icon */}
-        <div style={{ position: 'absolute', bottom: -48, left: 40 }}>
-          <div style={{ width: 96, height: 96, borderRadius: 24, border: '4px solid #000', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.8)', animation: 'glow 4s ease-in-out infinite' }}>
-            {server.imageUrl
-              ? <img src={server.imageUrl} alt={server.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ color: ACCENT, fontSize: 36, fontWeight: 800 }}>{server.name[0].toUpperCase()}</span>}
-          </div>
-        </div>
+
         {/* top actions */}
         <div style={{ position: 'absolute', top: 16, right: 20, display: 'flex', gap: 8 }}>
           {isAdmin && (
@@ -1074,7 +1075,16 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
       </div>
 
       {/* Content */}
-      <div style={{ padding: '64px 44px 48px', maxWidth: 860, width: '100%' }}>
+      <div style={{ position: 'relative', padding: '64px 44px 48px', maxWidth: 860, width: '100%' }}>
+        {/* floating server icon */}
+        <div style={{ position: 'absolute', top: -48, left: 44 }}>
+          <div style={{ width: 96, height: 96, borderRadius: 24, border: '4px solid #000', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.8)', animation: 'glow 4s ease-in-out infinite' }}>
+            {server.imageUrl
+              ? (isVideoUrl(server.imageUrl) ? <video src={server.imageUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={server.imageUrl} alt={server.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />)
+              : <span style={{ color: ACCENT, fontSize: 36, fontWeight: 800 }}>{server.name[0].toUpperCase()}</span>}
+          </div>
+        </div>
+
         {/* Name + stats row */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -1198,7 +1208,7 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
                   return (
                     <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 30, height: 30, borderRadius: '50%', background: BG_LIGHT, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {m.profile?.avatarUrl ? <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: acc, fontWeight: 700, fontSize: 12 }}>{name[0].toUpperCase()}</span>}
+                        {m.profile?.avatarUrl ? (isVideoUrl(m.profile.avatarUrl) ? <video src={m.profile.avatarUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: acc, fontWeight: 700, fontSize: 12 }}>{name[0].toUpperCase()}</span>}
                       </div>
                       <p style={{ margin: 0, color: acc, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{name}</p>
                       {m.userId === server.ownerId && <span style={{ fontSize: 10, color: '#F0B132', flexShrink: 0 }}>👑</span>}
@@ -1243,55 +1253,55 @@ export default function ServerPage() {
   const { socket, connected } = useCommunitySocket();
 
   // Data
-  const [server,     setServer]     = useState<Server | null>(null);
-  const [myServers,  setMyServers]  = useState<MyServer[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [channel,    setChannel]    = useState<Channel | null>(null);
-  const [msgs,       setMsgs]       = useState<Msg[]>([]);
+  const [server, setServer] = useState<Server | null>(null);
+  const [myServers, setMyServers] = useState<MyServer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [channel, setChannel] = useState<Channel | null>(null);
+  const [msgs, setMsgs] = useState<Msg[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
-  const [text,       setText]       = useState('');
-  const [events,     setEvents]     = useState<CommunityEvent[]>([]);
+  const [text, setText] = useState('');
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
 
   // UI
-  const [showServerMenu,     setShowServerMenu]     = useState(false);
+  const [showServerMenu, setShowServerMenu] = useState(false);
   const [showServerSettings, setShowServerSettings] = useState(false);
-  const [showInvite,         setShowInvite]         = useState(false);
-  const [copied,             setCopied]             = useState(false);
-  const [showCh,             setShowCh]             = useState(false);
-  const [chName,             setChName]             = useState('');
-  const [chCategoryId,       setChCategoryId]       = useState('');
-  const [showCat,            setShowCat]            = useState(false);
-  const [newCatName,         setNewCatName]         = useState('');
-  const [collapsedCats,      setCollapsedCats]      = useState<Record<string, boolean>>({});
+  const [showInvite, setShowInvite] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showCh, setShowCh] = useState(false);
+  const [chName, setChName] = useState('');
+  const [chCategoryId, setChCategoryId] = useState('');
+  const [showCat, setShowCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
   const [channelSettingsTarget, setChannelSettingsTarget] = useState<Channel | null>(null);
-  const [memberMenuUserId,   setMemberMenuUserId]   = useState<string | null>(null);
-  const [showAttachMenu,     setShowAttachMenu]     = useState(false);
-  const [replyTo,            setReplyTo]            = useState<Msg | null>(null);
-  const [editing,            setEditing]            = useState<{ id: string; text: string } | null>(null);
-  const [typingIds,          setTypingIds]          = useState<Record<string, boolean>>({});
-  const [showPins,           setShowPins]           = useState(false);
-  const [pins,               setPins]               = useState<Msg[]>([]);
-  const [memberSearchQ,      setMemberSearchQ]      = useState('');
-  const [showEditProfile,    setShowEditProfile]    = useState(false);
-  const [showMembersPanel,   setShowMembersPanel]   = useState(true);
-  const [showEventsPanel,    setShowEventsPanel]    = useState(false);
-  const [showCreateEvent,    setShowCreateEvent]    = useState(false);
-  const [emojiPickerMsgId,   setEmojiPickerMsgId]  = useState<string | null>(null);
-  const [uploadingFile,      setUploadingFile]      = useState(false);
-  const [showGuide,          setShowGuide]          = useState(true);
+  const [memberMenuUserId, setMemberMenuUserId] = useState<string | null>(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [replyTo, setReplyTo] = useState<Msg | null>(null);
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [typingIds, setTypingIds] = useState<Record<string, boolean>>({});
+  const [showPins, setShowPins] = useState(false);
+  const [pins, setPins] = useState<Msg[]>([]);
+  const [memberSearchQ, setMemberSearchQ] = useState('');
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showMembersPanel, setShowMembersPanel] = useState(true);
+  const [showEventsPanel, setShowEventsPanel] = useState(false);
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<string | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [showGuide, setShowGuide] = useState(true);
 
-  const bottomRef   = useRef<HTMLDivElement>(null);
-  const joinedRef   = useRef<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const joinedRef = useRef<string | null>(null);
   const typingStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fileRef     = useRef<HTMLInputElement>(null);
-  const inputRef    = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const myMember  = server?.members.find(m => m.userId === user?.id);
-  const isAdmin   = myMember?.role === 'admin';
-  const isMod     = isAdmin || myMember?.communityRole?.canModerate === true;
+  const myMember = server?.members.find(m => m.userId === user?.id);
+  const isAdmin = myMember?.role === 'admin';
+  const isMod = isAdmin || myMember?.communityRole?.canModerate === true;
   const canManageCh = isAdmin || myMember?.communityRole?.canManageChannels === true;
 
-  useEffect(() => { api.get<MyServer[]>('/community/servers').then(setMyServers).catch(() => {}); }, []);
+  useEffect(() => { api.get<MyServer[]>('/community/servers').then(setMyServers).catch(() => { }); }, []);
 
   const refreshServer = useCallback(async () => {
     if (!serverId) return;
@@ -1325,7 +1335,7 @@ export default function ServerPage() {
 
   useEffect(() => {
     if (!socket) return;
-    const h   = (msg: Msg) => { if (msg.channelId !== channel?.id) return; setMsgs(p => p.some(m => m.id === msg.id) ? p : [...p, msg]); };
+    const h = (msg: Msg) => { if (msg.channelId !== channel?.id) return; setMsgs(p => p.some(m => m.id === msg.id) ? p : [...p, msg]); };
     const del = (payload: { id?: string; messageId?: string; channelId: string }) => { if (payload.channelId !== channel?.id) return; const mid = payload.id ?? payload.messageId; if (!mid) return; setMsgs(p => p.filter(m => m.id !== mid)); };
     const upd = (msg: Msg) => { if (msg.channelId !== channel?.id) return; setMsgs(p => p.map(m => m.id === msg.id ? msg : m)); };
     const react = (payload: { messageId: string; channelId: string; reactions: ReactionEntry[] }) => { if (payload.channelId !== channel?.id) return; setMsgs(p => p.map(m => m.id === payload.messageId ? { ...m, reactions: payload.reactions } : m)); };
@@ -1381,7 +1391,7 @@ export default function ServerPage() {
     let bannerUrl: string | undefined;
     let imageUrl: string | undefined;
     if (data.bannerFile) bannerUrl = await uploadFile(data.bannerFile, server.id);
-    if (data.iconFile)   imageUrl  = await uploadFile(data.iconFile, server.id);
+    if (data.iconFile) imageUrl = await uploadFile(data.iconFile, server.id);
     await api.patch(`/community/servers/${server.id}`, { name: data.name, description: data.description, bannerColor: data.bannerColor, bannerUrl, imageUrl });
     await refreshServer();
   }
@@ -1546,8 +1556,9 @@ export default function ServerPage() {
       <div style={{ width: 240, background: '#07080a', display: 'flex', flexDirection: 'column', flexShrink: 0, borderRight: `1px solid rgba(255,255,255,0.04)` }}>
         {/* Banner do servidor */}
         {(server.bannerUrl || server.bannerColor) && (
-          <div style={{ height: 80, background: server.bannerColor ?? '#1a1a2e', backgroundImage: server.bannerUrl ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0, position: 'relative' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(7,8,10,0.7) 100%)' }} />
+          <div style={{ height: 80, background: server.bannerColor ?? '#1a1a2e', backgroundImage: server.bannerUrl && !isVideoUrl(server.bannerUrl) ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+            {isVideoUrl(server.bannerUrl) && <video src={server.bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(7,8,10,0.7) 100%)', zIndex: 1 }} />
           </div>
         )}
         {/* Server header */}
@@ -1563,26 +1574,26 @@ export default function ServerPage() {
         {showServerMenu && (
           <div style={{ background: '#0b0c0e', margin: '4px 8px 8px', borderRadius: 12, border: `1px solid rgba(255,255,255,0.08)`, overflow: 'hidden', animation: 'slideDown 0.15s cubic-bezier(.4,0,.2,1)', boxShadow: '0 16px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(165,230,0,0.06)', backdropFilter: 'blur(8px)' }}>
             <div style={{ padding: '4px 0' }}>
-            {[
-              { label: 'Convidar para o servidor', icon: '👤', action: () => { setShowInvite(true); setShowServerMenu(false); } },
-              { label: 'Configurações do servidor', icon: '⚙️', action: () => { setShowServerSettings(true); setShowServerMenu(false); }, admin: true },
-              { label: 'Criar canal', icon: '#️⃣', action: () => { setShowCh(true); setShowServerMenu(false); }, admin: true },
-              { label: 'Criar categoria', icon: '🏷️', action: () => { setShowCat(true); setShowServerMenu(false); }, admin: true },
-              { label: 'Criar evento', icon: '📅', action: () => { setShowCreateEvent(true); setShowServerMenu(false); }, admin: true },
-              null,
-              { label: 'Sair do servidor', icon: '🚪', action: handleLeaveServer, danger: true },
-            ].map((item, i) => item === null ? (
-              <div key={i} style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '4px 8px' }} />
-            ) : (
-              (!item.admin || isAdmin) && (
-                <button key={i} onClick={item.action} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: (item as any).danger ? '#ED4245' : TEXT_NORMAL, padding: '8px 14px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, transition: 'all 0.1s', borderRadius: 0 }}
-                  onMouseEnter={e => { (e.currentTarget as any).style.background = (item as any).danger ? 'rgba(237,66,69,0.12)' : 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = (item as any).danger ? '#FF6B6B' : TEXT_BRIGHT; }}
-                  onMouseLeave={e => { (e.currentTarget as any).style.background = 'transparent'; (e.currentTarget as any).style.color = (item as any).danger ? '#ED4245' : TEXT_NORMAL; }}>
-                  <span style={{ width: 20, textAlign: 'center', fontSize: 15 }}>{item.icon}</span>
-                  <span style={{ fontWeight: 500 }}>{item.label}</span>
-                </button>
-              )
-            ))}
+              {[
+                { label: 'Convidar para o servidor', icon: '👤', action: () => { setShowInvite(true); setShowServerMenu(false); } },
+                { label: 'Configurações do servidor', icon: '⚙️', action: () => { setShowServerSettings(true); setShowServerMenu(false); }, admin: true },
+                { label: 'Criar canal', icon: '#️⃣', action: () => { setShowCh(true); setShowServerMenu(false); }, admin: true },
+                { label: 'Criar categoria', icon: '🏷️', action: () => { setShowCat(true); setShowServerMenu(false); }, admin: true },
+                { label: 'Criar evento', icon: '📅', action: () => { setShowCreateEvent(true); setShowServerMenu(false); }, admin: true },
+                null,
+                { label: 'Sair do servidor', icon: '🚪', action: handleLeaveServer, danger: true },
+              ].map((item, i) => item === null ? (
+                <div key={i} style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '4px 8px' }} />
+              ) : (
+                (!item.admin || isAdmin) && (
+                  <button key={i} onClick={item.action} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: (item as any).danger ? '#ED4245' : TEXT_NORMAL, padding: '8px 14px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, transition: 'all 0.1s', borderRadius: 0 }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = (item as any).danger ? 'rgba(237,66,69,0.12)' : 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = (item as any).danger ? '#FF6B6B' : TEXT_BRIGHT; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'transparent'; (e.currentTarget as any).style.color = (item as any).danger ? '#ED4245' : TEXT_NORMAL; }}>
+                    <span style={{ width: 20, textAlign: 'center', fontSize: 15 }}>{item.icon}</span>
+                    <span style={{ fontWeight: 500 }}>{item.label}</span>
+                  </button>
+                )
+              ))}
             </div>
           </div>
         )}
@@ -1609,7 +1620,7 @@ export default function ServerPage() {
           )}
           {(server.channelCategories ?? []).map(cat => {
             const catChannels = channelsByCategory.byCat.get(cat.id) ?? [];
-            const collapsed   = collapsedCats[cat.id];
+            const collapsed = collapsedCats[cat.id];
             return (
               <div key={cat.id} style={{ marginTop: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', margin: '0 8px 2px' }}>
@@ -1655,7 +1666,7 @@ export default function ServerPage() {
           <div onClick={() => setMemberMenuUserId(user?.id ?? null)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `2px solid rgba(165,230,0,0.3)`, transition: 'all 0.15s', position: 'relative' }}
             onMouseEnter={e => { (e.currentTarget as any).style.borderColor = ACCENT; (e.currentTarget as any).style.boxShadow = '0 0 10px rgba(165,230,0,0.3)'; }}
             onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(165,230,0,0.3)'; (e.currentTarget as any).style.boxShadow = 'none'; }}>
-            {user?.profile?.avatarUrl ? <img src={user.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: ACCENT, fontWeight: 700, fontSize: 13 }}>{(user?.profile?.username ?? 'U')[0].toUpperCase()}</span>}
+            {user?.profile?.avatarUrl ? (isVideoUrl(user.profile.avatarUrl) ? <video src={user.profile.avatarUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={user.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: ACCENT, fontWeight: 700, fontSize: 13 }}>{(user?.profile?.username ?? 'U')[0].toUpperCase()}</span>}
             <div style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%', background: '#23A559', border: '2px solid #050607' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => setMemberMenuUserId(user?.id ?? null)}>
@@ -1681,181 +1692,181 @@ export default function ServerPage() {
           onInvite={() => setShowInvite(true)}
         />
       ) : (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#000' }}>
-        {/* Topbar */}
-        {channel && (
-          <div style={{ height: 48, borderBottom: `1px solid rgba(255,255,255,0.04)`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10, flexShrink: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
-            <span style={{ color: ACCENT, fontSize: 20, fontWeight: 300, opacity: 0.8 }}>#</span>
-            <span style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15 }}>{channel.name}</span>
-            <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)' }} />
-            <span style={{ color: TEXT_MUTED, fontSize: 12 }}>{channel.topic?.trim() || 'Canal de texto'}</span>
-            <div style={{ flex: 1 }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              {isMod && <Tooltip text="Fixadas">
-                <button onClick={() => { setShowPins(p => !p); if (!showPins) api.get<Msg[]>(`/community/channels/${channel.id}/pins`).then(setPins).catch(() => {}); }}
-                  style={{ background: showPins ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showPins ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s' }}
-                  onMouseEnter={e => { if (!showPins) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
-                  onMouseLeave={e => { if (!showPins) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>📌</button>
-              </Tooltip>}
-              <Tooltip text="Eventos">
-                <button onClick={() => setShowEventsPanel(p => !p)} style={{ background: showEventsPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showEventsPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', position: 'relative' }}
-                  onMouseEnter={e => { if (!showEventsPanel) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
-                  onMouseLeave={e => { if (!showEventsPanel) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>
-                  📅
-                  {upcomingEvents.length > 0 && <span style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: ACCENT, boxShadow: '0 0 6px rgba(165,230,0,0.8)', animation: 'pulse 2s infinite' }}/>}
-                </button>
-              </Tooltip>
-              <Tooltip text={showMembersPanel ? 'Ocultar membros' : 'Mostrar membros'}>
-                <button onClick={() => setShowMembersPanel(p => !p)} style={{ background: showMembersPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showMembersPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s' }}
-                  onMouseEnter={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
-                  onMouseLeave={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>👥</button>
-              </Tooltip>
-              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: `1px solid rgba(255,255,255,0.07)`, borderRadius: 8, padding: '4px 10px', gap: 6, marginLeft: 4 }}>
-                <input placeholder={`Buscar em #${channel.name}`} style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 13, width: 140 }} />
-                <span style={{ color: TEXT_MUTED, fontSize: 13 }}>🔍</span>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#000' }}>
+          {/* Topbar */}
+          {channel && (
+            <div style={{ height: 48, borderBottom: `1px solid rgba(255,255,255,0.04)`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10, flexShrink: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+              <span style={{ color: ACCENT, fontSize: 20, fontWeight: 300, opacity: 0.8 }}>#</span>
+              <span style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15 }}>{channel.name}</span>
+              <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)' }} />
+              <span style={{ color: TEXT_MUTED, fontSize: 12 }}>{channel.topic?.trim() || 'Canal de texto'}</span>
+              <div style={{ flex: 1 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {isMod && <Tooltip text="Fixadas">
+                  <button onClick={() => { setShowPins(p => !p); if (!showPins) api.get<Msg[]>(`/community/channels/${channel.id}/pins`).then(setPins).catch(() => { }); }}
+                    style={{ background: showPins ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showPins ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s' }}
+                    onMouseEnter={e => { if (!showPins) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
+                    onMouseLeave={e => { if (!showPins) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>📌</button>
+                </Tooltip>}
+                <Tooltip text="Eventos">
+                  <button onClick={() => setShowEventsPanel(p => !p)} style={{ background: showEventsPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showEventsPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', position: 'relative' }}
+                    onMouseEnter={e => { if (!showEventsPanel) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
+                    onMouseLeave={e => { if (!showEventsPanel) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>
+                    📅
+                    {upcomingEvents.length > 0 && <span style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: ACCENT, boxShadow: '0 0 6px rgba(165,230,0,0.8)', animation: 'pulse 2s infinite' }} />}
+                  </button>
+                </Tooltip>
+                <Tooltip text={showMembersPanel ? 'Ocultar membros' : 'Mostrar membros'}>
+                  <button onClick={() => setShowMembersPanel(p => !p)} style={{ background: showMembersPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showMembersPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s' }}
+                    onMouseEnter={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
+                    onMouseLeave={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>👥</button>
+                </Tooltip>
+                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: `1px solid rgba(255,255,255,0.07)`, borderRadius: 8, padding: '4px 10px', gap: 6, marginLeft: 4 }}>
+                  <input placeholder={`Buscar em #${channel.name}`} style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 13, width: 140 }} />
+                  <span style={{ color: TEXT_MUTED, fontSize: 13 }}>🔍</span>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Messages */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 0' }} onClick={() => setEmojiPickerMsgId(null)}>
-          {loadingMsgs && <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><div style={{ width: 28, height: 28, border: `2px solid ${ACCENT_DIM}`, borderTopColor: ACCENT, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /></div>}
-          {!loadingMsgs && msgs.length === 0 && channel && (
-            <div style={{ textAlign: 'center', padding: '60px 0' }}>
-              <div style={{ fontSize: 52, marginBottom: 12, opacity: 0.4 }}>#</div>
-              <h3 style={{ color: TEXT_BRIGHT, margin: '0 0 8px', fontSize: 20, fontWeight: 700 }}>Bem-vindo a #{channel.name}!</h3>
-              <p style={{ color: TEXT_MUTED, fontSize: 14 }}>Nenhuma mensagem ainda. Sê o primeiro a escrever algo.</p>
             </div>
           )}
-          {msgs.map((msg, i) => {
-            const prev    = msgs[i - 1];
-            const mt      = msg.messageType || 'text';
-            const grouped = !!(prev && prev.authorId === msg.authorId && prev.authorType === msg.authorType && !msg.replyTo && new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime() < 300000);
-            const isOwn   = msg.authorId === user?.id && msg.authorType === 'user';
-            const isBot   = msg.authorType === 'bot';
-            const canDel  = (isOwn && msg.authorType === 'user') || isMod;
-            const rx      = aggregateReactions(msg.reactions, user?.id);
-            const nameClr = isBot ? '#7EB6FF' : nameColor(msg.authorName);
-            const av      = msg.authorAvatarUrl;
-            const showEmoji = emojiPickerMsgId === msg.id;
 
-            const actions = (
-              <MsgActions
-                canDel={canDel} isOwn={isOwn && !isBot} isMod={isMod} isPinned={!!msg.pinned}
-                showEmojiPicker={showEmoji}
-                onToggleEmojiPicker={e => { e.stopPropagation(); setEmojiPickerMsgId(p => p === msg.id ? null : msg.id); }}
-                onReact={emoji => { socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji }); setEmojiPickerMsgId(null); }}
-                onDelete={() => socket?.emit('message.delete', { messageId: msg.id, channelId: channel?.id })}
-                onEdit={() => { setEditing({ id: msg.id, text: msg.content }); setText(msg.content); setTimeout(() => inputRef.current?.focus(), 50); }}
-                onReply={() => { setReplyTo(msg); setTimeout(() => inputRef.current?.focus(), 50); }}
-                onPin={() => handlePin(msg)}
-              />
-            );
-
-            if (grouped) return (
-              <div key={msg.id} className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '1px 0 1px 56px', position: 'relative', animation: 'fadeIn 0.12s ease' }}>
-                <div style={{ flex: 1 }}><MessageBody msg={msg} mt={mt} /><ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} /></div>
-                {actions}
+          {/* Messages */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 0' }} onClick={() => setEmojiPickerMsgId(null)}>
+            {loadingMsgs && <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><div style={{ width: 28, height: 28, border: `2px solid ${ACCENT_DIM}`, borderTopColor: ACCENT, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /></div>}
+            {!loadingMsgs && msgs.length === 0 && channel && (
+              <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                <div style={{ fontSize: 52, marginBottom: 12, opacity: 0.4 }}>#</div>
+                <h3 style={{ color: TEXT_BRIGHT, margin: '0 0 8px', fontSize: 20, fontWeight: 700 }}>Bem-vindo a #{channel.name}!</h3>
+                <p style={{ color: TEXT_MUTED, fontSize: 14 }}>Nenhuma mensagem ainda. Sê o primeiro a escrever algo.</p>
               </div>
-            );
+            )}
+            {msgs.map((msg, i) => {
+              const prev = msgs[i - 1];
+              const mt = msg.messageType || 'text';
+              const grouped = !!(prev && prev.authorId === msg.authorId && prev.authorType === msg.authorType && !msg.replyTo && new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime() < 300000);
+              const isOwn = msg.authorId === user?.id && msg.authorType === 'user';
+              const isBot = msg.authorType === 'bot';
+              const canDel = (isOwn && msg.authorType === 'user') || isMod;
+              const rx = aggregateReactions(msg.reactions, user?.id);
+              const nameClr = isBot ? '#7EB6FF' : nameColor(msg.authorName);
+              const av = msg.authorAvatarUrl;
+              const showEmoji = emojiPickerMsgId === msg.id;
 
-            return (
-              <div key={msg.id} className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 0 2px', gap: 16, position: 'relative', animation: 'fadeIn 0.12s ease', marginTop: 8 }}>
-                <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: '50%', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: isBot ? '1px solid rgba(96,165,250,0.4)' : 'none', transition: 'opacity 0.1s' }}
-                  onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>
-                  {isBot ? <span style={{ fontSize: 14, fontWeight: 800, color: '#93C5FD' }}>B</span> :
-                    av ? <img src={av} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> :
-                      <span style={{ color: nameClr, fontWeight: 700, fontSize: 16 }}>{msg.authorName[0]?.toUpperCase()}</span>}
+              const actions = (
+                <MsgActions
+                  canDel={canDel} isOwn={isOwn && !isBot} isMod={isMod} isPinned={!!msg.pinned}
+                  showEmojiPicker={showEmoji}
+                  onToggleEmojiPicker={e => { e.stopPropagation(); setEmojiPickerMsgId(p => p === msg.id ? null : msg.id); }}
+                  onReact={emoji => { socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji }); setEmojiPickerMsgId(null); }}
+                  onDelete={() => socket?.emit('message.delete', { messageId: msg.id, channelId: channel?.id })}
+                  onEdit={() => { setEditing({ id: msg.id, text: msg.content }); setText(msg.content); setTimeout(() => inputRef.current?.focus(), 50); }}
+                  onReply={() => { setReplyTo(msg); setTimeout(() => inputRef.current?.focus(), 50); }}
+                  onPin={() => handlePin(msg)}
+                />
+              );
+
+              if (grouped) return (
+                <div key={msg.id} className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '1px 0 1px 56px', position: 'relative', animation: 'fadeIn 0.12s ease' }}>
+                  <div style={{ flex: 1 }}><MessageBody msg={msg} mt={mt} /><ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} /></div>
+                  {actions}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {msg.replyTo && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, color: TEXT_MUTED, fontSize: 12 }}>
-                      <div style={{ width: 32, height: 10, borderTop: `2px solid ${BORDER_SUBTLE}`, borderLeft: `2px solid ${BORDER_SUBTLE}`, borderTopLeftRadius: 4, flexShrink: 0 }} />
-                      <span style={{ color: nameColor(msg.replyTo.authorName), fontWeight: 600 }}>{msg.replyTo.authorName}</span>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>{msg.replyTo.content}</span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
-                    <span style={{ color: nameClr, fontWeight: 600, fontSize: 15, cursor: 'pointer' }} onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>{msg.authorName}</span>
-                    {isBot && <span style={{ fontSize: 10, background: 'rgba(96,165,250,0.15)', color: '#93C5FD', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>BOT</span>}
-                    {msg.pinned && <span style={{ fontSize: 10, background: ACCENT_DIM, color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 3, padding: '1px 5px' }}>📌 FIXADA</span>}
-                    <span style={{ color: TEXT_MUTED, fontSize: 11 }}>{fmtDate(msg.createdAt)}</span>
-                    {msg.editedAt && <span style={{ color: TEXT_MUTED, fontSize: 10, fontStyle: 'italic' }}>(editado)</span>}
+              );
+
+              return (
+                <div key={msg.id} className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 0 2px', gap: 16, position: 'relative', animation: 'fadeIn 0.12s ease', marginTop: 8 }}>
+                  <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: '50%', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: isBot ? '1px solid rgba(96,165,250,0.4)' : 'none', transition: 'opacity 0.1s' }}
+                    onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>
+                    {isBot ? <span style={{ fontSize: 14, fontWeight: 800, color: '#93C5FD' }}>B</span> :
+                      av ? <img src={av} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> :
+                        <span style={{ color: nameClr, fontWeight: 700, fontSize: 16 }}>{msg.authorName[0]?.toUpperCase()}</span>}
                   </div>
-                  <MessageBody msg={msg} mt={mt} />
-                  <ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {msg.replyTo && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, color: TEXT_MUTED, fontSize: 12 }}>
+                        <div style={{ width: 32, height: 10, borderTop: `2px solid ${BORDER_SUBTLE}`, borderLeft: `2px solid ${BORDER_SUBTLE}`, borderTopLeftRadius: 4, flexShrink: 0 }} />
+                        <span style={{ color: nameColor(msg.replyTo.authorName), fontWeight: 600 }}>{msg.replyTo.authorName}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>{msg.replyTo.content}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
+                      <span style={{ color: nameClr, fontWeight: 600, fontSize: 15, cursor: 'pointer' }} onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>{msg.authorName}</span>
+                      {isBot && <span style={{ fontSize: 10, background: 'rgba(96,165,250,0.15)', color: '#93C5FD', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>BOT</span>}
+                      {msg.pinned && <span style={{ fontSize: 10, background: ACCENT_DIM, color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 3, padding: '1px 5px' }}>📌 FIXADA</span>}
+                      <span style={{ color: TEXT_MUTED, fontSize: 11 }}>{fmtDate(msg.createdAt)}</span>
+                      {msg.editedAt && <span style={{ color: TEXT_MUTED, fontSize: 10, fontStyle: 'italic' }}>(editado)</span>}
+                    </div>
+                    <MessageBody msg={msg} mt={mt} />
+                    <ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} />
+                  </div>
+                  {actions}
                 </div>
-                {actions}
-              </div>
-            );
-          })}
-          {typingNames.length > 0 && <p style={{ color: TEXT_MUTED, fontSize: 13, fontStyle: 'italic', padding: '4px 0 8px', animation: 'fadeIn 0.2s' }}>{typingNames.join(', ')} a escrever…</p>}
-          <div ref={bottomRef} style={{ height: 8 }} />
-        </div>
-
-        {/* Pins inline */}
-        {showPins && (
-          <div style={{ borderTop: `1px solid ${BORDER_SUBTLE}`, padding: '12px 16px', maxHeight: 240, overflowY: 'auto', background: '#0e0f13', flexShrink: 0, animation: 'slideDown 0.15s ease' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ color: TEXT_BRIGHT, fontWeight: 600, fontSize: 14 }}>📌 Mensagens fixadas</span>
-              <button onClick={() => setShowPins(false)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 16 }}>✕</button>
-            </div>
-            {pins.length === 0 ? <p style={{ color: TEXT_MUTED, fontSize: 13 }}>Nenhuma mensagem fixada.</p> : pins.map(p => (
-              <div key={p.id} style={{ padding: '8px 10px', background: BG_DARK, borderRadius: 6, marginBottom: 6, border: `1px solid ${BORDER_SUBTLE}` }}>
-                <span style={{ color: ACCENT, fontSize: 12, fontWeight: 600 }}>{p.authorName}</span>
-                <p style={{ color: TEXT_NORMAL, fontSize: 13, margin: '3px 0 0', whiteSpace: 'pre-wrap' }}>{p.content}</p>
-              </div>
-            ))}
+              );
+            })}
+            {typingNames.length > 0 && <p style={{ color: TEXT_MUTED, fontSize: 13, fontStyle: 'italic', padding: '4px 0 8px', animation: 'fadeIn 0.2s' }}>{typingNames.join(', ')} a escrever…</p>}
+            <div ref={bottomRef} style={{ height: 8 }} />
           </div>
-        )}
 
-        {/* Input area */}
-        <div style={{ padding: '0 16px 16px', flexShrink: 0 }}>
-          {(replyTo || editing) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px', marginBottom: 0, background: 'rgba(165,230,0,0.05)', borderRadius: '12px 12px 0 0', border: `1px solid rgba(165,230,0,0.15)`, borderBottom: 'none', animation: 'slideDown 0.12s ease' }}>
-              <span style={{ fontSize: 12, color: editing ? ACCENT : TEXT_MUTED, fontWeight: 500 }}>{editing ? '✏️ A editar mensagem' : `↩ A responder a ${replyTo?.authorName}`}</span>
-              {!editing && replyTo && <span style={{ color: TEXT_MUTED, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: 'italic' }}>&ldquo;{replyTo.content}&rdquo;</span>}
-              <button onClick={() => { setReplyTo(null); setEditing(null); setText(''); }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, transition: 'color 0.1s' }}
-                onMouseEnter={e => (e.currentTarget as any).style.color = '#fff'}
-                onMouseLeave={e => (e.currentTarget as any).style.color = TEXT_MUTED}>✕</button>
-            </div>
-          )}
-          {showAttachMenu && (
-            <div style={{ background: '#0b0c0e', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 12, padding: 6, marginBottom: 6, animation: 'slideDown 0.12s ease', boxShadow: '0 8px 24px rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
-              {[{ icon: '🖼️', label: 'Enviar imagem', accept: 'image/*' }, { icon: '📎', label: 'Enviar ficheiro', accept: '*' }].map(item => (
-                <button key={item.label} onClick={() => { if (fileRef.current) { fileRef.current.accept = item.accept; fileRef.current.click(); } setShowAttachMenu(false); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: 'none', border: 'none', color: TEXT_NORMAL, padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 14, transition: 'all 0.1s' }}
-                  onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
-                  onMouseLeave={e => { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_NORMAL; }}>
-                  <span style={{ fontSize: 18 }}>{item.icon}</span>
-                  <span style={{ fontWeight: 500 }}>{item.label}</span>
-                </button>
+          {/* Pins inline */}
+          {showPins && (
+            <div style={{ borderTop: `1px solid ${BORDER_SUBTLE}`, padding: '12px 16px', maxHeight: 240, overflowY: 'auto', background: '#0e0f13', flexShrink: 0, animation: 'slideDown 0.15s ease' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ color: TEXT_BRIGHT, fontWeight: 600, fontSize: 14 }}>📌 Mensagens fixadas</span>
+                <button onClick={() => setShowPins(false)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 16 }}>✕</button>
+              </div>
+              {pins.length === 0 ? <p style={{ color: TEXT_MUTED, fontSize: 13 }}>Nenhuma mensagem fixada.</p> : pins.map(p => (
+                <div key={p.id} style={{ padding: '8px 10px', background: BG_DARK, borderRadius: 6, marginBottom: 6, border: `1px solid ${BORDER_SUBTLE}` }}>
+                  <span style={{ color: ACCENT, fontSize: 12, fontWeight: 600 }}>{p.authorName}</span>
+                  <p style={{ color: TEXT_NORMAL, fontSize: 13, margin: '3px 0 0', whiteSpace: 'pre-wrap' }}>{p.content}</p>
+                </div>
               ))}
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: (replyTo || editing) ? '0 0 14px 14px' : 14, padding: '0 14px', border: `1px solid rgba(255,255,255,0.08)`, gap: 8, opacity: connected ? 1 : 0.5, transition: 'opacity 0.2s, border-color 0.15s, box-shadow 0.15s' }}>
-            <input ref={fileRef} type="file" hidden onChange={handleFileUpload} />
-            <button onClick={() => setShowAttachMenu(p => !p)} disabled={uploadingFile}
-              style={{ background: 'none', border: 'none', color: uploadingFile ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 22, padding: '10px 2px', lineHeight: 1, flexShrink: 0, transition: 'all 0.12s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)' }}
-              onMouseEnter={e => { if (!uploadingFile) (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
-              onMouseLeave={e => { if (!uploadingFile) (e.currentTarget as any).style.color = TEXT_MUTED; }}>
-              {uploadingFile ? '⏳' : '+'}
-            </button>
-            <input ref={inputRef} value={text}
-              onChange={e => { setText(e.target.value); emitTyping(); }}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } if (e.key === 'Escape') { setReplyTo(null); setEditing(null); setText(''); } }}
-              placeholder={channel ? (connected ? `Mensagem em #${channel.name}` : 'A reconectar…') : 'Seleciona um canal'}
-              disabled={!connected || !channel}
-              style={{ flex: 1, background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 15, padding: '13px 0', minHeight: 46 }}
-            />
-            <button onClick={send} disabled={!text.trim() || !connected || !channel}
-              style={{ background: text.trim() && connected && channel ? `linear-gradient(135deg, ${ACCENT}, #7BC800)` : 'rgba(255,255,255,0.05)', border: 'none', color: text.trim() && connected && channel ? '#000' : TEXT_MUTED, borderRadius: 9, padding: '7px 15px', fontSize: 14, fontWeight: 700, cursor: text.trim() && connected && channel ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0, boxShadow: text.trim() && connected && channel ? '0 4px 12px rgba(165,230,0,0.3)' : 'none' }}
-              onMouseEnter={e => { if (text.trim() && connected && channel) (e.currentTarget as any).style.boxShadow = '0 6px 20px rgba(165,230,0,0.5)'; }}
-              onMouseLeave={e => { if (text.trim() && connected && channel) (e.currentTarget as any).style.boxShadow = '0 4px 12px rgba(165,230,0,0.3)'; }}>➤</button>
+
+          {/* Input area */}
+          <div style={{ padding: '0 16px 16px', flexShrink: 0 }}>
+            {(replyTo || editing) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px', marginBottom: 0, background: 'rgba(165,230,0,0.05)', borderRadius: '12px 12px 0 0', border: `1px solid rgba(165,230,0,0.15)`, borderBottom: 'none', animation: 'slideDown 0.12s ease' }}>
+                <span style={{ fontSize: 12, color: editing ? ACCENT : TEXT_MUTED, fontWeight: 500 }}>{editing ? '✏️ A editar mensagem' : `↩ A responder a ${replyTo?.authorName}`}</span>
+                {!editing && replyTo && <span style={{ color: TEXT_MUTED, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: 'italic' }}>&ldquo;{replyTo.content}&rdquo;</span>}
+                <button onClick={() => { setReplyTo(null); setEditing(null); setText(''); }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, transition: 'color 0.1s' }}
+                  onMouseEnter={e => (e.currentTarget as any).style.color = '#fff'}
+                  onMouseLeave={e => (e.currentTarget as any).style.color = TEXT_MUTED}>✕</button>
+              </div>
+            )}
+            {showAttachMenu && (
+              <div style={{ background: '#0b0c0e', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 12, padding: 6, marginBottom: 6, animation: 'slideDown 0.12s ease', boxShadow: '0 8px 24px rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+                {[{ icon: '🖼️', label: 'Enviar imagem', accept: 'image/*' }, { icon: '📎', label: 'Enviar ficheiro', accept: '*' }].map(item => (
+                  <button key={item.label} onClick={() => { if (fileRef.current) { fileRef.current.accept = item.accept; fileRef.current.click(); } setShowAttachMenu(false); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: 'none', border: 'none', color: TEXT_NORMAL, padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 14, transition: 'all 0.1s' }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_NORMAL; }}>
+                    <span style={{ fontSize: 18 }}>{item.icon}</span>
+                    <span style={{ fontWeight: 500 }}>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: (replyTo || editing) ? '0 0 14px 14px' : 14, padding: '0 14px', border: `1px solid rgba(255,255,255,0.08)`, gap: 8, opacity: connected ? 1 : 0.5, transition: 'opacity 0.2s, border-color 0.15s, box-shadow 0.15s' }}>
+              <input ref={fileRef} type="file" hidden onChange={handleFileUpload} />
+              <button onClick={() => setShowAttachMenu(p => !p)} disabled={uploadingFile}
+                style={{ background: 'none', border: 'none', color: uploadingFile ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 22, padding: '10px 2px', lineHeight: 1, flexShrink: 0, transition: 'all 0.12s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)' }}
+                onMouseEnter={e => { if (!uploadingFile) (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
+                onMouseLeave={e => { if (!uploadingFile) (e.currentTarget as any).style.color = TEXT_MUTED; }}>
+                {uploadingFile ? '⏳' : '+'}
+              </button>
+              <input ref={inputRef} value={text}
+                onChange={e => { setText(e.target.value); emitTyping(); }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } if (e.key === 'Escape') { setReplyTo(null); setEditing(null); setText(''); } }}
+                placeholder={channel ? (connected ? `Mensagem em #${channel.name}` : 'A reconectar…') : 'Seleciona um canal'}
+                disabled={!connected || !channel}
+                style={{ flex: 1, background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 15, padding: '13px 0', minHeight: 46 }}
+              />
+              <button onClick={send} disabled={!text.trim() || !connected || !channel}
+                style={{ background: text.trim() && connected && channel ? `linear-gradient(135deg, ${ACCENT}, #7BC800)` : 'rgba(255,255,255,0.05)', border: 'none', color: text.trim() && connected && channel ? '#000' : TEXT_MUTED, borderRadius: 9, padding: '7px 15px', fontSize: 14, fontWeight: 700, cursor: text.trim() && connected && channel ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0, boxShadow: text.trim() && connected && channel ? '0 4px 12px rgba(165,230,0,0.3)' : 'none' }}
+                onMouseEnter={e => { if (text.trim() && connected && channel) (e.currentTarget as any).style.boxShadow = '0 6px 20px rgba(165,230,0,0.5)'; }}
+                onMouseLeave={e => { if (text.trim() && connected && channel) (e.currentTarget as any).style.boxShadow = '0 4px 12px rgba(165,230,0,0.3)'; }}>➤</button>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* ── 4. EVENTS PANEL ─── */}
@@ -1879,11 +1890,11 @@ export default function ServerPage() {
               const u = (m.profile?.username ?? '').toLowerCase();
               return n.includes(memberSearchQ.toLowerCase()) || u.includes(memberSearchQ.toLowerCase());
             });
-            const owners    = filtered.filter(m => m.userId === server.ownerId);
-            const admins    = filtered.filter(m => m.role === 'admin' && m.userId !== server.ownerId && !m.communityRoleId);
+            const owners = filtered.filter(m => m.userId === server.ownerId);
+            const admins = filtered.filter(m => m.role === 'admin' && m.userId !== server.ownerId && !m.communityRoleId);
             const roleGroups = server.roles.map(r => ({ role: r, members: filtered.filter(m => m.communityRoleId === r.id) })).filter(g => g.members.length > 0);
-            const members   = filtered.filter(m => m.role !== 'admin' && m.userId !== server.ownerId && !m.communityRoleId);
-            const sections  = [
+            const members = filtered.filter(m => m.role !== 'admin' && m.userId !== server.ownerId && !m.communityRoleId);
+            const sections = [
               ...(owners.length ? [{ title: `DONO — ${owners.length}`, members: owners, color: '#F0B132' }] : []),
               ...roleGroups.map(g => ({ title: `${g.role.name.toUpperCase()} — ${g.members.length}`, members: g.members, color: g.role.color || TEXT_MUTED })),
               ...(admins.length ? [{ title: `ADMIN — ${admins.length}`, members: admins, color: '#ED4245' }] : []),
@@ -1893,7 +1904,7 @@ export default function ServerPage() {
               <div key={sec.title} style={{ marginBottom: 8 }}>
                 <div style={{ padding: '8px 12px 4px', color: sec.color, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em' }}>{sec.title}</div>
                 {sec.members.map(m => {
-                  const n      = mname(m);
+                  const n = mname(m);
                   const typing = typingIds[m.userId];
                   const accent = memberAccentColor(m, server.ownerId);
                   return (
@@ -1903,7 +1914,7 @@ export default function ServerPage() {
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                       <div style={{ position: 'relative', flexShrink: 0 }}>
                         <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {m.profile?.avatarUrl ? <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: accent, fontSize: 14, fontWeight: 700 }}>{n[0]?.toUpperCase()}</span>}
+                          {m.profile?.avatarUrl ? (isVideoUrl(m.profile.avatarUrl) ? <video src={m.profile.avatarUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: accent, fontSize: 14, fontWeight: 700 }}>{n[0]?.toUpperCase()}</span>}
                         </div>
                         <div style={{ position: 'absolute', right: -1, bottom: -1, width: 10, height: 10, borderRadius: '50%', background: typing ? '#F0B232' : ACCENT, border: `2px solid ${BG_DARK}`, transition: 'background 0.3s' }} />
                       </div>
@@ -1979,12 +1990,12 @@ export default function ServerPage() {
           </div>
         </SimpleModal>
       )}
-      {showCreateEvent && <CreateEventModal serverId={server.id} onClose={() => setShowCreateEvent(false)} onCreate={async ev => { 
+      {showCreateEvent && <CreateEventModal serverId={server.id} onClose={() => setShowCreateEvent(false)} onCreate={async ev => {
         try {
           const newEv = await api.post<CommunityEvent>(`/community/servers/${server.id}/events`, ev);
-          setEvents(p => [...p, newEv]); 
-          setShowCreateEvent(false); 
-          setShowEventsPanel(true); 
+          setEvents(p => [...p, newEv]);
+          setShowCreateEvent(false);
+          setShowEventsPanel(true);
         } catch (e: any) { alert(e.message); }
       }} />}
     </div>
