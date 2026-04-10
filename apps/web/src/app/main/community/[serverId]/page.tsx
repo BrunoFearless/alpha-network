@@ -23,7 +23,7 @@ const BORDER_SUBTLE = 'rgba(255,255,255,0.06)';
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 interface ChannelCategoryRow { id: string; name: string; position: number; }
-interface Channel { id: string; name: string; position: number; categoryId: string | null; }
+interface Channel { id: string; name: string; position: number; categoryId: string | null; topic?: string | null; }
 interface CommunityRole { id: string; name: string; position: number; color: string | null; canModerate: boolean; canManageServer: boolean; canManageChannels: boolean; }
 interface Member { userId: string; role: string; communityRoleId: string | null; mutedUntil?: string | null; communityRole: CommunityRole | null; profile: { displayName?: string | null; username: string; avatarUrl?: string | null; bio?: string | null; bannerUrl?: string | null; bannerColor?: string | null; } | null; }
 interface BotRow { id: string; isAdminBot: boolean; bot: { id: string; name: string; prefix: string }; }
@@ -98,12 +98,12 @@ function EmojiPickerPopover({ onSelect, onClose }: { onSelect: (e: string) => vo
     return () => { clearTimeout(t); document.removeEventListener('click', onClose); };
   }, [onClose]);
   return (
-    <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', right: 0, bottom: '100%', marginBottom: 4, background: '#18191c', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: 8, display: 'grid', gridTemplateColumns: 'repeat(8, 28px)', gap: 2, zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.7)', animation: 'popIn 0.12s ease' }}>
+    <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', right: 0, bottom: '100%', marginBottom: 6, background: '#0e0f11', border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 12, padding: 10, display: 'grid', gridTemplateColumns: 'repeat(8, 30px)', gap: 3, zIndex: 50, boxShadow: '0 16px 48px rgba(0,0,0,0.8), 0 0 0 1px rgba(165,230,0,0.1)', animation: 'popIn 0.15s cubic-bezier(.4,0,.2,1)', backdropFilter: 'blur(12px)' }}>
       {EMOJIS.map(e => (
         <button key={e} onClick={() => { onSelect(e); onClose(); }} title={e}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, width: 28, height: 28, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER}
-          onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>{e}</button>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, width: 30, height: 30, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s' }}
+          onMouseEnter={ev => { ev.currentTarget.style.background = 'rgba(255,255,255,0.1)'; ev.currentTarget.style.transform = 'scale(1.2)'; }}
+          onMouseLeave={ev => { ev.currentTarget.style.background = 'none'; ev.currentTarget.style.transform = 'scale(1)'; }}>{e}</button>
       ))}
     </div>
   );
@@ -114,10 +114,10 @@ function ServerIcon({ server, active, onClick }: { server: MyServer; active: boo
   const [hovered, setHovered] = useState(false);
   const label = server.name.slice(0, 2).toUpperCase();
   return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-      {(active || hovered) && <div style={{ position: 'absolute', left: -4, width: 4, height: active ? 40 : 20, background: ACCENT, borderRadius: '0 4px 4px 0', transition: 'height 0.2s cubic-bezier(.4,0,.2,1)' }} />}
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+      {(active || hovered) && <div style={{ position: 'absolute', left: -4, width: 4, height: active ? 40 : 22, background: ACCENT, borderRadius: '0 4px 4px 0', transition: 'height 0.25s cubic-bezier(.4,0,.2,1)', boxShadow: `0 0 8px rgba(165,230,0,0.6)` }} />}
       <button type="button" onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} title={server.name}
-        style={{ width: 48, height: 48, borderRadius: active ? 16 : hovered ? 16 : '50%', background: server.imageUrl ? 'transparent' : active ? ACCENT_DIM : BG_LIGHT, border: active ? `2px solid ${ACCENT}` : '2px solid transparent', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-radius 0.2s cubic-bezier(.4,0,.2,1), border-color 0.15s', flexShrink: 0, marginLeft: 4 }}>
+        style={{ width: 48, height: 48, borderRadius: active ? 16 : hovered ? 14 : '50%', background: server.imageUrl ? 'transparent' : active ? ACCENT_DIM : 'rgba(255,255,255,0.06)', border: active ? `2px solid ${ACCENT}` : '2px solid transparent', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-radius 0.2s cubic-bezier(.4,0,.2,1), border-color 0.15s, transform 0.15s, box-shadow 0.15s', flexShrink: 0, marginLeft: 4, transform: hovered && !active ? 'scale(1.05)' : 'scale(1)', boxShadow: active ? `0 4px 16px rgba(165,230,0,0.25)` : 'none' }}>
         {server.imageUrl ? <img src={server.imageUrl} alt={server.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: active ? ACCENT : TEXT_NORMAL, fontSize: 14, fontWeight: 700 }}>{label}</span>}
       </button>
     </div>
@@ -300,34 +300,38 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
   const bannerColor = member.profile?.bannerColor ?? '#1a1a2e';
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }} />
-      <div style={{ position: 'relative', zIndex: 10, width: 340, background: '#111214', borderRadius: 18, overflow: 'hidden', border: `1px solid ${BORDER_SUBTLE}`, boxShadow: '0 24px 80px rgba(0,0,0,0.8)', animation: 'slideUp 0.18s cubic-bezier(.4,0,.2,1)' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.15s ease' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }} />
+      <div style={{ position: 'relative', zIndex: 10, width: 360, background: '#0d0e10', borderRadius: 20, overflow: 'hidden', border: `1px solid rgba(255,255,255,0.08)`, boxShadow: '0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(165,230,0,0.06)', animation: 'slideUp 0.2s cubic-bezier(.4,0,.2,1)' }}>
         {/* Banner */}
-        <div style={{ height: 100, background: bannerColor, backgroundImage: bannerUrl ? `url(${bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
-          <button onClick={onClose} style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, backdropFilter: 'blur(4px)' }}>✕</button>
+        <div style={{ height: 110, background: bannerColor, backgroundImage: bannerUrl ? `url(${bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(13,14,16,0.8) 100%)' }} />
+          <button onClick={onClose} style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: `1px solid rgba(255,255,255,0.1)`, color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, backdropFilter: 'blur(8px)', transition: 'all 0.15s' }}
+            onMouseEnter={e => { (e.currentTarget as any).style.color = '#fff'; (e.currentTarget as any).style.background = 'rgba(0,0,0,0.8)'; }}
+            onMouseLeave={e => { (e.currentTarget as any).style.color = TEXT_MUTED; (e.currentTarget as any).style.background = 'rgba(0,0,0,0.6)'; }}
+          >✕</button>
         </div>
         {/* Avatar */}
-        <div style={{ position: 'absolute', top: 58, left: 20 }}>
-          <div style={{ width: 80, height: 80, borderRadius: '50%', border: `4px solid #111214`, overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {av ? <img src={av} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: accent, fontSize: 28, fontWeight: 700 }}>{name[0]?.toUpperCase()}</span>}
+        <div style={{ position: 'absolute', top: 64, left: 20 }}>
+          <div style={{ width: 84, height: 84, borderRadius: '50%', border: `4px solid #0d0e10`, overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 20px rgba(0,0,0,0.6)`, animation: 'glow 3s ease-in-out infinite' }}>
+            {av ? <img src={av} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: accent, fontSize: 30, fontWeight: 700 }}>{name[0]?.toUpperCase()}</span>}
           </div>
         </div>
-        <div style={{ padding: '16px 20px 20px', marginTop: 36 }}>
-          <h2 style={{ color: TEXT_BRIGHT, fontSize: 20, fontWeight: 700, margin: '0 0 4px' }}>{name}</h2>
-          {username && <p style={{ color: TEXT_MUTED, fontSize: 13, margin: '0 0 8px' }}>@{username}</p>}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: bio ? 12 : 0 }}>
-            {isOwner && <span style={{ fontSize: 11, background: '#F0B13222', color: '#F0B132', border: '1px solid #F0B13244', borderRadius: 4, padding: '2px 8px' }}>👑 Dono</span>}
-            {member.role === 'admin' && !isOwner && <span style={{ fontSize: 11, background: '#ED424522', color: '#ED4245', border: '1px solid #ED424544', borderRadius: 4, padding: '2px 8px' }}>Admin</span>}
-            {member.communityRole && <span style={{ fontSize: 11, background: (member.communityRole.color || '#7C6FAD') + '22', color: member.communityRole.color || '#7C6FAD', border: `1px solid ${member.communityRole.color || '#7C6FAD'}44`, borderRadius: 4, padding: '2px 8px' }}>{member.communityRole.name}</span>}
-            {isOwn && <span style={{ fontSize: 11, background: ACCENT_DIM, color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 4, padding: '2px 8px' }}>Tu</span>}
+        <div style={{ padding: '20px 20px 20px', marginTop: 36 }}>
+          <h2 style={{ color: TEXT_BRIGHT, fontSize: 20, fontWeight: 800, margin: '0 0 3px', letterSpacing: '-0.02em' }}>{name}</h2>
+          {username && <p style={{ color: TEXT_MUTED, fontSize: 13, margin: '0 0 10px' }}>@{username}</p>}
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: bio ? 14 : 0 }}>
+            {isOwner && <span style={{ fontSize: 11, background: 'rgba(240,177,50,0.12)', color: '#F0B132', border: '1px solid rgba(240,177,50,0.3)', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>👑 Dono</span>}
+            {member.role === 'admin' && !isOwner && <span style={{ fontSize: 11, background: 'rgba(237,66,69,0.12)', color: '#ED4245', border: '1px solid rgba(237,66,69,0.3)', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Admin</span>}
+            {member.communityRole && <span style={{ fontSize: 11, background: (member.communityRole.color || '#7C6FAD') + '20', color: member.communityRole.color || '#7C6FAD', border: `1px solid ${member.communityRole.color || '#7C6FAD'}40`, borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>{member.communityRole.name}</span>}
+            {isOwn && <span style={{ fontSize: 11, background: 'rgba(165,230,0,0.12)', color: ACCENT, border: `1px solid rgba(165,230,0,0.3)`, borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Tu</span>}
           </div>
-          {bio && <div style={{ background: BG_DARK, borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}><p style={{ color: TEXT_NORMAL, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{bio}</p></div>}
+          {bio && <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(255,255,255,0.06)`, borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}><p style={{ color: TEXT_NORMAL, fontSize: 13, margin: 0, lineHeight: 1.6 }}>{bio}</p></div>}
           {isAdmin && !isOwner && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 11, color: TEXT_MUTED, display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cargo</label>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: TEXT_MUTED, display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Cargo</label>
               <select value={member.communityRoleId ?? ''} onChange={e => onAssignRole(member.userId, e.target.value)}
-                style={{ width: '100%', background: BG_DARK, border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_BRIGHT, borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+                style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: `1px solid rgba(255,255,255,0.1)`, color: TEXT_BRIGHT, borderRadius: 10, padding: '9px 12px', fontSize: 13 }}>
                 <option value="">— sem cargo —</option>
                 {server.roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
@@ -335,8 +339,12 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
           )}
           {isMod && !isOwner && !isOwn && (
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => onKick(member.userId)} style={{ flex: 1, background: 'transparent', border: '1px solid rgba(237,66,69,0.4)', color: '#ED4245', borderRadius: 8, padding: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Expulsar</button>
-              <button onClick={() => onBan(member.userId)} style={{ flex: 1, background: 'rgba(237,66,69,0.12)', border: '1px solid rgba(237,66,69,0.5)', color: '#ED4245', borderRadius: 8, padding: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Banir</button>
+              <button onClick={() => onKick(member.userId)} style={{ flex: 1, background: 'transparent', border: '1px solid rgba(237,66,69,0.4)', color: '#ED4245', borderRadius: 10, padding: '9px', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}
+                onMouseEnter={e => (e.currentTarget as any).style.background = 'rgba(237,66,69,0.08)'}
+                onMouseLeave={e => (e.currentTarget as any).style.background = 'transparent'}>Expulsar</button>
+              <button onClick={() => onBan(member.userId)} style={{ flex: 1, background: 'rgba(237,66,69,0.1)', border: '1px solid rgba(237,66,69,0.4)', color: '#ED4245', borderRadius: 10, padding: '9px', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}
+                onMouseEnter={e => (e.currentTarget as any).style.background = 'rgba(237,66,69,0.2)'}
+                onMouseLeave={e => (e.currentTarget as any).style.background = 'rgba(237,66,69,0.1)'}>Banir</button>
             </div>
           )}
         </div>
@@ -586,10 +594,11 @@ function ServerSettingsModal({ server, serverId, onClose, onSave, onLeave, onDel
 // ─── CHANNEL SETTINGS MODAL ──────────────────────────────────────────────────
 function ChannelSettingsModal({ channel, onClose, onSave, onDelete }: {
   channel: Channel; onClose: () => void;
-  onSave: (name: string) => Promise<void>;
+  onSave: (name: string, topic: string) => Promise<void>;
   onDelete: (channelId: string) => Promise<void>;
 }) {
   const [name, setName] = useState(channel.name);
+  const [topic, setTopic] = useState(channel.topic ?? '');
   const [tab, setTab] = useState<'overview' | 'permissions'>('overview');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -597,7 +606,7 @@ function ChannelSettingsModal({ channel, onClose, onSave, onDelete }: {
   async function handleSave() {
     if (!name.trim()) return;
     setSaving(true);
-    try { await onSave(name.toLowerCase().replace(/\s+/g, '-')); onClose(); }
+    try { await onSave(name.toLowerCase().replace(/\s+/g, '-'), topic); onClose(); }
     catch (e: any) { alert(e.message); }
     finally { setSaving(false); }
   }
@@ -638,6 +647,13 @@ function ChannelSettingsModal({ channel, onClose, onSave, onDelete }: {
                   <input value={name} onChange={e => setName(e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 15 }} />
                 </div>
               </div>
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Descrição do canal</label>
+                <textarea value={topic} onChange={e => setTopic(e.target.value)} rows={3} maxLength={200}
+                  placeholder="Uma pequena descrição do propósito deste canal…"
+                  style={{ width: '100%', background: BG_DARK, border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', color: TEXT_BRIGHT, fontSize: 14, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6, boxSizing: 'border-box' }} />
+                <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '4px 0 0', textAlign: 'right' }}>{topic.length}/200</p>
+              </div>
               <button onClick={handleSave} disabled={saving || !name.trim()} style={{ background: ACCENT, color: '#000', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'A guardar…' : 'Guardar alterações'}
               </button>
@@ -653,9 +669,10 @@ function ChannelSettingsModal({ channel, onClose, onSave, onDelete }: {
 // ─── CREATE EVENT MODAL (MELHORADO) ──────────────────────────────────────────
 const EVENT_COVER_COLORS = ['#1a1a2e','#2d1b69','#0f3460','#1B1B2F','#14532d','#4a0e0e','#0c4a6e','#422006','#1e1b4b','#162447','#3d1a78','#065f46'];
 
-function CreateEventModal({ onClose, onCreate }: {
+function CreateEventModal({ serverId, onClose, onCreate }: {
+  serverId: string;
   onClose: () => void;
-  onCreate: (ev: CommunityEvent) => void;
+  onCreate: (ev: any) => void;
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -676,15 +693,25 @@ function CreateEventModal({ onClose, onCreate }: {
   async function handle() {
     if (!title.trim() || !startsAt) return;
     setSaving(true);
-    const ev: CommunityEvent = {
-      id: `local_${Date.now()}`,
-      title, description: description || null,
-      startsAt, endsAt: endsAt || null,
-      location: location || null,
-      creatorId: '', imageUrl: coverPreview,
-      coverColor, rsvpCount: 0, myRsvp: false,
-    };
-    try { onCreate(ev); } finally { setSaving(false); }
+    let finalImageUrl = null;
+    try {
+      if (coverFile) {
+        finalImageUrl = await uploadFile(coverFile, serverId);
+      }
+      const data = {
+        title, description: description || null,
+        startsAt, endsAt: endsAt || null,
+        location: location || null,
+        imageUrl: finalImageUrl,
+        coverColor,
+      };
+      await onCreate(data);
+    } catch (e: any) {
+      console.error(e);
+      alert('Erro ao criar evento');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -747,40 +774,67 @@ function CreateEventModal({ onClose, onCreate }: {
 }
 
 // ─── EVENTS PANEL ────────────────────────────────────────────────────────────
-function EventsPanel({ events, isAdmin, onNew, onRsvp, onClose }: {
+function EventsPanel({ events, isAdmin, onNew, onRsvp, onClose, onClearPast }: {
   events: CommunityEvent[]; isAdmin: boolean;
   onNew: () => void; onRsvp: (id: string) => void; onClose: () => void;
+  onClearPast: () => void;
 }) {
   const now = new Date();
+  const [confirmClear, setConfirmClear] = useState(false);
   const upcoming = events.filter(e => new Date(e.startsAt) > now).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
   const past     = events.filter(e => new Date(e.startsAt) <= now).sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
 
   return (
-    <div style={{ width: 340, background: '#0e0f13', borderLeft: `1px solid ${BORDER_SUBTLE}`, overflowY: 'auto', flexShrink: 0, display: 'flex', flexDirection: 'column', animation: 'slideLeft 0.2s cubic-bezier(.4,0,.2,1)' }}>
-      <div style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER_SUBTLE}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+    <div style={{ width: 340, background: '#09090b', borderLeft: `1px solid rgba(255,255,255,0.06)`, overflowY: 'auto', flexShrink: 0, display: 'flex', flexDirection: 'column', animation: 'slideLeft 0.2s cubic-bezier(.4,0,.2,1)' }}>
+      <div style={{ padding: '14px 16px', borderBottom: `1px solid rgba(255,255,255,0.06)`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'rgba(255,255,255,0.02)' }}>
         <span style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15 }}>📅 Eventos</span>
         <div style={{ display: 'flex', gap: 6 }}>
-          {isAdmin && <button onClick={onNew} style={{ background: ACCENT, color: '#000', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ Novo</button>}
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 18, padding: '2px 6px' }}>✕</button>
+          {isAdmin && <button onClick={onNew} style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, color: '#000', border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(165,230,0,0.3)', transition: 'all 0.15s' }}
+            onMouseEnter={e => (e.currentTarget as any).style.boxShadow = '0 4px 16px rgba(165,230,0,0.5)'}
+            onMouseLeave={e => (e.currentTarget as any).style.boxShadow = '0 2px 10px rgba(165,230,0,0.3)'}>+ Novo</button>}
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.07)', border: 'none', color: TEXT_MUTED, cursor: 'pointer', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, transition: 'all 0.15s' }}
+            onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.14)'; (e.currentTarget as any).style.color = '#fff'; }}
+            onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_MUTED; }}>✕</button>
         </div>
       </div>
       <div style={{ flex: 1, padding: 12, overflowY: 'auto' }}>
         {upcoming.length === 0 && past.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <p style={{ fontSize: 40, margin: '0 0 12px' }}>📅</p>
-            <p style={{ color: TEXT_MUTED, fontSize: 14 }}>Nenhum evento agendado.</p>
-            {isAdmin && <button onClick={onNew} style={{ background: ACCENT, color: '#000', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 12 }}>Criar primeiro evento</button>}
+          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+            <p style={{ fontSize: 44, margin: '0 0 12px', animation: 'float 3s ease-in-out infinite' }}>📅</p>
+            <p style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 16, lineHeight: 1.5 }}>Nenhum evento agendado ainda.</p>
+            {isAdmin && <button onClick={onNew} style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, color: '#000', border: 'none', borderRadius: 10, padding: '9px 22px', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(165,230,0,0.3)' }}>Criar primeiro evento</button>}
           </div>
         )}
         {upcoming.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Próximos</p>
+          <div style={{ marginBottom: 18 }}>
+            <p style={{ color: TEXT_MUTED, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8, paddingLeft: 2 }}>Próximos</p>
             {upcoming.map(ev => <EventCard key={ev.id} ev={ev} onRsvp={onRsvp} />)}
           </div>
         )}
         {past.length > 0 && (
           <div>
-            <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Passados</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 2, paddingRight: 2 }}>
+              <p style={{ color: TEXT_MUTED, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Passados</p>
+              {isAdmin && (
+                confirmClear ? (
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={() => setConfirmClear(false)}
+                      style={{ background: 'transparent', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, borderRadius: 5, padding: '2px 8px', fontSize: 10, cursor: 'pointer' }}>Cancelar</button>
+                    <button onClick={() => { onClearPast(); setConfirmClear(false); }}
+                      style={{ background: 'rgba(237,66,69,0.15)', border: '1px solid rgba(237,66,69,0.4)', color: '#ED4245', borderRadius: 5, padding: '2px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                      Confirmar
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmClear(true)}
+                    style={{ background: 'transparent', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, borderRadius: 5, padding: '2px 10px', fontSize: 10, cursor: 'pointer', transition: 'all 0.15s' }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(237,66,69,0.5)'; (e.currentTarget as any).style.color = '#ED4245'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.borderColor = BORDER_SUBTLE; (e.currentTarget as any).style.color = TEXT_MUTED; }}>
+                    🗑 Limpar histórico
+                  </button>
+                )
+              )}
+            </div>
             {past.map(ev => <EventCard key={ev.id} ev={ev} onRsvp={onRsvp} past />)}
           </div>
         )}
@@ -790,21 +844,26 @@ function EventsPanel({ events, isAdmin, onNew, onRsvp, onClose }: {
 }
 
 function EventCard({ ev, onRsvp, past }: { ev: CommunityEvent; onRsvp: (id: string) => void; past?: boolean }) {
+  const [hov, setHov] = useState(false);
   return (
-    <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 10, border: `1px solid ${BORDER_SUBTLE}`, opacity: past ? 0.6 : 1, animation: 'fadeIn 0.2s ease' }}>
+    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 10, border: `1px solid ${hov && !past ? 'rgba(165,230,0,0.25)' : 'rgba(255,255,255,0.06)'}`, opacity: past ? 0.55 : 1, animation: 'fadeIn 0.2s ease', transition: 'all 0.2s', transform: hov && !past ? 'translateY(-2px)' : 'translateY(0)', boxShadow: hov && !past ? '0 8px 24px rgba(0,0,0,0.5)' : 'none' }}>
       {/* Cover */}
-      <div style={{ height: 80, background: ev.coverColor ?? '#1a1a2e', backgroundImage: ev.imageUrl ? `url(${ev.imageUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
-        {past && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 700 }}>ENCERRADO</span></div>}
+      <div style={{ height: 84, background: ev.coverColor ?? '#1a1a2e', backgroundImage: ev.imageUrl ? `url(${ev.imageUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6) 100%)' }} />
+        {past && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 800, letterSpacing: '0.08em' }}>ENCERRADO</span></div>}
       </div>
-      <div style={{ background: '#18191c', padding: '10px 12px' }}>
-        <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 14, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
-        <p style={{ color: ACCENT, fontSize: 12, margin: '0 0 2px', fontWeight: 500 }}>📆 {fmtEventDate(ev.startsAt)}</p>
+      <div style={{ background: '#0f1012', padding: '10px 12px' }}>
+        <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 13, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
+        <p style={{ color: ACCENT, fontSize: 11, margin: '0 0 2px', fontWeight: 600 }}>📆 {fmtEventDate(ev.startsAt)}</p>
         {ev.endsAt && <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '0 0 2px' }}>⏱ Até {fmtEventDate(ev.endsAt)}</p>}
         {ev.location && <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '0 0 6px' }}>📍 {ev.location}</p>}
         {ev.description && <p style={{ color: TEXT_NORMAL, fontSize: 12, margin: '0 0 8px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.description}</p>}
         {!past && (
           <button onClick={() => onRsvp(ev.id)}
-            style={{ background: ev.myRsvp ? ACCENT_DIM : ACCENT, color: ev.myRsvp ? ACCENT : '#000', border: ev.myRsvp ? `1px solid ${ACCENT}` : 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', width: '100%' }}>
+            style={{ background: ev.myRsvp ? 'rgba(165,230,0,0.1)' : `linear-gradient(135deg, ${ACCENT}, #7BC800)`, color: ev.myRsvp ? ACCENT : '#000', border: ev.myRsvp ? `1px solid rgba(165,230,0,0.4)` : 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', width: '100%' }}
+            onMouseEnter={e => !ev.myRsvp && ((e.currentTarget as any).style.boxShadow = '0 4px 12px rgba(165,230,0,0.3)')}
+            onMouseLeave={e => !ev.myRsvp && ((e.currentTarget as any).style.boxShadow = 'none')}>
             {ev.myRsvp ? `✓ Vou lá · ${ev.rsvpCount ?? 0}` : `Participar · ${ev.rsvpCount ?? 0}`}
           </button>
         )}
@@ -816,12 +875,15 @@ function EventCard({ ev, onRsvp, past }: { ev: CommunityEvent; onRsvp: (id: stri
 // ─── SIMPLE MODAL ────────────────────────────────────────────────────────────
 function SimpleModal({ title, children, onClose, maxWidth = 480 }: { title: string; children: React.ReactNode; onClose: () => void; maxWidth?: number }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }} />
-      <div style={{ position: 'relative', zIndex: 10, background: '#111214', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 18, padding: 28, width: '100%', maxWidth, maxHeight: '85vh', overflowY: 'auto', animation: 'slideUp 0.18s cubic-bezier(.4,0,.2,1)', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h2 style={{ color: TEXT_BRIGHT, fontSize: 18, fontWeight: 700, margin: 0 }}>{title}</h2>
-          <button onClick={onClose} style={{ background: BG_LIGHT, border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.15s ease' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(14px)' }} />
+      <div style={{ position: 'relative', zIndex: 10, background: '#0d0e10', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 20, padding: 28, width: '100%', maxWidth, maxHeight: '88vh', overflowY: 'auto', animation: 'slideUp 0.2s cubic-bezier(.4,0,.2,1)', boxShadow: '0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(165,230,0,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+          <h2 style={{ color: TEXT_BRIGHT, fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>{title}</h2>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.07)', border: `1px solid rgba(255,255,255,0.08)`, color: TEXT_MUTED, width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+            onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.14)'; (e.currentTarget as any).style.color = '#fff'; }}
+            onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_MUTED; }}
+          >✕</button>
         </div>
         {children}
       </div>
@@ -833,15 +895,18 @@ function SimpleModal({ title, children, onClose, maxWidth = 480 }: { title: stri
 function ChannelRow({ ch, active, canManage, onSelect, onSettings }: { ch: Channel; active: boolean; canManage: boolean; onSelect: (ch: Channel) => void; onSettings: (ch: Channel) => void; }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <div className="ch-row" style={{ width: 'calc(100% - 16px)', margin: '1px 8px', display: 'flex', alignItems: 'center', borderRadius: 4, background: active ? BG_HOVER : hovered ? 'rgba(255,255,255,0.04)' : 'transparent', cursor: 'pointer', transition: 'background 0.1s' }}
+    <div className="ch-row" style={{ width: 'calc(100% - 16px)', margin: '1px 8px', display: 'flex', alignItems: 'center', borderRadius: 6, background: active ? 'rgba(165,230,0,0.08)' : hovered ? 'rgba(255,255,255,0.05)' : 'transparent', cursor: 'pointer', transition: 'background 0.12s, transform 0.12s' }}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onClick={() => onSelect(ch)}>
-      <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '5px 8px', gap: 6 }}>
-        <span style={{ color: active ? TEXT_BRIGHT : TEXT_MUTED, fontSize: 18, fontWeight: 300, lineHeight: 1 }}>#</span>
-        <span style={{ color: active ? TEXT_BRIGHT : TEXT_MUTED, fontSize: 15, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ch.name}</span>
+      <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '6px 8px', gap: 6 }}>
+        <span style={{ color: active ? ACCENT : hovered ? TEXT_NORMAL : TEXT_MUTED, fontSize: 17, fontWeight: 300, lineHeight: 1, transition: 'color 0.12s' }}>#</span>
+        <span style={{ color: active ? TEXT_BRIGHT : hovered ? TEXT_NORMAL : TEXT_MUTED, fontSize: 14, fontWeight: active ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, transition: 'color 0.12s' }}>{ch.name}</span>
+        {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT, boxShadow: '0 0 6px rgba(165,230,0,0.8)', flexShrink: 0 }} />}
       </div>
       {canManage && hovered && (
         <div style={{ display: 'flex', gap: 2, paddingRight: 6 }} onClick={e => e.stopPropagation()}>
-          <button onClick={() => onSettings(ch)} title="Editar canal" style={{ background: 'rgba(255,255,255,0.07)', border: 'none', color: TEXT_MUTED, cursor: 'pointer', width: 22, height: 22, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>⚙</button>
+          <button onClick={() => onSettings(ch)} title="Editar canal" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: TEXT_MUTED, cursor: 'pointer', width: 22, height: 22, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, transition: 'all 0.1s' }}
+            onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.18)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
+            onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as any).style.color = TEXT_MUTED; }}>⚙</button>
         </div>
       )}
     </div>
@@ -916,7 +981,7 @@ function MsgActions({ canDel, isOwn, isMod, isPinned, showEmojiPicker, onToggleE
   onReact: (emoji: string) => void; onPin: () => void;
 }) {
   return (
-    <div className="msg-actions" style={{ position: 'absolute', right: 8, top: -20, background: '#18191c', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 6, display: 'flex', gap: 1, padding: 2, opacity: 0, transition: 'opacity 0.1s', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+    <div className="msg-actions" style={{ position: 'absolute', right: 8, top: -22, background: '#0e0f11', border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 8, display: 'flex', gap: 1, padding: '2px 4px', opacity: 0, transition: 'opacity 0.12s', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
       {(['👍','❤️','😂','🔥'] as const).map(e => (
         <Tooltip key={e} text={e}>
           <button onClick={() => onReact(e)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, padding: '3px 5px', borderRadius: 4 }}
@@ -937,6 +1002,235 @@ function MsgActions({ canDel, isOwn, isMod, isPinned, showEmojiPicker, onToggleE
       {isMod && <Tooltip text={isPinned ? 'Desafixar' : 'Fixar'}><button onClick={onPin} style={{ background: isPinned ? ACCENT_DIM : 'none', border: 'none', color: isPinned ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 14, padding: '3px 6px', borderRadius: 4 }} onMouseEnter={ev => { if (!isPinned) ev.currentTarget.style.background = BG_HOVER; }} onMouseLeave={ev => { if (!isPinned) ev.currentTarget.style.background = 'none'; }}>📌</button></Tooltip>}
       {isOwn && <Tooltip text="Editar"><button onClick={onEdit} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 14, padding: '3px 6px', borderRadius: 4 }} onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER} onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>✏️</button></Tooltip>}
       {canDel && <Tooltip text="Apagar"><button onClick={onDelete} style={{ background: 'none', border: 'none', color: '#ED4245', cursor: 'pointer', fontSize: 14, padding: '3px 6px', borderRadius: 4 }} onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(237,66,69,0.15)'} onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>🗑</button></Tooltip>}
+    </div>
+  );
+}
+
+// ─── SERVER GUIDE ────────────────────────────────────────────────────────────
+function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateEvent, onInvite }: {
+  server: Server;
+  events: CommunityEvent[];
+  isAdmin: boolean;
+  onClose: () => void;
+  onEditServer: () => void;
+  onCreateEvent: () => void;
+  onInvite: () => void;
+}) {
+  const upcomingEvs = events.filter(e => new Date(e.startsAt) > new Date()).slice(0, 3);
+  const [copied, setCopied] = useState(false);
+  const [editingAbout, setEditingAbout] = useState(false);
+  const [aboutText, setAboutText] = useState(server.description ?? '');
+  const [savingAbout, setSavingAbout] = useState(false);
+
+  async function handleSaveAbout() {
+    setSavingAbout(true);
+    try { await api.patch(`/community/servers/${server.id}`, { description: aboutText }); }
+    catch { /* best effort */ }
+    finally { setSavingAbout(false); setEditingAbout(false); }
+  }
+
+  function copyInvite() {
+    navigator.clipboard.writeText(server.inviteCode);
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
+  }
+
+  const bannerBg = server.bannerUrl
+    ? `url(${server.bannerUrl})`
+    : server.bannerColor
+    ? server.bannerColor
+    : 'linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%)';
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', background: '#000', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.25s ease' }}>
+      {/* Hero Banner */}
+      <div style={{ position: 'relative', height: 220, background: server.bannerUrl ? 'transparent' : (server.bannerColor ?? '#0d1117'), backgroundImage: server.bannerUrl ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0 }}>
+        {/* gradient overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.55) 70%, #000 100%)' }} />
+        {/* floating server icon */}
+        <div style={{ position: 'absolute', bottom: -48, left: 40 }}>
+          <div style={{ width: 96, height: 96, borderRadius: 24, border: '4px solid #000', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.8)', animation: 'glow 4s ease-in-out infinite' }}>
+            {server.imageUrl
+              ? <img src={server.imageUrl} alt={server.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span style={{ color: ACCENT, fontSize: 36, fontWeight: 800 }}>{server.name[0].toUpperCase()}</span>}
+          </div>
+        </div>
+        {/* top actions */}
+        <div style={{ position: 'absolute', top: 16, right: 20, display: 'flex', gap: 8 }}>
+          {isAdmin && (
+            <button onClick={onEditServer}
+              style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)', color: TEXT_NORMAL, borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
+              onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(0,0,0,0.5)'; (e.currentTarget as any).style.color = TEXT_NORMAL; }}>
+              ⚙️ Editar servidor
+            </button>
+          )}
+          <button onClick={onInvite}
+            style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, border: 'none', color: '#000', borderRadius: 8, padding: '6px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(165,230,0,0.3)', transition: 'all 0.15s' }}
+            onMouseEnter={e => (e.currentTarget as any).style.boxShadow = '0 6px 24px rgba(165,230,0,0.5)'}
+            onMouseLeave={e => (e.currentTarget as any).style.boxShadow = '0 4px 16px rgba(165,230,0,0.3)'}>
+            👤 Convidar
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '64px 44px 48px', maxWidth: 860, width: '100%' }}>
+        {/* Name + stats row */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h1 style={{ color: TEXT_BRIGHT, fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>{server.name}</h1>
+            <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
+              <span style={{ color: TEXT_MUTED, fontSize: 13, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT, display: 'inline-block', boxShadow: '0 0 8px rgba(165,230,0,0.6)' }} />
+                {server.membersCount} membros
+              </span>
+              <span style={{ color: TEXT_MUTED, fontSize: 13 }}>📢 {server.channels.length} canais</span>
+              {upcomingEvs.length > 0 && <span style={{ color: ACCENT, fontSize: 13 }}>📅 {upcomingEvs.length} evento{upcomingEvs.length > 1 ? 's' : ''} próximos</span>}
+            </div>
+          </div>
+          {/* Invite code pill */}
+          <button onClick={copyInvite}
+            style={{ background: copied ? 'rgba(165,230,0,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${copied ? 'rgba(165,230,0,0.4)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 10, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', transition: 'all 0.2s' }}>
+            <span style={{ fontFamily: 'monospace', fontSize: 12, color: copied ? ACCENT : TEXT_MUTED }}>{server.inviteCode}</span>
+            <span style={{ fontSize: 12, color: copied ? ACCENT : TEXT_MUTED }}>{copied ? '✓ Copiado!' : '📋 Copiar convite'}</span>
+          </button>
+        </div>
+
+        <div style={{ width: '100%', height: 1, background: BORDER_SUBTLE, margin: '20px 0' }} />
+
+        {/* About — full width */}
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 16, padding: '20px 24px', marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 700, margin: 0 }}>📋 Sobre o servidor</h2>
+            {isAdmin && !editingAbout && (
+              <button onClick={() => setEditingAbout(true)}
+                style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, borderRadius: 6, padding: '4px 12px', fontSize: 11, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}
+                onMouseEnter={e => { (e.currentTarget as any).style.color = ACCENT; (e.currentTarget as any).style.borderColor = ACCENT + '66'; }}
+                onMouseLeave={e => { (e.currentTarget as any).style.color = TEXT_MUTED; (e.currentTarget as any).style.borderColor = BORDER_SUBTLE; }}>
+                ✏️ Editar
+              </button>
+            )}
+          </div>
+          {editingAbout ? (
+            <div>
+              <textarea value={aboutText} onChange={e => setAboutText(e.target.value)} rows={8} maxLength={2000}
+                placeholder="Descreve o teu servidor — regras, propósito, recursos, considerações…"
+                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(165,230,0,0.25)`, borderRadius: 8, padding: '12px 16px', color: TEXT_BRIGHT, fontSize: 14, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.7, boxSizing: 'border-box', minHeight: 140 }} />
+              <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '4px 0 10px', textAlign: 'right' }}>{aboutText.length}/2000</p>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={() => setEditingAbout(false)} style={{ background: 'transparent', color: TEXT_MUTED, border: 'none', padding: '7px 14px', cursor: 'pointer', borderRadius: 6, fontSize: 13 }}>Cancelar</button>
+                <button onClick={handleSaveAbout} disabled={savingAbout}
+                  style={{ background: ACCENT, color: '#000', border: 'none', borderRadius: 7, padding: '7px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingAbout ? 0.7 : 1 }}>
+                  {savingAbout ? '⏳ A guardar…' : '✓ Guardar'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p style={{ color: aboutText ? TEXT_NORMAL : TEXT_MUTED, fontSize: 14, margin: 0, lineHeight: 1.8, fontStyle: aboutText ? 'normal' : 'italic', whiteSpace: 'pre-wrap' }}>
+              {aboutText || (isAdmin ? 'Clica em "Editar" para adicionar uma descrição do servidor.' : 'Este servidor ainda não tem descrição.')}
+            </p>
+          )}
+        </div>
+
+        {/* Two-column layout — events+channels LEFT, members+roles RIGHT */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
+          {/* Left column */}
+          <div>
+            {/* Upcoming Events */}
+            {upcomingEvs.length > 0 && (
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 700, margin: 0 }}>📅 Próximos eventos</h2>
+                  {isAdmin && (
+                    <button onClick={onCreateEvent}
+                      style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, border: 'none', color: '#000', borderRadius: 7, padding: '5px 14px', fontSize: 11, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(165,230,0,0.25)', transition: 'all 0.15s' }}
+                      onMouseEnter={e => (e.currentTarget as any).style.boxShadow = '0 4px 16px rgba(165,230,0,0.45)'}
+                      onMouseLeave={e => (e.currentTarget as any).style.boxShadow = '0 2px 10px rgba(165,230,0,0.25)'}>
+                      + Novo evento
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {upcomingEvs.map(ev => (
+                    <div key={ev.id} style={{ display: 'flex', gap: 14, padding: '12px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 12, transition: 'all 0.15s', cursor: 'default' }}
+                      onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.055)'; (e.currentTarget as any).style.borderColor = 'rgba(165,230,0,0.2)'; (e.currentTarget as any).style.transform = 'translateY(-1px)'; }}
+                      onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.03)'; (e.currentTarget as any).style.borderColor = BORDER_SUBTLE; (e.currentTarget as any).style.transform = 'none'; }}>
+                      <div style={{ width: 52, height: 52, borderRadius: 12, background: ev.coverColor ?? '#1a1a2e', backgroundImage: ev.imageUrl ? `url(${ev.imageUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {!ev.imageUrl && <span style={{ fontSize: 22 }}>📅</span>}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: '0 0 3px', color: TEXT_BRIGHT, fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
+                        <p style={{ margin: '0 0 4px', color: ACCENT, fontSize: 12 }}>{fmtEventDate(ev.startsAt)}</p>
+                        {ev.location && <p style={{ margin: 0, color: TEXT_MUTED, fontSize: 12 }}>📍 {ev.location}</p>}
+                      </div>
+                      {(ev.rsvpCount ?? 0) > 0 && <span style={{ color: TEXT_MUTED, fontSize: 11, alignSelf: 'center', flexShrink: 0 }}>👥 {ev.rsvpCount}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Channels */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 16, padding: '20px 24px' }}>
+              <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 700, margin: '0 0 14px' }}>💬 Canais</h2>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {server.channels.slice(0, 12).map(ch => (
+                  <button key={ch.id} onClick={onClose}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '6px 14px', color: TEXT_NORMAL, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(165,230,0,0.1)'; (e.currentTarget as any).style.color = ACCENT; (e.currentTarget as any).style.borderColor = 'rgba(165,230,0,0.3)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as any).style.color = TEXT_NORMAL; (e.currentTarget as any).style.borderColor = BORDER_SUBTLE; }}>
+                    <span style={{ color: TEXT_MUTED, fontSize: 14 }}>#</span> {ch.name}
+                  </button>
+                ))}
+                {server.channels.length > 12 && <span style={{ color: TEXT_MUTED, fontSize: 13, padding: '6px 0' }}>+{server.channels.length - 12} mais</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Right column — members + roles */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 16, padding: '18px 20px' }}>
+              <h3 style={{ color: TEXT_BRIGHT, fontSize: 13, fontWeight: 700, margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>👥 Membros</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {server.members.slice(0, 6).map(m => {
+                  const name = m.profile?.displayName ?? m.profile?.username ?? 'Utilizador';
+                  const acc = memberAccentColor(m, server.ownerId);
+                  return (
+                    <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: BG_LIGHT, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {m.profile?.avatarUrl ? <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: acc, fontWeight: 700, fontSize: 12 }}>{name[0].toUpperCase()}</span>}
+                      </div>
+                      <p style={{ margin: 0, color: acc, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{name}</p>
+                      {m.userId === server.ownerId && <span style={{ fontSize: 10, color: '#F0B132', flexShrink: 0 }}>👑</span>}
+                    </div>
+                  );
+                })}
+                {server.members.length > 6 && <p style={{ color: TEXT_MUTED, fontSize: 12, margin: '4px 0 0' }}>e mais {server.members.length - 6} membros…</p>}
+              </div>
+            </div>
+            {server.roles.length > 0 && (
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 16, padding: '18px 20px' }}>
+                <h3 style={{ color: TEXT_BRIGHT, fontSize: 13, fontWeight: 700, margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🎖 Cargos</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {server.roles.map(r => (
+                    <span key={r.id} style={{ fontSize: 11, background: (r.color || '#7C6FAD') + '20', color: r.color || '#7C6FAD', border: `1px solid ${(r.color || '#7C6FAD')}40`, borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>{r.name}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Enter channels — full width, always at bottom */}
+        <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${BORDER_SUBTLE}` }}>
+          <button onClick={onClose}
+            style={{ width: '100%', background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, border: 'none', color: '#000', borderRadius: 14, padding: '16px', fontSize: 15, fontWeight: 800, cursor: 'pointer', boxShadow: '0 6px 24px rgba(165,230,0,0.35)', transition: 'all 0.2s', letterSpacing: '0.01em' }}
+            onMouseEnter={e => { (e.currentTarget as any).style.transform = 'translateY(-2px)'; (e.currentTarget as any).style.boxShadow = '0 10px 32px rgba(165,230,0,0.5)'; }}
+            onMouseLeave={e => { (e.currentTarget as any).style.transform = 'none'; (e.currentTarget as any).style.boxShadow = '0 6px 24px rgba(165,230,0,0.35)'; }}>
+            💬 Entrar nos canais
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -984,6 +1278,7 @@ export default function ServerPage() {
   const [showCreateEvent,    setShowCreateEvent]    = useState(false);
   const [emojiPickerMsgId,   setEmojiPickerMsgId]  = useState<string | null>(null);
   const [uploadingFile,      setUploadingFile]      = useState(false);
+  const [showGuide,          setShowGuide]          = useState(true);
 
   const bottomRef   = useRef<HTMLDivElement>(null);
   const joinedRef   = useRef<string | null>(null);
@@ -1007,9 +1302,13 @@ export default function ServerPage() {
   useEffect(() => {
     if (!serverId) return;
     api.get<Server>(`/community/servers/${serverId}`)
-      .then(d => { setServer(d); if (d.channels.length > 0) setChannel(d.channels[0]); })
+      .then(d => { setServer(d); setShowGuide(true); setShowMembersPanel(false); })
       .catch(() => router.push('/main/community'))
       .finally(() => setLoading(false));
+
+    api.get<CommunityEvent[]>(`/community/servers/${serverId}/events`)
+      .then(setEvents)
+      .catch(console.error);
   }, [serverId, router]);
 
   useEffect(() => {
@@ -1103,15 +1402,22 @@ export default function ServerPage() {
     if (channel?.id === channelId) { const rest = server?.channels.filter(c => c.id !== channelId) ?? []; setChannel(rest[0] ?? null); }
     setChannelSettingsTarget(null);
   }
-  async function handleSaveChannel(channelId: string, name: string) {
-    try { await api.patch(`/community/channels/${channelId}`, { name }); } catch { /* optimistic */ }
-    setServer(p => p ? { ...p, channels: p.channels.map(c => c.id === channelId ? { ...c, name } : c) } : p);
-    if (channel?.id === channelId) setChannel(p => p ? { ...p, name } : p);
+  async function handleSaveChannel(channelId: string, name: string, topic: string) {
+    try { await api.patch(`/community/channels/${channelId}`, { name, topic }); } catch { /* optimistic */ }
+    setServer(p => p ? { ...p, channels: p.channels.map(c => c.id === channelId ? { ...c, name, topic } : c) } : p);
+    if (channel?.id === channelId) setChannel(p => p ? { ...p, name, topic } : p);
   }
   async function handleDeleteCategory(catId: string) {
     if (!server || !confirm('Eliminar esta categoria?')) return;
     try { await api.delete(`/community/servers/${server.id}/categories/${catId}`); } catch { /* optimistic */ }
     setServer(p => p ? { ...p, channelCategories: p.channelCategories.filter(c => c.id !== catId) } : p);
+  }
+  async function handleClearPastEvents() {
+    if (!server) return;
+    try {
+      await api.delete(`/community/servers/${server.id}/events/past`);
+      setEvents(p => p.filter(e => new Date(e.startsAt) > new Date()));
+    } catch (e: any) { alert(e.message); }
   }
   async function handleCreateRole(name: string, color: string, perms: { canModerate: boolean; canManageServer: boolean; canManageChannels: boolean }) {
     if (!server) return;
@@ -1156,6 +1462,9 @@ export default function ServerPage() {
   }
   function handleRsvp(eventId: string) {
     setEvents(p => p.map(e => e.id === eventId ? { ...e, myRsvp: !e.myRsvp, rsvpCount: (e.rsvpCount ?? 0) + (e.myRsvp ? -1 : 1) } : e));
+    api.post<{ rsvpCount: number; myRsvp: boolean }>(`/community/events/${eventId}/rsvp`)
+      .then(res => setEvents(p => p.map(e => e.id === eventId ? { ...e, rsvpCount: res.rsvpCount, myRsvp: res.myRsvp } : e)))
+      .catch(console.error);
   }
 
   function mname(m: Member) {
@@ -1191,26 +1500,36 @@ export default function ServerPage() {
   return (
     <div style={{ display: 'flex', height: '100vh', background: BG_DARKEST, overflow: 'hidden' }}>
       <style>{`
-        @keyframes spin    { to { transform: rotate(360deg); } }
-        @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
-        @keyframes slideLeft { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
-        @keyframes popIn   { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @keyframes spin       { to { transform: rotate(360deg); } }
+        @keyframes fadeIn     { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp    { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: none; } }
+        @keyframes slideDown  { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+        @keyframes slideLeft  { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+        @keyframes slideRight { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: none; } }
+        @keyframes popIn      { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }
+        @keyframes msgIn      { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        @keyframes glow       { 0%,100% { box-shadow: 0 0 12px rgba(165,230,0,0.2); } 50% { box-shadow: 0 0 28px rgba(165,230,0,0.5); } }
+        @keyframes float      { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes pulse      { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
         .ch-row:hover .ch-actions { opacity: 1 !important; }
-        input, textarea, select { outline: none; color-scheme: dark; }
+        input, textarea, select { outline: none !important; color-scheme: dark; font-family: inherit; }
+        input:focus, textarea:focus, select:focus { outline: none !important; box-shadow: none !important; border-color: inherit !important; }
+
         .msg-row:hover .msg-actions { opacity: 1 !important; }
-        .msg-row { transition: background 0.08s; }
-        .msg-row:hover { background: rgba(255,255,255,0.02); border-radius: 4px; }
+        .msg-row { transition: background 0.1s; }
+        .msg-row:hover { background: rgba(255,255,255,0.025); border-radius: 6px; }
+        button { font-family: inherit; }
       `}</style>
 
       {/* ── 1. SERVERS SIDEBAR ─── */}
       <div style={{ width: 72, background: BG_DARKEST, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 12, overflowY: 'auto', flexShrink: 0, borderRight: `1px solid ${BORDER_SUBTLE}` }}>
-        <button onClick={() => router.push('/main')} title="Início" style={{ width: 48, height: 48, borderRadius: '40%', background: BG_LIGHT, border: '2px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, color: ACCENT, fontSize: 20, flexShrink: 0, transition: 'border-radius 0.2s' }}
+        <button onClick={() => router.push('/main/community')} title="Início" style={{ width: 48, height: 48, borderRadius: '40%', background: BG_LIGHT, border: '2px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, color: ACCENT, fontSize: 20, flexShrink: 0, transition: 'border-radius 0.2s' }}
           onMouseEnter={e => e.currentTarget.style.borderRadius = '50%'}
           onMouseLeave={e => e.currentTarget.style.borderRadius = '40%'}>✦</button>
         <div style={{ width: 32, height: 2, background: BORDER_SUBTLE, borderRadius: 1, marginBottom: 8 }} />
@@ -1224,54 +1543,68 @@ export default function ServerPage() {
       </div>
 
       {/* ── 2. CHANNEL SIDEBAR ─── */}
-      <div style={{ width: 240, background: BG_DARK, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <div style={{ width: 240, background: '#07080a', display: 'flex', flexDirection: 'column', flexShrink: 0, borderRight: `1px solid rgba(255,255,255,0.04)` }}>
         {/* Banner do servidor */}
         {(server.bannerUrl || server.bannerColor) && (
-          <div style={{ height: 72, background: server.bannerColor ?? '#1a1a2e', backgroundImage: server.bannerUrl ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0 }} />
+          <div style={{ height: 80, background: server.bannerColor ?? '#1a1a2e', backgroundImage: server.bannerUrl ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0, position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(7,8,10,0.7) 100%)' }} />
+          </div>
         )}
         {/* Server header */}
-        <div style={{ padding: '10px 16px', borderBottom: `1px solid ${BORDER_SUBTLE}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, userSelect: 'none', transition: 'background 0.1s' }}
+        <div style={{ padding: '10px 16px', borderBottom: `1px solid rgba(255,255,255,0.05)`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, userSelect: 'none', transition: 'background 0.15s', flexShrink: 0 }}
           onClick={() => setShowServerMenu(p => !p)}
-          onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)'}
+          onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)'}
           onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
-          <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 700, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{server.name}</h2>
-          <span style={{ color: TEXT_MUTED, fontSize: 11, transition: 'transform 0.2s', transform: showServerMenu ? 'rotate(180deg)' : 'none' }}>▼</span>
+          <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 800, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{server.name}</h2>
+          <span style={{ color: TEXT_MUTED, fontSize: 10, transition: 'transform 0.25s cubic-bezier(.4,0,.2,1)', display: 'inline-block', transform: showServerMenu ? 'rotate(180deg)' : 'none' }}>▼</span>
         </div>
 
         {/* Server dropdown */}
         {showServerMenu && (
-          <div style={{ background: '#18191c', margin: 8, borderRadius: 8, border: `1px solid ${BORDER_SUBTLE}`, overflow: 'hidden', animation: 'slideDown 0.12s ease', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+          <div style={{ background: '#0b0c0e', margin: '4px 8px 8px', borderRadius: 12, border: `1px solid rgba(255,255,255,0.08)`, overflow: 'hidden', animation: 'slideDown 0.15s cubic-bezier(.4,0,.2,1)', boxShadow: '0 16px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(165,230,0,0.06)', backdropFilter: 'blur(8px)' }}>
+            <div style={{ padding: '4px 0' }}>
             {[
               { label: 'Convidar para o servidor', icon: '👤', action: () => { setShowInvite(true); setShowServerMenu(false); } },
               { label: 'Configurações do servidor', icon: '⚙️', action: () => { setShowServerSettings(true); setShowServerMenu(false); }, admin: true },
-              { label: 'Criar canal', icon: '#', action: () => { setShowCh(true); setShowServerMenu(false); }, admin: true },
+              { label: 'Criar canal', icon: '#️⃣', action: () => { setShowCh(true); setShowServerMenu(false); }, admin: true },
               { label: 'Criar categoria', icon: '🏷️', action: () => { setShowCat(true); setShowServerMenu(false); }, admin: true },
               { label: 'Criar evento', icon: '📅', action: () => { setShowCreateEvent(true); setShowServerMenu(false); }, admin: true },
               null,
               { label: 'Sair do servidor', icon: '🚪', action: handleLeaveServer, danger: true },
             ].map((item, i) => item === null ? (
-              <div key={i} style={{ height: 1, background: BORDER_SUBTLE, margin: '4px 0' }} />
+              <div key={i} style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '4px 8px' }} />
             ) : (
               (!item.admin || isAdmin) && (
-                <button key={i} onClick={item.action} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: (item as any).danger ? '#ED4245' : TEXT_BRIGHT, padding: '9px 12px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, transition: 'background 0.08s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = (item as any).danger ? 'rgba(237,66,69,0.12)' : BG_HOVER}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <span style={{ width: 18, textAlign: 'center' }}>{item.icon}</span>{item.label}
+                <button key={i} onClick={item.action} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: (item as any).danger ? '#ED4245' : TEXT_NORMAL, padding: '8px 14px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, transition: 'all 0.1s', borderRadius: 0 }}
+                  onMouseEnter={e => { (e.currentTarget as any).style.background = (item as any).danger ? 'rgba(237,66,69,0.12)' : 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = (item as any).danger ? '#FF6B6B' : TEXT_BRIGHT; }}
+                  onMouseLeave={e => { (e.currentTarget as any).style.background = 'transparent'; (e.currentTarget as any).style.color = (item as any).danger ? '#ED4245' : TEXT_NORMAL; }}>
+                  <span style={{ width: 20, textAlign: 'center', fontSize: 15 }}>{item.icon}</span>
+                  <span style={{ fontWeight: 500 }}>{item.label}</span>
                 </button>
               )
             ))}
+            </div>
           </div>
         )}
 
         {/* Channel list */}
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
+          {/* Guide entry */}
+          <button
+            onClick={() => setShowGuide(true)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: showGuide ? 'rgba(165,230,0,0.1)' : 'transparent', border: 'none', borderRadius: 6, padding: '7px 12px', cursor: 'pointer', color: showGuide ? ACCENT : TEXT_MUTED, fontSize: 13, fontWeight: showGuide ? 700 : 500, transition: 'all 0.12s', margin: '6px 4px 2px', boxSizing: 'border-box' }}
+            onMouseEnter={e => { if (!showGuide) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
+            onMouseLeave={e => { if (!showGuide) { (e.currentTarget as any).style.background = 'transparent'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>
+            <span style={{ fontSize: 15 }}>🗺️</span>
+            <span>Guia do Servidor</span>
+          </button>
           {channelsByCategory.uncategorized.length > 0 && (
             <div style={{ paddingTop: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px 4px 16px', marginBottom: 2 }}>
                 <span style={{ flex: 1, color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Canais de texto</span>
                 {canManageCh && <button onClick={() => setShowCh(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 18, padding: '0 4px' }}>+</button>}
               </div>
-              {channelsByCategory.uncategorized.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} onSelect={setChannel} onSettings={setChannelSettingsTarget} />)}
+              {channelsByCategory.uncategorized.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} onSelect={ch => { setChannel(ch); setShowGuide(false); }} onSettings={setChannelSettingsTarget} />)}
             </div>
           )}
           {(server.channelCategories ?? []).map(cat => {
@@ -1292,7 +1625,7 @@ export default function ServerPage() {
                     onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ED4245'; }}
                     onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = TEXT_MUTED; }}>×</button>}
                 </div>
-                {!collapsed && catChannels.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} onSelect={setChannel} onSettings={setChannelSettingsTarget} />)}
+                {!collapsed && catChannels.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} onSelect={ch => { setChannel(ch); setShowGuide(false); }} onSettings={setChannelSettingsTarget} />)}
               </div>
             );
           })}
@@ -1318,48 +1651,68 @@ export default function ServerPage() {
         </div>
 
         {/* User panel */}
-        <div style={{ padding: 8, borderTop: `1px solid ${BORDER_SUBTLE}`, background: '#0c0d0f', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div onClick={() => setMemberMenuUserId(user?.id ?? null)} style={{ width: 32, height: 32, borderRadius: '50%', background: BG_LIGHT, overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `2px solid ${ACCENT}44`, transition: 'border-color 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = ACCENT}
-            onMouseLeave={e => e.currentTarget.style.borderColor = `${ACCENT}44`}>
+        <div style={{ padding: '8px 10px', borderTop: `1px solid rgba(255,255,255,0.05)`, background: '#050607', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <div onClick={() => setMemberMenuUserId(user?.id ?? null)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `2px solid rgba(165,230,0,0.3)`, transition: 'all 0.15s', position: 'relative' }}
+            onMouseEnter={e => { (e.currentTarget as any).style.borderColor = ACCENT; (e.currentTarget as any).style.boxShadow = '0 0 10px rgba(165,230,0,0.3)'; }}
+            onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(165,230,0,0.3)'; (e.currentTarget as any).style.boxShadow = 'none'; }}>
             {user?.profile?.avatarUrl ? <img src={user.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: ACCENT, fontWeight: 700, fontSize: 13 }}>{(user?.profile?.username ?? 'U')[0].toUpperCase()}</span>}
+            <div style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%', background: '#23A559', border: '2px solid #050607' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => setMemberMenuUserId(user?.id ?? null)}>
             <p style={{ margin: 0, color: TEXT_BRIGHT, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.profile?.displayName ?? user?.profile?.username}</p>
             <p style={{ margin: 0, color: TEXT_MUTED, fontSize: 11 }}>@{user?.profile?.username}</p>
           </div>
-          <Tooltip text="Editar perfil"><button onClick={() => setShowEditProfile(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: 4, borderRadius: 4, transition: 'color 0.1s' }} onMouseEnter={e => e.currentTarget.style.color = ACCENT} onMouseLeave={e => e.currentTarget.style.color = TEXT_MUTED}>✏️</button></Tooltip>
-          <Tooltip text="Configurações"><button onClick={() => setShowServerSettings(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: 4, borderRadius: 4, transition: 'color 0.1s' }} onMouseEnter={e => e.currentTarget.style.color = ACCENT} onMouseLeave={e => e.currentTarget.style.color = TEXT_MUTED}>⚙️</button></Tooltip>
+          <div style={{ display: 'flex', gap: 2 }}>
+            <Tooltip text="Editar perfil"><button onClick={() => setShowEditProfile(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '4px 6px', borderRadius: 6, transition: 'all 0.12s' }} onMouseEnter={e => { (e.currentTarget as any).style.color = ACCENT; (e.currentTarget as any).style.background = 'rgba(165,230,0,0.08)'; }} onMouseLeave={e => { (e.currentTarget as any).style.color = TEXT_MUTED; (e.currentTarget as any).style.background = 'none'; }}>✏️</button></Tooltip>
+            <Tooltip text="Configurações"><button onClick={() => setShowServerSettings(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '4px 6px', borderRadius: 6, transition: 'all 0.12s' }} onMouseEnter={e => { (e.currentTarget as any).style.color = ACCENT; (e.currentTarget as any).style.background = 'rgba(165,230,0,0.08)'; }} onMouseLeave={e => { (e.currentTarget as any).style.color = TEXT_MUTED; (e.currentTarget as any).style.background = 'none'; }}>⚙️</button></Tooltip>
+          </div>
         </div>
       </div>
 
-      {/* ── 3. MAIN CHAT ─── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: BG_MID }}>
+      {/* ── 3. MAIN AREA (Guide or Chat) ─── */}
+      {showGuide && server ? (
+        <ServerGuide
+          server={server}
+          events={events}
+          isAdmin={isAdmin}
+          onClose={() => { setShowGuide(false); if (!channel && server.channels.length > 0) setChannel(server.channels[0]); }}
+          onEditServer={() => { setShowServerSettings(true); }}
+          onCreateEvent={() => { setShowCreateEvent(true); }}
+          onInvite={() => setShowInvite(true)}
+        />
+      ) : (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#000' }}>
         {/* Topbar */}
         {channel && (
-          <div style={{ height: 48, borderBottom: `1px solid ${BORDER_SUBTLE}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, flexShrink: 0, background: BG_MID }}>
-            <span style={{ color: TEXT_MUTED, fontSize: 22, fontWeight: 300 }}>#</span>
-            <span style={{ color: TEXT_BRIGHT, fontWeight: 600, fontSize: 15 }}>{channel.name}</span>
-            <div style={{ width: 1, height: 20, background: BORDER_SUBTLE }} />
-            <span style={{ color: TEXT_MUTED, fontSize: 13 }}>Canal de texto</span>
+          <div style={{ height: 48, borderBottom: `1px solid rgba(255,255,255,0.04)`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10, flexShrink: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+            <span style={{ color: ACCENT, fontSize: 20, fontWeight: 300, opacity: 0.8 }}>#</span>
+            <span style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15 }}>{channel.name}</span>
+            <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)' }} />
+            <span style={{ color: TEXT_MUTED, fontSize: 12 }}>{channel.topic?.trim() || 'Canal de texto'}</span>
             <div style={{ flex: 1 }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               {isMod && <Tooltip text="Fixadas">
                 <button onClick={() => { setShowPins(p => !p); if (!showPins) api.get<Msg[]>(`/community/channels/${channel.id}/pins`).then(setPins).catch(() => {}); }}
-                  style={{ background: showPins ? ACCENT_DIM : 'none', border: 'none', color: showPins ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 16, padding: '4px 6px', borderRadius: 4, transition: 'all 0.1s' }}>📌</button>
+                  style={{ background: showPins ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showPins ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s' }}
+                  onMouseEnter={e => { if (!showPins) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
+                  onMouseLeave={e => { if (!showPins) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>📌</button>
               </Tooltip>}
               <Tooltip text="Eventos">
-                <button onClick={() => setShowEventsPanel(p => !p)} style={{ background: showEventsPanel ? ACCENT_DIM : 'none', border: 'none', color: showEventsPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 16, padding: '4px 6px', borderRadius: 4, transition: 'all 0.1s', position: 'relative' }}>
+                <button onClick={() => setShowEventsPanel(p => !p)} style={{ background: showEventsPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showEventsPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', position: 'relative' }}
+                  onMouseEnter={e => { if (!showEventsPanel) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
+                  onMouseLeave={e => { if (!showEventsPanel) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>
                   📅
-                  {upcomingEvents.length > 0 && <span style={{ position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: '50%', background: ACCENT }}/>}
+                  {upcomingEvents.length > 0 && <span style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: ACCENT, boxShadow: '0 0 6px rgba(165,230,0,0.8)', animation: 'pulse 2s infinite' }}/>}
                 </button>
               </Tooltip>
               <Tooltip text={showMembersPanel ? 'Ocultar membros' : 'Mostrar membros'}>
-                <button onClick={() => setShowMembersPanel(p => !p)} style={{ background: showMembersPanel ? ACCENT_DIM : 'none', border: 'none', color: showMembersPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 16, padding: '4px 6px', borderRadius: 4, transition: 'all 0.1s' }}>👥</button>
+                <button onClick={() => setShowMembersPanel(p => !p)} style={{ background: showMembersPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showMembersPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s' }}
+                  onMouseEnter={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
+                  onMouseLeave={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>👥</button>
               </Tooltip>
-              <div style={{ display: 'flex', alignItems: 'center', background: BG_DARK, border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 4, padding: '2px 8px', gap: 6, marginLeft: 4 }}>
-                <input placeholder={`Buscar em #${channel.name}`} style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 13, width: 150 }} />
-                <span style={{ color: TEXT_MUTED, fontSize: 14 }}>🔍</span>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: `1px solid rgba(255,255,255,0.07)`, borderRadius: 8, padding: '4px 10px', gap: 6, marginLeft: 4 }}>
+                <input placeholder={`Buscar em #${channel.name}`} style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 13, width: 140 }} />
+                <span style={{ color: TEXT_MUTED, fontSize: 13 }}>🔍</span>
               </div>
             </div>
           </div>
@@ -1460,30 +1813,33 @@ export default function ServerPage() {
         {/* Input area */}
         <div style={{ padding: '0 16px 16px', flexShrink: 0 }}>
           {(replyTo || editing) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', marginBottom: 0, background: '#0e0f13', borderRadius: '10px 10px 0 0', border: `1px solid ${BORDER_SUBTLE}`, borderBottom: 'none', animation: 'slideDown 0.1s ease' }}>
-              <span style={{ fontSize: 12, color: editing ? ACCENT : TEXT_MUTED }}>{editing ? '✏️ A editar' : `↩ Responder a ${replyTo?.authorName}`}</span>
-              {!editing && replyTo && <span style={{ color: TEXT_MUTED, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{replyTo.content}</span>}
-              <button onClick={() => { setReplyTo(null); setEditing(null); setText(''); }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 16 }}>✕</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px', marginBottom: 0, background: 'rgba(165,230,0,0.05)', borderRadius: '12px 12px 0 0', border: `1px solid rgba(165,230,0,0.15)`, borderBottom: 'none', animation: 'slideDown 0.12s ease' }}>
+              <span style={{ fontSize: 12, color: editing ? ACCENT : TEXT_MUTED, fontWeight: 500 }}>{editing ? '✏️ A editar mensagem' : `↩ A responder a ${replyTo?.authorName}`}</span>
+              {!editing && replyTo && <span style={{ color: TEXT_MUTED, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: 'italic' }}>&ldquo;{replyTo.content}&rdquo;</span>}
+              <button onClick={() => { setReplyTo(null); setEditing(null); setText(''); }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, transition: 'color 0.1s' }}
+                onMouseEnter={e => (e.currentTarget as any).style.color = '#fff'}
+                onMouseLeave={e => (e.currentTarget as any).style.color = TEXT_MUTED}>✕</button>
             </div>
           )}
           {showAttachMenu && (
-            <div style={{ background: '#0e0f13', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: 8, marginBottom: 4, animation: 'slideDown 0.1s ease' }}>
+            <div style={{ background: '#0b0c0e', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 12, padding: 6, marginBottom: 6, animation: 'slideDown 0.12s ease', boxShadow: '0 8px 24px rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
               {[{ icon: '🖼️', label: 'Enviar imagem', accept: 'image/*' }, { icon: '📎', label: 'Enviar ficheiro', accept: '*' }].map(item => (
                 <button key={item.label} onClick={() => { if (fileRef.current) { fileRef.current.accept = item.accept; fileRef.current.click(); } setShowAttachMenu(false); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', color: TEXT_NORMAL, padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 14, transition: 'background 0.1s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = BG_HOVER}
-                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                  <span style={{ fontSize: 18 }}>{item.icon}</span> {item.label}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: 'none', border: 'none', color: TEXT_NORMAL, padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 14, transition: 'all 0.1s' }}
+                  onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
+                  onMouseLeave={e => { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_NORMAL; }}>
+                  <span style={{ fontSize: 18 }}>{item.icon}</span>
+                  <span style={{ fontWeight: 500 }}>{item.label}</span>
                 </button>
               ))}
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', background: BG_LIGHT, borderRadius: (replyTo || editing) ? '0 0 12px 12px' : 12, padding: '0 12px', border: `1px solid ${BORDER_SUBTLE}`, gap: 8, opacity: connected ? 1 : 0.6, transition: 'opacity 0.2s' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: (replyTo || editing) ? '0 0 14px 14px' : 14, padding: '0 14px', border: `1px solid rgba(255,255,255,0.08)`, gap: 8, opacity: connected ? 1 : 0.5, transition: 'opacity 0.2s, border-color 0.15s, box-shadow 0.15s' }}>
             <input ref={fileRef} type="file" hidden onChange={handleFileUpload} />
             <button onClick={() => setShowAttachMenu(p => !p)} disabled={uploadingFile}
-              style={{ background: 'none', border: 'none', color: uploadingFile ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 22, padding: '10px 4px', lineHeight: 1, flexShrink: 0, transition: 'color 0.1s' }}
-              onMouseEnter={e => { if (!uploadingFile) e.currentTarget.style.color = TEXT_BRIGHT; }}
-              onMouseLeave={e => { if (!uploadingFile) e.currentTarget.style.color = TEXT_MUTED; }}>
+              style={{ background: 'none', border: 'none', color: uploadingFile ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 22, padding: '10px 2px', lineHeight: 1, flexShrink: 0, transition: 'all 0.12s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)' }}
+              onMouseEnter={e => { if (!uploadingFile) (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
+              onMouseLeave={e => { if (!uploadingFile) (e.currentTarget as any).style.color = TEXT_MUTED; }}>
               {uploadingFile ? '⏳' : '+'}
             </button>
             <input ref={inputRef} value={text}
@@ -1491,24 +1847,27 @@ export default function ServerPage() {
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } if (e.key === 'Escape') { setReplyTo(null); setEditing(null); setText(''); } }}
               placeholder={channel ? (connected ? `Mensagem em #${channel.name}` : 'A reconectar…') : 'Seleciona um canal'}
               disabled={!connected || !channel}
-              style={{ flex: 1, background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 15, padding: '12px 0', minHeight: 44 }}
+              style={{ flex: 1, background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 15, padding: '13px 0', minHeight: 46 }}
             />
             <button onClick={send} disabled={!text.trim() || !connected || !channel}
-              style={{ background: text.trim() && connected && channel ? ACCENT : 'transparent', border: text.trim() && connected && channel ? 'none' : `1px solid ${BORDER_SUBTLE}`, color: text.trim() ? '#000' : TEXT_MUTED, borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 700, cursor: text.trim() ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0 }}>➤</button>
+              style={{ background: text.trim() && connected && channel ? `linear-gradient(135deg, ${ACCENT}, #7BC800)` : 'rgba(255,255,255,0.05)', border: 'none', color: text.trim() && connected && channel ? '#000' : TEXT_MUTED, borderRadius: 9, padding: '7px 15px', fontSize: 14, fontWeight: 700, cursor: text.trim() && connected && channel ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0, boxShadow: text.trim() && connected && channel ? '0 4px 12px rgba(165,230,0,0.3)' : 'none' }}
+              onMouseEnter={e => { if (text.trim() && connected && channel) (e.currentTarget as any).style.boxShadow = '0 6px 20px rgba(165,230,0,0.5)'; }}
+              onMouseLeave={e => { if (text.trim() && connected && channel) (e.currentTarget as any).style.boxShadow = '0 4px 12px rgba(165,230,0,0.3)'; }}>➤</button>
           </div>
         </div>
       </div>
+      )}
 
       {/* ── 4. EVENTS PANEL ─── */}
       {showEventsPanel && (
-        <EventsPanel events={events} isAdmin={isAdmin} onNew={() => setShowCreateEvent(true)} onRsvp={handleRsvp} onClose={() => setShowEventsPanel(false)} />
+        <EventsPanel events={events} isAdmin={isAdmin} onNew={() => setShowCreateEvent(true)} onRsvp={handleRsvp} onClose={() => setShowEventsPanel(false)} onClearPast={handleClearPastEvents} />
       )}
 
       {/* ── 5. MEMBERS SIDEBAR ─── */}
       {showMembersPanel && !showEventsPanel && (
-        <div style={{ width: 240, background: BG_DARK, overflowY: 'auto', flexShrink: 0, borderLeft: `1px solid ${BORDER_SUBTLE}`, animation: 'slideLeft 0.15s ease' }}>
-          <div style={{ padding: '12px 12px 8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: '#0c0d0f', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 6, padding: '4px 10px', gap: 6 }}>
+        <div style={{ width: 240, background: '#07080a', overflowY: 'auto', flexShrink: 0, borderLeft: `1px solid rgba(255,255,255,0.04)`, animation: 'slideLeft 0.18s cubic-bezier(.4,0,.2,1)' }}>
+          <div style={{ padding: '12px 12px 8px', position: 'sticky', top: 0, background: '#07080a', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(255,255,255,0.07)`, borderRadius: 8, padding: '5px 10px', gap: 6, transition: 'border-color 0.15s' }}>
               <span style={{ color: TEXT_MUTED, fontSize: 13 }}>🔍</span>
               <input value={memberSearchQ} onChange={e => setMemberSearchQ(e.target.value)} placeholder="Pesquisar membros" style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 13, flex: 1 }} />
             </div>
@@ -1569,7 +1928,7 @@ export default function ServerPage() {
       )}
       {channelSettingsTarget && (
         <ChannelSettingsModal channel={channelSettingsTarget} onClose={() => setChannelSettingsTarget(null)}
-          onSave={async name => { await handleSaveChannel(channelSettingsTarget.id, name); }}
+          onSave={async (name, topic) => { await handleSaveChannel(channelSettingsTarget.id, name, topic); }}
           onDelete={handleDeleteChannel} />
       )}
       {showServerSettings && (
@@ -1620,7 +1979,14 @@ export default function ServerPage() {
           </div>
         </SimpleModal>
       )}
-      {showCreateEvent && <CreateEventModal onClose={() => setShowCreateEvent(false)} onCreate={ev => { setEvents(p => [...p, ev]); setShowCreateEvent(false); setShowEventsPanel(true); }} />}
+      {showCreateEvent && <CreateEventModal serverId={server.id} onClose={() => setShowCreateEvent(false)} onCreate={async ev => { 
+        try {
+          const newEv = await api.post<CommunityEvent>(`/community/servers/${server.id}/events`, ev);
+          setEvents(p => [...p, newEv]); 
+          setShowCreateEvent(false); 
+          setShowEventsPanel(true); 
+        } catch (e: any) { alert(e.message); }
+      }} />}
     </div>
   );
 }

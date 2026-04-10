@@ -48,6 +48,8 @@ model Profile {
   username    String   @unique
   displayName String?
   avatarUrl   String?
+  bannerUrl   String?
+  bannerColor String?
   activeModes String[] @default([])           // ["lazer","developer",...]
   bio         String?
   createdAt   DateTime @default(now())
@@ -225,6 +227,8 @@ model Server {
   name        String
   description String?
   imageUrl    String?
+  bannerUrl   String?
+  bannerColor String?
   inviteCode  String    @unique @default(uuid())
   createdAt   DateTime  @default(now())
   deletedAt   DateTime?
@@ -307,6 +311,7 @@ model Channel {
   parentId        String?  // If type == "thread", this points to the parent Channel
   parentMessageId String?  // Optional: If thread was created from a message
   name            String
+  topic           String?
   type            String   @default("text") // "text" | "voice" | "thread"
   icon            String   @default("#")
   position        Int      @default(0)
@@ -403,8 +408,9 @@ model CommunityEvent {
   locationType  String    @default("external") // "voice" | "external"
   imageUrl      String?
   startDate     DateTime
-  endDate       DateTime  
+  endDate       DateTime?  
   frequency     String    @default("none")
+  coverColor    String?
   createdAt     DateTime  @default(now())
 
   server        Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)

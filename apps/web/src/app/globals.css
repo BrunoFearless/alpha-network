@@ -125,10 +125,9 @@ html {
 }
 
 /* Focus visível para acessibilidade */
+/* Focus removido conforme solicitado */
 :focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: none;
 }
 
 /* Melhorias de contrast no dark mode */
@@ -153,9 +152,7 @@ textarea:hover {
 
 input:focus,
 textarea:focus {
-  border-color: rgba(165, 230, 0, 0.3);
-  background-color: #121820;
-  box-shadow: 0 0 0 3px rgba(165, 230, 0, 0.1);
+  outline: none;
 }
 
 /* Placeholders */

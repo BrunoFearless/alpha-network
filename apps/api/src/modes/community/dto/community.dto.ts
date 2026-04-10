@@ -126,6 +126,21 @@ export class UpdateServerDto {
   @IsString()
   @MaxLength(500)
   description?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  imageUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  bannerUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  bannerColor?: string | null;
 }
 
 export class CreateCommunityRoleDto {

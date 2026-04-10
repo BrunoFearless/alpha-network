@@ -64,13 +64,15 @@ export class UsersService {
     });
   }
 
-  async updateProfile(userId: string, data: { displayName?: string; bio?: string; avatarUrl?: string }) {
+  async updateProfile(userId: string, data: { displayName?: string; bio?: string; avatarUrl?: string; bannerUrl?: string; bannerColor?: string }) {
     return this.prisma.profile.update({
       where: { userId },
       data: {
         ...(data.displayName !== undefined && { displayName: data.displayName }),
         ...(data.bio !== undefined && { bio: data.bio }),
         ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
+        ...(data.bannerUrl !== undefined && { bannerUrl: data.bannerUrl }),
+        ...(data.bannerColor !== undefined && { bannerColor: data.bannerColor }),
       },
     });
   }
