@@ -1,6 +1,6 @@
 import {
   Controller, Get, Patch, Delete,
-  Body, Param, UseGuards, HttpCode, HttpStatus,
+  Body, Param, UseGuards, HttpCode, HttpStatus, Req, Post,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -15,15 +15,21 @@ export class UsersController {
   // ── Perfil público ─────────────────────────────────────────────────
   // TODO (Adolfo v2): implementar getProfile completo com followersCount
   @Get(':username')
-  async getProfile(@Param('username') username: string) {
-    const profile = await this.usersService.findByUsername(username);
-    if (!profile) {
+  @UseGuards(JwtAuthGuard)
+  async getProfile(
+    @Param('username') username: string,
+    @Req() req: any // O Passport/JWT costuma injetar o user aqui
+  ) {
+    // Se o utilizador não estiver logado, o id será undefined, e o isFollowing será false
+    const requesterId = req.user?.id;
+
+    const result = await this.usersService.getFullProfile(username, requesterId);
+
+    if (!result) {
       return { success: false, error: { message: 'Utilizador não encontrado.' } };
     }
-    const { user } = profile;
-    const { passwordHash, deletedAt, emailVerified, ...safeUser } = user as any;
-    console.log(safeUser)
-    return { success: true, data: { ...profile, user: safeUser } };
+
+    return { success: true, data: result };
   }
 
   // ── Activar/desactivar modos ───────────────────────────────────────
@@ -54,13 +60,42 @@ export class UsersController {
   }
 
   // ── Apagar conta ───────────────────────────────────────────────────
-  // TODO (Adolfo v2): soft delete com deletedAt
   @Delete('me')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteAccount(@CurrentUser() user: { id: string }) {
-    // Placeholder — Adolfo implementa em v2
     await this.usersService.softDelete(user.id)
     return
+  }
+
+  // ── Seguir ───────────────────────────────────────────────────
+  @UseGuards(JwtAuthGuard)
+  @Post(':username/follow')
+  async follow(
+    @Param('username') username: string,
+    @Req() req: any
+  ) {
+    const requesterId = req.user.id
+    await this.usersService.follow(requesterId, username)
+    return {
+      success: true,
+      message: `Agora segues ${username}`
+    }
+  }
+
+  // ── Parar de seguir ───────────────────────────────────────────────────
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':username/follow')
+  async unfollow(
+    @Param('username') username: string,
+    @Req() req: any
+  ) {
+    const requesterId = req?.user.id
+    await this.usersService.unfollow(requesterId, username)
+    return {
+      success: true,
+      message: `Deixaste de seguir ${username}`
+    }
   }
 }
