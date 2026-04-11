@@ -30,14 +30,14 @@ model User {
   id            String    @id @default(uuid())
   email         String    @unique
   passwordHash  String?
-  provider      String    @default("email")   // "email" | "google"
+  provider      String    @default("email") // "email" | "google"
   emailVerified Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  profile       Profile?
-  sessions      Session[]
+  profile  Profile?
+  sessions Session[]
 
   @@map("users")
 }
@@ -48,12 +48,12 @@ model Profile {
   username    String   @unique
   displayName String?
   avatarUrl   String?
-  activeModes String[] @default([])           // ["lazer","developer",...]
+  activeModes String[] @default([]) // ["lazer","developer",...]
   bio         String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("profiles")
 }
@@ -65,9 +65,19 @@ model Session {
   expiresAt    DateTime
   createdAt    DateTime @default(now())
 
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@map("follows")
 }
 
 // ─── MODO LAZER (Obed) ───────────────────────────────────────────────
@@ -88,13 +98,13 @@ model LazerPost {
 }
 
 model LazerReaction {
-  id        String    @id @default(uuid())
+  id        String   @id @default(uuid())
   postId    String
   userId    String
-  type      String    @default("like")
-  createdAt DateTime  @default(now())
+  type      String   @default("like")
+  createdAt DateTime @default(now())
 
-  post      LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
   @@map("lazer_reactions")
@@ -108,7 +118,7 @@ model LazerComment {
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 
-  post      LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@map("lazer_comments")
 }
@@ -168,10 +178,10 @@ model DevMember {
   id        String   @id @default(uuid())
   projectId String
   userId    String
-  role      String   @default("member")      // "owner" | "member"
+  role      String   @default("member") // "owner" | "member"
   joinedAt  DateTime @default(now())
 
-  project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
   @@map("dev_members")
@@ -186,7 +196,7 @@ model DevFile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, path])
   @@map("dev_files")
@@ -200,7 +210,7 @@ model DevTask {
   completed   Boolean  @default(false)
   createdAt   DateTime @default(now())
 
-  project     DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("dev_tasks")
 }
@@ -212,7 +222,7 @@ model DevMessage {
   content   String
   createdAt DateTime @default(now())
 
-  project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("dev_messages")
 }
@@ -307,10 +317,10 @@ model Channel {
   position   Int      @default(0)
   createdAt  DateTime @default(now())
 
-  server    Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  category  ChannelCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  messages  Message[]
-  pins      PinnedMessage[]
+  server   Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  category ChannelCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  messages Message[]
+  pins     PinnedMessage[]
 
   @@map("community_channels")
 }
@@ -319,9 +329,9 @@ model Message {
   id             String    @id @default(uuid())
   channelId      String
   authorId       String
-  authorType     String    @default("user")     // "user" | "bot"
+  authorType     String    @default("user") // "user" | "bot"
   content        String
-  messageType    String    @default("text")      // text | image | embed
+  messageType    String    @default("text") // text | image | embed
   imageUrl       String?
   embedJson      Json?
   replyToId      String?
@@ -331,9 +341,9 @@ model Message {
   createdAt      DateTime  @default(now())
   deletedAt      DateTime?
 
-  channel   Channel            @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  replyTo   Message?           @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies   Message[]          @relation("MessageReply")
+  channel   Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  replyTo   Message?          @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[]         @relation("MessageReply")
   reactions MessageReaction[]
   pin       PinnedMessage?
 
@@ -371,13 +381,13 @@ model ServerMember {
   id              String    @id @default(uuid())
   serverId        String
   userId          String
-  role            String    @default("member")      // "admin" | "member"
+  role            String    @default("member") // "admin" | "member"
   communityRoleId String?
   mutedUntil      DateTime?
   joinedAt        DateTime  @default(now())
 
-  server        Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  communityRole CommunityRole?  @relation(fields: [communityRoleId], references: [id], onDelete: SetNull)
+  server        Server         @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  communityRole CommunityRole? @relation(fields: [communityRoleId], references: [id], onDelete: SetNull)
 
   @@unique([serverId, userId])
   @@map("community_members")
@@ -386,24 +396,24 @@ model ServerMember {
 // ─── MODO BOT (Bruno) ────────────────────────────────────────────────
 
 model Bot {
-  id           String   @id @default(uuid())
-  ownerId      String
-  name         String
-  description  String?
-  avatarUrl    String?
-  customColor  String   @default("#C9A84C")
-  token        String   @unique @default(uuid())
-  prefix       String   @default("!")
+  id          String   @id @default(uuid())
+  ownerId     String
+  name        String
+  description String?
+  avatarUrl   String?
+  customColor String   @default("#C9A84C")
+  token       String   @unique @default(uuid())
+  prefix      String   @default("!")
   /// Fluxo do builder visual (JSON: { version, nodes }).
-  builderFlow  Json?
+  builderFlow Json?
   /// Listagem pública (marketplace).
-  isPublic     Boolean  @default(false)
+  isPublic    Boolean  @default(false)
   /// Incrementa quando o bot é publicado/actualizado para o público.
-  version      Int      @default(1)
-  createdAt    DateTime @default(now())
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
 
-  commands BotCommand[]
-  servers  ServerBot[]
+  commands      BotCommand[]
+  servers       ServerBot[]
   executionLogs BotExecutionLog[]
 
   @@map("bots")
@@ -426,15 +436,15 @@ model BotExecutionLog {
 }
 
 model BotCommand {
-  id           String @id @default(uuid())
+  id           String  @id @default(uuid())
   botId        String
   trigger      String
   response     String
-  responseType String @default("text") // text | image | embed
+  responseType String  @default("text") // text | image | embed
   imageUrl     String?
   embedJson    Json?
 
-  bot      Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@unique([botId, trigger])
   @@map("bot_commands")
