@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { usePathname } from 'next/navigation';
 import { Spinner } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isAuthenticated, refresh, logout } = useAuthStore();
   const [ready, setReady] = useState(false);
   const called = useRef(false);
@@ -35,11 +37,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
+  const isCommunityServer = pathname?.startsWith('/main/community/') && pathname.split('/').length >= 4;
   const activeModes = user?.profile?.activeModes ?? [];
 
   return (
     <div className="min-h-screen bg-alpha-bg flex flex-col">
-      <Navbar user={user} onLogout={logout} />
+      {!isCommunityServer && <Navbar user={user} onLogout={logout} />}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Desktop: sidebar oculto até hover no canto esquerdo; mobile: sempre visível */}
         <div className="group relative flex-shrink-0 w-56 max-md:w-56 md:w-0 md:self-stretch min-h-0">

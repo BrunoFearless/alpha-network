@@ -1,4 +1,5 @@
 import React from 'react';
+import { EmojiRenderer } from './EmojiRenderer';
 
 // Tipagem baseada nos campos criados na base de dados (UserProfile)
 export interface DisplayNameProfile {
@@ -155,7 +156,7 @@ export function DisplayName({ profile, fallbackName, style, className, onClick, 
       style={{ ...baseStyle, ...effectStyle }}
       onClick={onClick}
     >
-      {name}
+      <EmojiRenderer content={name} emojiSize={style?.fontSize || 14} style={{ display: 'inline', verticalAlign: 'inherit' }} />
     </span>
   );
 }

@@ -13,6 +13,11 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
+import { 
+  SHORTCODE_TO_ANIMATED, 
+  UNICODE_TO_ANIMATED,
+  getAnimatedUrl 
+} from '@/components/ui/EmojiRenderer';
 
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
@@ -22,10 +27,14 @@ interface EmojiPickerProps {
 
 // Emojis agrupados por categoria
 const EMOJI_CATEGORIES = {
+  'Animados': [
+    ...Object.keys(SHORTCODE_TO_ANIMATED),
+    ...Object.keys(UNICODE_TO_ANIMATED)
+  ],
   'Reações': ['👍', '❤️', '😂', '😮', '😢', '😡', '🤔', '😍', '🙏', '👏', '🎉', '🔥', '✨', '💯'],
   'Gestos': ['👋', '🤝', '✌️', '🙌', '🤲', '👐', '🤷', '🤞', '🤟', '🙏', '👌', '🤘'],
   'Rostos': ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰'],
-  'Emoções': ['😍', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😎', '🤩', '🥸', '😏'],
+  'Emoções': ['😍', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😎', '🤩', '😎', '😏'],
   'Símbolos': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '💕', '💞', '💓', '💗'],
   'Natureza': ['🌟', '⭐', '✨', '⚡', '🔥', '💥', '🌈', '☀️', '🌙', '⭐', '🌺', '🌸', '🌼', '🌻'],
   'Objetos': ['🎁', '🎈', '🎊', '🎉', '🎀', '🎵', '🎶', '🎤', '🎧', '🎬', '🎮', '🎯', '🎲', '🧩'],
@@ -223,7 +232,13 @@ export function EmojiPicker({ onSelect, onClose, position = 'bottom' }: EmojiPic
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              {emoji}
+              {(() => {
+                const url = getAnimatedUrl(emoji);
+                if (url) {
+                  return <img src={url} alt={emoji} style={{ width: 24, height: 24, objectFit: 'contain' }} />;
+                }
+                return emoji;
+              })()}
             </button>
           ))
         )}

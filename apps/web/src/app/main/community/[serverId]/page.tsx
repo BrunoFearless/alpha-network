@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, Fragment } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
@@ -7,6 +7,8 @@ import { useCommunitySocket } from '@/lib/socket';
 import { Avatar } from '@/components/ui/Avatar';
 import { DisplayName, FONT_OPTIONS, EFFECT_OPTIONS, COLOR_OPTIONS } from '@/components/ui/DisplayName';
 import { AuroraBackground } from '@/components/ui/AuroraBackground';
+import { EmojiRenderer, getAnimatedUrl } from '@/components/ui/EmojiRenderer';
+import { EmojiPicker, useEmojiPickerPopup } from '@/components/community/EmojiPicker';
 
 
 // ─── ACCENT COLOR ────────────────────────────────────────────────────────────
@@ -57,6 +59,22 @@ function aggregateReactions(reactions: ReactionEntry[] | undefined, myId: string
 function fmtTime(d: string) { return new Date(d).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }); }
 function fmtDate(d: string) { const dt = new Date(d); const now = new Date(); const diff = now.getTime() - dt.getTime(); if (diff < 86400000) return 'Hoje às ' + fmtTime(d); if (diff < 172800000) return 'Ontem às ' + fmtTime(d); return dt.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) + ' às ' + fmtTime(d); }
 function fmtEventDate(d: string) { return new Date(d).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+
+function isDifferentDay(d1: string, d2: string) {
+  const date1 = new Date(d1);
+  const date2 = new Date(d2);
+  return date1.getFullYear() !== date2.getFullYear() || date1.getMonth() !== date2.getMonth() || date1.getDate() !== date2.getDate();
+}
+
+function formatDateLabel(d: string) {
+  const dt = new Date(d);
+  const now = new Date();
+  if (dt.toDateString() === now.toDateString()) return 'Hoje';
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (dt.toDateString() === yesterday.toDateString()) return 'Ontem';
+  return dt.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 function isVideoUrl(url?: string | null) { 
   if (!url) return false;
   return url.match(/\.(mp4|webm|mov|ogg|m4v|3gp|flv|quicktime)(?:\?|#|$)/i) || url.startsWith('data:video/') || url.startsWith('blob:') || url.toLowerCase().includes('video');
@@ -455,7 +473,9 @@ function EditProfileModal({ user, serverId, onClose, onSave }: {
                         
                         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid rgba(255,255,255,0.06)` }}>
                           <p style={{ color: TEXT_BRIGHT, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Sobre Mim</p>
-                          <p style={{ color: TEXT_BRIGHT, fontSize: 13, margin: 0, opacity: 0.8 }}>{bio || 'Este utilizador não tem biografia.'}</p>
+                          <p style={{ color: TEXT_BRIGHT, fontSize: 13, margin: 0, opacity: 0.8 }}>
+                            <EmojiRenderer content={bio || 'Este utilizador não tem biografia.'} emojiSize={14} />
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -487,6 +507,7 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
   onKick: (uid: string) => void; onBan: (uid: string) => void; onAssignRole: (uid: string, roleId: string) => void;
 }) {
   const [bioExpanded, setBioExpanded] = useState(false);
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
   const accent = memberAccentColor(member, server.ownerId);
   const isOwner = member.userId === server.ownerId;
   const name = member.profile?.displayName ?? member.profile?.username ?? 'Utilizador';
@@ -541,7 +562,9 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <p style={{ color: TEXT_NORMAL, fontSize: 14, margin: 0, fontWeight: 600 }}>@{username}</p>
                 <div style={{ width: 4, height: 4, borderRadius: '50%', background: TEXT_MUTED }} />
-                <p style={{ color: TEXT_MUTED, fontSize: 13, margin: 0, fontStyle: 'italic', opacity: 0.9 }}>{statusMsg || 'Explorando a Alpha Network...'}</p>
+                <p style={{ color: TEXT_MUTED, fontSize: 13, margin: 0, fontStyle: 'italic', opacity: 0.9 }}>
+                  <EmojiRenderer content={statusMsg || 'Explorando a Alpha Network...'} emojiSize={16} />
+                </p>
               </div>
             </div>
 
@@ -575,7 +598,7 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
             {/* Bio Section */}
             <div style={{ marginBottom: 20 }}>
                <p style={{ color: TEXT_BRIGHT, fontSize: 13, margin: '0 0 10px', lineHeight: 1.6, maxHeight: bioExpanded ? 'none' : '60px', overflow: 'hidden' }}>
-                 {bio || 'Este utilizador prefere manter o mistério sobre a sua biografia...'}
+                 <EmojiRenderer content={bio || 'Este utilizador prefere manter o mistério sobre a sua biografia...'} emojiSize={18} />
                </p>
                {bio && bio.length > 100 && (
                  <button onClick={() => setBioExpanded(!bioExpanded)} style={{ background: 'transparent', border: 'none', color: TEXT_NORMAL, fontSize: 12, fontWeight: 700, padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
@@ -595,7 +618,9 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
                         onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                      >
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: ['#F0B132', '#3FB8AF', '#7C6FAD', '#ED4245'][i % 4] }} />
-                        <span style={{ color: TEXT_BRIGHT, fontSize: 12, fontWeight: 600 }}>{t}</span>
+                        <span style={{ color: TEXT_BRIGHT, fontSize: 12, fontWeight: 600 }}>
+                           <EmojiRenderer content={t} emojiSize={14} />
+                        </span>
                      </div>
                    ))}
                    {!tags.length && <p style={{ color: TEXT_MUTED, fontSize: 12, margin: 0, fontStyle: 'italic' }}>Nenhuma tag definida.</p>}
@@ -609,7 +634,43 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {isOwner && <span style={{ fontSize: 11, background: 'rgba(240,177,50,0.12)', color: '#F0B132', border: '1px solid rgba(240,177,50,0.3)', borderRadius: 6, padding: '4px 10px', fontWeight: 600 }}>👑 Dono</span>}
                 {member.role === 'admin' && !isOwner && <span style={{ fontSize: 11, background: 'rgba(237,66,69,0.12)', color: '#ED4245', border: '1px solid rgba(237,66,69,0.3)', borderRadius: 6, padding: '4px 10px', fontWeight: 600 }}>Admin</span>}
-                {member.communityRole && <span style={{ fontSize: 11, background: (member.communityRole.color || '#7C6FAD') + '20', color: member.communityRole.color || '#7C6FAD', border: `1px solid ${member.communityRole.color || '#7C6FAD'}40`, borderRadius: 6, padding: '4px 10px', fontWeight: 600 }}>{member.communityRole.name}</span>}
+                {member.communityRole && <span style={{ fontSize: 11, background: (member.communityRole.color || '#7C6FAD') + '20', color: member.communityRole.color || '#7C6FAD', border: `1px solid ${member.communityRole.color || '#7C6FAD'}40`, borderRadius: 6, padding: '4px 10px', fontWeight: 600 }}>
+                  <EmojiRenderer content={member.communityRole.name} emojiSize={12} />
+                </span>}
+                
+                {isAdmin && !isOwner && !isOwn && (
+                  <div style={{ position: 'relative' }}>
+                    <button onClick={() => setShowRoleSelector(!showRoleSelector)}
+                      style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: `1px solid ${showRoleSelector ? ACCENT : 'rgba(255,255,255,0.1)'}`, color: showRoleSelector ? ACCENT : TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, transition: 'all 0.15s' }}
+                      onMouseEnter={e => !showRoleSelector && (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)')}
+                      onMouseLeave={e => !showRoleSelector && (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+                    >+</button>
+                    
+                    {showRoleSelector && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 50, width: 200, background: '#111214', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 10, padding: 6, boxShadow: '0 10px 30px rgba(0,0,0,0.8)', animation: 'slideDown 0.12s ease' }}>
+                        <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', padding: '6px 8px', marginBottom: 4 }}>Atribuir Cargo</p>
+                        <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                          {server.roles.map(r => (
+                            <button key={r.id} onClick={() => { onAssignRole(member.userId, r.id); setShowRoleSelector(false); }}
+                              style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: member.communityRoleId === r.id ? ACCENT : TEXT_NORMAL, padding: '8px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.1s' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                              <div style={{ width: 10, height: 10, borderRadius: '50%', background: r.color || '#7C6FAD' }} />
+                              <EmojiRenderer content={r.name} emojiSize={14} />
+                            </button>
+                          ))}
+                          <div style={{ height: 1, background: BORDER_SUBTLE, margin: '6px 0' }} />
+                          <button onClick={() => { onAssignRole(member.userId, ''); setShowRoleSelector(false); }}
+                            style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#ED4245', padding: '8px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(237,66,69,0.1)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <span>❌</span> Remover cargo
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -744,7 +805,9 @@ function ServerSettingsModal({ server, serverId, onClose, onSave, onLeave, onDel
                       <input ref={iconRef} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={handleIconFile} />
                     </div>
                     <div>
-                      <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 16, margin: 0 }}>{name}</p>
+                      <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 16, margin: 0 }}>
+                        <EmojiRenderer content={name} emojiSize={20} />
+                      </p>
                       <p style={{ color: TEXT_MUTED, fontSize: 12, margin: '2px 0 0' }}>{server.membersCount} membros</p>
                     </div>
                   </div>
@@ -794,8 +857,15 @@ function ServerSettingsModal({ server, serverId, onClose, onSave, onLeave, onDel
                   <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Nome</label>
-                      <input value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="Ex: Moderador" maxLength={32}
-                        style={{ width: '100%', background: '#18191c', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 6, padding: '8px 12px', color: TEXT_BRIGHT, fontSize: 14, boxSizing: 'border-box' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <input value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="Ex: Moderador" maxLength={32}
+                          style={{ flex: 1, background: '#18191c', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 6, padding: '8px 12px', color: TEXT_BRIGHT, fontSize: 14, boxSizing: 'border-box' }} />
+                        {roleName.trim() && (
+                          <div style={{ padding: '0 8px', borderLeft: `1px solid ${BORDER_SUBTLE}` }}>
+                            <EmojiRenderer content={roleName} emojiSize={18} />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Cor</label>
@@ -831,7 +901,9 @@ function ServerSettingsModal({ server, serverId, onClose, onSave, onLeave, onDel
               {server.roles.map(r => (
                 <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: BG_DARK, borderRadius: 8, marginBottom: 6, border: `1px solid ${BORDER_SUBTLE}` }}>
                   <div style={{ width: 14, height: 14, borderRadius: '50%', background: r.color || '#7C6FAD', flexShrink: 0 }} />
-                  <span style={{ flex: 1, color: TEXT_BRIGHT, fontSize: 14 }}>{r.name}</span>
+                  <span style={{ flex: 1, color: TEXT_BRIGHT, fontSize: 14 }}>
+                    <EmojiRenderer content={r.name} emojiSize={16} />
+                  </span>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     {r.canModerate && <span style={{ fontSize: 10, background: '#22C55E22', color: '#22C55E', padding: '2px 6px', borderRadius: 4 }}>mod</span>}
                     {r.canManageServer && <span style={{ fontSize: 10, background: '#F59E0B22', color: '#F59E0B', padding: '2px 6px', borderRadius: 4 }}>servidor</span>}
@@ -1147,7 +1219,11 @@ function EventCard({ ev, onRsvp, past }: { ev: CommunityEvent; onRsvp: (id: stri
         <p style={{ color: ACCENT, fontSize: 11, margin: '0 0 2px', fontWeight: 600 }}>📆 {fmtEventDate(ev.startsAt)}</p>
         {ev.endsAt && <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '0 0 2px' }}>⏱ Até {fmtEventDate(ev.endsAt)}</p>}
         {ev.location && <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '0 0 6px' }}>📍 {ev.location}</p>}
-        {ev.description && <p style={{ color: TEXT_NORMAL, fontSize: 12, margin: '0 0 8px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.description}</p>}
+        {ev.description && (
+          <div style={{ color: TEXT_NORMAL, fontSize: 12, margin: '0 0 8px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <EmojiRenderer content={ev.description} emojiSize={14} />
+          </div>
+        )}
         {!past && (
           <button onClick={() => onRsvp(ev.id)}
             style={{ background: ev.myRsvp ? 'rgba(165,230,0,0.1)' : `linear-gradient(135deg, ${ACCENT}, #7BC800)`, color: ev.myRsvp ? ACCENT : '#000', border: ev.myRsvp ? `1px solid rgba(165,230,0,0.4)` : 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', width: '100%' }}
@@ -1188,7 +1264,9 @@ function ChannelRow({ ch, active, canManage, onSelect, onSettings }: { ch: Chann
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onClick={() => onSelect(ch)}>
       <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '6px 8px', gap: 6 }}>
         <span style={{ color: active ? ACCENT : hovered ? TEXT_NORMAL : TEXT_MUTED, fontSize: 17, fontWeight: 300, lineHeight: 1, transition: 'color 0.12s' }}>#</span>
-        <span style={{ color: active ? TEXT_BRIGHT : hovered ? TEXT_NORMAL : TEXT_MUTED, fontSize: 14, fontWeight: active ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, transition: 'color 0.12s' }}>{ch.name}</span>
+        <span style={{ color: active ? TEXT_BRIGHT : hovered ? TEXT_NORMAL : TEXT_MUTED, fontSize: 14, fontWeight: active ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, transition: 'color 0.12s' }}>
+          <EmojiRenderer content={ch.name} emojiSize={16} />
+        </span>
         {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT, boxShadow: '0 0 6px rgba(165,230,0,0.8)', flexShrink: 0 }} />}
       </div>
       {canManage && hovered && (
@@ -1213,7 +1291,11 @@ function MessageBody({ msg, mt }: { msg: Msg; mt: string }) {
           📄 {u.split('/').pop()}
         </a>
       ))}
-      {msg.content?.trim() && <p style={{ color: TEXT_NORMAL, fontSize: 15, margin: '4px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</p>}
+      {msg.content?.trim() && (
+        <div style={{ color: TEXT_NORMAL, fontSize: 15, margin: '4px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <EmojiRenderer content={msg.content} />
+        </div>
+      )}
     </div>
   );
   if (mt === 'image' && msg.imageUrl) return (
@@ -1227,22 +1309,34 @@ function MessageBody({ msg, mt }: { msg: Msg; mt: string }) {
     return (
       <div style={{ borderLeft: `4px solid ${e.color || '#7C6FAD'}`, background: 'rgba(0,0,0,0.2)', borderRadius: '0 8px 8px 0', padding: '10px 12px 10px 16px', marginTop: 2 }}>
         {e.title && <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15, margin: '0 0 6px' }}>{e.title}</p>}
-        {e.description && <p style={{ color: TEXT_NORMAL, fontSize: 14, margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>{e.description}</p>}
+        {e.description && (
+          <div style={{ color: TEXT_NORMAL, fontSize: 14, margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>
+            <EmojiRenderer content={e.description} emojiSize={18} />
+          </div>
+        )}
         {e.imageUrl && <img src={e.imageUrl} alt="" style={{ maxWidth: '100%', borderRadius: 6, marginTop: 8 }} />}
         {e.footer && <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '6px 0 0' }}>{e.footer}</p>}
       </div>
     );
   }
   const content = msg.content ?? '';
+  // Check for big emojis (only shortcode OR only unicode animated emoji)
+  const contentTrimmed = content.trim();
+  const isOnlyEmoji = /^:[a-z0-9_]+:$/.test(contentTrimmed) || !!getAnimatedUrl(contentTrimmed);
+  
   if (msg.mentions?.everyone) {
     const parts = content.split('@everyone');
     return (
-      <p style={{ color: TEXT_NORMAL, fontSize: 15, margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-        {parts.map((p, i) => <span key={i}>{p}{i < parts.length - 1 && <mark style={{ background: 'rgba(250,168,26,0.2)', color: '#FAA81A', borderRadius: 3, padding: '0 2px' }}>@everyone</mark>}</span>)}
-      </p>
+      <div style={{ color: TEXT_NORMAL, fontSize: 15, margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        {parts.map((p, i) => <span key={i}><EmojiRenderer content={p} emojiSize={isOnlyEmoji ? 32 : 20} />{i < parts.length - 1 && <mark style={{ background: 'rgba(250,168,26,0.2)', color: '#FAA81A', borderRadius: 3, padding: '0 2px' }}>@everyone</mark>}</span>)}
+      </div>
     );
   }
-  return <p style={{ color: TEXT_NORMAL, fontSize: 15, margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{content}</p>;
+  return (
+    <div style={{ color: TEXT_NORMAL, fontSize: 15, margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+      <EmojiRenderer content={content} emojiSize={isOnlyEmoji ? 32 : 20} />
+    </div>
+  );
 }
 
 // ─── REACTIONS BAR ───────────────────────────────────────────────────────────
@@ -1252,10 +1346,19 @@ function ReactionsBar({ rx, onReact }: { rx: { emoji: string; count: number; me:
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
       {rx.map(r => (
         <button key={r.emoji} onClick={() => onReact(r.emoji)}
-          style={{ background: r.me ? ACCENT_DIM : 'rgba(0,0,0,0.25)', border: `1px solid ${r.me ? ACCENT : BORDER_SUBTLE}`, borderRadius: 12, padding: '2px 8px', fontSize: 13, color: r.me ? ACCENT : TEXT_BRIGHT, cursor: 'pointer', transition: 'all 0.12s' }}
+          style={{ background: r.me ? ACCENT_DIM : 'rgba(0,0,0,0.25)', border: `1px solid ${r.me ? ACCENT : BORDER_SUBTLE}`, borderRadius: 12, padding: '2px 8px', fontSize: 13, color: r.me ? ACCENT : TEXT_BRIGHT, cursor: 'pointer', transition: 'all 0.12s', display: 'flex', alignItems: 'center', gap: 4 }}
           onMouseEnter={ev => { if (!r.me) ev.currentTarget.style.borderColor = ACCENT + '66'; }}
           onMouseLeave={ev => { if (!r.me) ev.currentTarget.style.borderColor = BORDER_SUBTLE; }}>
-          {r.emoji} {r.count}
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            {(() => {
+              const url = getAnimatedUrl(r.emoji);
+              if (url) {
+                return <img src={url} alt={r.emoji} style={{ width: 14, height: 14, objectFit: 'contain' }} />;
+              }
+              return r.emoji;
+            })()}
+          </span>
+          <span>{r.count}</span>
         </button>
       ))}
     </div>
@@ -1273,9 +1376,11 @@ function MsgActions({ canDel, isOwn, isMod, isPinned, showEmojiPicker, onToggleE
     <div className="msg-actions" style={{ position: 'absolute', right: 8, top: -22, background: '#0e0f11', border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 8, display: 'flex', gap: 1, padding: '2px 4px', opacity: 0, transition: 'opacity 0.12s', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
       {(['👍', '❤️', '😂', '🔥'] as const).map(e => (
         <Tooltip key={e} text={e}>
-          <button onClick={() => onReact(e)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, padding: '3px 5px', borderRadius: 4 }}
+          <button onClick={() => onReact(e)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, padding: '3px 5px', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER}
-            onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>{e}</button>
+            onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>
+            <EmojiRenderer content={e} emojiSize={16} />
+          </button>
         </Tooltip>
       ))}
       <div style={{ position: 'relative' }}>
@@ -1330,7 +1435,7 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
       : 'linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%)';
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', background: '#000', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.25s ease' }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: '#000', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.25s ease' }}>
       {/* Hero Banner */}
       <div style={{ position: 'relative', height: 220, background: server.bannerUrl && !isVideoUrl(server.bannerUrl) ? 'transparent' : (server.bannerColor ?? '#0d1117'), backgroundImage: server.bannerUrl && !isVideoUrl(server.bannerUrl) ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0, overflow: 'hidden' }}>
         {isVideoUrl(server.bannerUrl) && <video src={server.bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
@@ -1370,7 +1475,9 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
         {/* Name + stats row */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={{ color: TEXT_BRIGHT, fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>{server.name}</h1>
+            <h1 style={{ color: TEXT_BRIGHT, fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              <EmojiRenderer content={server.name} emojiSize={32} />
+            </h1>
             <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
               <span style={{ color: TEXT_MUTED, fontSize: 13, display: 'flex', alignItems: 'center', gap: 5 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT, display: 'inline-block', boxShadow: '0 0 8px rgba(165,230,0,0.6)' }} />
@@ -1419,7 +1526,7 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
             </div>
           ) : (
             <p style={{ color: aboutText ? TEXT_NORMAL : TEXT_MUTED, fontSize: 14, margin: 0, lineHeight: 1.8, fontStyle: aboutText ? 'normal' : 'italic', whiteSpace: 'pre-wrap' }}>
-              {aboutText || (isAdmin ? 'Clica em "Editar" para adicionar uma descrição do servidor.' : 'Este servidor ainda não tem descrição.')}
+              <EmojiRenderer content={aboutText || (isAdmin ? 'Clica em "Editar" para adicionar uma descrição do servidor.' : 'Este servidor ainda não tem descrição.')} emojiSize={20} />
             </p>
           )}
         </div>
@@ -1451,7 +1558,9 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
                         {!ev.imageUrl && <span style={{ fontSize: 22 }}>📅</span>}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: '0 0 3px', color: TEXT_BRIGHT, fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
+                        <p style={{ margin: '0 0 3px', color: TEXT_BRIGHT, fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <EmojiRenderer content={ev.title} emojiSize={14} />
+                        </p>
                         <p style={{ margin: '0 0 4px', color: ACCENT, fontSize: 12 }}>{fmtEventDate(ev.startsAt)}</p>
                         {ev.location && <p style={{ margin: 0, color: TEXT_MUTED, fontSize: 12 }}>📍 {ev.location}</p>}
                       </div>
@@ -1471,7 +1580,8 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
                     style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '6px 14px', color: TEXT_NORMAL, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
                     onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(165,230,0,0.1)'; (e.currentTarget as any).style.color = ACCENT; (e.currentTarget as any).style.borderColor = 'rgba(165,230,0,0.3)'; }}
                     onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as any).style.color = TEXT_NORMAL; (e.currentTarget as any).style.borderColor = BORDER_SUBTLE; }}>
-                    <span style={{ color: TEXT_MUTED, fontSize: 14 }}>#</span> {ch.name}
+                    <span style={{ color: TEXT_MUTED, fontSize: 14 }}>#</span> 
+                    <EmojiRenderer content={ch.name} emojiSize={14} />
                   </button>
                 ))}
                 {server.channels.length > 12 && <span style={{ color: TEXT_MUTED, fontSize: 13, padding: '6px 0' }}>+{server.channels.length - 12} mais</span>}
@@ -1505,7 +1615,9 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
                 <h3 style={{ color: TEXT_BRIGHT, fontSize: 13, fontWeight: 700, margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🎖 Cargos</h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {server.roles.map(r => (
-                    <span key={r.id} style={{ fontSize: 11, background: (r.color || '#7C6FAD') + '20', color: r.color || '#7C6FAD', border: `1px solid ${(r.color || '#7C6FAD')}40`, borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>{r.name}</span>
+                    <span key={r.id} style={{ fontSize: 11, background: (r.color || '#7C6FAD') + '20', color: r.color || '#7C6FAD', border: `1px solid ${(r.color || '#7C6FAD')}40`, borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>
+                      <EmojiRenderer content={r.name} emojiSize={12} />
+                    </span>
                   ))}
                 </div>
               </div>
@@ -1572,12 +1684,14 @@ export default function ServerPage() {
   const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const joinedRef = useRef<string | null>(null);
   const typingStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { showPicker, setShowPicker, triggerRef, onEmojiSelect } = useEmojiPickerPopup();
 
   const myMember = server?.members.find(m => m.userId === user?.id);
   const isAdmin = myMember?.role === 'admin';
@@ -1765,6 +1879,12 @@ export default function ServerPage() {
       .then(res => setEvents(p => p.map(e => e.id === eventId ? { ...e, rsvpCount: res.rsvpCount, myRsvp: res.myRsvp } : e)))
       .catch(console.error);
   }
+  
+  function handleScroll(e: React.UIEvent<HTMLDivElement>) {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const dist = scrollHeight - (scrollTop + clientHeight);
+    setShowScrollBtn(dist > 300);
+  }
 
   function mname(m: Member) {
     if (m.userId === user?.id) return user?.profile?.displayName ?? user?.profile?.username ?? 'Tu';
@@ -1855,7 +1975,9 @@ export default function ServerPage() {
           onClick={() => setShowServerMenu(p => !p)}
           onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)'}
           onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
-          <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 800, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{server.name}</h2>
+          <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 800, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
+            <EmojiRenderer content={server.name} emojiSize={18} />
+          </h2>
           <span style={{ color: TEXT_MUTED, fontSize: 10, transition: 'transform 0.25s cubic-bezier(.4,0,.2,1)', display: 'inline-block', transform: showServerMenu ? 'rotate(180deg)' : 'none' }}>▼</span>
         </div>
 
@@ -1918,7 +2040,9 @@ export default function ServerPage() {
                     onMouseEnter={e => e.currentTarget.style.color = TEXT_BRIGHT}
                     onMouseLeave={e => e.currentTarget.style.color = TEXT_MUTED}>
                     <span style={{ fontSize: 10, transition: 'transform 0.15s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-block' }}>▼</span>
-                    <span style={{ flex: 1 }}>{cat.name}</span>
+                    <span style={{ flex: 1 }}>
+                      <EmojiRenderer content={cat.name} emojiSize={14} />
+                    </span>
                   </button>
                   {canManageCh && <button onClick={() => { setShowCh(true); setChCategoryId(cat.id); }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 16, padding: '2px 6px' }}>+</button>}
                   {isAdmin && <button onClick={() => handleDeleteCategory(cat.id)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 13, padding: '2px 4px', opacity: 0.5, transition: 'opacity 0.1s, color 0.1s' }}
@@ -1979,15 +2103,35 @@ export default function ServerPage() {
           onInvite={() => setShowInvite(true)}
         />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#000' }}>
-          {/* Topbar */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative', background: '#000', overflow: 'hidden' }}>
+          {/* 1. Floating Menu Button (Always on top) */}
+          <button onClick={() => setShowServerMenu(p => !p)}
+            style={{ position: 'absolute', top: 24, left: 10, zIndex: 1100, width: 34, height: 34, background: 'rgba(5,5,5,0.85)', backdropFilter: 'blur(10px)', border: `1px solid ${ACCENT}88`, borderRadius: 10, color: ACCENT, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 4px 15px rgba(0,0,0,0.6)', transition: 'all 0.2s', animation: 'float 3s ease-in-out infinite' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#000'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(5,5,5,0.85)'; e.currentTarget.style.color = ACCENT; }}>
+            ☰
+          </button>
+
+          {/* 2. Server Identity Bar (Discord style) */}
+          {server && (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 34, zIndex: 1050, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+              <span style={{ color: TEXT_MUTED, fontSize: 13, fontWeight: 700, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                <EmojiRenderer content={server.name} emojiSize={14} />
+              </span>
+            </div>
+          )}
+
+          {/* 3. Channel Topbar (Shifted down) */}
           {channel && (
-            <div style={{ height: 48, borderBottom: `1px solid rgba(255,255,255,0.04)`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10, flexShrink: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+            <div style={{ position: 'absolute', top: 34, left: 0, right: 0, height: 48, zIndex: 1000, background: '#050505', borderBottom: `1px solid rgba(255,255,255,0.06)`, display: 'flex', alignItems: 'center', padding: '0 16px 0 56px', gap: 10, boxShadow: '0 6px 18px rgba(0,0,0,0.8)' }}>
               <span style={{ color: ACCENT, fontSize: 20, fontWeight: 300, opacity: 0.8 }}>#</span>
-              <span style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15 }}>{channel.name}</span>
+              <span style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15 }}>
+                <EmojiRenderer content={channel.name} emojiSize={18} />
+              </span>
               <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)' }} />
-              <span style={{ color: TEXT_MUTED, fontSize: 12 }}>{channel.topic?.trim() || 'Canal de texto'}</span>
-              <div style={{ flex: 1 }} />
+              <div style={{ color: TEXT_MUTED, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                <EmojiRenderer content={channel.topic?.trim() || 'Canal de texto'} emojiSize={16} />
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {isMod && <Tooltip text="Fixadas">
                   <button onClick={() => { setShowPins(p => !p); if (!showPins) api.get<Msg[]>(`/community/channels/${channel.id}/pins`).then(setPins).catch(() => { }); }}
@@ -2008,16 +2152,12 @@ export default function ServerPage() {
                     onMouseEnter={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
                     onMouseLeave={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>👥</button>
                 </Tooltip>
-                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: `1px solid rgba(255,255,255,0.07)`, borderRadius: 8, padding: '4px 10px', gap: 6, marginLeft: 4 }}>
-                  <input placeholder={`Buscar em #${channel.name}`} style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 13, width: 140 }} />
-                  <span style={{ color: TEXT_MUTED, fontSize: 13 }}>🔍</span>
-                </div>
               </div>
             </div>
           )}
 
-          {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 0' }} onClick={() => setEmojiPickerMsgId(null)}>
+          {/* 4. Messages Area */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 16px 0', marginTop: 82 }} onClick={() => setEmojiPickerMsgId(null)} onScroll={handleScroll}>
             {loadingMsgs && <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><div style={{ width: 28, height: 28, border: `2px solid ${ACCENT_DIM}`, borderTopColor: ACCENT, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /></div>}
             {!loadingMsgs && msgs.length === 0 && channel && (
               <div style={{ textAlign: 'center', padding: '60px 0' }}>
@@ -2028,6 +2168,7 @@ export default function ServerPage() {
             )}
             {msgs.map((msg, i) => {
               const prev = msgs[i - 1];
+              const showDateHeader = !prev || isDifferentDay(msg.createdAt, prev.createdAt);
               const mt = msg.messageType || 'text';
               const grouped = !!(prev && prev.authorId === msg.authorId && prev.authorType === msg.authorType && !msg.replyTo && new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime() < 300000);
               const isOwn = msg.authorId === user?.id && msg.authorType === 'user';
@@ -2052,7 +2193,7 @@ export default function ServerPage() {
                 />
               );
 
-              if (grouped) return (
+              if (grouped && !showDateHeader) return (
                 <div key={msg.id} className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '1px 0 1px 56px', position: 'relative', animation: 'fadeIn 0.12s ease' }}>
                   <div style={{ flex: 1 }}><MessageBody msg={msg} mt={mt} /><ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} /></div>
                   {actions}
@@ -2060,7 +2201,9 @@ export default function ServerPage() {
               );
 
               return (
-                <div key={msg.id} className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 0 2px', gap: 16, position: 'relative', animation: 'fadeIn 0.12s ease', marginTop: 8 }}>
+                <Fragment key={msg.id}>
+                  {showDateHeader && <DateSeparator label={formatDateLabel(msg.createdAt)} />}
+                  <div className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 0 2px', gap: 16, position: 'relative', animation: 'fadeIn 0.12s ease', marginTop: grouped ? 2 : 8 }}>
                   <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: '50%', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: isBot ? '1px solid rgba(96,165,250,0.4)' : 'none', transition: 'opacity 0.1s' }}
                     onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>
                     {isBot ? <span style={{ fontSize: 14, fontWeight: 800, color: '#93C5FD' }}>B</span> :
@@ -2071,13 +2214,17 @@ export default function ServerPage() {
                     {msg.replyTo && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, color: TEXT_MUTED, fontSize: 12 }}>
                         <div style={{ width: 32, height: 10, borderTop: `2px solid ${BORDER_SUBTLE}`, borderLeft: `2px solid ${BORDER_SUBTLE}`, borderTopLeftRadius: 4, flexShrink: 0 }} />
-                        <span style={{ color: nameColor(msg.replyTo.authorName), fontWeight: 600 }}>{msg.replyTo.authorName}</span>
+                        <span style={{ color: nameColor(msg.replyTo.authorName), fontWeight: 600 }}>
+                          <EmojiRenderer content={msg.replyTo.authorName} emojiSize={14} />
+                        </span>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 280 }}>{msg.replyTo.content}</span>
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
                       {isBot
-                        ? <span style={{ color: '#7EB6FF', fontWeight: 600, fontSize: 15, cursor: 'pointer' }} onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>{msg.authorName}</span>
+                        ? <span style={{ color: '#7EB6FF', fontWeight: 600, fontSize: 15, cursor: 'pointer' }} onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>
+                            <EmojiRenderer content={msg.authorName} emojiSize={16} />
+                          </span>
                         : <DisplayName profile={msg.authorProfile || authorMember?.profile} fallbackName={msg.authorName} baseColor={nameClr} style={{ fontWeight: 600, fontSize: 15, cursor: 'pointer' }} onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }} />}
                       {isBot && <span style={{ fontSize: 10, background: 'rgba(96,165,250,0.15)', color: '#93C5FD', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>BOT</span>}
                       {msg.pinned && <span style={{ fontSize: 10, background: ACCENT_DIM, color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 3, padding: '1px 5px' }}>📌 FIXADA</span>}
@@ -2089,11 +2236,33 @@ export default function ServerPage() {
                   </div>
                   {actions}
                 </div>
-              );
-            })}
-            {typingNames.length > 0 && <p style={{ color: TEXT_MUTED, fontSize: 13, fontStyle: 'italic', padding: '4px 0 8px', animation: 'fadeIn 0.2s' }}>{typingNames.join(', ')} a escrever…</p>}
+              </Fragment>
+            );
+          })}
+            {typingNames.length > 0 && (
+              <p style={{ color: TEXT_MUTED, fontSize: 13, fontStyle: 'italic', padding: '4px 0 8px', animation: 'fadeIn 0.2s', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {typingNames.map((name, i) => (
+                  <Fragment key={i}>
+                    <EmojiRenderer content={name} emojiSize={14} />
+                    {i < typingNames.length - 1 ? ', ' : ''}
+                  </Fragment>
+                ))} a escrever…
+              </p>
+            )}
             <div ref={bottomRef} style={{ height: 8 }} />
           </div>
+
+          {/* Floating Scroll to Bottom Button */}
+          {showScrollBtn && (
+            <button
+              onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              style={{ position: 'absolute', bottom: 100, right: 32, zIndex: 1000, width: 42, height: 42, background: 'rgba(5,5,5,0.7)', backdropFilter: 'blur(10px)', border: `1px solid ${ACCENT}55`, borderRadius: '50%', color: ACCENT, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', animation: 'popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)', transition: 'all 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.scale = '1.1'; e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#000'; }}
+              onMouseLeave={e => { e.currentTarget.style.scale = '1'; e.currentTarget.style.background = 'rgba(5,5,5,0.7)'; e.currentTarget.style.color = ACCENT; }}
+            >
+              ↓
+            </button>
+          )}
 
           {/* Pins inline */}
           {showPins && (
@@ -2104,8 +2273,12 @@ export default function ServerPage() {
               </div>
               {pins.length === 0 ? <p style={{ color: TEXT_MUTED, fontSize: 13 }}>Nenhuma mensagem fixada.</p> : pins.map(p => (
                 <div key={p.id} style={{ padding: '8px 10px', background: BG_DARK, borderRadius: 6, marginBottom: 6, border: `1px solid ${BORDER_SUBTLE}` }}>
-                  <span style={{ color: ACCENT, fontSize: 12, fontWeight: 600 }}>{p.authorName}</span>
-                  <p style={{ color: TEXT_NORMAL, fontSize: 13, margin: '3px 0 0', whiteSpace: 'pre-wrap' }}>{p.content}</p>
+                  <span style={{ color: ACCENT, fontSize: 12, fontWeight: 600 }}>
+                    <EmojiRenderer content={p.authorName} emojiSize={12} />
+                  </span>
+                  <p style={{ color: TEXT_NORMAL, fontSize: 13, margin: '3px 0 0', whiteSpace: 'pre-wrap' }}>
+                    <EmojiRenderer content={p.content} />
+                  </p>
                 </div>
               ))}
             </div>
@@ -2150,6 +2323,28 @@ export default function ServerPage() {
                 disabled={!connected || !channel}
                 style={{ flex: 1, background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 15, padding: '13px 0', minHeight: 46 }}
               />
+              
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <button
+                  ref={triggerRef}
+                  onClick={() => setShowPicker(!showPicker)}
+                  style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 22, padding: '10px 8px', transition: 'all 0.12s' }}
+                  onMouseEnter={e => (e.currentTarget as any).style.color = TEXT_BRIGHT}
+                  onMouseLeave={e => (e.currentTarget as any).style.color = TEXT_MUTED}
+                >
+                  😊
+                </button>
+                {showPicker && (
+                  <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 12, zIndex: 100, transform: 'translateX(-240px)' }}>
+                    <EmojiPicker 
+                      onSelect={(emoji) => { setText(p => p + emoji); setShowPicker(false); inputRef.current?.focus(); }}
+                      onClose={() => setShowPicker(false)}
+                      position="top"
+                    />
+                  </div>
+                )}
+              </div>
+
               <button onClick={send} disabled={!text.trim() || !connected || !channel}
                 style={{ background: text.trim() && connected && channel ? `linear-gradient(135deg, ${ACCENT}, #7BC800)` : 'rgba(255,255,255,0.05)', border: 'none', color: text.trim() && connected && channel ? '#000' : TEXT_MUTED, borderRadius: 9, padding: '7px 15px', fontSize: 14, fontWeight: 700, cursor: text.trim() && connected && channel ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0, boxShadow: text.trim() && connected && channel ? '0 4px 12px rgba(165,230,0,0.3)' : 'none' }}
                 onMouseEnter={e => { if (text.trim() && connected && channel) (e.currentTarget as any).style.boxShadow = '0 6px 20px rgba(165,230,0,0.5)'; }}
@@ -2192,7 +2387,9 @@ export default function ServerPage() {
             ];
             return sections.map(sec => (
               <div key={sec.title} style={{ marginBottom: 8 }}>
-                <div style={{ padding: '8px 12px 4px', color: sec.color, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em' }}>{sec.title}</div>
+                <div style={{ padding: '8px 12px 4px', color: sec.color, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em' }}>
+                  <EmojiRenderer content={sec.title} emojiSize={12} />
+                </div>
                 {sec.members.map(m => {
                   const n = mname(m);
                   const typing = typingIds[m.userId];
@@ -2288,6 +2485,16 @@ export default function ServerPage() {
           setShowEventsPanel(true);
         } catch (e: any) { alert(e.message); }
       }} />}
+    </div>
+  );
+}
+
+function DateSeparator({ label }: { label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', margin: '24px 8px 16px', gap: 16, animation: 'fadeIn 0.2s ease' }}>
+      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
+      <span style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', textTransform: 'lowercase' }}>{label}</span>
+      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
     </div>
   );
 }

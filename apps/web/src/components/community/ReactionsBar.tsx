@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import { ANIMATED_EMOJIS } from '@/components/ui/EmojiRenderer';
 
 export interface ReactionItem {
   emoji: string;
@@ -174,7 +175,11 @@ function ReactionButton({ emoji, count, reacted, onClick }: ReactionButtonProps)
         e.currentTarget.style.transform = 'scale(1)';
       }}
     >
-      <span style={{ lineHeight: 1 }}>{emoji}</span>
+      <span style={{ lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {ANIMATED_EMOJIS[emoji] ? (
+          <img src={ANIMATED_EMOJIS[emoji].url} alt={emoji} style={{ width: 16, height: 16, objectFit: 'contain' }} />
+        ) : emoji}
+      </span>
       <span style={{ fontSize: 11, opacity: 0.9 }}>{count}</span>
     </button>
   );
