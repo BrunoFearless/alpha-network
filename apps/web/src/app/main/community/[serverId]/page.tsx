@@ -57,8 +57,31 @@ function aggregateReactions(reactions: ReactionEntry[] | undefined, myId: string
   return [...map.entries()].map(([emoji, v]) => ({ emoji, ...v }));
 }
 function fmtTime(d: string) { return new Date(d).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }); }
-function fmtDate(d: string) { const dt = new Date(d); const now = new Date(); const diff = now.getTime() - dt.getTime(); if (diff < 86400000) return 'Hoje às ' + fmtTime(d); if (diff < 172800000) return 'Ontem às ' + fmtTime(d); return dt.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) + ' às ' + fmtTime(d); }
+function fmtDate(d: string) {
+  const dt = new Date(d);
+  const now = new Date();
+  if (dt.toDateString() === now.toDateString()) return 'Hoje às ' + fmtTime(d);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (dt.toDateString() === yesterday.toDateString()) return 'Ontem às ' + fmtTime(d);
+  return dt.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) + ' às ' + fmtTime(d);
+}
 function fmtEventDate(d: string) { return new Date(d).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+
+function getLuminance(hex: string) {
+  if (!hex || !hex.startsWith('#')) return 0;
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.slice(1, 3), 16);
+    g = parseInt(hex.slice(3, 5), 16);
+    b = parseInt(hex.slice(5, 7), 16);
+  }
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
 
 function isDifferentDay(d1: string, d2: string) {
   const date1 = new Date(d1);
@@ -74,6 +97,11 @@ function formatDateLabel(d: string) {
   yesterday.setDate(now.getDate() - 1);
   if (dt.toDateString() === yesterday.toDateString()) return 'Ontem';
   return dt.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function isSameColor(c1?: string | null, c2?: string | null) {
+  if (!c1 || !c2) return c1 === c2;
+  return c1.toLowerCase() === c2.toLowerCase();
 }
 function isVideoUrl(url?: string | null) { 
   if (!url) return false;
@@ -135,6 +163,86 @@ function EmojiPickerPopover({ onSelect, onClose }: { onSelect: (e: string) => vo
   );
 }
 
+// ─── TYPES ───────────────────────────────────────────────────────────────────
+interface IconProps { size?: number; color?: string; style?: React.CSSProperties; stroke?: number; className?: string; }
+
+// ─── ICONS ───────────────────────────────────────────────────────────────────
+function IconHome({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+}
+function IconUser({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+}
+function IconHammer({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="m15 5 4 4"/><path d="M7 7a2 2 0 1 0 2 2M2.7 2.7l4.3 4.3M11 10a2 2 0 1 0 2 2l-3.5 3.5"/><path d="m20 10-4 4M10 20l4-4"/></svg>;
+}
+function IconMedal({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15"/><circle cx="12" cy="15" r="5"/><path d="M12 18l-2 4h4l-2-4z"/></svg>;
+}
+function IconShield({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+}
+function IconDiamond({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/></svg>;
+}
+function IconClock({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+}
+function IconCheck({ size = 20, color = 'currentColor', style, stroke = 2 }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style}><polyline points="20 6 9 17 4 12"/></svg>;
+}
+function IconPlus({ size = 20, color = 'currentColor', stroke = 2, style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+}
+function IconMenu({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M4 6h16M4 12h16M4 18h16"/></svg>;
+}
+function IconSettings({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M12.22 2h-.44a2 2 0 0 0-2 2 2 2 0 0 1-2 2 2 2 0 0 0-2 2 2 2 0 0 1-2 2 2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2 2 2 0 0 1 2 2 2 2 0 0 0 2 2 2 2 0 0 1 2 2 2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2 2 2 0 0 1 2-2 2 2 0 0 0 2-2 2 2 0 0 1 2-2 2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2 2 2 0 0 1-2-2 2 2 0 0 0-2-2 2 2 0 0 1-2-2 2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
+}
+function IconClose({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M18 6 6 18M6 6l12 12"/></svg>;
+}
+function IconHashtag({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="m4 9 16 0M4 15 20 15M10 3 8 21M16 3 14 21"/></svg>;
+}
+function IconEmoji({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>;
+}
+function IconReply({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>;
+}
+function IconPin({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>;
+}
+function IconEdit({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>;
+}
+function IconTrash({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+}
+function IconSend({ size = 20, color = 'currentColor', stroke = 2, style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style}><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
+}
+function IconCalendar({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+}
+function IconChevronDown({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="m6 9 6 6 6-6"/></svg>;
+}
+function IconUsers({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+}
+function IconGlobe({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>;
+}
+function IconCamera({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>;
+}
+function IconDotsVertical({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>;
+}
+
 // ─── SERVER ICON ─────────────────────────────────────────────────────────────
 function ServerIcon({ server, active, onClick }: { server: MyServer; active: boolean; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
@@ -185,8 +293,10 @@ function ImageColorPicker({
       {/* Preview */}
       <div style={{ height: 80, borderRadius: 10, overflow: 'hidden', marginBottom: 10, background: preview ? 'transparent' : (activeColor || '#1a1a2e'), border: `1px solid ${BORDER_SUBTLE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
         {preview ? <Avatar src={preview} name="P" size="lg" className="w-full h-full" /> : <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 12 }}>Pré-visualização</span>}
-        <button onClick={() => ref.current?.click()} style={{ position: 'absolute', right: 8, bottom: 8, background: 'rgba(0,0,0,0.6)', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_BRIGHT, borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer', backdropFilter: 'blur(4px)' }}>
-          📷 Mídia
+        <button onClick={() => ref.current?.click()} style={{ position: 'absolute', right: 8, bottom: 8, background: 'rgba(0,0,0,0.6)', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_BRIGHT, borderRadius: 8, padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}>
+          <IconCamera size={14} /> Mídia
         </button>
         <input ref={ref} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={handleFile} />
       </div>
@@ -194,11 +304,11 @@ function ImageColorPicker({
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {colorPresets.map(c => (
           <button key={c} onClick={() => pickColor(c)} title={c}
-            style={{ width: 28, height: 28, borderRadius: 6, background: c, border: activeColor === c && !preview ? `3px solid ${ACCENT}` : '2px solid transparent', cursor: 'pointer', transition: 'transform 0.1s', transform: activeColor === c && !preview ? 'scale(1.15)' : 'scale(1)' }} />
+            style={{ width: 28, height: 28, borderRadius: 6, background: c, border: isSameColor(activeColor, c) && !preview ? `3px solid ${ACCENT}` : '2px solid transparent', cursor: 'pointer', transition: 'transform 0.1s', transform: isSameColor(activeColor, c) && !preview ? 'scale(1.15)' : 'scale(1)' }} />
         ))}
         {/* Custom color */}
-        <label title="Cor personalizada" style={{ position: 'relative', width: 28, height: 28, borderRadius: 6, background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)', cursor: 'pointer', overflow: 'hidden', border: '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <input type="color" onChange={e => pickColor(e.target.value)} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+        <label title="Cor personalizada" style={{ position: 'relative', width: 28, height: 28, borderRadius: 6, background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)', cursor: 'pointer', overflow: 'hidden', border: isSameColor(activeColor, currentColor) ? '2px solid transparent' : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <input type="color" value={activeColor && activeColor.startsWith('#') ? activeColor : '#ffffff'} onChange={e => pickColor(e.target.value)} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
         </label>
       </div>
     </div>
@@ -332,7 +442,7 @@ function EditProfileModal({ user, serverId, onClose, onSave }: {
                       <div style={{ position: 'absolute', inset: 0, opacity: 0.2, background: auroraTheme.startsWith('#') ? auroraTheme : 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' }} />
                       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                         <div style={{ width: 24, height: 24, borderRadius: '50%', background: auroraTheme.startsWith('#') ? auroraTheme : 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)', border: '2px solid rgba(255,255,255,0.1)' }} />
-                        <span style={{ color: auroraTheme.startsWith('#') ? ACCENT : TEXT_NORMAL, fontSize: 10, fontWeight: 700 }}>Custom</span>
+                        <span style={{ color: auroraTheme.startsWith('#') ? ACCENT : TEXT_NORMAL, fontSize: 10, fontWeight: 700 }}>Personalizada</span>
                       </div>
                     </label>
                   </div>
@@ -429,10 +539,10 @@ function EditProfileModal({ user, serverId, onClose, onSave }: {
                         <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Cor do Nome</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                           {COLOR_OPTIONS.map(c => (
-                            <button key={c} onClick={() => setNameColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: `2.5px solid ${nameColor === c ? '#fff' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.15s', boxShadow: nameColor === c ? `0 0 10px ${c}60` : 'none' }} />
+                            <button key={c} onClick={() => setNameColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: `2.5px solid ${isSameColor(nameColor, c) ? '#fff' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.15s', boxShadow: isSameColor(nameColor, c) ? `0 0 10px ${c}60` : 'none' }} />
                           ))}
-                          <label style={{ position: 'relative', width: 28, height: 28, borderRadius: '50%', background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)', cursor: 'pointer', border: `2px solid ${!COLOR_OPTIONS.includes(nameColor) ? '#fff' : 'transparent'}` }}>
-                            <input type="color" value={nameColor} onChange={e => setNameColor(e.target.value)} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+                          <label style={{ position: 'relative', width: 28, height: 28, borderRadius: '50%', background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)', cursor: 'pointer', border: `2px solid ${!COLOR_OPTIONS.some(opt => isSameColor(opt, nameColor)) ? '#fff' : 'transparent'}` }}>
+                            <input type="color" value={nameColor && nameColor.startsWith('#') ? nameColor : '#ffffff'} onChange={e => setNameColor(e.target.value)} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
                           </label>
                         </div>
                      </div>
@@ -452,9 +562,9 @@ function EditProfileModal({ user, serverId, onClose, onSave }: {
               <div style={{ width: 340, position: 'sticky', top: 0, flexShrink: 0 }}>
                 <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>Pré-visualização</label>
                 
-                <div style={{ borderRadius: 16, overflow: 'hidden', border: `1px solid rgba(165,230,0,0.15)`, boxShadow: '0 32px 64px rgba(0,0,0,0.6)', position: 'relative', background: '#0d0e10' }}>
+                <div style={{ borderRadius: 16, overflow: 'hidden', border: `1px solid ${getLuminance(auroraTheme) > 0.65 ? 'rgba(0,0,0,0.1)' : 'rgba(165,230,0,0.15)'}`, boxShadow: '0 32px 64px rgba(0,0,0,0.6)', position: 'relative', background: getLuminance(auroraTheme) > 0.65 ? '#f8fafc' : '#0d0e10' }}>
                   <AuroraBackground theme={auroraTheme as any} />
-                  <div style={{ position: 'relative', zIndex: 1, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}>
+                  <div style={{ position: 'relative', zIndex: 1, background: getLuminance(auroraTheme) > 0.65 ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}>
                     <div style={{ height: 110, background: bannerColor, backgroundImage: user.profile?.bannerUrl && !isVideoUrl(user.profile.bannerUrl) ? `url(${user.profile.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden' }}>
                       {isVideoUrl(user.profile?.bannerUrl) && <video src={user.profile?.bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
                     </div>
@@ -467,13 +577,13 @@ function EditProfileModal({ user, serverId, onClose, onSave }: {
                           style={{ width: 80, height: 80, border: '6px solid #111214', background: BG_LIGHT }} 
                         />
                       </div>
-                      <div style={{ marginTop: 10, background: '#111214', borderRadius: 8, padding: 12 }}>
-                        <p style={{ margin: '0 0 2px', lineHeight: 1.2 }}><DisplayName profile={previewProfile} fallbackName={name} style={{ fontWeight: 700, fontSize: 18 }} /></p>
-                        <p style={{ color: TEXT_MUTED, fontSize: 13, margin: 0 }}>@{user.profile?.username}</p>
+                      <div style={{ marginTop: 10, background: getLuminance(auroraTheme) > 0.65 ? 'rgba(0,0,0,0.05)' : '#111214', borderRadius: 8, padding: 12 }}>
+                        <p style={{ margin: '0 0 2px', lineHeight: 1.2 }}><DisplayName profile={previewProfile} fallbackName={name} style={{ fontWeight: 700, fontSize: 18, color: getLuminance(auroraTheme) > 0.65 ? '#000' : TEXT_BRIGHT }} /></p>
+                        <p style={{ color: getLuminance(auroraTheme) > 0.65 ? 'rgba(0,0,0,0.6)' : TEXT_MUTED, fontSize: 13, margin: 0 }}>@{user.profile?.username}</p>
                         
-                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid rgba(255,255,255,0.06)` }}>
-                          <p style={{ color: TEXT_BRIGHT, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Sobre Mim</p>
-                          <p style={{ color: TEXT_BRIGHT, fontSize: 13, margin: 0, opacity: 0.8 }}>
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${getLuminance(auroraTheme) > 0.65 ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.06)'}` }}>
+                          <p style={{ color: getLuminance(auroraTheme) > 0.65 ? '#000' : TEXT_BRIGHT, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Sobre Mim</p>
+                          <p style={{ color: getLuminance(auroraTheme) > 0.65 ? 'rgba(0,0,0,0.8)' : TEXT_BRIGHT, fontSize: 13, margin: 0, opacity: 0.8 }}>
                             <EmojiRenderer content={bio || 'Este utilizador não tem biografia.'} emojiSize={14} />
                           </p>
                         </div>
@@ -489,9 +599,9 @@ function EditProfileModal({ user, serverId, onClose, onSave }: {
           <div style={{ height: 80, background: '#000000', borderTop: `1px solid ${BORDER_SUBTLE}`, padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
              <p style={{ color: TEXT_NORMAL, fontSize: 14 }}>Cuidado — você tem alterações não salvas!</p>
              <div style={{ display: 'flex', gap: 12 }}>
-               <button onClick={onClose} style={{ background: 'transparent', color: TEXT_BRIGHT, border: 'none', padding: '10px 20px', cursor: 'pointer', fontSize: 14, fontWeight: 500 }}>Redefinir</button>
-               <button onClick={handleSave} disabled={saving} style={{ background: '#248046', color: '#fff', border: 'none', borderRadius: 4, padding: '10px 28px', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
-                 {saving ? 'A salvar...' : 'Salvar Alterações'}
+               <button onClick={onClose} style={{ background: 'transparent', color: TEXT_NORMAL, border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 24px', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.1s' }} onMouseEnter={e => e.currentTarget.style.color = '#fff'}>Redefinir</button>
+               <button onClick={handleSave} disabled={saving} style={{ background: ACCENT, color: '#000', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(165,230,0,0.3)' }} onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(165,230,0,0.5)'} onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 15px rgba(165,230,0,0.3)'}>
+                 {saving ? '⏳ A salvar...' : <><IconCheck size={18} stroke={3} /> Salvar Alterações</>}
                </button>
              </div>
           </div>
@@ -524,11 +634,11 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.15s ease' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }} />
       
-      <div style={{ position: 'relative', zIndex: 10, width: 380, borderRadius: 24, overflow: 'hidden', background: '#000', border: `1px solid rgba(165,230,0,0.1)`, boxShadow: '0 40px 100px rgba(0,0,0,0.9)', animation: 'slideUp 0.3s cubic-bezier(.4,0,.2,1)' }}>
+      <div style={{ position: 'relative', zIndex: 10, width: 380, borderRadius: 24, overflow: 'hidden', background: getLuminance(member.profile?.auroraTheme || '') > 0.65 ? '#f8fafc' : '#000', border: `1px solid ${getLuminance(member.profile?.auroraTheme || '') > 0.65 ? 'rgba(0,0,0,0.1)' : 'rgba(165,230,0,0.1)'}`, boxShadow: '0 40px 100px rgba(0,0,0,0.9)', animation: 'slideUp 0.3s cubic-bezier(.4,0,.2,1)' }}>
         
         <AuroraBackground theme={(member.profile?.auroraTheme as any) || 'ALPHA'} />
         
-        <div style={{ position: 'relative', zIndex: 10, background: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(6px)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'relative', zIndex: 10, background: getLuminance(member.profile?.auroraTheme || '') > 0.65 ? 'rgba(255,255,255,0.4)' : 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(6px)', display: 'flex', flexDirection: 'column' }}>
           
           {/* Banner area */}
           <div style={{ height: 130, background: bannerColor, backgroundImage: bannerUrl && !isVideoUrl(bannerUrl) ? `url(${bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
@@ -537,8 +647,8 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
             
             {/* Banner Actions */}
             <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 8 }}>
-              {!isOwn && <button style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👤+</button>}
-              <button style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>•••</button>
+              {!isOwn && <button style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.8)'}><IconPlus size={18} /></button>}
+              <button style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.8)'}><IconDotsVertical size={20} /></button>
             </div>
           </div>
 
@@ -568,15 +678,21 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
               </div>
             </div>
 
-            {/* Badges Row */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-               {['🛡️', '💎', '⏳', '🏠'].map((emoji, i) => (
-                 <div key={i} style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer', transition: 'transform 0.15s' }}
-                   onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                 >{emoji}</div>
+               {[
+                 { icon: <IconShield size={16} />, color: '#ED4245', tooltip: 'Staff' },
+                 { icon: <IconDiamond size={16} />, color: '#A5E600', tooltip: 'Boost' },
+                 { icon: <IconClock size={16} />, color: '#7C6FAD', tooltip: 'Legacy' },
+                 { icon: <IconHome size={16} />, color: '#5865F2', tooltip: 'Origin' },
+               ].map((badge, i) => (
+                 <Tooltip key={i} text={badge.tooltip}>
+                   <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid rgba(255,255,255,0.05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s', color: badge.color }}
+                     onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                     onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                   >{badge.icon}</div>
+                 </Tooltip>
                ))}
-               <div style={{ borderRadius: 6, padding: '0 8px', background: 'linear-gradient(90deg, #5865F2, #eb459e)', color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', letterSpacing: '0.05em' }}>NITRO</div>
+               <div style={{ height: 28, borderRadius: 8, padding: '0 10px', background: 'linear-gradient(45deg, #A5E600, #5865F2)', color: '#000', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', letterSpacing: '0.1em', boxShadow: '0 0 15px rgba(165,230,0,0.2)' }}>NITRO</div>
             </div>
 
             {/* Mutual Info Component */}
@@ -660,11 +776,11 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
                             </button>
                           ))}
                           <div style={{ height: 1, background: BORDER_SUBTLE, margin: '6px 0' }} />
-                          <button onClick={() => { onAssignRole(member.userId, ''); setShowRoleSelector(false); }}
+                           <button onClick={() => { onAssignRole(member.userId, ''); setShowRoleSelector(false); }}
                             style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#ED4245', padding: '8px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
                             onMouseEnter={e => e.currentTarget.style.background = 'rgba(237,66,69,0.1)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                            <span>❌</span> Remover cargo
+                            <IconTrash size={14} /> Remover cargo
                           </button>
                         </div>
                       </div>
@@ -686,11 +802,10 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
             )}
           </div>
 
-          {/* Interaction Footer */}
           <div style={{ padding: '0 20px 24px' }}>
-            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: '12px 18px', display: 'flex', alignItems: 'center', border: '1px solid rgba(255,255,255,0.08)', transition: 'all 0.2s' }} onFocusCapture={e => e.currentTarget.style.borderColor = ACCENT}>
               <input type="text" placeholder={`Enviar mensagem para @${username}`} style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 13, flex: 1, outline: 'none' }} />
-              <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0.6, fontSize: 20 }}>🎁</button>
+              <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: TEXT_MUTED, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.1s' }} onMouseEnter={e => e.currentTarget.style.color = TEXT_BRIGHT}><IconEmoji size={20} /></button>
             </div>
           </div>
         </div>
@@ -755,11 +870,11 @@ function ServerSettingsModal({ server, serverId, onClose, onSave, onLeave, onDel
   }
 
   const tabs = [
-    { id: 'profile', label: 'Perfil do servidor', icon: '🌐' },
-    { id: 'roles', label: 'Cargos', icon: '🎖' },
-    { id: 'members', label: 'Membros', icon: '👥' },
-    { id: 'bans', label: 'Banimentos', icon: '🔨' },
-    { id: 'integrations', label: 'Integrações', icon: '⚙️' },
+    { id: 'profile', label: 'Perfil do servidor', icon: <IconGlobe size={18} /> },
+    { id: 'roles', label: 'Cargos', icon: <IconMedal size={18} /> },
+    { id: 'members', label: 'Membros', icon: <IconUsers size={18} /> },
+    { id: 'bans', label: 'Banimentos', icon: <IconHammer size={18} /> },
+    { id: 'integrations', label: 'Integrações', icon: <IconSettings size={18} /> },
   ] as const;
 
   return (
@@ -774,11 +889,17 @@ function ServerSettingsModal({ server, serverId, onClose, onSave, onLeave, onDel
               <span>{t.icon}</span> {t.label}
             </button>
           ))}
-          <div style={{ marginTop: 'auto', borderTop: `1px solid ${BORDER_SUBTLE}`, paddingTop: 12 }}>
-            <button onClick={handleLeave} disabled={leavingServer} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#ED4245', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, opacity: leavingServer ? 0.6 : 1 }}>
-              🚪 {leavingServer ? 'A sair…' : 'Sair do servidor'}
+          <div style={{ marginTop: 'auto', borderTop: `1px solid ${BORDER_SUBTLE}`, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <button onClick={handleLeave} disabled={leavingServer} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#ED4245', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, opacity: leavingServer ? 0.6 : 1, transition: 'all 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(237,66,69,0.1)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <IconClose size={16} /> {leavingServer ? 'A sair…' : 'Sair do servidor'}
             </button>
-            <button onClick={onDelete} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#ED4245', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, opacity: 0.5 }}>🗑 Eliminar servidor</button>
+            <button onClick={onDelete} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#ED4245', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, opacity: 0.4, transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'rgba(237,66,69,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '0.4'; e.currentTarget.style.background = 'transparent'; }}>
+              <IconTrash size={16} /> Eliminar servidor
+            </button>
           </div>
         </div>
 
@@ -984,18 +1105,25 @@ function ChannelSettingsModal({ channel, onClose, onSave, onDelete }: {
         <div style={{ width: 220, background: BG_DARK, padding: '24px 12px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ color: TEXT_MUTED, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12, paddingLeft: 8 }}># {channel.name}</div>
           {(['overview', 'permissions'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ width: '100%', textAlign: 'left', background: tab === t ? BG_HOVER : 'transparent', border: 'none', color: tab === t ? TEXT_BRIGHT : TEXT_NORMAL, padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 14, marginBottom: 2 }}>
-              {t === 'overview' ? '⚙️ Visão geral' : '🔒 Permissões'}
+            <button key={t} onClick={() => setTab(t)} style={{ width: '100%', textAlign: 'left', background: tab === t ? BG_HOVER : 'transparent', border: 'none', color: tab === t ? TEXT_BRIGHT : TEXT_NORMAL, padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 14, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.1s' }}>
+              {t === 'overview' ? <IconSettings size={16} /> : <IconShield size={16} />} 
+              {t === 'overview' ? 'Visão geral' : 'Permissões'}
             </button>
           ))}
           <div style={{ marginTop: 8, borderTop: `1px solid ${BORDER_SUBTLE}`, paddingTop: 8 }}>
-            <button onClick={handleDelete} disabled={deleting} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#ED4245', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 14, opacity: deleting ? 0.6 : 1 }}>
-              🗑 {deleting ? 'A eliminar…' : 'Excluir canal'}
+            <button onClick={handleDelete} disabled={deleting} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: '#ED4245', padding: '8px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 14, opacity: deleting ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(237,66,69,0.1)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <IconTrash size={18} /> {deleting ? 'A eliminar…' : 'Excluir canal'}
             </button>
           </div>
         </div>
         <div style={{ flex: 1, background: '#111214', padding: 40, overflowY: 'auto' }}>
-          <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: BG_LIGHT, border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, width: 34, height: 34, borderRadius: '50%', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, width: 34, height: 34, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = TEXT_BRIGHT; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = TEXT_MUTED; }}>
+            <IconClose size={20} />
+          </button>
           {tab === 'overview' && (
             <div style={{ maxWidth: 540 }}>
               <h2 style={{ color: TEXT_BRIGHT, fontSize: 20, fontWeight: 700, marginBottom: 24 }}>Visão geral</h2>
@@ -1074,7 +1202,7 @@ function CreateEventModal({ serverId, onClose, onCreate }: {
   }
 
   return (
-    <SimpleModal title="📅 Criar evento" onClose={onClose} maxWidth={560}>
+    <SimpleModal title={<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><IconCalendar size={22} color={ACCENT} /> Criar evento</div>} onClose={onClose} maxWidth={560}>
       {/* Cover preview */}
       <div style={{ height: 120, borderRadius: 12, marginBottom: 20, background: coverColor, backgroundImage: coverPreview && !isVideoUrl(coverPreview) ? `url(${coverPreview})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden', border: `1px solid ${BORDER_SUBTLE}`, cursor: 'pointer' }} onClick={() => coverRef.current?.click()}>
         {isVideoUrl(coverPreview) && <video src={coverPreview!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
@@ -1125,8 +1253,8 @@ function CreateEventModal({ serverId, onClose, onCreate }: {
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
         <button onClick={onClose} style={{ background: 'transparent', color: TEXT_MUTED, border: 'none', padding: '9px 16px', cursor: 'pointer', borderRadius: 6, fontSize: 13 }}>Cancelar</button>
         <button onClick={handle} disabled={saving || !title.trim() || !startsAt}
-          style={{ background: ACCENT, color: '#000', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (saving || !title.trim() || !startsAt) ? 0.5 : 1, transition: 'opacity 0.15s' }}>
-          {saving ? '⏳ A criar…' : '📅 Criar evento'}
+          style={{ background: ACCENT, color: '#000', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (saving || !title.trim() || !startsAt) ? 0.5 : 1, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {saving ? '⏳ A criar…' : <><IconPlus size={18} stroke={3} /> Criar evento</>}
         </button>
       </div>
     </SimpleModal>
@@ -1147,22 +1275,33 @@ function EventsPanel({ events, isAdmin, onNew, onRsvp, onClose, onClearPast }: {
   return (
     <div style={{ width: 340, background: '#09090b', borderLeft: `1px solid rgba(255,255,255,0.06)`, overflowY: 'auto', flexShrink: 0, display: 'flex', flexDirection: 'column', animation: 'slideLeft 0.2s cubic-bezier(.4,0,.2,1)' }}>
       <div style={{ padding: '14px 16px', borderBottom: `1px solid rgba(255,255,255,0.06)`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'rgba(255,255,255,0.02)' }}>
-        <span style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15 }}>📅 Eventos</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <IconCalendar size={18} color={ACCENT} />
+          <span style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15 }}>Eventos</span>
+        </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {isAdmin && <button onClick={onNew} style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, color: '#000', border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(165,230,0,0.3)', transition: 'all 0.15s' }}
+          {isAdmin && <button onClick={onNew} style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, color: '#000', border: 'none', borderRadius: 8, padding: '5px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(165,230,0,0.3)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
             onMouseEnter={e => (e.currentTarget as any).style.boxShadow = '0 4px 16px rgba(165,230,0,0.5)'}
-            onMouseLeave={e => (e.currentTarget as any).style.boxShadow = '0 2px 10px rgba(165,230,0,0.3)'}>+ Novo</button>}
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.07)', border: 'none', color: TEXT_MUTED, cursor: 'pointer', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, transition: 'all 0.15s' }}
+            onMouseLeave={e => (e.currentTarget as any).style.boxShadow = '0 2px 10px rgba(165,230,0,0.3)'}>
+            <IconPlus size={14} stroke={3} /> Novo
+          </button>}
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.07)', border: 'none', color: TEXT_MUTED, cursor: 'pointer', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
             onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.14)'; (e.currentTarget as any).style.color = '#fff'; }}
-            onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_MUTED; }}>✕</button>
+            onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_MUTED; }}>
+            <IconClose size={16} />
+          </button>
         </div>
       </div>
       <div style={{ flex: 1, padding: 12, overflowY: 'auto' }}>
         {upcoming.length === 0 && past.length === 0 && (
           <div style={{ textAlign: 'center', padding: '48px 16px' }}>
-            <p style={{ fontSize: 44, margin: '0 0 12px', animation: 'float 3s ease-in-out infinite' }}>📅</p>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <IconCalendar size={48} color={BORDER_SUBTLE} style={{ animation: 'float 3s ease-in-out infinite' }} />
+            </div>
             <p style={{ color: TEXT_MUTED, fontSize: 14, marginBottom: 16, lineHeight: 1.5 }}>Nenhum evento agendado ainda.</p>
-            {isAdmin && <button onClick={onNew} style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, color: '#000', border: 'none', borderRadius: 10, padding: '9px 22px', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(165,230,0,0.3)' }}>Criar primeiro evento</button>}
+            {isAdmin && <button onClick={onNew} style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, color: '#000', border: 'none', borderRadius: 10, padding: '9px 22px', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(165,230,0,0.3)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <IconPlus size={18} stroke={3} /> Criar primeiro evento
+            </button>}
           </div>
         )}
         {upcoming.length > 0 && (
@@ -1187,10 +1326,10 @@ function EventsPanel({ events, isAdmin, onNew, onRsvp, onClose, onClearPast }: {
                   </div>
                 ) : (
                   <button onClick={() => setConfirmClear(true)}
-                    style={{ background: 'transparent', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, borderRadius: 5, padding: '2px 10px', fontSize: 10, cursor: 'pointer', transition: 'all 0.15s' }}
+                    style={{ background: 'transparent', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, borderRadius: 5, padding: '2px 10px', fontSize: 10, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 4 }}
                     onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(237,66,69,0.5)'; (e.currentTarget as any).style.color = '#ED4245'; }}
                     onMouseLeave={e => { (e.currentTarget as any).style.borderColor = BORDER_SUBTLE; (e.currentTarget as any).style.color = TEXT_MUTED; }}>
-                    🗑 Limpar histórico
+                    <IconTrash size={12} /> Limpar histórico
                   </button>
                 )
               )}
@@ -1216,9 +1355,15 @@ function EventCard({ ev, onRsvp, past }: { ev: CommunityEvent; onRsvp: (id: stri
       </div>
       <div style={{ background: '#0f1012', padding: '10px 12px' }}>
         <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 13, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
-        <p style={{ color: ACCENT, fontSize: 11, margin: '0 0 2px', fontWeight: 600 }}>📆 {fmtEventDate(ev.startsAt)}</p>
-        {ev.endsAt && <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '0 0 2px' }}>⏱ Até {fmtEventDate(ev.endsAt)}</p>}
-        {ev.location && <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '0 0 6px' }}>📍 {ev.location}</p>}
+        <p style={{ color: ACCENT, fontSize: 11, margin: '0 0 4px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <IconCalendar size={12} /> {fmtEventDate(ev.startsAt)}
+        </p>
+        {ev.endsAt && <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <IconClock size={12} /> {fmtEventDate(ev.endsAt)}
+        </p>}
+        {ev.location && <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <IconGlobe size={12} /> {ev.location}
+        </p>}
         {ev.description && (
           <div style={{ color: TEXT_NORMAL, fontSize: 12, margin: '0 0 8px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             <EmojiRenderer content={ev.description} emojiSize={14} />
@@ -1238,17 +1383,17 @@ function EventCard({ ev, onRsvp, past }: { ev: CommunityEvent; onRsvp: (id: stri
 }
 
 // ─── SIMPLE MODAL ────────────────────────────────────────────────────────────
-function SimpleModal({ title, children, onClose, maxWidth = 480 }: { title: string; children: React.ReactNode; onClose: () => void; maxWidth?: number }) {
+function SimpleModal({ title, children, onClose, maxWidth = 480 }: { title: React.ReactNode; children: React.ReactNode; onClose: () => void; maxWidth?: number }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.15s ease' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(14px)' }} />
       <div style={{ position: 'relative', zIndex: 10, background: '#0d0e10', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 20, padding: 28, width: '100%', maxWidth, maxHeight: '88vh', overflowY: 'auto', animation: 'slideUp 0.2s cubic-bezier(.4,0,.2,1)', boxShadow: '0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(165,230,0,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-          <h2 style={{ color: TEXT_BRIGHT, fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>{title}</h2>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.07)', border: `1px solid rgba(255,255,255,0.08)`, color: TEXT_MUTED, width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-            onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.14)'; (e.currentTarget as any).style.color = '#fff'; }}
-            onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_MUTED; }}
-          >✕</button>
+          <h2 style={{ color: TEXT_BRIGHT, fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h2>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.07)', border: `1px solid rgba(255,255,255,0.08)`, color: TEXT_MUTED, width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.14)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = TEXT_MUTED; }}
+          ><IconClose size={20} /></button>
         </div>
         {children}
       </div>
@@ -1262,8 +1407,8 @@ function ChannelRow({ ch, active, canManage, onSelect, onSettings }: { ch: Chann
   return (
     <div className="ch-row" style={{ width: 'calc(100% - 16px)', margin: '1px 8px', display: 'flex', alignItems: 'center', borderRadius: 6, background: active ? 'rgba(165,230,0,0.08)' : hovered ? 'rgba(255,255,255,0.05)' : 'transparent', cursor: 'pointer', transition: 'background 0.12s, transform 0.12s' }}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onClick={() => onSelect(ch)}>
-      <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '6px 8px', gap: 6 }}>
-        <span style={{ color: active ? ACCENT : hovered ? TEXT_NORMAL : TEXT_MUTED, fontSize: 17, fontWeight: 300, lineHeight: 1, transition: 'color 0.12s' }}>#</span>
+      <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '6px 8px', gap: 8 }}>
+        <IconHashtag size={16} color={active ? ACCENT : hovered ? TEXT_NORMAL : TEXT_MUTED} />
         <span style={{ color: active ? TEXT_BRIGHT : hovered ? TEXT_NORMAL : TEXT_MUTED, fontSize: 14, fontWeight: active ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, transition: 'color 0.12s' }}>
           <EmojiRenderer content={ch.name} emojiSize={16} />
         </span>
@@ -1271,9 +1416,11 @@ function ChannelRow({ ch, active, canManage, onSelect, onSettings }: { ch: Chann
       </div>
       {canManage && hovered && (
         <div style={{ display: 'flex', gap: 2, paddingRight: 6 }} onClick={e => e.stopPropagation()}>
-          <button onClick={() => onSettings(ch)} title="Editar canal" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: TEXT_MUTED, cursor: 'pointer', width: 22, height: 22, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, transition: 'all 0.1s' }}
-            onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.18)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
-            onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as any).style.color = TEXT_MUTED; }}>⚙</button>
+          <button onClick={() => onSettings(ch)} title="Editar canal" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: TEXT_MUTED, cursor: 'pointer', width: 22, height: 22, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.1s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = TEXT_BRIGHT; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = TEXT_MUTED; }}>
+            <IconSettings size={14} />
+          </button>
         </div>
       )}
     </div>
@@ -1281,14 +1428,14 @@ function ChannelRow({ ch, active, canManage, onSelect, onSettings }: { ch: Chann
 }
 
 // ─── MESSAGE BODY ─────────────────────────────────────────────────────────────
-function MessageBody({ msg, mt }: { msg: Msg; mt: string }) {
+function MessageBody({ msg, mt, members, userId }: { msg: Msg; mt: string; members: Member[]; userId: string | undefined }) {
   if (msg.attachmentUrls?.length) return (
     <div>
       {msg.attachmentUrls.map((u, i) => /\.(png|jpe?g|gif|webp)$/i.test(u) ? (
         <img key={i} src={u} alt="" style={{ maxWidth: 400, maxHeight: 300, borderRadius: 8, display: 'block', marginBottom: 4, cursor: 'pointer' }} onClick={() => window.open(u, '_blank')} />
       ) : (
-        <a key={i} href={u} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.2)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '8px 12px', marginBottom: 4, color: '#7EB6FF', fontSize: 13, textDecoration: 'none', width: 'fit-content' }}>
-          📄 {u.split('/').pop()}
+        <a key={i} href={u} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.2)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', marginBottom: 6, color: '#7EB6FF', fontSize: 13, textDecoration: 'none', width: 'fit-content', transition: 'all 0.1s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.3)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.2)'}>
+          <IconPlus size={16} /> <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 200, whiteSpace: 'nowrap' }}>{u.split('/').pop()}</span>
         </a>
       ))}
       {msg.content?.trim() && (
@@ -1320,21 +1467,44 @@ function MessageBody({ msg, mt }: { msg: Msg; mt: string }) {
     );
   }
   const content = msg.content ?? '';
-  // Check for big emojis (only shortcode OR only unicode animated emoji)
   const contentTrimmed = content.trim();
   const isOnlyEmoji = /^:[a-z0-9_]+:$/.test(contentTrimmed) || !!getAnimatedUrl(contentTrimmed);
-  
-  if (msg.mentions?.everyone) {
-    const parts = content.split('@everyone');
-    return (
-      <div style={{ color: TEXT_NORMAL, fontSize: 15, margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-        {parts.map((p, i) => <span key={i}><EmojiRenderer content={p} emojiSize={isOnlyEmoji ? 32 : 20} />{i < parts.length - 1 && <mark style={{ background: 'rgba(250,168,26,0.2)', color: '#FAA81A', borderRadius: 3, padding: '0 2px' }}>@everyone</mark>}</span>)}
-      </div>
-    );
+
+  // Highlighting logic
+  function renderContent(text: string) {
+    // Split by @everyone and @username mentions
+    const parts = text.split(/(@everyone|@todos|@[\w.]+)/g);
+    return parts.map((part, i) => {
+      const pLower = part.toLowerCase();
+      if (pLower === '@everyone' || pLower === '@todos') {
+        return <mark key={i} style={{ background: 'rgba(250,168,26,0.15)', color: '#FAA81A', borderRadius: 3, padding: '0 2px', fontWeight: 600 }}>{part}</mark>;
+      }
+      if (part.startsWith('@')) {
+        const username = part.slice(1).toLowerCase();
+        const member = members.find(m => m.profile?.username.toLowerCase() === username);
+        if (member) {
+          const isMe = member.userId === userId;
+          return (
+            <span key={i} style={{ 
+              background: isMe ? 'rgba(165,230,0,0.15)' : 'rgba(88,101,242,0.15)', 
+              color: isMe ? ACCENT : '#7EB6FF', 
+              borderRadius: 3, 
+              padding: '0 2px', 
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}>
+              @{member.profile?.displayName || member.profile?.username}
+            </span>
+          );
+        }
+      }
+      return <EmojiRenderer key={i} content={part} emojiSize={isOnlyEmoji ? 32 : 20} />;
+    });
   }
+
   return (
     <div style={{ color: TEXT_NORMAL, fontSize: 15, margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-      <EmojiRenderer content={content} emojiSize={isOnlyEmoji ? 32 : 20} />
+      {renderContent(content)}
     </div>
   );
 }
@@ -1385,17 +1555,41 @@ function MsgActions({ canDel, isOwn, isMod, isPinned, showEmojiPicker, onToggleE
       ))}
       <div style={{ position: 'relative' }}>
         <Tooltip text="Reagir">
-          <button onClick={onToggleEmojiPicker} style={{ background: showEmojiPicker ? BG_HOVER : 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 14, padding: '3px 6px', borderRadius: 4 }}
+          <button onClick={onToggleEmojiPicker} style={{ background: showEmojiPicker ? BG_HOVER : 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 14, padding: '4px 7px', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.1s' }}
             onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER}
-            onMouseLeave={ev => { if (!showEmojiPicker) ev.currentTarget.style.background = 'none'; }}>😊</button>
+            onMouseLeave={ev => { if (!showEmojiPicker) ev.currentTarget.style.background = 'none'; }}>
+            <IconEmoji size={18} />
+          </button>
         </Tooltip>
         {showEmojiPicker && <EmojiPickerPopover onSelect={onReact} onClose={() => onToggleEmojiPicker({ stopPropagation: () => { } } as any)} />}
       </div>
       <div style={{ width: 1, height: 18, background: BORDER_SUBTLE, alignSelf: 'center', margin: '0 1px' }} />
-      <Tooltip text="Responder"><button onClick={onReply} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 14, padding: '3px 6px', borderRadius: 4 }} onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER} onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>↩</button></Tooltip>
-      {isMod && <Tooltip text={isPinned ? 'Desafixar' : 'Fixar'}><button onClick={onPin} style={{ background: isPinned ? ACCENT_DIM : 'none', border: 'none', color: isPinned ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 14, padding: '3px 6px', borderRadius: 4 }} onMouseEnter={ev => { if (!isPinned) ev.currentTarget.style.background = BG_HOVER; }} onMouseLeave={ev => { if (!isPinned) ev.currentTarget.style.background = 'none'; }}>📌</button></Tooltip>}
-      {isOwn && <Tooltip text="Editar"><button onClick={onEdit} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 14, padding: '3px 6px', borderRadius: 4 }} onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER} onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>✏️</button></Tooltip>}
-      {canDel && <Tooltip text="Apagar"><button onClick={onDelete} style={{ background: 'none', border: 'none', color: '#ED4245', cursor: 'pointer', fontSize: 14, padding: '3px 6px', borderRadius: 4 }} onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(237,66,69,0.15)'} onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>🗑</button></Tooltip>}
+      <Tooltip text="Responder">
+        <button onClick={onReply} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', padding: '4px 7px', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.1s' }} onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER} onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>
+          <IconReply size={18} />
+        </button>
+      </Tooltip>
+      {isMod && (
+        <Tooltip text={isPinned ? 'Desafixar' : 'Fixar'}>
+          <button onClick={onPin} style={{ background: isPinned ? ACCENT_DIM : 'none', border: 'none', color: isPinned ? ACCENT : TEXT_MUTED, cursor: 'pointer', padding: '4px 7px', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.1s' }} onMouseEnter={ev => { if (!isPinned) ev.currentTarget.style.background = BG_HOVER; }} onMouseLeave={ev => { if (!isPinned) ev.currentTarget.style.background = 'none'; }}>
+            <IconPin size={18} />
+          </button>
+        </Tooltip>
+      )}
+      {isOwn && (
+        <Tooltip text="Editar">
+          <button onClick={onEdit} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', padding: '4px 7px', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.1s' }} onMouseEnter={ev => ev.currentTarget.style.background = BG_HOVER} onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>
+            <IconEdit size={18} />
+          </button>
+        </Tooltip>
+      )}
+      {canDel && (
+        <Tooltip text="Apagar">
+          <button onClick={onDelete} style={{ background: 'none', border: 'none', color: '#ED4245', cursor: 'pointer', padding: '4px 7px', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.1s' }} onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(237,66,69,0.15)'} onMouseLeave={ev => ev.currentTarget.style.background = 'none'}>
+            <IconTrash size={18} />
+          </button>
+        </Tooltip>
+      )}
     </div>
   );
 }
@@ -1446,17 +1640,17 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
         <div style={{ position: 'absolute', top: 16, right: 20, display: 'flex', gap: 8 }}>
           {isAdmin && (
             <button onClick={onEditServer}
-              style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)', color: TEXT_NORMAL, borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-              onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
-              onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(0,0,0,0.5)'; (e.currentTarget as any).style.color = TEXT_NORMAL; }}>
-              ⚙️ Editar servidor
+              style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)', color: TEXT_NORMAL, borderRadius: 10, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 8 }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = TEXT_BRIGHT; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.5)'; e.currentTarget.style.color = TEXT_NORMAL; }}>
+              <IconSettings size={16} /> Editar servidor
             </button>
           )}
           <button onClick={onInvite}
-            style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, border: 'none', color: '#000', borderRadius: 8, padding: '6px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(165,230,0,0.3)', transition: 'all 0.15s' }}
-            onMouseEnter={e => (e.currentTarget as any).style.boxShadow = '0 6px 24px rgba(165,230,0,0.5)'}
-            onMouseLeave={e => (e.currentTarget as any).style.boxShadow = '0 4px 16px rgba(165,230,0,0.3)'}>
-            👤 Convidar
+            style={{ background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`, border: 'none', color: '#000', borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(165,230,0,0.3)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 8 }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 24px rgba(165,230,0,0.5)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(165,230,0,0.3)'}>
+            <IconPlus size={18} stroke={3} /> Convidar
           </button>
         </div>
       </div>
@@ -1483,15 +1677,15 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT, display: 'inline-block', boxShadow: '0 0 8px rgba(165,230,0,0.6)' }} />
                 {server.membersCount} membros
               </span>
-              <span style={{ color: TEXT_MUTED, fontSize: 13 }}>📢 {server.channels.length} canais</span>
-              {upcomingEvs.length > 0 && <span style={{ color: ACCENT, fontSize: 13 }}>📅 {upcomingEvs.length} evento{upcomingEvs.length > 1 ? 's' : ''} próximos</span>}
+              <span style={{ color: TEXT_MUTED, fontSize: 13, display: 'flex', alignItems: 'center', gap: 5 }}><IconPlus size={14} color={ACCENT} /> {server.channels.length} canais</span>
+              {upcomingEvs.length > 0 && <span style={{ color: ACCENT, fontSize: 13, display: 'flex', alignItems: 'center', gap: 5 }}><IconCalendar size={14} /> {upcomingEvs.length} evento{upcomingEvs.length > 1 ? 's' : ''} próximos</span>}
             </div>
           </div>
           {/* Invite code pill */}
           <button onClick={copyInvite}
             style={{ background: copied ? 'rgba(165,230,0,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${copied ? 'rgba(165,230,0,0.4)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 10, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', transition: 'all 0.2s' }}>
             <span style={{ fontFamily: 'monospace', fontSize: 12, color: copied ? ACCENT : TEXT_MUTED }}>{server.inviteCode}</span>
-            <span style={{ fontSize: 12, color: copied ? ACCENT : TEXT_MUTED }}>{copied ? '✓ Copiado!' : '📋 Copiar convite'}</span>
+            <span style={{ fontSize: 12, color: copied ? ACCENT : TEXT_MUTED }}>{copied ? '✓ Copiado!' : <><IconPlus size={14} /> Copiar convite</>}</span>
           </button>
         </div>
 
@@ -1500,13 +1694,13 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
         {/* About — full width */}
         <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 16, padding: '20px 24px', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 700, margin: 0 }}>📋 Sobre o servidor</h2>
+            <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}><IconEdit size={18} color={ACCENT} /> Sobre o servidor</h2>
             {isAdmin && !editingAbout && (
               <button onClick={() => setEditingAbout(true)}
-                style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, borderRadius: 6, padding: '4px 12px', fontSize: 11, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}
-                onMouseEnter={e => { (e.currentTarget as any).style.color = ACCENT; (e.currentTarget as any).style.borderColor = ACCENT + '66'; }}
-                onMouseLeave={e => { (e.currentTarget as any).style.color = TEXT_MUTED; (e.currentTarget as any).style.borderColor = BORDER_SUBTLE; }}>
-                ✏️ Editar
+                style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, borderRadius: 8, padding: '5px 14px', fontSize: 11, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
+                onMouseEnter={e => { e.currentTarget.style.color = ACCENT; e.currentTarget.style.borderColor = ACCENT + '66'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.borderColor = BORDER_SUBTLE; }}>
+                <IconEdit size={14} /> Editar
               </button>
             )}
           </div>
@@ -1603,7 +1797,7 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <DisplayName profile={m.profile} fallbackName={name} baseColor={acc} style={{ fontSize: 13, fontWeight: 600 }} />
                       </div>
-                      {m.userId === server.ownerId && <span style={{ fontSize: 10, color: '#F0B132', flexShrink: 0 }}>👑</span>}
+                      {m.userId === server.ownerId && <span style={{ fontSize: 12, display: 'flex' }}><IconShield size={12} color="#F0B132" /></span>}
                     </div>
                   );
                 })}
@@ -1655,6 +1849,8 @@ export default function ServerPage() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [text, setText] = useState('');
+  const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
 
   // UI
@@ -1670,10 +1866,6 @@ export default function ServerPage() {
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
   const [channelSettingsTarget, setChannelSettingsTarget] = useState<Channel | null>(null);
   const [memberMenuUserId, setMemberMenuUserId] = useState<string | null>(null);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const [replyTo, setReplyTo] = useState<Msg | null>(null);
-  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
-  const [typingIds, setTypingIds] = useState<Record<string, boolean>>({});
   const [showPins, setShowPins] = useState(false);
   const [pins, setPins] = useState<Msg[]>([]);
   const [memberSearchQ, setMemberSearchQ] = useState('');
@@ -1683,8 +1875,19 @@ export default function ServerPage() {
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [randomEmoji, setRandomEmoji] = useState(EMOJIS[0]);
+  const handleEmojiHover = () => {
+    const next = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+    setRandomEmoji(next);
+  };
   const [showGuide, setShowGuide] = useState(true);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [replyTo, setReplyTo] = useState<Msg | null>(null);
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [typingIds, setTypingIds] = useState<Record<string, boolean>>({});
+
+  const isModalOpen = !!(memberMenuUserId || channelSettingsTarget || showServerSettings || showEditProfile || showInvite || showCh || showCat || showCreateEvent);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const joinedRef = useRef<string | null>(null);
@@ -1908,6 +2111,44 @@ export default function ServerPage() {
 
   const upcomingEvents = events.filter(e => new Date(e.startsAt) > new Date());
 
+  const mentionResults = useMemo(() => {
+    if (mentionSearch === null || !server) return [];
+    const q = mentionSearch.toLowerCase();
+    const results: (Member | { id: string; type: 'everyone' })[] = [];
+    
+    if ('everyone'.includes(q) || 'todos'.includes(q)) {
+      results.push({ id: 'everyone', type: 'everyone' });
+    }
+
+    const filteredMembers = (server?.members || []).filter(m => 
+      m.profile?.username.toLowerCase().includes(q) || 
+      m.profile?.displayName?.toLowerCase().includes(q)
+    );
+    
+    return [...results, ...filteredMembers].slice(0, 10);
+  }, [server?.members, mentionSearch]);
+
+  const insertMention = useCallback((item: Member | { type: 'everyone' }) => {
+    if (mentionSearch === null || !inputRef.current) return;
+    const pos = inputRef.current.selectionStart || 0;
+    const before = text.slice(0, pos).replace(/@[\w.]*$/, '');
+    const after = text.slice(pos);
+    
+    const mentionText = (item as any).type === 'everyone' ? 'todos' : (item as Member).profile?.username;
+    const newText = before + `@${mentionText} ` + after;
+    
+    setText(newText);
+    setMentionSearch(null);
+    setMentionIndex(0);
+    setTimeout(() => {
+      if (inputRef.current) {
+        const newPos = (before + `@${mentionText} `).length;
+        inputRef.current.setSelectionRange(newPos, newPos);
+        inputRef.current.focus();
+      }
+    }, 0);
+  }, [text, mentionSearch]);
+
   if (loading) return (
     <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: BG_DARKEST }}>
       <div style={{ width: 36, height: 36, border: `3px solid ${ACCENT_DIM}`, borderTopColor: ACCENT, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -1948,9 +2189,11 @@ export default function ServerPage() {
 
       {/* ── 1. SERVERS SIDEBAR ─── */}
       <div style={{ width: 72, background: BG_DARKEST, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 12, overflowY: 'auto', flexShrink: 0, borderRight: `1px solid ${BORDER_SUBTLE}` }}>
-        <button onClick={() => router.push('/main/community')} title="Início" style={{ width: 48, height: 48, borderRadius: '40%', background: BG_LIGHT, border: '2px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, color: ACCENT, fontSize: 20, flexShrink: 0, transition: 'border-radius 0.2s' }}
-          onMouseEnter={e => e.currentTarget.style.borderRadius = '50%'}
-          onMouseLeave={e => e.currentTarget.style.borderRadius = '40%'}>✦</button>
+        <button onClick={() => router.push('/main/community')} title="Início" style={{ width: 48, height: 48, borderRadius: '40%', background: BG_LIGHT, border: '2px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, color: ACCENT, flexShrink: 0, transition: 'all 0.2s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderRadius = '50%'; e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#000'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderRadius = '40%'; e.currentTarget.style.background = BG_LIGHT; e.currentTarget.style.color = ACCENT; }}>
+          <IconHome size={24} />
+        </button>
         <div style={{ width: 32, height: 2, background: BORDER_SUBTLE, borderRadius: 1, marginBottom: 8 }} />
         {myServers.map(s => (
           <ServerIcon key={s.id} server={s} active={s.id === serverId} onClick={() => router.push(`/main/community/${s.id}`)} />
@@ -1978,7 +2221,7 @@ export default function ServerPage() {
           <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 800, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
             <EmojiRenderer content={server.name} emojiSize={18} />
           </h2>
-          <span style={{ color: TEXT_MUTED, fontSize: 10, transition: 'transform 0.25s cubic-bezier(.4,0,.2,1)', display: 'inline-block', transform: showServerMenu ? 'rotate(180deg)' : 'none' }}>▼</span>
+          <IconChevronDown size={14} color={TEXT_MUTED} style={{ transition: 'transform 0.25s cubic-bezier(.4,0,.2,1)', transform: showServerMenu ? 'rotate(180deg)' : 'none' }} />
         </div>
 
         {/* Server dropdown */}
@@ -1986,22 +2229,22 @@ export default function ServerPage() {
           <div style={{ background: '#0b0c0e', margin: '4px 8px 8px', borderRadius: 12, border: `1px solid rgba(255,255,255,0.08)`, overflow: 'hidden', animation: 'slideDown 0.15s cubic-bezier(.4,0,.2,1)', boxShadow: '0 16px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(165,230,0,0.06)', backdropFilter: 'blur(8px)' }}>
             <div style={{ padding: '4px 0' }}>
               {[
-                { label: 'Convidar para o servidor', icon: '👤', action: () => { setShowInvite(true); setShowServerMenu(false); } },
-                { label: 'Configurações do servidor', icon: '⚙️', action: () => { setShowServerSettings(true); setShowServerMenu(false); }, admin: true },
-                { label: 'Criar canal', icon: '#️⃣', action: () => { setShowCh(true); setShowServerMenu(false); }, admin: true },
-                { label: 'Criar categoria', icon: '🏷️', action: () => { setShowCat(true); setShowServerMenu(false); }, admin: true },
-                { label: 'Criar evento', icon: '📅', action: () => { setShowCreateEvent(true); setShowServerMenu(false); }, admin: true },
+                { label: 'Convidar para o servidor', icon: <IconPlus size={16} />, action: () => { setShowInvite(true); setShowServerMenu(false); } },
+                { label: 'Configurações do servidor', icon: <IconSettings size={16} />, action: () => { setShowServerSettings(true); setShowServerMenu(false); }, admin: true },
+                { label: 'Criar canal', icon: <IconHashtag size={16} />, action: () => { setShowCh(true); setShowServerMenu(false); }, admin: true },
+                { label: 'Criar categoria', icon: <IconMenu size={16} />, action: () => { setShowCat(true); setShowServerMenu(false); }, admin: true },
+                { label: 'Criar evento', icon: <IconCalendar size={16} />, action: () => { setShowCreateEvent(true); setShowServerMenu(false); }, admin: true },
                 null,
-                { label: 'Sair do servidor', icon: '🚪', action: handleLeaveServer, danger: true },
+                { label: 'Sair do servidor', icon: <IconClose size={16} />, action: handleLeaveServer, danger: true },
               ].map((item, i) => item === null ? (
                 <div key={i} style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '4px 8px' }} />
               ) : (
                 (!item.admin || isAdmin) && (
-                  <button key={i} onClick={item.action} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: (item as any).danger ? '#ED4245' : TEXT_NORMAL, padding: '8px 14px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, transition: 'all 0.1s', borderRadius: 0 }}
+                  <button key={i} onClick={item.action} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: (item as any).danger ? '#ED4245' : TEXT_NORMAL, padding: '10px 14px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.1s', borderRadius: 0 }}
                     onMouseEnter={e => { (e.currentTarget as any).style.background = (item as any).danger ? 'rgba(237,66,69,0.12)' : 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = (item as any).danger ? '#FF6B6B' : TEXT_BRIGHT; }}
                     onMouseLeave={e => { (e.currentTarget as any).style.background = 'transparent'; (e.currentTarget as any).style.color = (item as any).danger ? '#ED4245' : TEXT_NORMAL; }}>
-                    <span style={{ width: 20, textAlign: 'center', fontSize: 15 }}>{item.icon}</span>
-                    <span style={{ fontWeight: 500 }}>{item.label}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'currentColor', opacity: 0.7 }}>{item.icon}</span>
+                    <span style={{ fontWeight: 600 }}>{item.label}</span>
                   </button>
                 )
               ))}
@@ -2012,19 +2255,19 @@ export default function ServerPage() {
         {/* Channel list */}
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
           {/* Guide entry */}
-          <button
-            onClick={() => setShowGuide(true)}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: showGuide ? 'rgba(165,230,0,0.1)' : 'transparent', border: 'none', borderRadius: 6, padding: '7px 12px', cursor: 'pointer', color: showGuide ? ACCENT : TEXT_MUTED, fontSize: 13, fontWeight: showGuide ? 700 : 500, transition: 'all 0.12s', margin: '6px 4px 2px', boxSizing: 'border-box' }}
-            onMouseEnter={e => { if (!showGuide) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
-            onMouseLeave={e => { if (!showGuide) { (e.currentTarget as any).style.background = 'transparent'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>
-            <span style={{ fontSize: 15 }}>🗺️</span>
+            <button
+              onClick={() => setShowGuide(true)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: showGuide ? 'rgba(165,230,0,0.1)' : 'transparent', border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: showGuide ? ACCENT : TEXT_MUTED, fontSize: 13, fontWeight: showGuide ? 700 : 600, transition: 'all 0.12s', margin: '4px 0', boxSizing: 'border-box' }}
+              onMouseEnter={e => { if (!showGuide) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = TEXT_BRIGHT; } }}
+              onMouseLeave={e => { if (!showGuide) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = TEXT_MUTED; } }}>
+              <IconGlobe size={18} />
             <span>Guia do Servidor</span>
           </button>
           {channelsByCategory.uncategorized.length > 0 && (
             <div style={{ paddingTop: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px 4px 16px', marginBottom: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', padding: '12px 8px 4px 16px', marginBottom: 2 }}>
                 <span style={{ flex: 1, color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Canais de texto</span>
-                {canManageCh && <button onClick={() => setShowCh(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 18, padding: '0 4px' }}>+</button>}
+                {canManageCh && <button onClick={() => setShowCh(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 4px', transition: 'color 0.1s' }} onMouseEnter={e => e.currentTarget.style.color = TEXT_BRIGHT} onMouseLeave={e => e.currentTarget.style.color = TEXT_MUTED}><IconPlus size={16} /></button>}
               </div>
               {channelsByCategory.uncategorized.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} onSelect={ch => { setChannel(ch); setShowGuide(false); }} onSettings={setChannelSettingsTarget} />)}
             </div>
@@ -2039,15 +2282,15 @@ export default function ServerPage() {
                     style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', gap: 4, padding: '4px 8px', borderRadius: 4 }}
                     onMouseEnter={e => e.currentTarget.style.color = TEXT_BRIGHT}
                     onMouseLeave={e => e.currentTarget.style.color = TEXT_MUTED}>
-                    <span style={{ fontSize: 10, transition: 'transform 0.15s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-block' }}>▼</span>
+                    <IconChevronDown size={10} style={{ transition: 'transform 0.15s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
                     <span style={{ flex: 1 }}>
                       <EmojiRenderer content={cat.name} emojiSize={14} />
                     </span>
                   </button>
-                  {canManageCh && <button onClick={() => { setShowCh(true); setChCategoryId(cat.id); }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 16, padding: '2px 6px' }}>+</button>}
-                  {isAdmin && <button onClick={() => handleDeleteCategory(cat.id)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 13, padding: '2px 4px', opacity: 0.5, transition: 'opacity 0.1s, color 0.1s' }}
+                  {canManageCh && <button onClick={() => { setShowCh(true); setChCategoryId(cat.id); }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px 6px', transition: 'color 0.1s' }} onMouseEnter={e => e.currentTarget.style.color = TEXT_BRIGHT} onMouseLeave={e => e.currentTarget.style.color = TEXT_MUTED}><IconPlus size={14} /></button>}
+                  {isAdmin && <button onClick={() => handleDeleteCategory(cat.id)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px 4px', opacity: 0.5, transition: 'all 0.1s' }}
                     onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ED4245'; }}
-                    onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = TEXT_MUTED; }}>×</button>}
+                    onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = TEXT_MUTED; }}><IconClose size={14} /></button>}
                 </div>
                 {!collapsed && catChannels.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} onSelect={ch => { setChannel(ch); setShowGuide(false); }} onSettings={setChannelSettingsTarget} />)}
               </div>
@@ -2084,9 +2327,9 @@ export default function ServerPage() {
             <DisplayName profile={user?.profile} fallbackName={user?.profile?.username || 'U'} style={{ fontSize: 13, fontWeight: 600 }} />
             <p style={{ margin: 0, color: TEXT_MUTED, fontSize: 11 }}>@{user?.profile?.username}</p>
           </div>
-          <div style={{ display: 'flex', gap: 2 }}>
-            <Tooltip text="Editar perfil"><button onClick={() => setShowEditProfile(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '4px 6px', borderRadius: 6, transition: 'all 0.12s' }} onMouseEnter={e => { (e.currentTarget as any).style.color = ACCENT; (e.currentTarget as any).style.background = 'rgba(165,230,0,0.08)'; }} onMouseLeave={e => { (e.currentTarget as any).style.color = TEXT_MUTED; (e.currentTarget as any).style.background = 'none'; }}>✏️</button></Tooltip>
-            <Tooltip text="Configurações"><button onClick={() => setShowServerSettings(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '4px 6px', borderRadius: 6, transition: 'all 0.12s' }} onMouseEnter={e => { (e.currentTarget as any).style.color = ACCENT; (e.currentTarget as any).style.background = 'rgba(165,230,0,0.08)'; }} onMouseLeave={e => { (e.currentTarget as any).style.color = TEXT_MUTED; (e.currentTarget as any).style.background = 'none'; }}>⚙️</button></Tooltip>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <Tooltip text="Editar perfil"><button onClick={() => setShowEditProfile(true)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: TEXT_MUTED, cursor: 'pointer', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.12s' }} onMouseEnter={e => { e.currentTarget.style.color = TEXT_BRIGHT; e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }} onMouseLeave={e => { e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}><IconEdit size={16} /></button></Tooltip>
+            {isAdmin && <Tooltip text="Configurações do servidor"><button onClick={() => setShowServerSettings(true)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: TEXT_MUTED, cursor: 'pointer', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.12s' }} onMouseEnter={e => { e.currentTarget.style.color = TEXT_BRIGHT; e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }} onMouseLeave={e => { e.currentTarget.style.color = TEXT_MUTED; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}><IconSettings size={16} /></button></Tooltip>}
           </div>
         </div>
       </div>
@@ -2106,15 +2349,15 @@ export default function ServerPage() {
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative', background: '#000', overflow: 'hidden' }}>
           {/* 1. Floating Menu Button (Always on top) */}
           <button onClick={() => setShowServerMenu(p => !p)}
-            style={{ position: 'absolute', top: 24, left: 10, zIndex: 1100, width: 34, height: 34, background: 'rgba(5,5,5,0.85)', backdropFilter: 'blur(10px)', border: `1px solid ${ACCENT}88`, borderRadius: 10, color: ACCENT, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 4px 15px rgba(0,0,0,0.6)', transition: 'all 0.2s', animation: 'float 3s ease-in-out infinite' }}
+            style={{ position: 'absolute', top: 24, left: 10, zIndex: 110, width: 34, height: 34, background: 'rgba(5,5,5,0.85)', backdropFilter: 'blur(10px)', border: `1px solid ${ACCENT}88`, borderRadius: 10, color: ACCENT, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.6)', transition: 'all 0.2s', animation: 'float 3s ease-in-out infinite', opacity: isModalOpen ? 0 : 1, visibility: isModalOpen ? 'hidden' : 'visible' }}
             onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.background = ACCENT; e.currentTarget.style.color = '#000'; }}
             onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(5,5,5,0.85)'; e.currentTarget.style.color = ACCENT; }}>
-            ☰
+            <IconMenu size={18} />
           </button>
 
           {/* 2. Server Identity Bar (Discord style) */}
           {server && (
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 34, zIndex: 1050, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 34, zIndex: 105, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px', opacity: isModalOpen ? 0 : 1, visibility: isModalOpen ? 'hidden' : 'visible' }}>
               <span style={{ color: TEXT_MUTED, fontSize: 13, fontWeight: 700, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                 <EmojiRenderer content={server.name} emojiSize={14} />
               </span>
@@ -2123,8 +2366,8 @@ export default function ServerPage() {
 
           {/* 3. Channel Topbar (Shifted down) */}
           {channel && (
-            <div style={{ position: 'absolute', top: 34, left: 0, right: 0, height: 48, zIndex: 1000, background: '#050505', borderBottom: `1px solid rgba(255,255,255,0.06)`, display: 'flex', alignItems: 'center', padding: '0 16px 0 56px', gap: 10, boxShadow: '0 6px 18px rgba(0,0,0,0.8)' }}>
-              <span style={{ color: ACCENT, fontSize: 20, fontWeight: 300, opacity: 0.8 }}>#</span>
+            <div style={{ position: 'absolute', top: 34, left: 0, right: 0, height: 48, zIndex: 100, background: '#050505', borderBottom: `1px solid rgba(255,255,255,0.06)`, display: 'flex', alignItems: 'center', padding: '0 16px 0 56px', gap: 10, boxShadow: '0 6px 18px rgba(0,0,0,0.8)', opacity: isModalOpen ? 0 : 1, visibility: isModalOpen ? 'hidden' : 'visible' }}>
+              <IconHashtag size={20} color={ACCENT} style={{ opacity: 0.8 }} />
               <span style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 15 }}>
                 <EmojiRenderer content={channel.name} emojiSize={18} />
               </span>
@@ -2135,22 +2378,22 @@ export default function ServerPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {isMod && <Tooltip text="Fixadas">
                   <button onClick={() => { setShowPins(p => !p); if (!showPins) api.get<Msg[]>(`/community/channels/${channel.id}/pins`).then(setPins).catch(() => { }); }}
-                    style={{ background: showPins ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showPins ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s' }}
-                    onMouseEnter={e => { if (!showPins) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
-                    onMouseLeave={e => { if (!showPins) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>📌</button>
+                    style={{ background: showPins ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showPins ? ACCENT : TEXT_MUTED, cursor: 'pointer', padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    onMouseEnter={e => { if (!showPins) { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = TEXT_BRIGHT; } }}
+                    onMouseLeave={e => { if (!showPins) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = TEXT_MUTED; } }}><IconPin size={18} /></button>
                 </Tooltip>}
                 <Tooltip text="Eventos">
-                  <button onClick={() => setShowEventsPanel(p => !p)} style={{ background: showEventsPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showEventsPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', position: 'relative' }}
-                    onMouseEnter={e => { if (!showEventsPanel) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
-                    onMouseLeave={e => { if (!showEventsPanel) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>
-                    📅
+                  <button onClick={() => setShowEventsPanel(p => !p)} style={{ background: showEventsPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showEventsPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    onMouseEnter={e => { if (!showEventsPanel) { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = TEXT_BRIGHT; } }}
+                    onMouseLeave={e => { if (!showEventsPanel) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = TEXT_MUTED; } }}>
+                    <IconCalendar size={18} />
                     {upcomingEvents.length > 0 && <span style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: ACCENT, boxShadow: '0 0 6px rgba(165,230,0,0.8)', animation: 'pulse 2s infinite' }} />}
                   </button>
                 </Tooltip>
                 <Tooltip text={showMembersPanel ? 'Ocultar membros' : 'Mostrar membros'}>
-                  <button onClick={() => setShowMembersPanel(p => !p)} style={{ background: showMembersPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showMembersPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 15, padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s' }}
-                    onMouseEnter={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; } }}
-                    onMouseLeave={e => { if (!showMembersPanel) { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_MUTED; } }}>👥</button>
+                  <button onClick={() => setShowMembersPanel(p => !p)} style={{ background: showMembersPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showMembersPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    onMouseEnter={e => { if (!showMembersPanel) { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = TEXT_BRIGHT; } }}
+                    onMouseLeave={e => { if (!showMembersPanel) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = TEXT_MUTED; } }}><IconUsers size={18} /></button>
                 </Tooltip>
               </div>
             </div>
@@ -2195,15 +2438,27 @@ export default function ServerPage() {
 
               if (grouped && !showDateHeader) return (
                 <div key={msg.id} className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '1px 0 1px 56px', position: 'relative', animation: 'fadeIn 0.12s ease' }}>
-                  <div style={{ flex: 1 }}><MessageBody msg={msg} mt={mt} /><ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} /></div>
+                  <div style={{ flex: 1 }}><MessageBody msg={msg} mt={mt} members={server?.members || []} userId={user?.id} /><ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} /></div>
                   {actions}
                 </div>
               );
 
+              const isMentioned = msg.mentions?.everyone || msg.mentions?.userIds?.includes(user?.id || '');
+
               return (
                 <Fragment key={msg.id}>
                   {showDateHeader && <DateSeparator label={formatDateLabel(msg.createdAt)} />}
-                  <div className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 0 2px', gap: 16, position: 'relative', animation: 'fadeIn 0.12s ease', marginTop: grouped ? 2 : 8 }}>
+                  <div className="msg-row" style={{ 
+                    display: 'flex', 
+                    alignItems: 'flex-start', 
+                    padding: '8px 0 2px', 
+                    gap: 16, 
+                    position: 'relative', 
+                    animation: 'fadeIn 0.12s ease', 
+                    marginTop: grouped ? 2 : 8,
+                    background: isMentioned ? 'rgba(165,230,0,0.03)' : 'transparent',
+                    borderLeft: isMentioned ? `2px solid ${ACCENT}` : 'none'
+                  }}>
                   <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: '50%', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: isBot ? '1px solid rgba(96,165,250,0.4)' : 'none', transition: 'opacity 0.1s' }}
                     onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>
                     {isBot ? <span style={{ fontSize: 14, fontWeight: 800, color: '#93C5FD' }}>B</span> :
@@ -2231,7 +2486,7 @@ export default function ServerPage() {
                       <span style={{ color: TEXT_MUTED, fontSize: 11 }}>{fmtDate(msg.createdAt)}</span>
                       {msg.editedAt && <span style={{ color: TEXT_MUTED, fontSize: 10, fontStyle: 'italic' }}>(editado)</span>}
                     </div>
-                    <MessageBody msg={msg} mt={mt} />
+                    <MessageBody msg={msg} mt={mt} members={server?.members || []} userId={user?.id} />
                     <ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} />
                   </div>
                   {actions}
@@ -2268,7 +2523,7 @@ export default function ServerPage() {
           {showPins && (
             <div style={{ borderTop: `1px solid ${BORDER_SUBTLE}`, padding: '12px 16px', maxHeight: 240, overflowY: 'auto', background: '#0e0f13', flexShrink: 0, animation: 'slideDown 0.15s ease' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ color: TEXT_BRIGHT, fontWeight: 600, fontSize: 14 }}>📌 Mensagens fixadas</span>
+                <span style={{ color: TEXT_BRIGHT, fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}><IconPin size={16} color={ACCENT} /> Mensagens fixadas</span>
                 <button onClick={() => setShowPins(false)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 16 }}>✕</button>
               </div>
               {pins.length === 0 ? <p style={{ color: TEXT_MUTED, fontSize: 13 }}>Nenhuma mensagem fixada.</p> : pins.map(p => (
@@ -2287,52 +2542,125 @@ export default function ServerPage() {
           {/* Input area */}
           <div style={{ padding: '0 16px 16px', flexShrink: 0 }}>
             {(replyTo || editing) && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px', marginBottom: 0, background: 'rgba(165,230,0,0.05)', borderRadius: '12px 12px 0 0', border: `1px solid rgba(165,230,0,0.15)`, borderBottom: 'none', animation: 'slideDown 0.12s ease' }}>
-                <span style={{ fontSize: 12, color: editing ? ACCENT : TEXT_MUTED, fontWeight: 500 }}>{editing ? '✏️ A editar mensagem' : `↩ A responder a ${replyTo?.authorName}`}</span>
-                {!editing && replyTo && <span style={{ color: TEXT_MUTED, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: 'italic' }}>&ldquo;{replyTo.content}&rdquo;</span>}
-                <button onClick={() => { setReplyTo(null); setEditing(null); setText(''); }} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 15, transition: 'color 0.1s' }}
-                  onMouseEnter={e => (e.currentTarget as any).style.color = '#fff'}
-                  onMouseLeave={e => (e.currentTarget as any).style.color = TEXT_MUTED}>✕</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', marginBottom: 0, background: 'rgba(165,230,0,0.06)', borderRadius: '12px 12px 0 0', border: `1px solid rgba(165,230,0,0.15)`, borderBottom: 'none', animation: 'slideDown 0.12s ease' }}>
+                <span style={{ color: editing ? ACCENT : TEXT_MUTED, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {editing ? <IconEdit size={14} /> : <IconReply size={14} />}
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{editing ? 'A editar mensagem' : `A responder a ${replyTo?.authorName}`}</span>
+                </span>
+                {!editing && replyTo && <span style={{ color: TEXT_MUTED, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.7 }}>&ldquo;{replyTo.content}&rdquo;</span>}
+                <button onClick={() => { setReplyTo(null); setEditing(null); setText(''); }} style={{ background: 'transparent', border: 'none', color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.1s' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                  onMouseLeave={e => e.currentTarget.style.color = TEXT_MUTED}><IconClose size={16} /></button>
               </div>
             )}
             {showAttachMenu && (
               <div style={{ background: '#0b0c0e', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 12, padding: 6, marginBottom: 6, animation: 'slideDown 0.12s ease', boxShadow: '0 8px 24px rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
-                {[{ icon: '🖼️', label: 'Enviar imagem', accept: 'image/*' }, { icon: '📎', label: 'Enviar ficheiro', accept: '*' }].map(item => (
+                {[
+                  { icon: <IconCamera size={18} />, label: 'Enviar imagem', accept: 'image/*' },
+                  { icon: <IconGlobe size={18} />, label: 'Mais opções', accept: '*' }
+                ].map(item => (
                   <button key={item.label} onClick={() => { if (fileRef.current) { fileRef.current.accept = item.accept; fileRef.current.click(); } setShowAttachMenu(false); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', background: 'none', border: 'none', color: TEXT_NORMAL, padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 14, transition: 'all 0.1s' }}
-                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
-                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'none'; (e.currentTarget as any).style.color = TEXT_NORMAL; }}>
-                    <span style={{ fontSize: 18 }}>{item.icon}</span>
-                    <span style={{ fontWeight: 500 }}>{item.label}</span>
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = TEXT_BRIGHT; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = TEXT_NORMAL; }}>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACCENT, opacity: 0.8 }}>{item.icon}</span>
+                    <span style={{ fontWeight: 600 }}>{item.label}</span>
                   </button>
                 ))}
               </div>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: (replyTo || editing) ? '0 0 14px 14px' : 14, padding: '0 14px', border: `1px solid rgba(255,255,255,0.08)`, gap: 8, opacity: connected ? 1 : 0.5, transition: 'opacity 0.2s, border-color 0.15s, box-shadow 0.15s' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: (replyTo || editing) ? '0 0 14px 14px' : 14, padding: '0 14px', border: `1px solid rgba(255,255,255,0.08)`, gap: 8, opacity: connected ? 1 : 0.5, transition: 'opacity 0.2s, border-color 0.15s, box-shadow 0.15s' }}>
               <input ref={fileRef} type="file" hidden onChange={handleFileUpload} />
               <button onClick={() => setShowAttachMenu(p => !p)} disabled={uploadingFile}
-                style={{ background: 'none', border: 'none', color: uploadingFile ? ACCENT : TEXT_MUTED, cursor: 'pointer', fontSize: 22, padding: '10px 2px', lineHeight: 1, flexShrink: 0, transition: 'all 0.12s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)' }}
-                onMouseEnter={e => { if (!uploadingFile) (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
-                onMouseLeave={e => { if (!uploadingFile) (e.currentTarget as any).style.color = TEXT_MUTED; }}>
-                {uploadingFile ? '⏳' : '+'}
+                style={{ background: 'none', border: 'none', color: uploadingFile ? ACCENT : TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 2px', flexShrink: 0, transition: 'all 0.12s', transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0)' }}
+                onMouseEnter={e => { if (!uploadingFile) e.currentTarget.style.color = TEXT_BRIGHT; }}
+                onMouseLeave={e => { if (!uploadingFile) e.currentTarget.style.color = TEXT_MUTED; }}>
+                {uploadingFile ? '⏳' : <IconPlus size={22} stroke={3} />}
               </button>
               <input ref={inputRef} value={text}
-                onChange={e => { setText(e.target.value); emitTyping(); }}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } if (e.key === 'Escape') { setReplyTo(null); setEditing(null); setText(''); } }}
+                onChange={e => { 
+                  const val = e.target.value;
+                  setText(val); 
+                  emitTyping(); 
+                  
+                  const pos = e.target.selectionStart || 0;
+                  const textBeforeCursor = val.slice(0, pos);
+                  const match = textBeforeCursor.match(/@([\w.]*)$/);
+                  if (match) {
+                    setMentionSearch(match[1]);
+                    setMentionIndex(0);
+                  } else {
+                    setMentionSearch(null);
+                  }
+                }}
+                onKeyDown={e => { 
+                  if (mentionSearch !== null && mentionResults.length > 0) {
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(p => (p + 1) % mentionResults.length); return; }
+                    if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(p => (p - 1 + mentionResults.length) % mentionResults.length); return; }
+                    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(mentionResults[mentionIndex] as any); return; }
+                    if (e.key === 'Escape') { e.preventDefault(); setMentionSearch(null); return; }
+                  }
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } 
+                  if (e.key === 'Escape') { setReplyTo(null); setEditing(null); setText(''); } 
+                }}
                 placeholder={channel ? (connected ? `Mensagem em #${channel.name}` : 'A reconectar…') : 'Seleciona um canal'}
                 disabled={!connected || !channel}
                 style={{ flex: 1, background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 15, padding: '13px 0', minHeight: 46 }}
               />
               
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {mentionSearch !== null && mentionResults.length > 0 && (
+                  <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 12, background: '#0b0c0e', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.8)', zIndex: 1000, animation: 'slideDown 0.12s ease' }}>
+                    <div style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sugestões de Menção</p>
+                      <span style={{ fontSize: 10, color: TEXT_MUTED }}>{mentionResults.length} resultados</span>
+                    </div>
+                    {mentionResults.map((item, i) => {
+                      const isEveryone = (item as any).type === 'everyone';
+                      const m = item as Member;
+                      return (
+                        <div key={isEveryone ? 'everyone' : m.userId} 
+                          onClick={() => insertMention(item as any)}
+                          onMouseEnter={() => setMentionIndex(i)}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 12, 
+                            padding: '10px 16px', 
+                            cursor: 'pointer', 
+                            background: i === mentionIndex ? 'rgba(165,230,0,0.08)' : 'transparent',
+                            transition: 'all 0.1s',
+                            borderLeft: i === mentionIndex ? `3px solid ${ACCENT}` : '3px solid transparent'
+                          }}>
+                          {isEveryone ? (
+                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: ACCENT_DIM, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACCENT, fontWeight: 800, fontSize: 16 }}>@</div>
+                          ) : (
+                            <Avatar src={m.profile?.avatarUrl} name={(m.profile?.displayName || m.profile?.username) || 'User'} size="sm" />
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {isEveryone ? (
+                              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: i === mentionIndex ? ACCENT : TEXT_BRIGHT }}>Mencionar Todos</p>
+                            ) : (
+                              <DisplayName profile={m.profile} fallbackName={m.profile?.username || 'U'} style={{ fontSize: 14, fontWeight: 700 }} />
+                            )}
+                            <p style={{ margin: 0, fontSize: 11, color: TEXT_MUTED }}>
+                              {isEveryone ? '@todos ou @everyone' : `@${m.profile?.username}`}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <button
                   ref={triggerRef}
                   onClick={() => setShowPicker(!showPicker)}
-                  style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', fontSize: 22, padding: '10px 8px', transition: 'all 0.12s' }}
-                  onMouseEnter={e => (e.currentTarget as any).style.color = TEXT_BRIGHT}
-                  onMouseLeave={e => (e.currentTarget as any).style.color = TEXT_MUTED}
+                  onMouseEnter={handleEmojiHover}
+                  style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 8px', transition: 'all 0.12s' }}
                 >
-                  😊
+                  <span onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.2) rotate(10deg)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1) rotate(0deg)'; }} style={{ fontSize: 22, transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <EmojiRenderer content={randomEmoji} emojiSize={22} />
+                  </span>
                 </button>
                 {showPicker && (
                   <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 12, zIndex: 100, transform: 'translateX(-240px)' }}>
@@ -2346,9 +2674,11 @@ export default function ServerPage() {
               </div>
 
               <button onClick={send} disabled={!text.trim() || !connected || !channel}
-                style={{ background: text.trim() && connected && channel ? `linear-gradient(135deg, ${ACCENT}, #7BC800)` : 'rgba(255,255,255,0.05)', border: 'none', color: text.trim() && connected && channel ? '#000' : TEXT_MUTED, borderRadius: 9, padding: '7px 15px', fontSize: 14, fontWeight: 700, cursor: text.trim() && connected && channel ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0, boxShadow: text.trim() && connected && channel ? '0 4px 12px rgba(165,230,0,0.3)' : 'none' }}
-                onMouseEnter={e => { if (text.trim() && connected && channel) (e.currentTarget as any).style.boxShadow = '0 6px 20px rgba(165,230,0,0.5)'; }}
-                onMouseLeave={e => { if (text.trim() && connected && channel) (e.currentTarget as any).style.boxShadow = '0 4px 12px rgba(165,230,0,0.3)'; }}>➤</button>
+                style={{ background: text.trim() && connected && channel ? `linear-gradient(135deg, ${ACCENT}, #7BC800)` : 'rgba(255,255,255,0.05)', border: 'none', color: text.trim() && connected && channel ? '#000' : TEXT_MUTED, borderRadius: 9, padding: '8px 16px', cursor: text.trim() && connected && channel ? 'pointer' : 'default', transition: 'all 0.15s', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: text.trim() && connected && channel ? '0 4px 12px rgba(165,230,0,0.3)' : 'none' }}
+                onMouseEnter={e => { if (text.trim() && connected && channel) e.currentTarget.style.boxShadow = '0 6px 20px rgba(165,230,0,0.5)'; }}
+                onMouseLeave={e => { if (text.trim() && connected && channel) e.currentTarget.style.boxShadow = '0 4px 12px rgba(165,230,0,0.3)'; }}>
+                <IconSend size={18} stroke={3} />
+              </button>
             </div>
           </div>
         </div>
@@ -2363,8 +2693,8 @@ export default function ServerPage() {
       {showMembersPanel && !showEventsPanel && (
         <div style={{ width: 240, background: '#07080a', overflowY: 'auto', flexShrink: 0, borderLeft: `1px solid rgba(255,255,255,0.04)`, animation: 'slideLeft 0.18s cubic-bezier(.4,0,.2,1)' }}>
           <div style={{ padding: '12px 12px 8px', position: 'sticky', top: 0, background: '#07080a', zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(255,255,255,0.07)`, borderRadius: 8, padding: '5px 10px', gap: 6, transition: 'border-color 0.15s' }}>
-              <span style={{ color: TEXT_MUTED, fontSize: 13 }}>🔍</span>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(255,255,255,0.07)`, borderRadius: 10, padding: '6px 14px', gap: 10, transition: 'all 0.2s' }} onFocusCapture={(e: any) => e.currentTarget.style.borderColor = ACCENT} onBlurCapture={(e: any) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}>
+              <IconGlobe size={14} color={TEXT_MUTED} />
               <input value={memberSearchQ} onChange={e => setMemberSearchQ(e.target.value)} placeholder="Pesquisar membros" style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 13, flex: 1 }} />
             </div>
           </div>
@@ -2380,15 +2710,15 @@ export default function ServerPage() {
             const roleGroups = server.roles.map(r => ({ role: r, members: filtered.filter(m => m.communityRoleId === r.id) })).filter(g => g.members.length > 0);
             const members = filtered.filter(m => m.role !== 'admin' && m.userId !== server.ownerId && !m.communityRoleId);
             const sections = [
-              ...(owners.length ? [{ title: `DONO — ${owners.length}`, members: owners, color: '#F0B132' }] : []),
-              ...roleGroups.map(g => ({ title: `${g.role.name.toUpperCase()} — ${g.members.length}`, members: g.members, color: g.role.color || TEXT_MUTED })),
-              ...(admins.length ? [{ title: `ADMIN — ${admins.length}`, members: admins, color: '#ED4245' }] : []),
-              ...(members.length ? [{ title: `MEMBROS — ${members.length}`, members, color: TEXT_MUTED }] : []),
+              ...(owners.length ? [{ title: `DONO — ${owners.length}`, members: owners, color: '#F0B132', icon: <IconShield size={12} /> }] : []),
+              ...roleGroups.map(g => ({ title: `${g.role.name.toUpperCase()} — ${g.members.length}`, members: g.members, color: g.role.color || TEXT_MUTED, icon: <IconMedal size={12} /> })),
+              ...(admins.length ? [{ title: `ADMIN — ${admins.length}`, members: admins, color: '#ED4245', icon: <IconHammer size={12} /> }] : []),
+              ...(members.length ? [{ title: `MEMBROS — ${members.length}`, members, color: TEXT_MUTED, icon: <IconUsers size={12} /> }] : []),
             ];
             return sections.map(sec => (
               <div key={sec.title} style={{ marginBottom: 8 }}>
-                <div style={{ padding: '8px 12px 4px', color: sec.color, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em' }}>
-                  <EmojiRenderer content={sec.title} emojiSize={12} />
+                <div style={{ padding: '12px 12px 4px', color: sec.color, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {sec.icon} <EmojiRenderer content={sec.title} emojiSize={12} />
                 </div>
                 {sec.members.map(m => {
                   const n = mname(m);
@@ -2403,10 +2733,11 @@ export default function ServerPage() {
                         <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Avatar src={m.profile?.avatarUrl} name={n} size="sm" />
                         </div>
-                        <div style={{ position: 'absolute', right: -1, bottom: -1, width: 10, height: 10, borderRadius: '50%', background: typing ? '#F0B232' : ACCENT, border: `2px solid ${BG_DARK}`, transition: 'background 0.3s' }} />
+<div style={{ position: 'absolute', right: -1, bottom: -1, width: 10, height: 10, borderRadius: '50%', background: typing ? '#F0B232' : ACCENT, border: `2px solid #07080a`, transition: 'background 0.3s' }} />
                       </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><DisplayName profile={m.profile} fallbackName={n} baseColor={accent} style={{ fontSize: 14, fontWeight: 600 }} /></p>
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <p style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}><DisplayName profile={m.profile} fallbackName={n} baseColor={accent} style={{ fontSize: 14, fontWeight: 600 }} /></p>
+                          {m.userId === server.ownerId && <IconShield size={12} color="#F0B132" />}
                         {typing && <p style={{ margin: 0, color: '#F0B232', fontSize: 11, fontStyle: 'italic', animation: 'fadeIn 0.2s' }}>a escrever…</p>}
                       </div>
                     </button>
@@ -2442,8 +2773,9 @@ export default function ServerPage() {
           <p style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 12 }}>Código para entrar em <strong style={{ color: TEXT_BRIGHT }}>{server.name}</strong></p>
           <div style={{ background: '#0c0d0f', border: `1px solid ${ACCENT}44`, borderRadius: 8, padding: '12px 16px', fontFamily: 'monospace', color: ACCENT, fontSize: 13, marginBottom: 16, wordBreak: 'break-all', userSelect: 'all' }}>{server.inviteCode}</div>
           <button onClick={() => { navigator.clipboard.writeText(server.inviteCode); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-            style={{ background: copied ? ACCENT_DIM : ACCENT, color: copied ? ACCENT : '#000', border: copied ? `1px solid ${ACCENT}` : 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
-            {copied ? '✓ Copiado!' : '📋 Copiar código'}
+            style={{ background: copied ? ACCENT_DIM : ACCENT, color: copied ? ACCENT : '#000', border: copied ? `1px solid ${ACCENT}` : 'none', borderRadius: 10, padding: '10px 24px', fontSize: 13, fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {copied ? <IconCheck size={16} /> : <IconPlus size={16} />}
+            {copied ? 'Copiado!' : 'Copiar código'}
           </button>
         </SimpleModal>
       )}

@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 
 interface AvatarProps {
   src?: string | null;
@@ -7,6 +7,7 @@ interface AvatarProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   style?: React.CSSProperties;
+  play?: boolean;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -24,9 +25,10 @@ const sizes = {
   xl: 'w-32 h-32 text-4xl', // 128px
 };
 
-export function Avatar({ src: rawSrc, name, size = 'md', className, style }: AvatarProps) {
+export function Avatar({ src: rawSrc, name, size = 'md', className, style, play = true }: AvatarProps) {
   const [error, setError] = useState(false);
   const [isVideo, setIsVideo] = useState<boolean | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const src = useMemo(() => {
     if (!rawSrc || rawSrc === 'null' || rawSrc === 'undefined') return null;
@@ -53,6 +55,16 @@ export function Avatar({ src: rawSrc, name, size = 'md', className, style }: Ava
 
     setIsVideo(isKnownVideo);
   }, [src]);
+
+  // Optimized Playback Control
+  useEffect(() => {
+    if (!videoRef.current) return;
+    if (play) {
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+    }
+  }, [play, isVideo, src]);
 
   const initialsLayer = (
     <div
@@ -82,12 +94,16 @@ export function Avatar({ src: rawSrc, name, size = 'md', className, style }: Ava
         <div className="absolute inset-0 z-10 w-full h-full">
           {isVideo ? (
             <video
+              ref={videoRef}
               key={src}
               src={src}
-              autoPlay
+              autoPlay={play}
               muted
               loop
               playsInline
+              preload="metadata"
+              disablePictureInPicture
+              disableRemotePlayback
               onError={() => setIsVideo(false)}
               className="w-full h-full object-cover"
             />

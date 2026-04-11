@@ -68,7 +68,7 @@ export class UsersService {
     });
   }
 
-  async updateProfile(userId: string, data: { displayName?: string; bio?: string; avatarUrl?: string; bannerUrl?: string; bannerColor?: string; auroraTheme?: string; nameFont?: string; nameEffect?: string; nameColor?: string }) {
+  async updateProfile(userId: string, data: { displayName?: string; bio?: string; avatarUrl?: string; bannerUrl?: string; bannerColor?: string; auroraTheme?: string; nameFont?: string; nameEffect?: string; nameColor?: string; status?: string; tags?: string }) {
     return this.prisma.profile.update({
       where: { userId },
       data: {
@@ -81,6 +81,8 @@ export class UsersService {
         ...(data.nameFont !== undefined && { nameFont: data.nameFont }),
         ...(data.nameEffect !== undefined && { nameEffect: data.nameEffect }),
         ...(data.nameColor !== undefined && { nameColor: data.nameColor }),
+        ...(data.status !== undefined && { status: data.status }),
+        ...(data.tags !== undefined && { tags: data.tags }),
       },
     });
   }

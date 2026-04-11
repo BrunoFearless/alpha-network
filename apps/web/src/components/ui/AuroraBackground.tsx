@@ -61,9 +61,9 @@ const THEMES: Record<string, ThemeConfig> = {
   }
 };
 
-function hexToRgba(hex: string, alpha: number) {
+function getLuminance(hex: string) {
+  if (!hex.startsWith('#')) return 0;
   let r = 0, g = 0, b = 0;
-  if (!hex.startsWith('#')) return `rgba(255, 255, 255, ${alpha})`;
   if (hex.length === 4) {
     r = parseInt(hex[1] + hex[1], 16);
     g = parseInt(hex[2] + hex[2], 16);
@@ -73,7 +73,24 @@ function hexToRgba(hex: string, alpha: number) {
     g = parseInt(hex.slice(3, 5), 16);
     b = parseInt(hex.slice(5, 7), 16);
   }
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+function hexToRgba(hex: string, alpha: number, boost = false) {
+  if (!hex.startsWith('#')) return `rgba(255, 255, 255, ${alpha})`;
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.slice(1, 3), 16);
+    g = parseInt(hex.slice(3, 5), 16);
+    b = parseInt(hex.slice(5, 7), 16);
+  }
+  // Increase visibility for light themes
+  const finalAlpha = boost ? Math.min(alpha * 1.8, 0.7) : alpha;
+  return `rgba(${r}, ${g}, ${b}, ${finalAlpha})`;
 }
 
 interface AuroraBackgroundProps extends React.HTMLProps<HTMLDivElement> {
@@ -102,18 +119,20 @@ export const AuroraBackground = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Determine config
+  const isLightTheme = theme?.startsWith('#') && getLuminance(theme) > 0.65;
+
   let config = THEMES[theme as string];
   if (!config && theme?.startsWith('#')) {
     config = {
       orbs: [
-        hexToRgba(theme, 0.25),
-        hexToRgba(theme, 0.22),
-        hexToRgba(theme, 0.18),
-        hexToRgba(theme, 0.15),
-        hexToRgba(theme, 0.12),
-        hexToRgba(theme, 0.10),
+        hexToRgba(theme, 0.25, isLightTheme),
+        hexToRgba(theme, 0.22, isLightTheme),
+        hexToRgba(theme, 0.18, isLightTheme),
+        hexToRgba(theme, 0.15, isLightTheme),
+        hexToRgba(theme, 0.12, isLightTheme),
+        hexToRgba(theme, 0.10, isLightTheme),
       ],
-      particle: hexToRgba(theme, 0.4)
+      particle: hexToRgba(theme, 0.4, isLightTheme)
     };
   }
   if (!config) config = THEMES.ALPHA;
@@ -160,7 +179,7 @@ export const AuroraBackground = ({
         
         ctx.beginPath();
         ctx.arc(p.x * W, p.y * H, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `${particleColorBase}${p.o})`;
+        ctx.fillStyle = isLightTheme ? `rgba(0,0,0,${p.o * 0.4})` : `${particleColorBase}${p.o})`;
         ctx.fill();
       });
       
@@ -176,7 +195,9 @@ export const AuroraBackground = ({
             ctx.beginPath();
             ctx.moveTo(a.x * W, a.y * H);
             ctx.lineTo(b.x * W, b.y * H);
-            ctx.strokeStyle = `${particleColorBase}${0.1 * (1 - dist / 120)})`;
+            ctx.strokeStyle = isLightTheme 
+              ? `rgba(0,0,0,${0.08 * (1 - dist / 120)})`
+              : `${particleColorBase}${0.1 * (1 - dist / 120)})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
@@ -197,7 +218,8 @@ export const AuroraBackground = ({
   return (
     <div
       className={cn(
-        "absolute inset-0 overflow-hidden pointer-events-none z-0 bg-[#05060b]",
+        "absolute inset-0 overflow-hidden pointer-events-none z-0",
+        isLightTheme ? "bg-[#f8fafc]" : "bg-[#05060b]",
         className
       )}
       {...props}
@@ -213,7 +235,7 @@ export const AuroraBackground = ({
       </div>
 
       {/* 2. Dot Grid Texture */}
-      <div className="dotgrid" />
+      <div className={cn("dotgrid", isLightTheme && "opacity-20 invert")} />
 
       {/* 3. Particle Constellation Layer */}
       <canvas 

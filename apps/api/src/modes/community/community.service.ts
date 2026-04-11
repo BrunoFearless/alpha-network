@@ -74,10 +74,10 @@ export class CommunityService {
   }
 
   private async parseMentionsFromContent(content: string, serverId: string): Promise<Prisma.InputJsonValue | undefined> {
-    const everyone = /\B@everyone\b/i.test(content);
+    const everyone = /\B@(everyone|todos)\b/i.test(content);
     const re = /@([\w.]+)/g;
     const tags = [...content.matchAll(re)].map(m => m[1].toLowerCase());
-    const uniqTags = [...new Set(tags)].filter(t => t !== 'everyone');
+    const uniqTags = [...new Set(tags)].filter(t => t !== 'everyone' && t !== 'todos');
     if (!everyone && uniqTags.length === 0) return undefined;
     const members = await this.prisma.serverMember.findMany({ where: { serverId }, select: { userId: true } });
     const userIdsInServer = new Set(members.map(m => m.userId));
@@ -108,7 +108,7 @@ export class CommunityService {
     const [profiles, bots] = await Promise.all([
       this.prisma.profile.findMany({
         where: { userId: { in: [...humanIds] } },
-        select: { userId: true, displayName: true, username: true, avatarUrl: true, nameFont: true, nameEffect: true, nameColor: true, auroraTheme: true },
+        select: { userId: true, displayName: true, username: true, avatarUrl: true, nameFont: true, nameEffect: true, nameColor: true, auroraTheme: true, status: true, tags: true },
       }),
       this.prisma.bot.findMany({ where: { id: { in: [...botIds] } }, select: { id: true, name: true } }),
     ]);
@@ -230,7 +230,7 @@ export class CommunityService {
     const userIds = server.members.map(m => m.userId);
     const profiles = await this.prisma.profile.findMany({
       where: { userId: { in: userIds } },
-      select: { userId: true, username: true, displayName: true, avatarUrl: true, bio: true, bannerUrl: true, bannerColor: true, auroraTheme: true, nameFont: true, nameEffect: true, nameColor: true },
+      select: { userId: true, username: true, displayName: true, avatarUrl: true, bio: true, bannerUrl: true, bannerColor: true, auroraTheme: true, nameFont: true, nameEffect: true, nameColor: true, status: true, tags: true },
     });
     const pm = new Map(profiles.map(p => [p.userId, p]));
     return {
