@@ -242,6 +242,12 @@ function IconCamera({ size = 20, color = 'currentColor', style }: IconProps) {
 function IconDotsVertical({ size = 20, color = 'currentColor', style }: IconProps) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>;
 }
+function IconDownload({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+}
+function IconExternalLink({ size = 20, color = 'currentColor', style }: IconProps) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>;
+}
 
 // ─── SERVER ICON ─────────────────────────────────────────────────────────────
 function ServerIcon({ server, active, onClick }: { server: MyServer; active: boolean; onClick: () => void }) {
@@ -1402,16 +1408,18 @@ function SimpleModal({ title, children, onClose, maxWidth = 480 }: { title: Reac
 }
 
 // ─── CHANNEL ROW ─────────────────────────────────────────────────────────────
-function ChannelRow({ ch, active, canManage, onSelect, onSettings }: { ch: Channel; active: boolean; canManage: boolean; onSelect: (ch: Channel) => void; onSettings: (ch: Channel) => void; }) {
+function ChannelRow({ ch, active, canManage, onSelect, onSettings, unreadCount, hasUnseenPins }: { ch: Channel; active: boolean; canManage: boolean; onSelect: (ch: Channel) => void; onSettings: (ch: Channel) => void; unreadCount?: number; hasUnseenPins?: boolean; }) {
   const [hovered, setHovered] = useState(false);
   return (
     <div className="ch-row" style={{ width: 'calc(100% - 16px)', margin: '1px 8px', display: 'flex', alignItems: 'center', borderRadius: 6, background: active ? 'rgba(165,230,0,0.08)' : hovered ? 'rgba(255,255,255,0.05)' : 'transparent', cursor: 'pointer', transition: 'background 0.12s, transform 0.12s' }}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onClick={() => onSelect(ch)}>
-      <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '6px 8px', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '6px 8px', gap: 8, minWidth: 0 }}>
         <IconHashtag size={16} color={active ? ACCENT : hovered ? TEXT_NORMAL : TEXT_MUTED} />
-        <span style={{ color: active ? TEXT_BRIGHT : hovered ? TEXT_NORMAL : TEXT_MUTED, fontSize: 14, fontWeight: active ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, transition: 'color 0.12s' }}>
-          <EmojiRenderer content={ch.name} emojiSize={16} />
+        <span style={{ color: active ? TEXT_BRIGHT : hovered ? TEXT_NORMAL : TEXT_MUTED, fontSize: 13, fontWeight: active ? 600 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, transition: 'color 0.12s' }}>
+          <EmojiRenderer content={ch.name} emojiSize={14} />
         </span>
+        {hasUnseenPins && <div className="blink-green-dot" title="Novas mensagens fixadas" />}
+        {(unreadCount ?? 0) > 0 && <div className="unread-badge">{unreadCount}</div>}
         {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT, boxShadow: '0 0 6px rgba(165,230,0,0.8)', flexShrink: 0 }} />}
       </div>
       {canManage && hovered && (
@@ -1428,16 +1436,40 @@ function ChannelRow({ ch, active, canManage, onSelect, onSettings }: { ch: Chann
 }
 
 // ─── MESSAGE BODY ─────────────────────────────────────────────────────────────
-function MessageBody({ msg, mt, members, userId }: { msg: Msg; mt: string; members: Member[]; userId: string | undefined }) {
+function MessageBody({ msg, mt, members, userId, onMediaClick }: { msg: Msg; mt: string; members: Member[]; userId: string | undefined; onMediaClick: (url: string, type: 'image' | 'video') => void }) {
   if (msg.attachmentUrls?.length) return (
     <div>
-      {msg.attachmentUrls.map((u, i) => /\.(png|jpe?g|gif|webp)$/i.test(u) ? (
-        <img key={i} src={u} alt="" style={{ maxWidth: 400, maxHeight: 300, borderRadius: 8, display: 'block', marginBottom: 4, cursor: 'pointer' }} onClick={() => window.open(u, '_blank')} />
-      ) : (
-        <a key={i} href={u} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.2)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', marginBottom: 6, color: '#7EB6FF', fontSize: 13, textDecoration: 'none', width: 'fit-content', transition: 'all 0.1s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.3)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.2)'}>
-          <IconPlus size={16} /> <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 200, whiteSpace: 'nowrap' }}>{u.split('/').pop()}</span>
-        </a>
-      ))}
+      {msg.attachmentUrls.map((u, i) => {
+        const isImg = /\.(png|jpe?g|gif|webp)$/i.test(u);
+        const isVid = /\.(mp4|webm|mov|ogg)$/i.test(u);
+        
+        if (isImg) return <img key={i} src={u} alt="" style={{ maxWidth: 400, maxHeight: 300, borderRadius: 8, display: 'block', marginBottom: 4, cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => onMediaClick(u, 'image')} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />;
+        
+        if (isVid) return (
+          <div key={i} style={{ position: 'relative', width: 'fit-content', cursor: 'pointer', marginBottom: 4 }} 
+            onClick={() => onMediaClick(u, 'video')}
+            onMouseEnter={e => {
+              const v = e.currentTarget.querySelector('video');
+              if (v) v.play().catch(() => {});
+            }}
+            onMouseLeave={e => {
+              const v = e.currentTarget.querySelector('video');
+              if (v) { v.pause(); v.currentTime = 0; }
+            }}
+          >
+            <video src={u} muted loop playsInline style={{ maxWidth: 400, maxHeight: 300, borderRadius: 8, display: 'block' }} />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: 8, opacity: 0.8 }}>
+              <IconMenu size={32} color="#fff" />
+            </div>
+          </div>
+        );
+
+        return (
+          <a key={i} href={u} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.2)', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', marginBottom: 6, color: '#7EB6FF', fontSize: 13, textDecoration: 'none', width: 'fit-content', transition: 'all 0.1s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.3)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.2)'}>
+            <IconPlus size={16} /> <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: 200, whiteSpace: 'nowrap' }}>{u.split('/').pop()}</span>
+          </a>
+        );
+      })}
       {msg.content?.trim() && (
         <div style={{ color: TEXT_NORMAL, fontSize: 15, margin: '4px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
           <EmojiRenderer content={msg.content} />
@@ -1447,7 +1479,7 @@ function MessageBody({ msg, mt, members, userId }: { msg: Msg; mt: string; membe
   );
   if (mt === 'image' && msg.imageUrl) return (
     <div>
-      <img src={msg.imageUrl} alt="" style={{ maxWidth: 400, maxHeight: 300, borderRadius: 8, display: 'block', cursor: 'pointer' }} onClick={() => window.open(msg.imageUrl!, '_blank')} />
+      <img src={msg.imageUrl} alt="" style={{ maxWidth: 400, maxHeight: 300, borderRadius: 8, display: 'block', cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => onMediaClick(msg.imageUrl!, 'image')} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
       {msg.content?.trim() && <p style={{ color: TEXT_NORMAL, fontSize: 14, margin: '6px 0 0' }}>{msg.content}</p>}
     </div>
   );
@@ -1866,6 +1898,7 @@ export default function ServerPage() {
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
   const [channelSettingsTarget, setChannelSettingsTarget] = useState<Channel | null>(null);
   const [memberMenuUserId, setMemberMenuUserId] = useState<string | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<{ url: string, type: 'image' | 'video' } | null>(null);
   const [showPins, setShowPins] = useState(false);
   const [pins, setPins] = useState<Msg[]>([]);
   const [memberSearchQ, setMemberSearchQ] = useState('');
@@ -1886,8 +1919,19 @@ export default function ServerPage() {
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [typingIds, setTypingIds] = useState<Record<string, boolean>>({});
+  const [confirmConfig, setConfirmConfig] = useState<{ 
+    title: string; 
+    message: string; 
+    onConfirm: () => void; 
+    isDanger?: boolean; 
+    confirmText?: string; 
+    verifyText?: string; // for server deletion
+  } | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [unseenPins, setUnseenPins] = useState<Record<string, boolean>>({});
 
-  const isModalOpen = !!(memberMenuUserId || channelSettingsTarget || showServerSettings || showEditProfile || showInvite || showCh || showCat || showCreateEvent);
+  const isModalOpen = !!(memberMenuUserId || channelSettingsTarget || showServerSettings || showEditProfile || showInvite || showCh || showCat || showCreateEvent || confirmConfig || pendingFile);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const joinedRef = useRef<string | null>(null);
@@ -1935,14 +1979,47 @@ export default function ServerPage() {
 
   useEffect(() => {
     if (!socket) return;
-    const h = (msg: Msg) => { if (msg.channelId !== channel?.id) return; setMsgs(p => p.some(m => m.id === msg.id) ? p : [...p, msg]); };
+    const h = (msg: Msg) => { 
+      if (msg.channelId === channel?.id) {
+        setMsgs(p => p.some(m => m.id === msg.id) ? p : [...p, msg]); 
+      } else {
+        setUnreadCounts(prev => ({ ...prev, [msg.channelId]: (prev[msg.channelId] || 0) + 1 }));
+      }
+    };
     const del = (payload: { id?: string; messageId?: string; channelId: string }) => { if (payload.channelId !== channel?.id) return; const mid = payload.id ?? payload.messageId; if (!mid) return; setMsgs(p => p.filter(m => m.id !== mid)); };
-    const upd = (msg: Msg) => { if (msg.channelId !== channel?.id) return; setMsgs(p => p.map(m => m.id === msg.id ? msg : m)); };
+    const upd = (msg: Msg) => { 
+      if (msg.channelId === channel?.id) {
+        setMsgs(p => p.map(m => m.id === msg.id ? msg : m)); 
+      }
+      if (msg.pinned) {
+        if (msg.channelId !== channel?.id || !showPins) {
+          setUnseenPins(prev => ({ ...prev, [msg.channelId]: true }));
+        }
+      }
+    };
     const react = (payload: { messageId: string; channelId: string; reactions: ReactionEntry[] }) => { if (payload.channelId !== channel?.id) return; setMsgs(p => p.map(m => m.id === payload.messageId ? { ...m, reactions: payload.reactions } : m)); };
     const typing = (payload: { channelId: string; userId: string; typing: boolean }) => { if (payload.channelId !== channel?.id || payload.userId === user?.id) return; setTypingIds(prev => { const next = { ...prev }; if (payload.typing) next[payload.userId] = true; else delete next[payload.userId]; return next; }); };
     socket.on('message.new', h); socket.on('message.deleted', del); socket.on('message.updated', upd); socket.on('reaction.updated', react); socket.on('typing.update', typing);
     return () => { socket.off('message.new', h); socket.off('message.deleted', del); socket.off('message.updated', upd); socket.off('reaction.updated', react); socket.off('typing.update', typing); };
-  }, [socket, channel?.id, user?.id]);
+  }, [socket, channel?.id, user?.id, showPins]);
+
+  useEffect(() => {
+    if (channel) {
+      setUnreadCounts(prev => {
+        if (prev[channel.id]) { const next = { ...prev }; delete next[channel.id]; return next; }
+        return prev;
+      });
+    }
+  }, [channel]);
+
+  useEffect(() => {
+    if (showPins && channel) {
+      setUnseenPins(prev => {
+        if (prev[channel.id]) { const next = { ...prev }; delete next[channel.id]; return next; }
+        return prev;
+      });
+    }
+  }, [showPins, channel]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
 
@@ -1975,12 +2052,28 @@ export default function ServerPage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   async function handleKick(targetUserId: string) {
-    if (!server || !confirm('Expulsar este membro?')) return;
-    try { await api.delete(`/community/servers/${server.id}/members/${targetUserId}`); setMemberMenuUserId(null); await refreshServer(); } catch (e: any) { alert(e.message); }
+    if (!server) return;
+    setConfirmConfig({
+      title: 'Expulsar Membro',
+      message: 'Tens a certeza que desejas expulsar este membro do servidor?',
+      isDanger: true,
+      onConfirm: async () => {
+        try { await api.delete(`/community/servers/${server.id}/members/${targetUserId}`); setMemberMenuUserId(null); await refreshServer(); } catch (e: any) { alert(e.message); }
+        setConfirmConfig(null);
+      }
+    });
   }
   async function handleBan(targetUserId: string) {
-    if (!server || !confirm('Banir este utilizador?')) return;
-    try { await api.post(`/community/servers/${server.id}/ban/${targetUserId}`); setMemberMenuUserId(null); await refreshServer(); } catch (e: any) { alert(e.message); }
+    if (!server) return;
+    setConfirmConfig({
+      title: 'Banir Utilizador',
+      message: 'Tens a certeza que desejas banir este utilizador? Ele não poderá voltar a entrar.',
+      isDanger: true,
+      onConfirm: async () => {
+        try { await api.post(`/community/servers/${server.id}/ban/${targetUserId}`); setMemberMenuUserId(null); await refreshServer(); } catch (e: any) { alert(e.message); }
+        setConfirmConfig(null);
+      }
+    });
   }
   async function handleAssignRole(targetUserId: string, roleId: string) {
     if (!server) return;
@@ -1997,20 +2090,47 @@ export default function ServerPage() {
   }
   async function handleLeaveServer() {
     if (!server) return;
-    await api.delete(`/community/servers/${server.id}/members/me`);
-    router.push('/main/community');
+    setConfirmConfig({
+      title: 'Sair do Servidor',
+      message: `Tens a certeza que desejas sair do servidor "${server.name}"?`,
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/community/servers/${server.id}/members/me`);
+          router.push('/main/community');
+        } catch (e: any) { alert(e.message); }
+        setConfirmConfig(null);
+      }
+    });
   }
   async function handleDeleteServer() {
     if (!server) return;
-    const input = prompt(`Para confirmar, escreve o nome do servidor: "${server.name}"`);
-    if (input !== server.name) { if (input !== null) alert('Nome incorrecto.'); return; }
-    try { await api.delete(`/community/servers/${server.id}`); router.push('/main/community'); } catch { alert('Não foi possível eliminar o servidor.'); }
+    setConfirmConfig({
+      title: 'Eliminar Servidor',
+      message: `Esta ação é irreversível. Todas as mensagens, canais e membros serão perdidos para sempre.\nPara confirmar, escreve o nome do servidor: "${server.name}"`,
+      isDanger: true,
+      verifyText: server.name,
+      confirmText: 'Eliminar Servidor',
+      onConfirm: async () => {
+        try { await api.delete(`/community/servers/${server.id}`); router.push('/main/community'); } catch { alert('Não foi possível eliminar o servidor.'); }
+        setConfirmConfig(null);
+      }
+    });
   }
   async function handleDeleteChannel(channelId: string) {
-    try { await api.delete(`/community/channels/${channelId}`); } catch { /* fallthrough */ }
-    setServer(p => p ? { ...p, channels: p.channels.filter(c => c.id !== channelId) } : p);
-    if (channel?.id === channelId) { const rest = server?.channels.filter(c => c.id !== channelId) ?? []; setChannel(rest[0] ?? null); }
-    setChannelSettingsTarget(null);
+    const chToDel = server?.channels.find(c => c.id === channelId);
+    setConfirmConfig({
+      title: 'Eliminar Canal',
+      message: `Tens a certeza que desejas eliminar o canal #${chToDel?.name}? Todas as mensagens serão perdidas.`,
+      isDanger: true,
+      onConfirm: async () => {
+        try { await api.delete(`/community/channels/${channelId}`); } catch { /* fallthrough */ }
+        setServer(p => p ? { ...p, channels: p.channels.filter(c => c.id !== channelId) } : p);
+        if (channel?.id === channelId) { const rest = server?.channels.filter(c => c.id !== channelId) ?? []; setChannel(rest[0] ?? null); }
+        setChannelSettingsTarget(null);
+        setConfirmConfig(null);
+      }
+    });
   }
   async function handleSaveChannel(channelId: string, name: string, topic: string) {
     try { await api.patch(`/community/channels/${channelId}`, { name, topic }); } catch { /* optimistic */ }
@@ -2018,16 +2138,31 @@ export default function ServerPage() {
     if (channel?.id === channelId) setChannel(p => p ? { ...p, name, topic } : p);
   }
   async function handleDeleteCategory(catId: string) {
-    if (!server || !confirm('Eliminar esta categoria?')) return;
-    try { await api.delete(`/community/servers/${server.id}/categories/${catId}`); } catch { /* optimistic */ }
-    setServer(p => p ? { ...p, channelCategories: p.channelCategories.filter(c => c.id !== catId) } : p);
+    if (!server) return;
+    setConfirmConfig({
+      title: 'Eliminar Categoria',
+      message: 'Tens a certeza que desejas eliminar esta categoria e todos os canais nela contidos?',
+      isDanger: true,
+      onConfirm: async () => {
+        try { await api.delete(`/community/servers/${server.id}/categories/${catId}`); } catch { /* optimistic */ }
+        setServer(p => p ? { ...p, channelCategories: p.channelCategories.filter(c => c.id !== catId) } : p);
+        setConfirmConfig(null);
+      }
+    });
   }
   async function handleClearPastEvents() {
     if (!server) return;
-    try {
-      await api.delete(`/community/servers/${server.id}/events/past`);
-      setEvents(p => p.filter(e => new Date(e.startsAt) > new Date()));
-    } catch (e: any) { alert(e.message); }
+    setConfirmConfig({
+      title: 'Limpar Eventos Passados',
+      message: 'Tens a certeza que desejas remover todos os eventos que já terminaram?',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/community/servers/${server.id}/events/past`);
+          setEvents(p => p.filter(e => new Date(e.startsAt) > new Date()));
+        } catch (e: any) { alert(e.message); }
+        setConfirmConfig(null);
+      }
+    });
   }
   async function handleCreateRole(name: string, color: string, perms: { canModerate: boolean; canManageServer: boolean; canManageChannels: boolean }) {
     if (!server) return;
@@ -2035,8 +2170,16 @@ export default function ServerPage() {
     setServer(p => p ? { ...p, roles: [...p.roles, role] } : p);
   }
   async function handleDeleteRole(roleId: string) {
-    if (!server || !confirm('Eliminar este cargo?')) return;
-    try { await api.delete(`/community/servers/${server.id}/roles/${roleId}`); setServer(p => p ? { ...p, roles: p.roles.filter(r => r.id !== roleId) } : p); } catch (e: any) { alert(e.message); }
+    if (!server) return;
+    setConfirmConfig({
+      title: 'Eliminar Cargo',
+      message: 'Tens a certeza que desejas eliminar este cargo?',
+      isDanger: true,
+      onConfirm: async () => {
+        try { await api.delete(`/community/servers/${server.id}/roles/${roleId}`); setServer(p => p ? { ...p, roles: p.roles.filter(r => r.id !== roleId) } : p); } catch (e: any) { alert(e.message); }
+        setConfirmConfig(null);
+      }
+    });
   }
   async function handlePin(msg: Msg) {
     if (!channel) return;
@@ -2049,14 +2192,26 @@ export default function ServerPage() {
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !channel || !socket || !server) return;
+    setPendingFile(file);
+    if (fileRef.current) fileRef.current.value = '';
+  }
+  async function performFileUpload(file: File) {
+    if (!channel || !socket || !server) return;
     setUploadingFile(true); setShowAttachMenu(false);
     try {
       const url = await uploadFile(file, server.id);
       const isImage = file.type.startsWith('image/');
-      socket.emit('message.send', { channelId: channel.id, content: isImage ? '' : file.name, ...(isImage ? { imageUrl: url, messageType: 'image' } : { attachmentUrls: [url] }), replyToId: replyTo?.id ?? undefined });
+      const isVideo = file.type.startsWith('video/');
+      const hasPreview = isImage || isVideo;
+      socket.emit('message.send', { 
+        channelId: channel.id, 
+        content: hasPreview ? '' : file.name, 
+        ...(isImage ? { imageUrl: url, messageType: 'image' } : { attachmentUrls: [url] }), 
+        replyToId: replyTo?.id ?? undefined 
+      });
       setReplyTo(null);
     } catch (err: any) { alert('Falha ao enviar: ' + err.message); }
-    finally { setUploadingFile(false); if (fileRef.current) fileRef.current.value = ''; }
+    finally { setUploadingFile(false); }
   }
   async function handleSaveProfile() {
     setShowEditProfile(false);
@@ -2181,10 +2336,26 @@ export default function ServerPage() {
         input, textarea, select { outline: none !important; color-scheme: dark; font-family: inherit; }
         input:focus, textarea:focus, select:focus { outline: none !important; box-shadow: none !important; border-color: inherit !important; }
 
-        .msg-row:hover .msg-actions { opacity: 1 !important; }
-        .msg-row { transition: background 0.1s; }
         .msg-row:hover { background: rgba(255,255,255,0.025); border-radius: 6px; }
         button { font-family: inherit; }
+
+        @keyframes blink-green {
+          0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px rgba(165,230,0,0.8)); transform: scale(1); }
+          50% { opacity: 0.5; filter: drop-shadow(0 0 1px rgba(165,230,0,0.4)); transform: scale(0.9); }
+        }
+        @keyframes blink-red {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 6px rgba(237,66,69,0.3); }
+          50% { transform: scale(1.1); box-shadow: 0 0 12px rgba(237,66,69,0.6); }
+        }
+        .blink-green-dot {
+          width: 8px; height: 8px; border-radius: 50%; background: #A5E600;
+          animation: blink-green 1.5s infinite ease-in-out;
+        }
+        .unread-badge {
+          background: #ED4245; color: #fff; border-radius: 10px; padding: 1px 6px;
+          font-size: 10px; fontWeight: 800; animation: blink-red 1.5s infinite ease-in-out;
+          min-width: 16px; text-align: center;
+        }
       `}</style>
 
       {/* ── 1. SERVERS SIDEBAR ─── */}
@@ -2207,9 +2378,9 @@ export default function ServerPage() {
       {/* ── 2. CHANNEL SIDEBAR ─── */}
       <div style={{ width: 240, background: '#07080a', display: 'flex', flexDirection: 'column', flexShrink: 0, borderRight: `1px solid rgba(255,255,255,0.04)` }}>
         {/* Banner do servidor */}
-        {(server.bannerUrl || server.bannerColor) && (
-          <div style={{ height: 80, background: server.bannerColor ?? '#1a1a2e', backgroundImage: server.bannerUrl && !isVideoUrl(server.bannerUrl) ? `url(${server.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
-            {isVideoUrl(server.bannerUrl) && <video src={server.bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
+        {(server?.bannerUrl || server?.bannerColor) && (
+          <div style={{ height: 80, background: server?.bannerColor ?? '#1a1a2e', backgroundImage: server?.bannerUrl && !isVideoUrl(server?.bannerUrl) ? `url(${server?.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+            {server?.bannerUrl && isVideoUrl(server.bannerUrl) && <video src={server.bannerUrl} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(7,8,10,0.7) 100%)', zIndex: 1 }} />
           </div>
         )}
@@ -2219,7 +2390,7 @@ export default function ServerPage() {
           onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)'}
           onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
           <h2 style={{ color: TEXT_BRIGHT, fontSize: 15, fontWeight: 800, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
-            <EmojiRenderer content={server.name} emojiSize={18} />
+            <EmojiRenderer content={server?.name ?? ''} emojiSize={18} />
           </h2>
           <IconChevronDown size={14} color={TEXT_MUTED} style={{ transition: 'transform 0.25s cubic-bezier(.4,0,.2,1)', transform: showServerMenu ? 'rotate(180deg)' : 'none' }} />
         </div>
@@ -2269,10 +2440,10 @@ export default function ServerPage() {
                 <span style={{ flex: 1, color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Canais de texto</span>
                 {canManageCh && <button onClick={() => setShowCh(true)} style={{ background: 'none', border: 'none', color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 4px', transition: 'color 0.1s' }} onMouseEnter={e => e.currentTarget.style.color = TEXT_BRIGHT} onMouseLeave={e => e.currentTarget.style.color = TEXT_MUTED}><IconPlus size={16} /></button>}
               </div>
-              {channelsByCategory.uncategorized.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} onSelect={ch => { setChannel(ch); setShowGuide(false); }} onSettings={setChannelSettingsTarget} />)}
+              {channelsByCategory.uncategorized.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} unreadCount={unreadCounts[ch.id]} hasUnseenPins={unseenPins[ch.id]} onSelect={ch => { setChannel(ch); setShowGuide(false); }} onSettings={setChannelSettingsTarget} />)}
             </div>
           )}
-          {(server.channelCategories ?? []).map(cat => {
+          {(server?.channelCategories ?? []).map(cat => {
             const catChannels = channelsByCategory.byCat.get(cat.id) ?? [];
             const collapsed = collapsedCats[cat.id];
             return (
@@ -2292,7 +2463,7 @@ export default function ServerPage() {
                     onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ED4245'; }}
                     onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = TEXT_MUTED; }}><IconClose size={14} /></button>}
                 </div>
-                {!collapsed && catChannels.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} onSelect={ch => { setChannel(ch); setShowGuide(false); }} onSettings={setChannelSettingsTarget} />)}
+                {!collapsed && catChannels.map(ch => <ChannelRow key={ch.id} ch={ch} active={channel?.id === ch.id} canManage={canManageCh} unreadCount={unreadCounts[ch.id]} hasUnseenPins={unseenPins[ch.id]} onSelect={ch => { setChannel(ch); setShowGuide(false); }} onSettings={setChannelSettingsTarget} />)}
               </div>
             );
           })}
@@ -2373,14 +2544,17 @@ export default function ServerPage() {
               </span>
               <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)' }} />
               <div style={{ color: TEXT_MUTED, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                <EmojiRenderer content={channel.topic?.trim() || 'Canal de texto'} emojiSize={16} />
+                <EmojiRenderer content={channel?.topic?.trim() || 'Canal de texto'} emojiSize={16} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {isMod && <Tooltip text="Fixadas">
-                  <button onClick={() => { setShowPins(p => !p); if (!showPins) api.get<Msg[]>(`/community/channels/${channel.id}/pins`).then(setPins).catch(() => { }); }}
-                    style={{ background: showPins ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showPins ? ACCENT : TEXT_MUTED, cursor: 'pointer', padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    onMouseEnter={e => { if (!showPins) { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = TEXT_BRIGHT; } }}
-                    onMouseLeave={e => { if (!showPins) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = TEXT_MUTED; } }}><IconPin size={18} /></button>
+                {channel && isMod && <Tooltip text="Fixadas">
+                  <div style={{ position: 'relative' }}>
+                    <button onClick={() => { if (!channel) return; setShowPins(p => !p); if (!showPins) api.get<Msg[]>(`/community/channels/${channel.id}/pins`).then(setPins).catch(() => { }); }}
+                      style={{ background: showPins ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showPins ? ACCENT : TEXT_MUTED, cursor: 'pointer', padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onMouseEnter={e => { if (!showPins) { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = TEXT_BRIGHT; } }}
+                      onMouseLeave={e => { if (!showPins) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = TEXT_MUTED; } }}><IconPin size={18} /></button>
+                    {unseenPins[channel.id] && <div className="blink-green-dot" style={{ position: 'absolute', top: 3, right: 3, width: 6, height: 6 }} />}
+                  </div>
                 </Tooltip>}
                 <Tooltip text="Eventos">
                   <button onClick={() => setShowEventsPanel(p => !p)} style={{ background: showEventsPanel ? 'rgba(165,230,0,0.1)' : 'none', border: 'none', color: showEventsPanel ? ACCENT : TEXT_MUTED, cursor: 'pointer', padding: '5px 7px', borderRadius: 7, transition: 'all 0.12s', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -2429,7 +2603,15 @@ export default function ServerPage() {
                   showEmojiPicker={showEmoji}
                   onToggleEmojiPicker={e => { e.stopPropagation(); setEmojiPickerMsgId(p => p === msg.id ? null : msg.id); }}
                   onReact={emoji => { socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji }); setEmojiPickerMsgId(null); }}
-                  onDelete={() => socket?.emit('message.delete', { messageId: msg.id, channelId: channel?.id })}
+                  onDelete={() => setConfirmConfig({
+                    title: 'Apagar Mensagem',
+                    message: 'Tens a certeza que desejas apagar esta mensagem? Esta ação não pode ser desfeita.',
+                    isDanger: true,
+                    onConfirm: () => {
+                      socket?.emit('message.delete', { messageId: msg.id, channelId: channel?.id });
+                      setConfirmConfig(null);
+                    }
+                  })}
                   onEdit={() => { setEditing({ id: msg.id, text: msg.content }); setText(msg.content); setTimeout(() => inputRef.current?.focus(), 50); }}
                   onReply={() => { setReplyTo(msg); setTimeout(() => inputRef.current?.focus(), 50); }}
                   onPin={() => handlePin(msg)}
@@ -2438,7 +2620,7 @@ export default function ServerPage() {
 
               if (grouped && !showDateHeader) return (
                 <div key={msg.id} className="msg-row" style={{ display: 'flex', alignItems: 'flex-start', padding: '1px 0 1px 56px', position: 'relative', animation: 'fadeIn 0.12s ease' }}>
-                  <div style={{ flex: 1 }}><MessageBody msg={msg} mt={mt} members={server?.members || []} userId={user?.id} /><ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} /></div>
+                  <div style={{ flex: 1 }}><MessageBody msg={msg} mt={mt} members={server?.members || []} userId={user?.id} onMediaClick={(url, type) => setPreviewMedia({ url, type })} /><ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} /></div>
                   {actions}
                 </div>
               );
@@ -2486,7 +2668,7 @@ export default function ServerPage() {
                       <span style={{ color: TEXT_MUTED, fontSize: 11 }}>{fmtDate(msg.createdAt)}</span>
                       {msg.editedAt && <span style={{ color: TEXT_MUTED, fontSize: 10, fontStyle: 'italic' }}>(editado)</span>}
                     </div>
-                    <MessageBody msg={msg} mt={mt} members={server?.members || []} userId={user?.id} />
+                    <MessageBody msg={msg} mt={mt} members={server?.members || []} userId={user?.id} onMediaClick={(url, type) => setPreviewMedia({ url, type })} />
                     <ReactionsBar rx={rx} onReact={emoji => socket?.emit('reaction.toggle', { channelId: channel?.id, messageId: msg.id, emoji })} />
                   </div>
                   {actions}
@@ -2750,7 +2932,7 @@ export default function ServerPage() {
       )}
 
       {/* ── MODAIS ─── */}
-      {memberMenuTarget && (
+      {memberMenuTarget && server && (
         <UserProfileModal member={memberMenuTarget} server={server} onClose={() => setMemberMenuUserId(null)}
           isOwn={memberMenuTarget.userId === user?.id} isMod={isMod} isAdmin={isAdmin}
           onKick={handleKick} onBan={handleBan} onAssignRole={handleAssignRole} />
@@ -2760,15 +2942,15 @@ export default function ServerPage() {
           onSave={async (name, topic) => { await handleSaveChannel(channelSettingsTarget.id, name, topic); }}
           onDelete={handleDeleteChannel} />
       )}
-      {showServerSettings && (
+      {showServerSettings && server && (
         <ServerSettingsModal server={server} serverId={server.id} onClose={() => setShowServerSettings(false)}
           onSave={handleSaveServer} onLeave={handleLeaveServer} onDelete={handleDeleteServer}
           onCreateRole={handleCreateRole} onDeleteRole={handleDeleteRole} />
       )}
-      {showEditProfile && user && (
-        <EditProfileModal user={user} serverId={server.id} onClose={() => setShowEditProfile(false)} onSave={handleSaveProfile} />
+      {showEditProfile && user && server && (
+        <EditProfileModal user={user as any} serverId={server.id} onClose={() => setShowEditProfile(false)} onSave={handleSaveProfile} />
       )}
-      {showInvite && (
+      {showInvite && server && (
         <SimpleModal title="Convidar para o servidor" onClose={() => setShowInvite(false)}>
           <p style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 12 }}>Código para entrar em <strong style={{ color: TEXT_BRIGHT }}>{server.name}</strong></p>
           <div style={{ background: '#0c0d0f', border: `1px solid ${ACCENT}44`, borderRadius: 8, padding: '12px 16px', fontFamily: 'monospace', color: ACCENT, fontSize: 13, marginBottom: 16, wordBreak: 'break-all', userSelect: 'all' }}>{server.inviteCode}</div>
@@ -2779,7 +2961,7 @@ export default function ServerPage() {
           </button>
         </SimpleModal>
       )}
-      {showCh && (
+      {showCh && server && (
         <SimpleModal title="Criar canal" onClose={() => { setShowCh(false); setChName(''); setChCategoryId(''); }}>
           <label style={{ color: TEXT_MUTED, fontSize: 12, display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Categoria (opcional)</label>
           <select value={chCategoryId} onChange={e => setChCategoryId(e.target.value)}
@@ -2817,6 +2999,167 @@ export default function ServerPage() {
           setShowEventsPanel(true);
         } catch (e: any) { alert(e.message); }
       }} />}
+
+      {previewMedia && (() => {
+        const media = previewMedia;
+        return (
+          <div 
+            onClick={() => setPreviewMedia(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease', cursor: 'zoom-out' }}
+          >
+            <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 12, zIndex: 10001 }}>
+              <button 
+                onClick={(e) => { e.stopPropagation(); window.open(media.url, '_blank'); }}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', borderRadius: 8, padding: 10, cursor: 'pointer', transition: 'all 0.1s' }}
+                onMouseEnter={e => (e.currentTarget as any).style.background = 'rgba(255,255,255,0.2)'}
+                onMouseLeave={e => (e.currentTarget as any).style.background = 'rgba(255,255,255,0.1)'}
+                title="Abrir no navegador"
+              >
+                <IconExternalLink size={20} />
+              </button>
+              <button 
+                onClick={async (e) => { 
+                  e.stopPropagation();
+                  try {
+                    const resp = await fetch(media.url);
+                    const blob = await resp.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = media.url.split('/').pop() || 'download';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    window.open(media.url, '_blank'); 
+                  }
+                }}
+                style={{ background: ACCENT, border: 'none', color: '#000', borderRadius: 8, padding: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}
+                title="Descarregar ficheiro"
+              >
+                <IconDownload size={20} /> Descarregar
+              </button>
+              <button 
+                onClick={() => setPreviewMedia(null)}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', borderRadius: 8, padding: 10, cursor: 'pointer' }}
+              >
+                <IconClose size={20} />
+              </button>
+            </div>
+
+            <div 
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '90vw', maxHeight: '85vh', position: 'relative', animation: 'popIn 0.3s cubic-bezier(.4,0,.2,1.2)', cursor: 'default' }}
+            >
+              {media.type === 'image' ? (
+                <img src={media.url} alt="" style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: 12, boxShadow: '0 24px 64px rgba(0,0,0,0.8)' }} />
+              ) : (
+                <video src={media.url} controls autoPlay style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: 12, boxShadow: '0 24px 64px rgba(0,0,0,0.8)' }} />
+              )}
+              <div style={{ marginTop: 16, textAlign: 'center' }}>
+                <p style={{ color: TEXT_MUTED, fontSize: 12, margin: 0 }}>{media.url.split('/').pop()}</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {confirmConfig && (() => {
+        const config = confirmConfig;
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'fadeIn 0.2s ease' }}>
+            <div style={{ background: '#111214', border: `1px solid ${config.isDanger ? 'rgba(237,66,69,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 16, width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.8)', animation: 'popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+              <h2 style={{ color: config.isDanger ? '#ED4245' : TEXT_BRIGHT, fontSize: 18, fontWeight: 800, margin: '0 0 12px' }}>{config.title}</h2>
+              <p style={{ color: TEXT_NORMAL, fontSize: 14, margin: '0 0 20px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{config.message}</p>
+              
+              {config.verifyText && (
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.04em' }}>Escreve o nome para confirmar</p>
+                  <input 
+                    autoFocus 
+                    type="text" 
+                    placeholder={config.verifyText}
+                    onChange={(e) => {
+                      const btn = document.getElementById('confirm-btn') as HTMLButtonElement;
+                      if (btn) btn.disabled = e.target.value !== config.verifyText;
+                    }}
+                    style={{ width: '100%', background: '#000', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', color: TEXT_BRIGHT, fontSize: 14 }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button 
+                  onClick={() => setConfirmConfig(null)}
+                  style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '10px 16px' }}>
+                  Cancelar
+                </button>
+                <button 
+                  id="confirm-btn"
+                  disabled={!!config.verifyText}
+                  onClick={() => { config.onConfirm(); setConfirmConfig(null); }}
+                  style={{ 
+                    background: config.isDanger ? '#ED4245' : ACCENT, 
+                    color: config.isDanger ? '#fff' : '#000', 
+                    border: 'none', 
+                    borderRadius: 10, 
+                    padding: '10px 24px', 
+                    fontSize: 13, 
+                    fontWeight: 800, 
+                    cursor: 'pointer',
+                    opacity: config.verifyText ? 0.5 : 1,
+                    transition: 'opacity 0.2s'
+                  }}>
+                  {config.confirmText || 'Confirmar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {pendingFile && (() => {
+        const file = pendingFile;
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'fadeIn 0.2s ease' }}>
+            <div style={{ background: '#111214', border: `1px solid ${ACCENT}33`, borderRadius: 16, width: '100%', maxWidth: 480, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.8)', animation: 'popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+              <h2 style={{ color: TEXT_BRIGHT, fontSize: 18, fontWeight: 800, margin: '0 0 16px' }}>Confirmar Envio</h2>
+              
+              <div style={{ background: '#000', borderRadius: 12, padding: 12, marginBottom: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', border: `1px solid ${BORDER_SUBTLE}` }}>
+                {file.type.startsWith('image/') ? (
+                  <img src={URL.createObjectURL(file)} alt="Preview" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8 }} />
+                ) : file.type.startsWith('video/') ? (
+                  <video src={URL.createObjectURL(file)} controls muted style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8 }} />
+                ) : (
+                  <div style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                    <IconPlus size={48} color={ACCENT} />
+                    <span style={{ color: TEXT_NORMAL, fontSize: 16, fontWeight: 600 }}>{file.name}</span>
+                  </div>
+                )}
+                <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.05)', margin: '12px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: TEXT_MUTED, fontSize: 12 }}>
+                  <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                  <span>{file.type || 'Ficheiro'}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button 
+                  onClick={() => setPendingFile(null)}
+                  style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '10px 16px' }}>
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => { performFileUpload(file); setPendingFile(null); }}
+                  style={{ background: ACCENT, color: '#000', border: 'none', borderRadius: 10, padding: '10px 32px', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                  Enviar Ficheiro
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

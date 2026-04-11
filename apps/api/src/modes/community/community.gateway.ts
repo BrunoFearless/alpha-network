@@ -52,18 +52,35 @@ export class CommunityGateway implements OnGatewayConnection, OnGatewayDisconnec
   @SubscribeMessage('message.send')
   async onMessage(
     @ConnectedSocket() c: Socket,
-    @MessageBody() data: { channelId: string; content: string; replyToId?: string | null; attachmentUrls?: string[] },
+    @MessageBody() data: { 
+      channelId: string; 
+      content?: string; 
+      replyToId?: string | null; 
+      attachmentUrls?: string[];
+      imageUrl?: string | null;
+      messageType?: string;
+      embedJson?: any;
+    },
   ) {
-    if (!c.data?.userId || !data?.channelId || !data?.content?.trim()) return;
+    const hasMedia = !!(data.imageUrl || data.attachmentUrls?.length || data.embedJson);
+    const hasText = !!data.content?.trim();
+
+    if (!c.data?.userId || !data?.channelId || (!hasText && !hasMedia)) return;
+
     try {
       await this.svc.assertNotMuted(data.channelId, c.data.userId);
       await this.svc.requireChannelMember(data.channelId, c.data.userId);
-      const msg = await this.svc.saveMessage(data.channelId, c.data.userId, 'user', data.content.trim(), {
+      
+      const msg = await this.svc.saveMessage(data.channelId, c.data.userId, 'user', (data.content || '').trim(), {
         replyToId: data.replyToId ?? null,
         attachmentUrls: data.attachmentUrls?.length ? data.attachmentUrls : undefined,
+        imageUrl: data.imageUrl,
+        messageType: data.messageType,
+        embedJson: data.embedJson,
       });
+      
       this.server.to(`ch:${data.channelId}`).emit('message.new', msg);
-      const hit = await this.bots.checkTriggersAndEngine(data.channelId, data.content.trim(), c.data.userId);
+      const hit = await this.bots.checkTriggersAndEngine(data.channelId, (data.content || '').trim(), c.data.userId);
       if (hit) {
         setTimeout(async () => {
           try {

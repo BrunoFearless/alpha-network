@@ -326,9 +326,9 @@ export class CommunityService {
     await this.requireMember(serverId, userId);
     
     const url = await this.mediaService.saveValidatedMedia(file, 'community', {
-      maxFileSizeMb: 5,
+      maxFileSizeMb: 10,
       allowedMimes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
-      maxVideoDurationSecs: 5,
+      maxVideoDurationSecs: 300,
     });
     
     return { url };
