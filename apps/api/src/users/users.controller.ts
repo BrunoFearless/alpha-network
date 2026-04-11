@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UpdateModesDto } from './dto/update-modes.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { OptionalJwtAuthGuard } from '@auth/guards/optional-jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {
@@ -15,6 +16,7 @@ export class UsersController {
   // ── Perfil público ─────────────────────────────────────────────────
   // TODO (Adolfo v2): implementar getProfile completo com followersCount
   @Get(':username')
+  @UseGuards(OptionalJwtAuthGuard)
   async getProfile(
     @Param('username') username: string,
     @Req() req: any // O Passport/JWT costuma injetar o user aqui
