@@ -15,7 +15,6 @@ export class UsersController {
   // ── Perfil público ─────────────────────────────────────────────────
   // TODO (Adolfo v2): implementar getProfile completo com followersCount
   @Get(':username')
-  @UseGuards(JwtAuthGuard)
   async getProfile(
     @Param('username') username: string,
     @Req() req: any // O Passport/JWT costuma injetar o user aqui
@@ -98,4 +97,22 @@ export class UsersController {
       message: `Deixaste de seguir ${username}`
     }
   }
+
+  // ── Lista de seguidores ───────────────────────────────────────────────────
+
+  @Get(':username/followers')
+  async followers(@Param('username') username: string) {
+    const followers = await this.usersService.getFollowers(username);
+    return { success: true, data: followers }
+
+  }
+
+  @Get(':username/followings')
+  async followings(@Param('username') username: string) {
+    const followings = await this.usersService.getFollowings(username)
+    return { success: true, data: followings }
+  }
+
+  // ── Lista de seguindos ───────────────────────────────────────────────────
+
 }

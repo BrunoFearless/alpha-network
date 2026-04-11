@@ -70,6 +70,7 @@ export class UsersService {
 
     return !!result
   }
+
   async getFullProfile(username: string, requesterId?: string) {
     const profile = await this.findByUsername(username);
 
@@ -87,11 +88,16 @@ export class UsersService {
     const { emailVerified, passwordHash, deletedAt, ...safeUser } = profile.user as any;
 
     return {
-      ...profile,
-      user: safeUser,
+      id: profile.id,
+      username: profile.username,
+      displayName: profile.displayName,
+      avatarUrl: profile.avatarUrl,
+      bio: profile.bio,
+      activeModes: profile.activeModes,
       followersCount,
       followingCount,
-      isFollowing
+      isFollowing,
+      createdAt: profile.createdAt
     };
   }
 
@@ -122,6 +128,59 @@ export class UsersService {
         followingId: target.userId
       }
     })
+  }
+
+  async getFollowings(username: string) {
+    // 1. Encontrar o perfil do utilizador que queremos ver quem ele segue
+    const target = await this.findByUsername(username);
+    if (!target) throw new NotFoundException('Utilizador não encontrado');
+
+    // 2. Procurar na tabela follows todos os registos onde este user é o seguidor
+    const followRecords = await this.prisma.follow.findMany({
+      where: { followerId: target.userId },
+      select: { followingId: true }
+    });
+
+    // 3. Criar um array apenas com os IDs de quem está a ser seguido
+    const followingIds = followRecords.map(f => f.followingId);
+
+    // 4. Buscar os perfis desses IDs para retornar uma lista legível
+    return await this.prisma.profile.findMany({
+      where: {
+        userId: { in: followingIds }
+      },
+      select: {
+        userId: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true
+      }
+    });
+  }
+
+  async getFollowers(username: string) {
+    const target = await this.findByUsername(username);
+    if (!target) throw new NotFoundException('Utilizador não encontrado');
+
+    // 2. Buscamos todos os registos onde o 'followingId' é o do alvo
+    const followRecords = await this.prisma.follow.findMany({
+      where: { followingId: target.userId },
+      select: { followerId: true }
+    });
+
+    // 3. Extraímos apenas os IDs de quem segue
+    const followerIds = followRecords.map(f => f.followerId);
+
+    // 4. Buscamos os dados dos perfis desses IDs
+    return await this.prisma.profile.findMany({
+      where: { userId: { in: followerIds } },
+      select: {
+        userId: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true
+      }
+    });
   }
 
   async createUser(data: CreateUserData) {
