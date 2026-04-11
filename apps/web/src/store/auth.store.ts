@@ -4,6 +4,9 @@ interface UserProfile {
   username: string;
   displayName?: string | null;
   avatarUrl?: string | null;
+  nameFont?: string | null;
+  nameEffect?: string | null;
+  nameColor?: string | null;
   activeModes: string[];
   bio?: string | null;
 }

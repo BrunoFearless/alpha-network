@@ -108,7 +108,7 @@ export class CommunityService {
     const [profiles, bots] = await Promise.all([
       this.prisma.profile.findMany({
         where: { userId: { in: [...humanIds] } },
-        select: { userId: true, displayName: true, username: true, avatarUrl: true },
+        select: { userId: true, displayName: true, username: true, avatarUrl: true, nameFont: true, nameEffect: true, nameColor: true, auroraTheme: true },
       }),
       this.prisma.bot.findMany({ where: { id: { in: [...botIds] } }, select: { id: true, name: true } }),
     ]);
@@ -133,6 +133,7 @@ export class CommunityService {
         mentions: msg.mentions as { everyone?: boolean; userIds?: string[] } | null,
         authorName: nameOf(msg.authorId, msg.authorType),
         authorAvatarUrl: avatarOf(msg.authorId, msg.authorType),
+        authorProfile: msg.authorType === 'user' ? pm.get(msg.authorId) : null,
         replyTo:
           rt && !rt.deletedAt
             ? {
@@ -229,7 +230,7 @@ export class CommunityService {
     const userIds = server.members.map(m => m.userId);
     const profiles = await this.prisma.profile.findMany({
       where: { userId: { in: userIds } },
-      select: { userId: true, username: true, displayName: true, avatarUrl: true, bio: true, bannerUrl: true, bannerColor: true },
+      select: { userId: true, username: true, displayName: true, avatarUrl: true, bio: true, bannerUrl: true, bannerColor: true, auroraTheme: true, nameFont: true, nameEffect: true, nameColor: true },
     });
     const pm = new Map(profiles.map(p => [p.userId, p]));
     return {

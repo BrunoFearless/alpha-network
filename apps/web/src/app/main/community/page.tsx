@@ -40,7 +40,7 @@ function getServerColor(name: string) {
 
 function isVideoUrl(url: string | null | undefined): boolean {
   if (!url) return false;
-  return /\.(mp4|webm|ogg)$/i.test(url) || url.startsWith('data:video/');
+  return !!url.match(/\.(mp4|webm|mov|ogg)(?:\?|#|$)/i) || url.startsWith('data:video/');
 }
 
 // ─── DESIGN TOKENS ───────────────────────────────────────────────────────────

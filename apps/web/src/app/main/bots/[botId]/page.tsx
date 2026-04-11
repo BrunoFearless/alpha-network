@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { BOT_COLOR_PALETTE, DEFAULT_BOT_COLOR, getColorLabel } from '@/lib/bot-palette';
+import { Avatar } from '@/components/ui/Avatar';
 
 interface Cmd {
   id: string;
@@ -311,7 +312,7 @@ export default function BotPage() {
                   overflow: 'hidden',
                 }}
               >
-                {newAvatarPreview ? <img src={newAvatarPreview} alt={newName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🤖'}
+                <Avatar src={newAvatarPreview} name={newName} size="xl" />
               </div>
               <div style={{ color: 'rgba(255,255,255,0.9)' }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>{newName || 'Bot Name'}</p>
@@ -361,7 +362,7 @@ export default function BotPage() {
                 overflow: 'hidden',
               }}
             >
-              {bot.avatarUrl ? <img src={bot.avatarUrl} alt={bot.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => {}} /> : '🤖'}
+              <Avatar src={bot.avatarUrl} name={bot.name} size="xl" />
             </div>
             <div>
               <p style={{ color: '#E8E0F0', fontSize: 14, fontWeight: 700, margin: 0 }}>{bot.name}</p>

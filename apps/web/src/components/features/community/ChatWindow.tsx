@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Avatar, Badge } from '@/components/ui';
+import { DisplayName } from '@/components/ui/DisplayName';
 import { formatTime } from '@/lib/format';
 import { api } from '@/lib/api';
 import { useCommunitySocket } from '@/lib/useSocket';
@@ -13,6 +14,7 @@ interface Message {
   authorName?: string;
   authorAvatarUrl?: string | null;
   authorType: 'user' | 'bot';
+  authorProfile?: any; // To support names with effects/fonts
   content: string;
   createdAt: string;
 }
@@ -174,9 +176,12 @@ function MessageRow({
   isOwn: boolean;
   grouped: boolean;
 }) {
+  const user = useAuthStore(s => s.user);
   const isBot = msg.authorType === 'bot';
   const name = msg.authorName ?? (isBot ? 'Bot' : `user_${msg.authorId.slice(0, 6)}`);
-  const avatarUrl = msg.authorAvatarUrl ?? null;
+
+  // Priorizar o avatar local do utilizador autenticado se for a sua própria mensagem
+  const avatarUrl = (isOwn && user?.profile?.avatarUrl) ? user.profile.avatarUrl : (msg.authorAvatarUrl ?? null);
 
   if (grouped) {
     // Mensagem agrupada — só mostra o conteúdo, sem avatar nem nome
@@ -206,10 +211,12 @@ function MessageRow({
       {/* Conteúdo */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <span className={`text-sm font-semibold leading-none ${isBot ? 'text-blue-400' : isOwn ? 'text-gold' : 'text-text-primary'
-            }`}>
-            {isOwn ? `${name} (tu)` : name}
-          </span>
+          <DisplayName
+            profile={isOwn ? user?.profile : msg.authorProfile}
+            fallbackName={isOwn ? (user?.profile?.displayName ?? user?.profile?.username ?? name) : name}
+            baseColor={isBot ? '#60a5fa' : isOwn ? '#A5E600' : '#e3e5e8'}
+            style={{ fontSize: '14px', fontWeight: 600 }}
+          />
           {isBot && <Badge variant="blue">Bot</Badge>}
           <span className="text-[10px] text-text-muted opacity-0 group-hover:opacity-100 transition-opacity">
             {formatTime(msg.createdAt)}

@@ -26,4 +26,24 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(32)
   bannerColor?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  nameFont?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  nameEffect?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  nameColor?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  auroraTheme?: string;
 }

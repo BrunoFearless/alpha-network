@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@400;500;600&family=Orbitron:wght@400;700&family=Playfair+Display:wght@700&family=Bebas+Neue&family=Dancing+Script:wght@700&family=JetBrains+Mono:wght@500&family=Fredoka:wght@600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,6 +10,10 @@
   --card: #1A1F2E;
   --gold: #C9A84C;
   --gold-light: #E8C97A;
+  --aurora-1: #0080ff;
+  --aurora-2: #00ffaa;
+  --aurora-3: #aa00ff;
+  --aurora-4: #00ccff;
 }
 
 * {
@@ -99,6 +103,86 @@ body {
   100% { background-position: 1000px 0; }
 }
 
+@keyframes rainbow-text {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes glitch-anim {
+  0% { text-shadow: 2px 0 0 #ff00c1, -2px 0 0 #00fff9; }
+  25% { text-shadow: -2px 0 0 #ff00c1, 2px 0 0 #00fff9; }
+  50% { text-shadow: 2px 0 0 #ff00c1, -2px 0 0 #00fff9; }
+  75% { text-shadow: -1px 0 0 #ff00c1, 1px 0 0 #00fff9; }
+  100% { text-shadow: 2px 0 0 #ff00c1, -2px 0 0 #00fff9; }
+}
+
+@keyframes fire-glow {
+  0% { text-shadow: 0 0 10px #ff4d00, 0 0 20px #ff4d00, 0 0 30px #ff0000; }
+  50% { text-shadow: 0 0 20px #ff8c00, 0 0 30px #ff8c00, 0 0 40px #ff4d00; }
+  100% { text-shadow: 0 0 10px #ff4d00, 0 0 20px #ff4d00, 0 0 30px #ff0000; }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { text-shadow: 0 0 5px var(--neon-color), 0 0 10px var(--neon-color), 0 0 20px var(--neon-color); }
+  50% { text-shadow: 0 0 10px var(--neon-color), 0 0 20px var(--neon-color), 0 0 40px var(--neon-color); }
+}
+
+@keyframes matrix-flicker {
+  0%, 100% { opacity: 1; text-shadow: 0 0 8px #00ff00; }
+  50% { opacity: 0.8; text-shadow: 0 0 15px #00ff00; }
+  90% { opacity: 1; text-shadow: 0 0 5px #00ff00; }
+}
+
+@keyframes aurora-border {
+  from { border-color: var(--aurora-1); }
+  to { border-color: var(--aurora-3); }
+}
+
+@keyframes d1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(230px, 130px) scale(1.14); }
+  50% { transform: translate(90px, 270px) scale(0.93); }
+  75% { transform: translate(-80px, 150px) scale(1.07); }
+}
+
+@keyframes d2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(-210px, -120px) scale(1.11); }
+  65% { transform: translate(-100px, 190px) scale(0.89); }
+}
+
+@keyframes d3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(160px, -110px) scale(1.22); }
+  66% { transform: translate(-110px, 210px) scale(0.84); }
+}
+
+@keyframes d4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-210px, -110px) scale(1.32); }
+}
+
+@keyframes d5 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40% { transform: translate(110px, 300px) scale(0.8); }
+  80% { transform: translate(-170px, -110px) scale(1.2); }
+}
+
+@keyframes d6 {
+  0%, 100% { transform: translate(0, 0); }
+  45% { transform: translate(150px, -170px) scale(1.18); }
+  90% { transform: translate(-90px, 70px) scale(0.92); }
+}
+
+.aorb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+
 /* ─── TRANSIÇÕES SUAVES ─── */
 button,
 a,
@@ -183,4 +267,15 @@ textarea::placeholder {
   body {
     font-size: 13px;
   }
+}
+
+/* ─── AURORA TEXTURES ─── */
+.dotgrid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(201, 168, 76, 0.08) 1px, transparent 1px);
+  background-size: 40px 40px; /* Reduced for modal density */
+  opacity: 0.6;
 }

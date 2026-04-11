@@ -4,6 +4,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { useCommunitySocket } from '@/lib/socket';
+import { Avatar } from '@/components/ui/Avatar';
+import { DisplayName, FONT_OPTIONS, EFFECT_OPTIONS, COLOR_OPTIONS } from '@/components/ui/DisplayName';
+import { AuroraBackground } from '@/components/ui/AuroraBackground';
+
 
 // ─── ACCENT COLOR ────────────────────────────────────────────────────────────
 const ACCENT = '#A5E600';
@@ -25,14 +29,14 @@ const BORDER_SUBTLE = 'rgba(255,255,255,0.06)';
 interface ChannelCategoryRow { id: string; name: string; position: number; }
 interface Channel { id: string; name: string; position: number; categoryId: string | null; topic?: string | null; }
 interface CommunityRole { id: string; name: string; position: number; color: string | null; canModerate: boolean; canManageServer: boolean; canManageChannels: boolean; }
-interface Member { userId: string; role: string; communityRoleId: string | null; mutedUntil?: string | null; communityRole: CommunityRole | null; profile: { displayName?: string | null; username: string; avatarUrl?: string | null; bio?: string | null; bannerUrl?: string | null; bannerColor?: string | null; } | null; }
+interface Member { userId: string; role: string; communityRoleId: string | null; mutedUntil?: string | null; communityRole: CommunityRole | null; profile: { displayName?: string | null; username: string; avatarUrl?: string | null; bio?: string | null; bannerUrl?: string | null; bannerColor?: string | null; auroraTheme?: string | null; nameFont?: string | null; nameEffect?: string | null; nameColor?: string | null; status?: string | null; tags?: string | null; } | null; }
 interface BotRow { id: string; isAdminBot: boolean; bot: { id: string; name: string; prefix: string }; }
 interface Server { id: string; name: string; description?: string | null; imageUrl?: string | null; bannerUrl?: string | null; bannerColor?: string | null; inviteCode: string; ownerId: string; channelCategories: ChannelCategoryRow[]; channels: Channel[]; members: Member[]; bots: BotRow[]; roles: CommunityRole[]; membersCount: number; }
 interface EmbedPayload { title?: string; description?: string; color?: string; footer?: string; imageUrl?: string; }
 interface ReplySnippet { id: string; content: string; authorName: string; }
 interface ReactionEntry { emoji: string; userId: string; }
 interface CommunityEvent { id: string; title: string; description: string | null; startsAt: string; endsAt: string | null; location: string | null; creatorId: string; imageUrl?: string | null; coverColor?: string; rsvpCount?: number; myRsvp?: boolean; }
-interface Msg { id: string; channelId: string; authorId: string; authorName: string; authorAvatarUrl?: string | null; authorType: 'user' | 'bot'; content: string; messageType?: string; imageUrl?: string | null; embedJson?: EmbedPayload | null; createdAt: string; editedAt?: string | null; replyToId?: string | null; replyTo?: ReplySnippet | null; attachmentUrls?: string[] | null; mentions?: { everyone?: boolean; userIds?: string[] } | null; reactions?: ReactionEntry[]; pinned?: boolean; }
+interface Msg { id: string; channelId: string; authorId: string; authorName: string; authorAvatarUrl?: string | null; authorType: 'user' | 'bot'; authorProfile?: Member['profile']; content: string; messageType?: string; imageUrl?: string | null; embedJson?: EmbedPayload | null; createdAt: string; editedAt?: string | null; replyToId?: string | null; replyTo?: ReplySnippet | null; attachmentUrls?: string[] | null; mentions?: { everyone?: boolean; userIds?: string[] } | null; reactions?: ReactionEntry[]; pinned?: boolean; }
 interface MyServer { id: string; name: string; description?: string | null; inviteCode: string; membersCount: number; role: string; channels: { id: string; name: string }[]; imageUrl?: string | null; }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -53,7 +57,10 @@ function aggregateReactions(reactions: ReactionEntry[] | undefined, myId: string
 function fmtTime(d: string) { return new Date(d).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }); }
 function fmtDate(d: string) { const dt = new Date(d); const now = new Date(); const diff = now.getTime() - dt.getTime(); if (diff < 86400000) return 'Hoje às ' + fmtTime(d); if (diff < 172800000) return 'Ontem às ' + fmtTime(d); return dt.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) + ' às ' + fmtTime(d); }
 function fmtEventDate(d: string) { return new Date(d).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
-function isVideoUrl(url?: string | null) { return url?.match(/\.(mp4|webm)$/i) || url?.startsWith('data:video/'); }
+function isVideoUrl(url?: string | null) { 
+  if (!url) return false;
+  return url.match(/\.(mp4|webm|mov|ogg|m4v|3gp|flv|quicktime)(?:\?|#|$)/i) || url.startsWith('data:video/') || url.startsWith('blob:') || url.toLowerCase().includes('video');
+}
 function memberAccentColor(m: Member, ownerId: string): string {
   if (m.userId === ownerId) return '#F0B132';
   if (m.communityRole?.color) return m.communityRole.color;
@@ -118,8 +125,8 @@ function ServerIcon({ server, active, onClick }: { server: MyServer; active: boo
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 6 }}>
       {(active || hovered) && <div style={{ position: 'absolute', left: -4, width: 4, height: active ? 40 : 22, background: ACCENT, borderRadius: '0 4px 4px 0', transition: 'height 0.25s cubic-bezier(.4,0,.2,1)', boxShadow: `0 0 8px rgba(165,230,0,0.6)` }} />}
       <button type="button" onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} title={server.name}
-        style={{ width: 48, height: 48, borderRadius: active ? 16 : hovered ? 14 : '50%', background: server.imageUrl ? 'transparent' : active ? ACCENT_DIM : 'rgba(255,255,255,0.06)', border: active ? `2px solid ${ACCENT}` : '2px solid transparent', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-radius 0.2s cubic-bezier(.4,0,.2,1), border-color 0.15s, transform 0.15s, box-shadow 0.15s', flexShrink: 0, marginLeft: 4, transform: hovered && !active ? 'scale(1.05)' : 'scale(1)', boxShadow: active ? `0 4px 16px rgba(165,230,0,0.25)` : 'none' }}>
-        {server.imageUrl ? (isVideoUrl(server.imageUrl) ? <video src={server.imageUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={server.imageUrl} alt={server.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: active ? ACCENT : TEXT_NORMAL, fontSize: 14, fontWeight: 700 }}>{label}</span>}
+        style={{ width: 48, height: 48, borderRadius: active ? 16 : hovered ? 14 : '50%', background: 'transparent', border: active ? `2px solid ${ACCENT}` : '2px solid transparent', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-radius 0.2s cubic-bezier(.4,0,.2,1), border-color 0.15s, transform 0.15s, box-shadow 0.15s', flexShrink: 0, marginLeft: 4, transform: hovered && !active ? 'scale(1.05)' : 'scale(1)', boxShadow: active ? `0 4px 16px rgba(165,230,0,0.25)` : 'none' }}>
+        <Avatar src={server.imageUrl} name={server.name} size="md" className="w-full h-full" />
       </button>
     </div>
   );
@@ -159,7 +166,7 @@ function ImageColorPicker({
       <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{label}</label>
       {/* Preview */}
       <div style={{ height: 80, borderRadius: 10, overflow: 'hidden', marginBottom: 10, background: preview ? 'transparent' : (activeColor || '#1a1a2e'), border: `1px solid ${BORDER_SUBTLE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-        {preview ? (isVideoUrl(preview) ? <video src={preview} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 12 }}>Pré-visualização</span>}
+        {preview ? <Avatar src={preview} name="P" size="lg" className="w-full h-full" /> : <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 12 }}>Pré-visualização</span>}
         <button onClick={() => ref.current?.click()} style={{ position: 'absolute', right: 8, bottom: 8, background: 'rgba(0,0,0,0.6)', border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_BRIGHT, borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer', backdropFilter: 'blur(4px)' }}>
           📷 Mídia
         </button>
@@ -182,18 +189,24 @@ function ImageColorPicker({
 
 // ─── EDIT PROFILE MODAL ──────────────────────────────────────────────────────
 function EditProfileModal({ user, serverId, onClose, onSave }: {
-  user: { profile?: { displayName?: string | null; username: string; avatarUrl?: string | null; bio?: string | null; bannerUrl?: string | null; bannerColor?: string | null; } | null };
+  user: { profile?: { displayName?: string | null; username: string; avatarUrl?: string | null; bio?: string | null; bannerUrl?: string | null; bannerColor?: string | null; auroraTheme?: string | null; nameFont?: string | null; nameEffect?: string | null; nameColor?: string | null; status?: string | null; tags?: string | null; } | null };
   serverId: string;
   onClose: () => void;
   onSave: () => void;
 }) {
   const [displayName, setDisplayName] = useState(user.profile?.displayName ?? '');
   const [bio, setBio] = useState(user.profile?.bio ?? '');
+  const [status, setStatus] = useState(user.profile?.status ?? '');
+  const [tags, setTags] = useState(user.profile?.tags ?? '');
   const [saving, setSaving] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerColor, setBannerColor] = useState(user.profile?.bannerColor ?? BANNER_PRESETS[1]);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.profile?.avatarUrl ?? null);
+  const [nameFont, setNameFont] = useState(user.profile?.nameFont ?? 'inherit');
+  const [nameEffect, setNameEffect] = useState(user.profile?.nameEffect ?? 'solido');
+  const [nameColor, setNameColor] = useState(user.profile?.nameColor ?? ACCENT);
+  const [auroraTheme, setAuroraTheme] = useState(user.profile?.auroraTheme ?? 'ALPHA');
   const avatarRef = useRef<HTMLInputElement>(null);
 
   function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -209,77 +222,258 @@ function EditProfileModal({ user, serverId, onClose, onSave }: {
       let bannerUrl: string | undefined;
       if (avatarFile) avatarUrl = await uploadFile(avatarFile, serverId);
       if (bannerFile) bannerUrl = await uploadFile(bannerFile, serverId);
-      await api.patch('/users/me', { displayName, bio, avatarUrl, bannerUrl, bannerColor });
+      const profileUpdates: any = { displayName, bio, status, tags, bannerColor, auroraTheme, nameFont, nameEffect, nameColor };
+      if (avatarUrl) profileUpdates.avatarUrl = avatarUrl;
+      if (bannerUrl) profileUpdates.bannerUrl = bannerUrl;
+      
+      const updateUserProfile = useAuthStore.getState().updateUserProfile;
+      await api.patch('/users/me', profileUpdates);
+      updateUserProfile(profileUpdates);
+      
       onSave();
-    } catch { onClose(); }
+    } catch (e) { console.error(e); }
     finally { setSaving(false); }
   }
 
   const name = displayName || user.profile?.username || 'U';
-  const bannerDisplay = user.profile?.bannerUrl ?? null;
+  const previewProfile = { displayName: name, username: user.profile?.username, nameFont, nameEffect, nameColor, status, tags };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }} />
-      <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 560, background: '#111214', borderRadius: 18, overflow: 'hidden', border: `1px solid ${BORDER_SUBTLE}`, boxShadow: '0 24px 80px rgba(0,0,0,0.8)', animation: 'slideUp 0.2s cubic-bezier(.4,0,.2,1)' }}>
-        {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${BORDER_SUBTLE}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ color: TEXT_BRIGHT, fontSize: 18, fontWeight: 700, margin: 0 }}>✏️ Editar perfil</h2>
-          <button onClick={onClose} style={{ background: BG_LIGHT, border: `1px solid ${BORDER_SUBTLE}`, color: TEXT_MUTED, width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', animation: 'fadeIn 0.2s ease' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0 }} />
+      
+      <div style={{ position: 'relative', zIndex: 10, width: '100vw', height: '100vh', maxWidth: 1100, maxHeight: 780, background: '#000000', borderRadius: 12, overflow: 'hidden', display: 'flex', boxShadow: '0 40px 100px rgba(0,0,0,0.9)', border: `1px solid ${BORDER_SUBTLE}`, animation: 'popIn 0.3s cubic-bezier(.4,0,.2,1)' }}>
+        
+        {/* Sidebar */}
+        <div style={{ width: 260, background: '#000000', borderRight: `1px solid ${BORDER_SUBTLE}`, display: 'flex', flexDirection: 'column', padding: '60px 6px 20px 20px', flexShrink: 0 }}>
+          <div style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, paddingLeft: 10 }}>Configurações de Usuário</div>
+          {['Minha Conta', 'Perfis', 'Conteúdo e Social', 'Dados e Privacidade', 'Central da Família'].map((item, i) => (
+            <div key={item} style={{ 
+              padding: '10px 12px', borderRadius: 6, cursor: item === 'Perfis' ? 'default' : 'pointer', fontSize: 14, marginBottom: 4, 
+              background: item === 'Perfis' ? 'rgba(255,255,255,0.08)' : 'transparent',
+              color: item === 'Perfis' ? TEXT_BRIGHT : TEXT_NORMAL,
+              fontWeight: item === 'Perfis' ? 600 : 500,
+              display: 'flex', alignItems: 'center', gap: 10
+            }}>
+              {item === 'Perfis' ? '👤' : i === 0 ? '🏠' : '⚙️'} {item}
+              {item === 'Central da Família' && <span style={{ background: '#5865F2', color: '#fff', fontSize: 9, padding: '1px 5px', borderRadius: 8, marginLeft: 'auto' }}>NOVO</span>}
+            </div>
+          ))}
         </div>
 
-        <div style={{ padding: 24, maxHeight: '75vh', overflowY: 'auto' }}>
-          {/* Live preview card */}
-          <div style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 24, border: `1px solid ${BORDER_SUBTLE}` }}>
-            <div style={{ height: 90, background: bannerColor, backgroundImage: bannerDisplay && !isVideoUrl(bannerDisplay) ? `url(${bannerDisplay})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden' }}>
-              {isVideoUrl(bannerDisplay) && <video src={bannerDisplay!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-              <span style={{ position: 'absolute', bottom: 8, right: 8, fontSize: 11, color: 'rgba(255,255,255,0.5)', background: 'rgba(0,0,0,0.4)', padding: '2px 8px', borderRadius: 4 }}>Pré-visualização</span>
-            </div>
-            <div style={{ background: '#18191c', padding: '0 16px 16px' }}>
-              <div style={{ position: 'relative', display: 'inline-block', marginTop: -28 }}>
-                <div style={{ width: 60, height: 60, borderRadius: '50%', border: '4px solid #18191c', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => avatarRef.current?.click()}>
-                  {avatarPreview ? (isVideoUrl(avatarPreview) ? <video src={avatarPreview} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: ACCENT, fontSize: 22, fontWeight: 700 }}>{name[0]?.toUpperCase()}</span>}
+        {/* Content Window */}
+        <div style={{ flex: 1, background: '#000000', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          
+          {/* Close button inside content area */}
+          <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 50 }}>
+            <button onClick={onClose} style={{ background: 'transparent', border: `2px solid ${TEXT_MUTED}`, color: TEXT_MUTED, width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', fontSize: 18, fontWeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            <div style={{ color: TEXT_MUTED, fontSize: 11, textAlign: 'center', marginTop: 4, fontWeight: 600 }}>ESC</div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '60px 40px 100px' }}>
+            <h1 style={{ color: TEXT_BRIGHT, fontSize: 22, fontWeight: 700, marginBottom: 32 }}>Perfis</h1>
+
+            <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
+              
+              {/* Settings Left Column */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 32 }}>
+                
+                {/* Experiment Nitro Flair */}
+                <div style={{ background: 'linear-gradient(90deg, #444BD3 0%, #DA2BB3 100%)', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Experimente o NITRO para muito mais estilos e extras.</div>
+                  <button style={{ background: '#fff', border: 'none', borderRadius: 4, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Obter Nitro</button>
                 </div>
-                <div onClick={() => avatarRef.current?.click()} style={{ position: 'absolute', right: -2, bottom: -2, width: 22, height: 22, borderRadius: '50%', background: ACCENT, border: '2px solid #18191c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>📷</div>
-                <input ref={avatarRef} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={handleAvatarFile} />
+
+                {/* Aurora Section */}
+                <div>
+                  <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Tema de Perfil (Aurora)</label>
+                  <p style={{ color: TEXT_MUTED, fontSize: 13, marginBottom: 16 }}>Escolhe a aura que descreve o teu estado de espírito.</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                    {[
+                      { id: 'ALPHA', label: 'Alpha', colors: ['#c9a84c', '#7060c8'] },
+                      { id: 'CRIMSON', label: 'Fogo', colors: ['#991b1b', '#ea580c'] },
+                      { id: 'AQUA', label: 'Oceano', colors: ['#06b6d4', '#2563eb'] },
+                      { id: 'VOID', label: 'Vazio', colors: ['#7e22ce', '#1e1b4b'] },
+                    ].map(t => (
+                      <button key={t.id} onClick={() => setAuroraTheme(t.id)}
+                        style={{ 
+                          position: 'relative', overflow: 'hidden', background: '#1e1f22', 
+                          border: `2px solid ${auroraTheme === t.id ? ACCENT : 'transparent'}`, 
+                          borderRadius: 8, padding: '12px 6px', cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}>
+                        <div style={{ position: 'absolute', inset: 0, opacity: 0.2, background: `linear-gradient(135deg, ${t.colors[0]}, ${t.colors[1]})` }} />
+                        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: `linear-gradient(135deg, ${t.colors[0]}, ${t.colors[1]})`, border: '2px solid rgba(255,255,255,0.1)' }} />
+                          <span style={{ color: auroraTheme === t.id ? ACCENT : TEXT_NORMAL, fontSize: 10, fontWeight: 700 }}>{t.label}</span>
+                        </div>
+                      </button>
+                    ))}
+                    <label style={{ position: 'relative', overflow: 'hidden', background: '#1e1f22', border: `2px solid ${auroraTheme.startsWith('#') ? ACCENT : 'transparent'}`, borderRadius: 8, padding: '12px 6px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <input type="color" value={auroraTheme.startsWith('#') ? auroraTheme : '#A5E600'} onChange={e => setAuroraTheme(e.target.value)} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+                      <div style={{ position: 'absolute', inset: 0, opacity: 0.2, background: auroraTheme.startsWith('#') ? auroraTheme : 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' }} />
+                      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: auroraTheme.startsWith('#') ? auroraTheme : 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)', border: '2px solid rgba(255,255,255,0.1)' }} />
+                        <span style={{ color: auroraTheme.startsWith('#') ? ACCENT : TEXT_NORMAL, fontSize: 10, fontWeight: 700 }}>Custom</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Banner Section */}
+                <div style={{ borderTop: `1px solid ${BORDER_SUBTLE}`, paddingTop: 24 }}>
+                  <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Faixa do Perfil</label>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*,video/mp4,video/webm';
+                        input.onchange = (e: any) => {
+                          const f = e.target.files?.[0]; if (!f) return;
+                          setBannerFile(f);
+                        };
+                        input.click();
+                      }} style={{ background: '#5865F2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Mudar banner</button>
+                    <button onClick={() => { setBannerFile(null); setBannerColor(BANNER_PRESETS[0]); }} style={{ background: 'transparent', color: TEXT_BRIGHT, border: 'none', padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>Remover banner</button>
+                  </div>
+                </div>
+
+                {/* Avatar Section */}
+                <div style={{ borderTop: `1px solid ${BORDER_SUBTLE}`, paddingTop: 24 }}>
+                  <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Avatar Animação</label>
+                  <button onClick={() => avatarRef.current?.click()} style={{ background: '#5865F2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Mudar Avatar</button>
+                  <input ref={avatarRef} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={handleAvatarFile} />
+                </div>
+
+                {/* Name Styles Section */}
+                <div style={{ borderTop: `1px solid ${BORDER_SUBTLE}`, paddingTop: 24 }}>
+                  <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>Estilos de Nome Exibido</label>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                     <div>
+                       <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Nome de exibição</p>
+                       <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={user.profile?.username} maxLength={32}
+                         style={{ width: '100%', background: '#1e1f22', border: 'none', borderRadius: 4, padding: '12px', color: TEXT_BRIGHT, fontSize: 15 }} />
+                     </div>
+
+                     <div>
+                       <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Mensagem de Estado</p>
+                       <input value={status} onChange={e => setStatus(e.target.value)} placeholder="O que estás a pensar?" maxLength={50}
+                         style={{ width: '100%', background: '#1e1f22', border: 'none', borderRadius: 4, padding: '12px', color: TEXT_BRIGHT, fontSize: 13 }} />
+                     </div>
+
+                     <div>
+                       <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Tags de Perfil (Separadas por vírgula)</p>
+                       <input value={tags} onChange={e => setTags(e.target.value)} placeholder="Ex: Caltech, USP, PUC, Dev"
+                         style={{ width: '100%', background: '#1e1f22', border: 'none', borderRadius: 4, padding: '12px', color: TEXT_BRIGHT, fontSize: 13 }} />
+                     </div>
+
+                     <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 12, border: `1px solid ${BORDER_SUBTLE}` }}>
+                        <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Fonte Exclusiva</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
+                          {FONT_OPTIONS.map(f => (
+                            <button key={f.id} onClick={() => setNameFont(f.value)}
+                              style={{ 
+                                background: nameFont === f.value ? 'rgba(165,230,0,0.1)' : 'rgba(255,255,255,0.03)', 
+                                border: `1.5px solid ${nameFont === f.value ? ACCENT : 'transparent'}`, 
+                                borderRadius: 8, padding: '12px 6px', cursor: 'pointer', transition: 'all 0.15s',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4
+                              }}>
+                              <span style={{ fontFamily: f.value, fontSize: 18, color: nameFont === f.value ? ACCENT : TEXT_NORMAL, fontWeight: 'bold' }}>Gg</span>
+                              <span style={{ color: nameFont === f.value ? ACCENT : TEXT_MUTED, fontSize: 9, fontWeight: 600 }}>{f.label}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Efeito & Animação</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+                          {EFFECT_OPTIONS.map(e => (
+                            <button key={e.id} onClick={() => setNameEffect(e.id)}
+                              style={{ 
+                                background: nameEffect === e.id ? 'rgba(165,230,0,0.1)' : 'rgba(255,255,255,0.03)', 
+                                border: `1.5px solid ${nameEffect === e.id ? ACCENT : 'transparent'}`, 
+                                borderRadius: 8, padding: '8px 14px', cursor: 'pointer', transition: 'all 0.15s',
+                                color: nameEffect === e.id ? ACCENT : TEXT_NORMAL, fontSize: 12, fontWeight: 600
+                              }}>
+                              {e.id === 'neon' ? <span style={{ color: '#fff', animation: 'neon-pulse 2s ease-in-out infinite', '--neon-color': nameColor } as any}>{e.label}</span>
+                                : e.id === 'fluido' ? <span style={{ background: `linear-gradient(90deg, ${nameColor}, #fff, ${nameColor})`, backgroundSize: '200% auto', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'rainbow-text 3s linear infinite' }}>{e.label}</span>
+                                : e.id === 'arco-iris' ? <span style={{ background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #8f00ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'rainbow-text 3s linear infinite', backgroundSize: '200% auto' }}>{e.label}</span>
+                                : e.id === 'glitch' ? <span style={{ color: '#fff', animation: 'glitch-anim 0.4s infinite alternate-reverse' }}>{e.label}</span>
+                                : e.id === 'fogo' ? <span style={{ color: '#fff', animation: 'fire-glow 1.5s ease-in-out infinite' }}>{e.label}</span>
+                                : e.id === 'diamante' ? <span style={{ background: `linear-gradient(90deg, ${nameColor} 0%, #fff 50%, ${nameColor} 100%)`, backgroundSize: '200% auto', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'shine-sweep 2.5s infinite linear' }}>{e.label}</span>
+                                : e.id === 'matrix' ? <span style={{ color: '#00ff00', textShadow: '0 0 8px #00ff00', animation: 'matrix-flicker 2s infinite', fontFamily: 'monospace' }}>{e.label}</span>
+                                : e.id === 'holograma' ? <span style={{ color: nameColor, textShadow: `0 0 10px ${nameColor}`, animation: 'holographic-shift 4s infinite linear' }}>{e.label}</span>
+                                : e.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Cor do Nome</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {COLOR_OPTIONS.map(c => (
+                            <button key={c} onClick={() => setNameColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: `2.5px solid ${nameColor === c ? '#fff' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.15s', boxShadow: nameColor === c ? `0 0 10px ${c}60` : 'none' }} />
+                          ))}
+                          <label style={{ position: 'relative', width: 28, height: 28, borderRadius: '50%', background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)', cursor: 'pointer', border: `2px solid ${!COLOR_OPTIONS.includes(nameColor) ? '#fff' : 'transparent'}` }}>
+                            <input type="color" value={nameColor} onChange={e => setNameColor(e.target.value)} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+                          </label>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+
+                {/* Bio Section */}
+                <div style={{ borderTop: `1px solid ${BORDER_SUBTLE}`, paddingTop: 24 }}>
+                  <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Sobre mim</label>
+                  <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Conta algo sobre ti..." maxLength={200} rows={4}
+                    style={{ width: '100%', background: '#1e1f22', border: 'none', borderRadius: 8, padding: '12px', color: TEXT_BRIGHT, fontSize: 14, resize: 'none' }} />
+                  <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '8px 0 0', textAlign: 'right' }}>{bio.length}/200</p>
+                </div>
               </div>
-              <p style={{ color: TEXT_BRIGHT, fontWeight: 700, fontSize: 16, margin: '8px 0 2px' }}>{name}</p>
-              <p style={{ color: TEXT_MUTED, fontSize: 12, margin: 0 }}>@{user.profile?.username}</p>
-              {bio && <p style={{ color: TEXT_NORMAL, fontSize: 13, margin: '8px 0 0', lineHeight: 1.4 }}>{bio}</p>}
+
+              {/* Preview Right Column (Sticky) */}
+              <div style={{ width: 340, position: 'sticky', top: 0, flexShrink: 0 }}>
+                <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>Pré-visualização</label>
+                
+                <div style={{ borderRadius: 16, overflow: 'hidden', border: `1px solid rgba(165,230,0,0.15)`, boxShadow: '0 32px 64px rgba(0,0,0,0.6)', position: 'relative', background: '#0d0e10' }}>
+                  <AuroraBackground theme={auroraTheme as any} />
+                  <div style={{ position: 'relative', zIndex: 1, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}>
+                    <div style={{ height: 110, background: bannerColor, backgroundImage: user.profile?.bannerUrl && !isVideoUrl(user.profile.bannerUrl) ? `url(${user.profile.bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden' }}>
+                      {isVideoUrl(user.profile?.bannerUrl) && <video src={user.profile?.bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                    </div>
+                    <div style={{ padding: '0 16px 20px' }}>
+                      <div style={{ position: 'relative', display: 'inline-block', marginTop: -35 }}>
+                        <Avatar 
+                          src={avatarPreview} 
+                          name={name} 
+                          size="md" 
+                          style={{ width: 80, height: 80, border: '6px solid #111214', background: BG_LIGHT }} 
+                        />
+                      </div>
+                      <div style={{ marginTop: 10, background: '#111214', borderRadius: 8, padding: 12 }}>
+                        <p style={{ margin: '0 0 2px', lineHeight: 1.2 }}><DisplayName profile={previewProfile} fallbackName={name} style={{ fontWeight: 700, fontSize: 18 }} /></p>
+                        <p style={{ color: TEXT_MUTED, fontSize: 13, margin: 0 }}>@{user.profile?.username}</p>
+                        
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+                          <p style={{ color: TEXT_BRIGHT, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Sobre Mim</p>
+                          <p style={{ color: TEXT_BRIGHT, fontSize: 13, margin: 0, opacity: 0.8 }}>{bio || 'Este utilizador não tem biografia.'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Banner */}
-          <ImageColorPicker
-            label="Capa do perfil"
-            currentImageUrl={bannerDisplay}
-            currentColor={bannerColor}
-            colorPresets={BANNER_PRESETS}
-            onImageChange={f => setBannerFile(f)}
-            onColorChange={c => setBannerColor(c)}
-          />
-
-          {/* Display name */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Nome de exibição</label>
-            <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={user.profile?.username} maxLength={32}
-              style={{ width: '100%', background: BG_DARK, border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', color: TEXT_BRIGHT, fontSize: 14, boxSizing: 'border-box' }} />
-          </div>
-
-          {/* Bio */}
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Sobre mim</label>
-            <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Conta algo sobre ti..." maxLength={200} rows={3}
-              style={{ width: '100%', background: BG_DARK, border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', color: TEXT_BRIGHT, fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
-            <p style={{ color: TEXT_MUTED, fontSize: 11, margin: '4px 0 0', textAlign: 'right' }}>{bio.length}/200</p>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={onClose} style={{ background: 'transparent', color: TEXT_MUTED, border: 'none', padding: '9px 16px', cursor: 'pointer', borderRadius: 6, fontSize: 13 }}>Cancelar</button>
-            <button onClick={handleSave} disabled={saving}
-              style={{ background: ACCENT, color: '#000', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1, transition: 'opacity 0.15s' }}>
-              {saving ? '⏳ A guardar…' : '✓ Guardar'}
-            </button>
+          {/* Action Footer bar (floating/fixed bottom) */}
+          <div style={{ height: 80, background: '#000000', borderTop: `1px solid ${BORDER_SUBTLE}`, padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+             <p style={{ color: TEXT_NORMAL, fontSize: 14 }}>Cuidado — você tem alterações não salvas!</p>
+             <div style={{ display: 'flex', gap: 12 }}>
+               <button onClick={onClose} style={{ background: 'transparent', color: TEXT_BRIGHT, border: 'none', padding: '10px 20px', cursor: 'pointer', fontSize: 14, fontWeight: 500 }}>Redefinir</button>
+               <button onClick={handleSave} disabled={saving} style={{ background: '#248046', color: '#fff', border: 'none', borderRadius: 4, padding: '10px 28px', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+                 {saving ? 'A salvar...' : 'Salvar Alterações'}
+               </button>
+             </div>
           </div>
         </div>
       </div>
@@ -292,6 +486,7 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
   member: Member; server: Server; onClose: () => void; isOwn: boolean; isMod: boolean; isAdmin: boolean;
   onKick: (uid: string) => void; onBan: (uid: string) => void; onAssignRole: (uid: string, roleId: string) => void;
 }) {
+  const [bioExpanded, setBioExpanded] = useState(false);
   const accent = memberAccentColor(member, server.ownerId);
   const isOwner = member.userId === server.ownerId;
   const name = member.profile?.displayName ?? member.profile?.username ?? 'Utilizador';
@@ -300,56 +495,143 @@ function UserProfileModal({ member, server, onClose, isOwn, isMod, isAdmin, onKi
   const av = member.profile?.avatarUrl;
   const bannerUrl = member.profile?.bannerUrl;
   const bannerColor = member.profile?.bannerColor ?? '#1a1a2e';
+  const statusMsg = member.profile?.status;
+  const tagsStr = member.profile?.tags;
+  const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.15s ease' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }} />
-      <div style={{ position: 'relative', zIndex: 10, width: 360, background: '#0d0e10', borderRadius: 20, overflow: 'hidden', border: `1px solid rgba(255,255,255,0.08)`, boxShadow: '0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(165,230,0,0.06)', animation: 'slideUp 0.2s cubic-bezier(.4,0,.2,1)' }}>
-        {/* Banner */}
-        <div style={{ height: 110, background: bannerColor, backgroundImage: bannerUrl && !isVideoUrl(bannerUrl) ? `url(${bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative', overflow: 'hidden' }}>
-          {isVideoUrl(bannerUrl) && <video src={bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(13,14,16,0.8) 100%)' }} />
-          <button onClick={onClose} style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: `1px solid rgba(255,255,255,0.1)`, color: TEXT_MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, backdropFilter: 'blur(8px)', transition: 'all 0.15s' }}
-            onMouseEnter={e => { (e.currentTarget as any).style.color = '#fff'; (e.currentTarget as any).style.background = 'rgba(0,0,0,0.8)'; }}
-            onMouseLeave={e => { (e.currentTarget as any).style.color = TEXT_MUTED; (e.currentTarget as any).style.background = 'rgba(0,0,0,0.6)'; }}
-          >✕</button>
-        </div>
-        {/* Avatar */}
-        <div style={{ position: 'absolute', top: 64, left: 20 }}>
-          <div style={{ width: 84, height: 84, borderRadius: '50%', border: `4px solid #0d0e10`, overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 20px rgba(0,0,0,0.6)`, animation: 'glow 3s ease-in-out infinite' }}>
-            {av ? (isVideoUrl(av) ? <video src={av} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={av} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: accent, fontSize: 30, fontWeight: 700 }}>{name[0]?.toUpperCase()}</span>}
-          </div>
-        </div>
-        <div style={{ padding: '20px 20px 20px', marginTop: 36 }}>
-          <h2 style={{ color: TEXT_BRIGHT, fontSize: 20, fontWeight: 800, margin: '0 0 3px', letterSpacing: '-0.02em' }}>{name}</h2>
-          {username && <p style={{ color: TEXT_MUTED, fontSize: 13, margin: '0 0 10px' }}>@{username}</p>}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: bio ? 14 : 0 }}>
-            {isOwner && <span style={{ fontSize: 11, background: 'rgba(240,177,50,0.12)', color: '#F0B132', border: '1px solid rgba(240,177,50,0.3)', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>👑 Dono</span>}
-            {member.role === 'admin' && !isOwner && <span style={{ fontSize: 11, background: 'rgba(237,66,69,0.12)', color: '#ED4245', border: '1px solid rgba(237,66,69,0.3)', borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Admin</span>}
-            {member.communityRole && <span style={{ fontSize: 11, background: (member.communityRole.color || '#7C6FAD') + '20', color: member.communityRole.color || '#7C6FAD', border: `1px solid ${member.communityRole.color || '#7C6FAD'}40`, borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>{member.communityRole.name}</span>}
-            {isOwn && <span style={{ fontSize: 11, background: 'rgba(165,230,0,0.12)', color: ACCENT, border: `1px solid rgba(165,230,0,0.3)`, borderRadius: 6, padding: '3px 10px', fontWeight: 600 }}>Tu</span>}
-          </div>
-          {bio && <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(255,255,255,0.06)`, borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}><p style={{ color: TEXT_NORMAL, fontSize: 13, margin: 0, lineHeight: 1.6 }}>{bio}</p></div>}
-          {isAdmin && !isOwner && (
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 11, color: TEXT_MUTED, display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Cargo</label>
-              <select value={member.communityRoleId ?? ''} onChange={e => onAssignRole(member.userId, e.target.value)}
-                style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: `1px solid rgba(255,255,255,0.1)`, color: TEXT_BRIGHT, borderRadius: 10, padding: '9px 12px', fontSize: 13 }}>
-                <option value="">— sem cargo —</option>
-                {server.roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
+      
+      <div style={{ position: 'relative', zIndex: 10, width: 380, borderRadius: 24, overflow: 'hidden', background: '#000', border: `1px solid rgba(165,230,0,0.1)`, boxShadow: '0 40px 100px rgba(0,0,0,0.9)', animation: 'slideUp 0.3s cubic-bezier(.4,0,.2,1)' }}>
+        
+        <AuroraBackground theme={(member.profile?.auroraTheme as any) || 'ALPHA'} />
+        
+        <div style={{ position: 'relative', zIndex: 10, background: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(6px)', display: 'flex', flexDirection: 'column' }}>
+          
+          {/* Banner area */}
+          <div style={{ height: 130, background: bannerColor, backgroundImage: bannerUrl && !isVideoUrl(bannerUrl) ? `url(${bannerUrl})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+            {isVideoUrl(bannerUrl) && <video src={bannerUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.7))' }} />
+            
+            {/* Banner Actions */}
+            <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 8 }}>
+              {!isOwn && <button style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👤+</button>}
+              <button style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>•••</button>
             </div>
-          )}
-          {isMod && !isOwner && !isOwn && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => onKick(member.userId)} style={{ flex: 1, background: 'transparent', border: '1px solid rgba(237,66,69,0.4)', color: '#ED4245', borderRadius: 10, padding: '9px', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}
-                onMouseEnter={e => (e.currentTarget as any).style.background = 'rgba(237,66,69,0.08)'}
-                onMouseLeave={e => (e.currentTarget as any).style.background = 'transparent'}>Expulsar</button>
-              <button onClick={() => onBan(member.userId)} style={{ flex: 1, background: 'rgba(237,66,69,0.1)', border: '1px solid rgba(237,66,69,0.4)', color: '#ED4245', borderRadius: 10, padding: '9px', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}
-                onMouseEnter={e => (e.currentTarget as any).style.background = 'rgba(237,66,69,0.2)'}
-                onMouseLeave={e => (e.currentTarget as any).style.background = 'rgba(237,66,69,0.1)'}>Banir</button>
+          </div>
+
+          {/* Avatar Area */}
+          <div style={{ position: 'absolute', top: 80, left: 20 }}>
+            <div style={{ position: 'relative' }}>
+              <Avatar 
+                src={av} 
+                name={name} 
+                size="xl" 
+                style={{ width: 92, height: 92, border: `6px solid #000`, boxShadow: `0 8px 30px rgba(0,0,0,0.8)` }} 
+              />
+              <div style={{ position: 'absolute', bottom: 4, right: 4, width: 22, height: 22, borderRadius: '50%', background: '#248046', border: '5px solid #000' }} />
             </div>
-          )}
+          </div>
+
+          {/* Body Content */}
+          <div style={{ padding: '24px 20px 20px', marginTop: 42, overflowY: 'auto', maxHeight: '60vh' }}>
+            <div style={{ marginBottom: 16 }}>
+              <DisplayName profile={member.profile} fallbackName={name} baseColor={accent} style={{ display: 'block', fontSize: 24, fontWeight: 800, margin: '0 0 2px', letterSpacing: '-0.02em' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <p style={{ color: TEXT_NORMAL, fontSize: 14, margin: 0, fontWeight: 600 }}>@{username}</p>
+                <div style={{ width: 4, height: 4, borderRadius: '50%', background: TEXT_MUTED }} />
+                <p style={{ color: TEXT_MUTED, fontSize: 13, margin: 0, fontStyle: 'italic', opacity: 0.9 }}>{statusMsg || 'Explorando a Alpha Network...'}</p>
+              </div>
+            </div>
+
+            {/* Badges Row */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+               {['🛡️', '💎', '⏳', '🏠'].map((emoji, i) => (
+                 <div key={i} style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, cursor: 'pointer', transition: 'transform 0.15s' }}
+                   onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                 >{emoji}</div>
+               ))}
+               <div style={{ borderRadius: 6, padding: '0 8px', background: 'linear-gradient(90deg, #5865F2, #eb459e)', color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', letterSpacing: '0.05em' }}>NITRO</div>
+            </div>
+
+            {/* Mutual Info Component */}
+            <div style={{ marginBottom: 20, padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', marginLeft: 4 }}>
+                    {[1,2,3].map(i => (
+                      <div key={i} style={{ width: 20, height: 20, borderRadius: '50%', background: '#333', border: '2px solid #000', marginLeft: i === 1 ? 0 : -8, overflow: 'hidden' }}>
+                        <img src={`https://i.pravatar.cc/100?u=${i}`} alt="" style={{ width: '100%', height: '100%', opacity: 0.8 }} />
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ color: TEXT_MUTED, fontSize: 12, margin: 0 }}>
+                    <span style={{ color: TEXT_BRIGHT, fontWeight: 600 }}>12 amigos mútuos</span> • 3 servidores mútuos
+                  </p>
+               </div>
+            </div>
+
+            {/* Bio Section */}
+            <div style={{ marginBottom: 20 }}>
+               <p style={{ color: TEXT_BRIGHT, fontSize: 13, margin: '0 0 10px', lineHeight: 1.6, maxHeight: bioExpanded ? 'none' : '60px', overflow: 'hidden' }}>
+                 {bio || 'Este utilizador prefere manter o mistério sobre a sua biografia...'}
+               </p>
+               {bio && bio.length > 100 && (
+                 <button onClick={() => setBioExpanded(!bioExpanded)} style={{ background: 'transparent', border: 'none', color: TEXT_NORMAL, fontSize: 12, fontWeight: 700, padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
+                   {bioExpanded ? 'Ler Menos' : 'Ver Biografia Completa'}
+                 </button>
+               )}
+            </div>
+
+            {/* Custom Tags Section */}
+            {(tags.length > 0 || isOwn) && (
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Conquistas & Interesses</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                   {tags.map((t, i) => (
+                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '6px 14px', border: '1px solid rgba(255,255,255,0.1)', transition: 'background 0.2s', cursor: 'pointer' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                     >
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: ['#F0B132', '#3FB8AF', '#7C6FAD', '#ED4245'][i % 4] }} />
+                        <span style={{ color: TEXT_BRIGHT, fontSize: 12, fontWeight: 600 }}>{t}</span>
+                     </div>
+                   ))}
+                   {!tags.length && <p style={{ color: TEXT_MUTED, fontSize: 12, margin: 0, fontStyle: 'italic' }}>Nenhuma tag definida.</p>}
+                </div>
+              </div>
+            )}
+
+            {/* Role List */}
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Cargos</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {isOwner && <span style={{ fontSize: 11, background: 'rgba(240,177,50,0.12)', color: '#F0B132', border: '1px solid rgba(240,177,50,0.3)', borderRadius: 6, padding: '4px 10px', fontWeight: 600 }}>👑 Dono</span>}
+                {member.role === 'admin' && !isOwner && <span style={{ fontSize: 11, background: 'rgba(237,66,69,0.12)', color: '#ED4245', border: '1px solid rgba(237,66,69,0.3)', borderRadius: 6, padding: '4px 10px', fontWeight: 600 }}>Admin</span>}
+                {member.communityRole && <span style={{ fontSize: 11, background: (member.communityRole.color || '#7C6FAD') + '20', color: member.communityRole.color || '#7C6FAD', border: `1px solid ${member.communityRole.color || '#7C6FAD'}40`, borderRadius: 6, padding: '4px 10px', fontWeight: 600 }}>{member.communityRole.name}</span>}
+              </div>
+            </div>
+
+            {/* Admin Controls */}
+            {isAdmin && !isOwner && !isOwn && (
+              <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <label style={{ fontSize: 11, color: TEXT_MUTED, display: 'block', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Moderação</label>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <button onClick={() => onKick(member.userId)} style={{ flex: 1, background: 'rgba(237,66,69,0.1)', border: '1px solid rgba(237,66,69,0.3)', color: '#ED4245', borderRadius: 8, padding: '10px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Expulsar</button>
+                  <button onClick={() => onBan(member.userId)} style={{ flex: 1, background: '#ED4245', border: 'none', color: '#fff', borderRadius: 8, padding: '10px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Banir</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Interaction Footer */}
+          <div style={{ padding: '0 20px 24px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <input type="text" placeholder={`Enviar mensagem para @${username}`} style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, fontSize: 13, flex: 1, outline: 'none' }} />
+              <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0.6, fontSize: 20 }}>🎁</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -572,10 +854,10 @@ function ServerSettingsModal({ server, serverId, onClose, onSave, onLeave, onDel
                 return (
                   <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10, background: BG_DARK, borderRadius: 8, marginBottom: 6, border: `1px solid ${BORDER_SUBTLE}` }}>
                     <div style={{ width: 36, height: 36, borderRadius: '50%', background: BG_HOVER, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                      {m.profile?.avatarUrl ? (isVideoUrl(m.profile.avatarUrl) ? <video src={m.profile.avatarUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: memberAccentColor(m, server.ownerId), fontWeight: 700 }}>{n[0]}</span>}
+                      <Avatar src={m.profile?.avatarUrl} name={n} size="sm" />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, color: TEXT_BRIGHT, fontSize: 14 }}>{n}</p>
+                      <DisplayName profile={m.profile} fallbackName={n} baseColor={memberAccentColor(m, server.ownerId)} style={{ fontSize: 14, fontWeight: 600, display: 'block' }} />
                       <p style={{ margin: 0, color: TEXT_MUTED, fontSize: 12 }}>@{m.profile?.username}</p>
                     </div>
                     <span style={{ fontSize: 11, color: m.userId === server.ownerId ? '#F0B132' : TEXT_MUTED }}>
@@ -1207,10 +1489,10 @@ function ServerGuide({ server, events, isAdmin, onClose, onEditServer, onCreateE
                   const acc = memberAccentColor(m, server.ownerId);
                   return (
                     <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: BG_LIGHT, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {m.profile?.avatarUrl ? (isVideoUrl(m.profile.avatarUrl) ? <video src={m.profile.avatarUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: acc, fontWeight: 700, fontSize: 12 }}>{name[0].toUpperCase()}</span>}
+                      <Avatar src={m.profile?.avatarUrl} name={name} size="sm" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <DisplayName profile={m.profile} fallbackName={name} baseColor={acc} style={{ fontSize: 13, fontWeight: 600 }} />
                       </div>
-                      <p style={{ margin: 0, color: acc, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{name}</p>
                       {m.userId === server.ownerId && <span style={{ fontSize: 10, color: '#F0B132', flexShrink: 0 }}>👑</span>}
                     </div>
                   );
@@ -1250,6 +1532,7 @@ export default function ServerPage() {
   const { serverId } = useParams<{ serverId: string }>();
   const router = useRouter();
   const user = useAuthStore(s => s.user);
+  const updateUserProfile = useAuthStore(s => s.updateUserProfile);
   const { socket, connected } = useCommunitySocket();
 
   // Data
@@ -1460,7 +1743,13 @@ export default function ServerPage() {
   }
   async function handleSaveProfile() {
     setShowEditProfile(false);
-    await refreshServer();
+    // Re-fetch the authenticated user so the auth store (and all UI that reads it)
+    // gets the updated nameFont / nameEffect / nameColor / avatar / etc.
+    try {
+      const me = await api.get<{ id: string; email: string; profile?: any }>('/auth/me');
+      updateUserProfile(me.profile ?? {});
+    } catch { /* best-effort */ }
+    await refreshServer(); // also refresh server members so the sidebar & guide update
   }
   async function createChannel() {
     if (!chName.trim() || !server) return;
@@ -1663,14 +1952,12 @@ export default function ServerPage() {
 
         {/* User panel */}
         <div style={{ padding: '8px 10px', borderTop: `1px solid rgba(255,255,255,0.05)`, background: '#050607', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <div onClick={() => setMemberMenuUserId(user?.id ?? null)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `2px solid rgba(165,230,0,0.3)`, transition: 'all 0.15s', position: 'relative' }}
-            onMouseEnter={e => { (e.currentTarget as any).style.borderColor = ACCENT; (e.currentTarget as any).style.boxShadow = '0 0 10px rgba(165,230,0,0.3)'; }}
-            onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(165,230,0,0.3)'; (e.currentTarget as any).style.boxShadow = 'none'; }}>
-            {user?.profile?.avatarUrl ? (isVideoUrl(user.profile.avatarUrl) ? <video src={user.profile.avatarUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={user.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: ACCENT, fontWeight: 700, fontSize: 13 }}>{(user?.profile?.username ?? 'U')[0].toUpperCase()}</span>}
+          <div onClick={() => setMemberMenuUserId(user?.id ?? null)} className="flex-shrink-0 border-2 border-accent/30 hover:border-accent hover:shadow-[0_0_10px_rgba(165,230,0,0.3)] transition-all rounded-full overflow-hidden cursor-pointer p-0.5">
+            <Avatar src={user?.profile?.avatarUrl} name={user?.profile?.displayName || user?.profile?.username || 'U'} size="sm" className="w-[30px] h-[30px]" />
             <div style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%', background: '#23A559', border: '2px solid #050607' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => setMemberMenuUserId(user?.id ?? null)}>
-            <p style={{ margin: 0, color: TEXT_BRIGHT, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.profile?.displayName ?? user?.profile?.username}</p>
+            <DisplayName profile={user?.profile} fallbackName={user?.profile?.username || 'U'} style={{ fontSize: 13, fontWeight: 600 }} />
             <p style={{ margin: 0, color: TEXT_MUTED, fontSize: 11 }}>@{user?.profile?.username}</p>
           </div>
           <div style={{ display: 'flex', gap: 2 }}>
@@ -1750,6 +2037,7 @@ export default function ServerPage() {
               const nameClr = isBot ? '#7EB6FF' : nameColor(msg.authorName);
               const av = msg.authorAvatarUrl;
               const showEmoji = emojiPickerMsgId === msg.id;
+              const authorMember = server?.members.find(x => x.userId === msg.authorId);
 
               const actions = (
                 <MsgActions
@@ -1788,7 +2076,9 @@ export default function ServerPage() {
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
-                      <span style={{ color: nameClr, fontWeight: 600, fontSize: 15, cursor: 'pointer' }} onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>{msg.authorName}</span>
+                      {isBot
+                        ? <span style={{ color: '#7EB6FF', fontWeight: 600, fontSize: 15, cursor: 'pointer' }} onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>{msg.authorName}</span>
+                        : <DisplayName profile={msg.authorProfile || authorMember?.profile} fallbackName={msg.authorName} baseColor={nameClr} style={{ fontWeight: 600, fontSize: 15, cursor: 'pointer' }} onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }} />}
                       {isBot && <span style={{ fontSize: 10, background: 'rgba(96,165,250,0.15)', color: '#93C5FD', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>BOT</span>}
                       {msg.pinned && <span style={{ fontSize: 10, background: ACCENT_DIM, color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 3, padding: '1px 5px' }}>📌 FIXADA</span>}
                       <span style={{ color: TEXT_MUTED, fontSize: 11 }}>{fmtDate(msg.createdAt)}</span>
@@ -1914,12 +2204,12 @@ export default function ServerPage() {
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                       <div style={{ position: 'relative', flexShrink: 0 }}>
                         <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {m.profile?.avatarUrl ? (isVideoUrl(m.profile.avatarUrl) ? <video src={m.profile.avatarUrl} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={m.profile.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />) : <span style={{ color: accent, fontSize: 14, fontWeight: 700 }}>{n[0]?.toUpperCase()}</span>}
+                          <Avatar src={m.profile?.avatarUrl} name={n} size="sm" />
                         </div>
                         <div style={{ position: 'absolute', right: -1, bottom: -1, width: 10, height: 10, borderRadius: '50%', background: typing ? '#F0B232' : ACCENT, border: `2px solid ${BG_DARK}`, transition: 'background 0.3s' }} />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, color: accent, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n}</p>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><DisplayName profile={m.profile} fallbackName={n} baseColor={accent} style={{ fontSize: 14, fontWeight: 600 }} /></p>
                         {typing && <p style={{ margin: 0, color: '#F0B232', fontSize: 11, fontStyle: 'italic', animation: 'fadeIn 0.2s' }}>a escrever…</p>}
                       </div>
                     </button>
