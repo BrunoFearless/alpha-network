@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { UpdateUserDto } from "./dto/update-user.dto";
 
 interface CreateUserData {
   email: string;
@@ -12,27 +13,40 @@ interface CreateUserData {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
       include: { profile: true },
     });
+
+    if (!user || user.deletedAt) return null
+
+    return user
   }
 
   async findById(id: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       include: { profile: true },
     });
+
+    if (!user || user.deletedAt) return null
+
+    return user
+
   }
 
   async findByUsername(username: string) {
-    return this.prisma.profile.findUnique({
+    const profile = await this.prisma.profile.findUnique({
       where: { username },
       include: { user: true },
     });
+
+    if (!profile || profile.user.deletedAt) return null
+
+    return profile
   }
 
   async createUser(data: CreateUserData) {
@@ -58,5 +72,18 @@ export class UsersService {
       where: { userId },
       data: { activeModes: modes },
     });
+  }
+  async updateProfile(userId: string, data: UpdateUserDto) {
+    return this.prisma.profile.update({
+      where: { userId },
+      data,
+    });
+  }
+
+  async softDelete(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { deletedAt: new Date() },
+    })
   }
 }

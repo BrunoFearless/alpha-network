@@ -6,10 +6,11 @@ import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UpdateModesDto } from './dto/update-modes.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   // ── Perfil público ─────────────────────────────────────────────────
   // TODO (Adolfo v2): implementar getProfile completo com followersCount
@@ -21,6 +22,7 @@ export class UsersController {
     }
     const { user } = profile;
     const { passwordHash, deletedAt, emailVerified, ...safeUser } = user as any;
+    console.log(safeUser)
     return { success: true, data: { ...profile, user: safeUser } };
   }
 
@@ -42,10 +44,13 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async updateProfile(
     @CurrentUser() user: { id: string },
-    @Body() body: any,
+    @Body() dto: UpdateUserDto,
   ) {
-    // Placeholder — Adolfo implementa em v2
-    return { success: true, data: { message: 'Em implementação.' } };
+    const updatedProfile = await this.usersService.updateProfile(user.id, dto)
+    return {
+      success: true,
+      data: updatedProfile
+    }
   }
 
   // ── Apagar conta ───────────────────────────────────────────────────
@@ -55,6 +60,7 @@ export class UsersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteAccount(@CurrentUser() user: { id: string }) {
     // Placeholder — Adolfo implementa em v2
-    return;
+    await this.usersService.softDelete(user.id)
+    return
   }
 }
