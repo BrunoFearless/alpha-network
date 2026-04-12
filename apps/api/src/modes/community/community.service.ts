@@ -5,6 +5,7 @@ import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventBusService } from '../../platform-events/event-bus.service';
+import { MediaService } from '../../common/services/media.service';
 import {
   CreateServerDto,
   CreateChannelDto,
@@ -53,6 +54,7 @@ export class CommunityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
+    private readonly mediaService: MediaService,
   ) {}
 
   private async logAudit(serverId: string, actorId: string, action: string, targetId?: string | null, metadata?: Record<string, unknown>) {
@@ -72,10 +74,10 @@ export class CommunityService {
   }
 
   private async parseMentionsFromContent(content: string, serverId: string): Promise<Prisma.InputJsonValue | undefined> {
-    const everyone = /\B@everyone\b/i.test(content);
+    const everyone = /\B@(everyone|todos)\b/i.test(content);
     const re = /@([\w.]+)/g;
     const tags = [...content.matchAll(re)].map(m => m[1].toLowerCase());
-    const uniqTags = [...new Set(tags)].filter(t => t !== 'everyone');
+    const uniqTags = [...new Set(tags)].filter(t => t !== 'everyone' && t !== 'todos');
     if (!everyone && uniqTags.length === 0) return undefined;
     const members = await this.prisma.serverMember.findMany({ where: { serverId }, select: { userId: true } });
     const userIdsInServer = new Set(members.map(m => m.userId));
@@ -106,7 +108,7 @@ export class CommunityService {
     const [profiles, bots] = await Promise.all([
       this.prisma.profile.findMany({
         where: { userId: { in: [...humanIds] } },
-        select: { userId: true, displayName: true, username: true, avatarUrl: true },
+        select: { userId: true, displayName: true, username: true, avatarUrl: true, nameFont: true, nameEffect: true, nameColor: true, auroraTheme: true, status: true, tags: true },
       }),
       this.prisma.bot.findMany({ where: { id: { in: [...botIds] } }, select: { id: true, name: true } }),
     ]);
@@ -131,6 +133,7 @@ export class CommunityService {
         mentions: msg.mentions as { everyone?: boolean; userIds?: string[] } | null,
         authorName: nameOf(msg.authorId, msg.authorType),
         authorAvatarUrl: avatarOf(msg.authorId, msg.authorType),
+        authorProfile: msg.authorType === 'user' ? pm.get(msg.authorId) : null,
         replyTo:
           rt && !rt.deletedAt
             ? {
@@ -227,7 +230,7 @@ export class CommunityService {
     const userIds = server.members.map(m => m.userId);
     const profiles = await this.prisma.profile.findMany({
       where: { userId: { in: userIds } },
-      select: { userId: true, username: true, displayName: true, avatarUrl: true },
+      select: { userId: true, username: true, displayName: true, avatarUrl: true, bio: true, bannerUrl: true, bannerColor: true, auroraTheme: true, nameFont: true, nameEffect: true, nameColor: true, status: true, tags: true },
     });
     const pm = new Map(profiles.map(p => [p.userId, p]));
     return {
@@ -250,9 +253,13 @@ export class CommunityService {
     if (!this.isAdminLegacy(m) && !this.canManageServerPerm(m)) {
       throw new ForbiddenException('Sem permissão para editar o servidor.');
     }
-    const data: { name?: string; description?: string | null } = {};
+    const data: any = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.description !== undefined) data.description = dto.description;
+    if (dto.imageUrl !== undefined) data.imageUrl = dto.imageUrl;
+    if (dto.bannerUrl !== undefined) data.bannerUrl = dto.bannerUrl;
+    if (dto.bannerColor !== undefined) data.bannerColor = dto.bannerColor;
+    
     if (Object.keys(data).length === 0) return this.prisma.server.findUniqueOrThrow({ where: { id: serverId } });
     const updated = await this.prisma.server.update({ where: { id: serverId }, data });
     await this.logAudit(serverId, actorId, 'server.update', serverId, data as Record<string, unknown>);
@@ -317,16 +324,13 @@ export class CommunityService {
 
   async saveCommunityUpload(serverId: string, userId: string, file: Express.Multer.File) {
     await this.requireMember(serverId, userId);
-    if (!file?.buffer?.length) throw new BadRequestException('Ficheiro em falta.');
-    const max = 5 * 1024 * 1024;
-    if (file.size > max) throw new BadRequestException('Ficheiro demasiado grande (máx. 5MB).');
-    const ext = (file.originalname.match(/\.[a-zA-Z0-9]{1,8}$/)?.[0] ?? '').slice(0, 8);
-    const name = `${randomUUID()}${ext || ''}`;
-    const dir = join(process.cwd(), 'uploads', 'community');
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, name), file.buffer);
-    const origin = process.env.API_PUBLIC_ORIGIN ?? `http://localhost:${process.env.API_PORT ?? 3001}`;
-    const url = `${origin.replace(/\/$/, '')}/uploads/community/${name}`;
+    
+    const url = await this.mediaService.saveValidatedMedia(file, 'community', {
+      maxFileSizeMb: 10,
+      allowedMimes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
+      maxVideoDurationSecs: 300,
+    });
+    
     return { url };
   }
 
@@ -745,5 +749,121 @@ export class CommunityService {
     const ch = await this.prisma.channel.findUnique({ where: { id: channelId }, select: { serverId: true } });
     if (!ch) throw new NotFoundException('Canal não encontrado.');
     return this.requireMember(ch.serverId, userId);
+  }
+
+  async createEvent(serverId: string, userId: string, dto: any) {
+    await this.requireMember(serverId, userId);
+    if (!dto.title || !dto.startsAt) throw new BadRequestException('Faltam campos obrigatórios');
+    
+    return this.prisma.communityEvent.create({
+      data: {
+        serverId,
+        creatorId: userId,
+        title: dto.title,
+        description: dto.description || null,
+        location: dto.location || null,
+        imageUrl: dto.imageUrl || null,
+        coverColor: dto.coverColor || null,
+        startDate: new Date(dto.startsAt),
+        endDate: dto.endsAt ? new Date(dto.endsAt) : null,
+      }
+    });
+  }
+
+  async getEvents(serverId: string, userId: string) {
+    await this.requireMember(serverId, userId);
+    const events = await this.prisma.communityEvent.findMany({
+      where: { serverId },
+      include: { interests: true },
+      orderBy: { startDate: 'asc' },
+    });
+    return events.map(e => {
+      const { startDate, endDate, interests, ...rest } = e;
+      return {
+        ...rest,
+        startsAt: startDate.toISOString(),
+        endsAt: endDate?.toISOString() ?? null,
+        rsvpCount: interests.length,
+        myRsvp: interests.some(i => i.userId === userId),
+      };
+    });
+  }
+
+  async toggleEventRsvp(eventId: string, userId: string) {
+    const event = await this.prisma.communityEvent.findUnique({ where: { id: eventId } });
+    if (!event) throw new NotFoundException('Evento não encontrado.');
+    await this.requireMember(event.serverId, userId);
+
+    const existing = await this.prisma.communityEventInterest.findUnique({
+      where: { eventId_userId: { eventId, userId } }
+    });
+
+    if (existing) {
+      await this.prisma.communityEventInterest.delete({ where: { id: existing.id } });
+    } else {
+      await this.prisma.communityEventInterest.create({ data: { eventId, userId } });
+    }
+    return { ok: true };
+  }
+
+  async deletePastEvents(serverId: string, actorId: string) {
+    const m = await this.requireMemberFull(serverId, actorId);
+    if (m.role !== 'admin' && !m.communityRole?.canModerate) {
+      throw new ForbiddenException('Não tens permissão para limpar o histórico de eventos.');
+    }
+    const now = new Date();
+    const result = await this.prisma.communityEvent.deleteMany({
+      where: {
+        serverId,
+        startDate: { lt: now }
+      }
+    });
+    await this.logAudit(serverId, actorId, 'events.clear_past', null, { deletedCount: result.count });
+    return { deletedCount: result.count };
+  }
+
+  async deleteServer(serverId: string, actorId: string) {
+    const server = await this.prisma.server.findUnique({ where: { id: serverId } });
+    if (!server) throw new NotFoundException('Servidor não encontrado.');
+    if (server.ownerId !== actorId) throw new ForbiddenException('Apenas o dono pode eliminar o servidor.');
+    
+    await this.prisma.server.delete({ where: { id: serverId } });
+    return { ok: true };
+  }
+
+  async deleteCategory(serverId: string, categoryId: string, actorId: string) {
+    const m = await this.requireMemberFull(serverId, actorId);
+    if (!this.isAdminLegacy(m) && !this.canManageChannelsPerm(m)) {
+      throw new ForbiddenException('Não tens permissão para eliminar categorias.');
+    }
+    await this.prisma.channelCategory.delete({ where: { id: categoryId } });
+    return { ok: true };
+  }
+
+  async deleteChannel(channelId: string, actorId: string) {
+    const ch = await this.prisma.channel.findUnique({ where: { id: channelId } });
+    if (!ch) throw new NotFoundException('Canal não encontrado.');
+    const m = await this.requireMemberFull(ch.serverId, actorId);
+    if (!this.isAdminLegacy(m) && !this.canManageChannelsPerm(m)) {
+      throw new ForbiddenException('Não tens permissão para eliminar canais.');
+    }
+    await this.prisma.channel.delete({ where: { id: channelId } });
+    return { ok: true };
+  }
+
+  async updateChannel(channelId: string, actorId: string, dto: { name?: string; topic?: string }) {
+    const ch = await this.prisma.channel.findUnique({ where: { id: channelId } });
+    if (!ch) throw new NotFoundException('Canal não encontrado.');
+    const m = await this.requireMemberFull(ch.serverId, actorId);
+    if (!this.isAdminLegacy(m) && !this.canManageChannelsPerm(m)) {
+      throw new ForbiddenException('Não tens permissão para editar canais.');
+    }
+    return this.prisma.channel.update({
+      where: { id: channelId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.topic !== undefined && { topic: dto.topic }),
+      },
+    });
   }
 }

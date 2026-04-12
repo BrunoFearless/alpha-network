@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { Avatar } from '@/components/ui';
+import { DisplayName } from '@/components/ui/DisplayName';
 
 interface NavbarProps {
   user?: { 
@@ -8,7 +9,10 @@ interface NavbarProps {
     profile?: { 
       username: string; 
       displayName?: string | null; 
-      avatarUrl?: string | null; 
+      avatarUrl?: string | null;
+      nameFont?: string | null;
+      nameEffect?: string | null;
+      nameColor?: string | null;
     } | null 
   } | null;
   onLogout?: () => void;
@@ -16,7 +20,7 @@ interface NavbarProps {
 
 export function Navbar({ user, onLogout }: NavbarProps) {
   return (
-    <nav className="h-14 bg-alpha-surface border-b border-alpha-border flex items-center px-6 gap-4 sticky top-0 z-40">
+    <nav className="h-14 bg-black flex items-center px-6 gap-4 sticky top-0 z-40">
       {/* Logo */}
       <Link href="/main" className="font-display text-gold text-lg tracking-widest hover:text-gold-light transition-colors">
         ALPHA
@@ -28,9 +32,11 @@ export function Navbar({ user, onLogout }: NavbarProps) {
       {/* Utilizador */}
       {user?.profile && (
         <div className="flex items-center gap-3">
-          <span className="text-sm text-text-secondary hidden sm:block">
-            {user.profile.displayName || user.profile.username}
-          </span>
+          <DisplayName 
+            profile={user.profile} 
+            fallbackName={user.profile.username} 
+            className="text-sm hidden sm:block" 
+          />
           <Avatar
             src={user.profile.avatarUrl}
             name={user.profile.displayName || user.profile.username}

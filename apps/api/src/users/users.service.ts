@@ -1,6 +1,9 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { UpdateUserDto } from "./dto/update-user.dto";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { randomUUID } from 'crypto';
+import { mkdir, writeFile, readdir, unlink } from 'fs/promises';
+import { join, extname } from 'path';
 
 interface CreateUserData {
   email: string;
@@ -54,7 +57,7 @@ export class UsersService {
       data: {
         email: data.email,
         passwordHash: data.passwordHash,
-        provider: data.provider || "email",
+        provider: data.provider || 'email',
         profile: {
           create: {
             username: data.username,
@@ -73,17 +76,66 @@ export class UsersService {
       data: { activeModes: modes },
     });
   }
-  async updateProfile(userId: string, data: UpdateUserDto) {
+
+  async updateProfile(userId: string, dto: UpdateProfileDto | Record<string, unknown>) {
+    const profile = await this.prisma.profile.findUnique({ where: { userId } });
+    if (!profile) throw new NotFoundException('Perfil não encontrado.');
+
+    const data: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(dto)) {
+      if (value !== undefined) data[key] = value;
+    }
+
     return this.prisma.profile.update({
       where: { userId },
       data,
     });
   }
 
-  async softDelete(userId: string) {
+  async saveUserUpload(
+    userId: string,
+    type: 'avatar' | 'banner',
+    file: Express.Multer.File,
+  ): Promise<string> {
+    const dir = join(process.cwd(), 'uploads', 'users', userId, type);
+    await mkdir(dir, { recursive: true });
+
+    // Apagar ficheiros antigos do mesmo tipo
+    try {
+      const existing = await readdir(dir);
+      await Promise.all(
+        existing.map(f => unlink(join(dir, f)).catch(() => {})),
+      );
+    } catch { /* pasta vazia */ }
+
+    const ext = extname(file.originalname) || this.mimeToExt(file.mimetype);
+    const filename = `${type}-${Date.now()}${ext}`;
+    await writeFile(join(dir, filename), file.buffer);
+
+    const origin =
+      process.env.API_PUBLIC_ORIGIN ??
+      `http://localhost:${process.env.API_PORT ?? 3001}`;
+
+    return `${origin.replace(/\/$/, '')}/uploads/users/${userId}/${type}/${filename}`;
+  }
+
+  async softDeleteUser(userId: string) {
     return this.prisma.user.update({
       where: { id: userId },
       data: { deletedAt: new Date() },
-    })
+    });
+  }
+
+  private mimeToExt(mime: string): string {
+    const map: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp',
+      'video/mp4': '.mp4',
+      'video/webm': '.webm',
+      'video/quicktime': '.mov',
+    };
+    return map[mime] ?? '';
   }
 }
