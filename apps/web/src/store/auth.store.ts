@@ -4,11 +4,16 @@ interface UserProfile {
   username: string;
   displayName?: string | null;
   avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  bannerColor?: string | null;
+  bio?: string | null;
+  status?: string | null;
+  tags?: string | null;
   nameFont?: string | null;
   nameEffect?: string | null;
   nameColor?: string | null;
+  auroraTheme?: string | null;
   activeModes: string[];
-  bio?: string | null;
 }
 
 interface AuthUser {
@@ -39,25 +44,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isAuthenticated: false,
   isLoading:       false,
 
-  // NOTA: api.ts usa useAuthStore.getState().accessToken — funciona porque
-  // o Zustand guarda o estado em memória e getState() devolve o valor actual.
   setUser: (user, accessToken) => {
     set({ user, accessToken, isAuthenticated: true });
   },
 
-  updateUserProfile: (profileUpdates) => {
-    set(state => {
-      if (!state.user || !state.user.profile) return state;
-      return {
-        user: {
-          ...state.user,
-          profile: {
-            ...state.user.profile,
-            ...profileUpdates,
-          },
-        },
-      };
-    });
+  updateUserProfile: (profile) => {
+    set(state => ({
+      user: state.user
+        ? {
+            ...state.user,
+            profile: state.user.profile
+              ? { ...state.user.profile, ...profile }
+              : state.user.profile,
+          }
+        : state.user,
+    }));
   },
 
   login: async (email, password) => {
@@ -70,9 +71,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message ?? 'Erro ao fazer login.');
-      }
+      if (!res.ok) throw new Error(data?.error?.message ?? 'Erro ao fazer login.');
       set({
         user: data.data.user,
         accessToken: data.data.accessToken,
@@ -95,9 +94,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         body: JSON.stringify({ email, password, username }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error?.message ?? 'Erro ao criar conta.');
-      }
+      if (!res.ok) throw new Error(data?.error?.message ?? 'Erro ao criar conta.');
       set({
         user: data.data.user,
         accessToken: data.data.accessToken,
@@ -118,9 +115,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         credentials: 'include',
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       });
-    } catch {
-      // ignora erros de rede no logout
-    }
+    } catch { /* ignora erros de rede */ }
     set({ user: null, accessToken: null, isAuthenticated: false });
   },
 

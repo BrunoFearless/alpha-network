@@ -1567,6 +1567,65 @@ function ReactionsBar({ rx, onReact }: { rx: { emoji: string; count: number; me:
   );
 }
 
+// ─── CONFIRM DIALOG ──────────────────────────────────────────────────────────
+function ConfirmDialog({ config, onClose }: {
+  config: { title: string; message: string; onConfirm: () => void; isDanger?: boolean; confirmText?: string; verifyText?: string };
+  onClose: () => void;
+}) {
+  const [typed, setTyped] = useState('');
+  const isVerified = !config.verifyText || typed === config.verifyText;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'fadeIn 0.2s ease' }}>
+      <div style={{ background: '#111214', border: `1px solid ${config.isDanger ? 'rgba(237,66,69,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 16, width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.8)', animation: 'popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+        <h2 style={{ color: config.isDanger ? '#ED4245' : TEXT_BRIGHT, fontSize: 18, fontWeight: 800, margin: '0 0 12px' }}>{config.title}</h2>
+        <p style={{ color: TEXT_NORMAL, fontSize: 14, margin: '0 0 20px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{config.message}</p>
+
+        {config.verifyText && (
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.04em' }}>
+              Escreve o nome do servidor para confirmar
+            </p>
+            <input
+              autoFocus
+              type="text"
+              value={typed}
+              placeholder={config.verifyText}
+              onChange={e => setTyped(e.target.value)}
+              style={{ width: '100%', background: '#000', border: `1px solid ${typed && typed === config.verifyText ? ACCENT + '66' : BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', color: TEXT_BRIGHT, fontSize: 14, transition: 'border-color 0.2s' }}
+            />
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '10px 16px' }}>
+            Cancelar
+          </button>
+          <button
+            disabled={!isVerified}
+            onClick={() => { config.onConfirm(); onClose(); }}
+            style={{
+              background: config.isDanger ? '#ED4245' : ACCENT,
+              color: config.isDanger ? '#fff' : '#000',
+              border: 'none',
+              borderRadius: 10,
+              padding: '10px 24px',
+              fontSize: 13,
+              fontWeight: 800,
+              cursor: isVerified ? 'pointer' : 'not-allowed',
+              opacity: isVerified ? 1 : 0.4,
+              transition: 'opacity 0.2s'
+            }}>
+            {config.confirmText || 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── MESSAGE ACTIONS ─────────────────────────────────────────────────────────
 function MsgActions({ canDel, isOwn, isMod, isPinned, showEmojiPicker, onToggleEmojiPicker, onDelete, onEdit, onReply, onReact, onPin }: {
   canDel: boolean; isOwn: boolean; isMod: boolean; isPinned: boolean;
@@ -2337,6 +2396,8 @@ export default function ServerPage() {
         input:focus, textarea:focus, select:focus { outline: none !important; box-shadow: none !important; border-color: inherit !important; }
 
         .msg-row:hover { background: rgba(255,255,255,0.025); border-radius: 6px; }
+        .msg-row:hover .msg-actions { opacity: 1 !important; }
+        .msg-row { overflow: visible !important; }
         button { font-family: inherit; }
 
         @keyframes blink-green {
@@ -3068,54 +3129,10 @@ export default function ServerPage() {
       {confirmConfig && (() => {
         const config = confirmConfig;
         return (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'fadeIn 0.2s ease' }}>
-            <div style={{ background: '#111214', border: `1px solid ${config.isDanger ? 'rgba(237,66,69,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 16, width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.8)', animation: 'popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
-              <h2 style={{ color: config.isDanger ? '#ED4245' : TEXT_BRIGHT, fontSize: 18, fontWeight: 800, margin: '0 0 12px' }}>{config.title}</h2>
-              <p style={{ color: TEXT_NORMAL, fontSize: 14, margin: '0 0 20px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{config.message}</p>
-              
-              {config.verifyText && (
-                <div style={{ marginBottom: 20 }}>
-                  <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.04em' }}>Escreve o nome para confirmar</p>
-                  <input 
-                    autoFocus 
-                    type="text" 
-                    placeholder={config.verifyText}
-                    onChange={(e) => {
-                      const btn = document.getElementById('confirm-btn') as HTMLButtonElement;
-                      if (btn) btn.disabled = e.target.value !== config.verifyText;
-                    }}
-                    style={{ width: '100%', background: '#000', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', color: TEXT_BRIGHT, fontSize: 14 }}
-                  />
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                <button 
-                  onClick={() => setConfirmConfig(null)}
-                  style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '10px 16px' }}>
-                  Cancelar
-                </button>
-                <button 
-                  id="confirm-btn"
-                  disabled={!!config.verifyText}
-                  onClick={() => { config.onConfirm(); setConfirmConfig(null); }}
-                  style={{ 
-                    background: config.isDanger ? '#ED4245' : ACCENT, 
-                    color: config.isDanger ? '#fff' : '#000', 
-                    border: 'none', 
-                    borderRadius: 10, 
-                    padding: '10px 24px', 
-                    fontSize: 13, 
-                    fontWeight: 800, 
-                    cursor: 'pointer',
-                    opacity: config.verifyText ? 0.5 : 1,
-                    transition: 'opacity 0.2s'
-                  }}>
-                  {config.confirmText || 'Confirmar'}
-                </button>
-              </div>
-            </div>
-          </div>
+          <ConfirmDialog
+            config={config}
+            onClose={() => setConfirmConfig(null)}
+          />
         );
       })()}
 
