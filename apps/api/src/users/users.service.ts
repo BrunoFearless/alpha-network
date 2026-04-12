@@ -16,27 +16,40 @@ interface CreateUserData {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
       include: { profile: true },
     });
+
+    if (!user || user.deletedAt) return null
+
+    return user
   }
 
   async findById(id: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       include: { profile: true },
     });
+
+    if (!user || user.deletedAt) return null
+
+    return user
+
   }
 
   async findByUsername(username: string) {
-    return this.prisma.profile.findUnique({
+    const profile = await this.prisma.profile.findUnique({
       where: { username },
       include: { user: true },
     });
+
+    if (!profile || profile.user.deletedAt) return null
+
+    return profile
   }
 
   async createUser(data: CreateUserData) {

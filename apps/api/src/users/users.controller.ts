@@ -12,7 +12,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   // ── Perfil público ─────────────────────────────────────────────────
   @Get(':username')
@@ -23,6 +23,7 @@ export class UsersController {
     }
     const { user } = profile;
     const { passwordHash, deletedAt, emailVerified, ...safeUser } = user as any;
+    console.log(safeUser)
     return { success: true, data: { ...profile, user: safeUser } };
   }
 
