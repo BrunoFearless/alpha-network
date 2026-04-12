@@ -11,10 +11,10 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
 interface GoogleUserData {
-  googleId: string;
-  email: string;
+  googleId:    string;
+  email:       string;
   displayName: string;
-  avatarUrl: string | null;
+  avatarUrl:   string | null;
 }
 
 @Injectable()
@@ -24,18 +24,14 @@ export class AuthService {
     private readonly users: UsersService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
-  ) { }
+  ) {}
 
   // ── Registo ───────────────────────────────────────────────────────
   async register(dto: RegisterDto) {
     const existing = await this.users.findByEmail(dto.email);
     if (existing) throw new ConflictException('Já existe uma conta com este email.');
 
-    const existingUsername = await this.users.findByUsername(dto.username);
-    if (existingUsername) throw new ConflictException('Este username já foi está sendo usado');
-
-    const saltRounds = 12;
-    const passwordHash = await bcrypt.hash(dto.password, saltRounds);
+    const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.users.createUser({
       email: dto.email,
       passwordHash,
@@ -69,7 +65,7 @@ export class AuthService {
       if (googleUser.avatarUrl && user.profile && !user.profile.avatarUrl) {
         await this.prisma.profile.update({
           where: { userId: user.id },
-          data: { avatarUrl: googleUser.avatarUrl },
+          data:  { avatarUrl: googleUser.avatarUrl },
         });
         // Recarregar com avatar actualizado
         user = await this.users.findByEmail(googleUser.email);
@@ -86,11 +82,11 @@ export class AuthService {
       const username = await this.generateUniqueUsername(baseUsername);
 
       user = await this.users.createUser({
-        email: googleUser.email,
-        provider: 'google',
+        email:       googleUser.email,
+        provider:    'google',
         username,
         displayName: googleUser.displayName,
-        avatarUrl: googleUser.avatarUrl ?? undefined,
+        avatarUrl:   googleUser.avatarUrl ?? undefined,
         // passwordHash fica null — conta Google não tem password
       });
     }
