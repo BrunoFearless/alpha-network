@@ -2,46 +2,41 @@
 
 /**
  * ReactionsBar Component
- * 
- * Exibe uma barra de reactions (emojis) com contagem
- * Similar ao Discord/Slack
- * 
- * Props:
- * - reactions: Array de reações agregadas por emoji
- * - onReact: Callback quando usuário clica em um emoji
- * - onEmojiPickerOpen: Callback para abrir o picker (opcional)
+ *
+ * CORRIGIDO: o import antigo de ANIMATED_EMOJIS não existia em EmojiRenderer.tsx
+ * e causava erro de build. Agora usa SHORTCODE_TO_ANIMATED (que é o map correto).
  */
 
 import React from 'react';
-import { ANIMATED_EMOJIS } from '@/components/ui/EmojiRenderer';
+import { SHORTCODE_TO_ANIMATED, UNICODE_TO_ANIMATED, getAnimatedUrl } from '@/components/ui/EmojiRenderer';
 
 export interface ReactionItem {
   emoji: string;
   count: number;
-  reacted: boolean; // true se o usuário atual reagiu
+  reacted: boolean;
 }
 
 interface ReactionsBarProps {
   reactions: ReactionItem[];
   onReact: (emoji: string) => void;
   onEmojiPickerOpen?: () => void;
-  maxVisible?: number; // Limite de reações visíveis antes de expandir
+  maxVisible?: number;
 }
 
-const UNIGRAM_GREEN = '#A5E600';
+const ACCENT_GREEN = '#A5E600';
 
-export function ReactionsBar({ 
-  reactions, 
-  onReact, 
+export function ReactionsBar({
+  reactions,
+  onReact,
   onEmojiPickerOpen,
-  maxVisible = 5
+  maxVisible = 5,
 }: ReactionsBarProps) {
   const [showMore, setShowMore] = React.useState(false);
   const visibleReactions = showMore ? reactions : reactions.slice(0, maxVisible);
   const hasMore = reactions.length > maxVisible;
 
   return (
-    <div 
+    <div
       style={{
         display: 'flex',
         gap: 6,
@@ -50,7 +45,6 @@ export function ReactionsBar({
         alignItems: 'center',
       }}
     >
-      {/* Reactions existentes */}
       {visibleReactions.map((r) => (
         <ReactionButton
           key={r.emoji}
@@ -61,7 +55,6 @@ export function ReactionsBar({
         />
       ))}
 
-      {/* Mostrar mais reactions */}
       {hasMore && !showMore && (
         <button
           type="button"
@@ -90,7 +83,6 @@ export function ReactionsBar({
         </button>
       )}
 
-      {/* Botão para adicionar reação */}
       {onEmojiPickerOpen && (
         <button
           type="button"
@@ -104,7 +96,6 @@ export function ReactionsBar({
             fontSize: 12,
             color: '#B5BAC1',
             cursor: 'pointer',
-            fontWeight: 500,
             transition: 'all 0.15s ease',
             display: 'flex',
             alignItems: 'center',
@@ -114,8 +105,8 @@ export function ReactionsBar({
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-            e.currentTarget.style.borderColor = UNIGRAM_GREEN;
-            e.currentTarget.style.color = UNIGRAM_GREEN;
+            e.currentTarget.style.borderColor = ACCENT_GREEN;
+            e.currentTarget.style.color = ACCENT_GREEN;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
@@ -130,10 +121,6 @@ export function ReactionsBar({
   );
 }
 
-/**
- * ReactionButton Component
- * Botão individual de reação
- */
 interface ReactionButtonProps {
   emoji: string;
   count: number;
@@ -142,15 +129,19 @@ interface ReactionButtonProps {
 }
 
 function ReactionButton({ emoji, count, reacted, onClick }: ReactionButtonProps) {
+  // CORRIGIDO: usa getAnimatedUrl() que lida tanto com shortcodes (:cat_jam:)
+  // quanto com Unicode — sem depender do export inexistente ANIMATED_EMOJIS
+  const animatedUrl = getAnimatedUrl(emoji);
+
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        background: reacted 
-          ? 'rgba(165, 230, 0, 0.15)' 
+        background: reacted
+          ? 'rgba(165, 230, 0, 0.15)'
           : 'rgba(255, 255, 255, 0.06)',
-        border: `1.5px solid ${reacted ? UNIGRAM_GREEN : 'rgba(255, 255, 255, 0.12)'}`,
+        border: `1.5px solid ${reacted ? ACCENT_GREEN : 'rgba(255, 255, 255, 0.12)'}`,
         borderRadius: 12,
         padding: '4px 10px',
         fontSize: 12,
@@ -163,22 +154,35 @@ function ReactionButton({ emoji, count, reacted, onClick }: ReactionButtonProps)
         transition: 'all 0.15s ease',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = reacted 
-          ? 'rgba(165, 230, 0, 0.25)' 
+        e.currentTarget.style.background = reacted
+          ? 'rgba(165, 230, 0, 0.25)'
           : 'rgba(255, 255, 255, 0.12)';
         e.currentTarget.style.transform = 'scale(1.08)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = reacted 
-          ? 'rgba(165, 230, 0, 0.15)' 
+        e.currentTarget.style.background = reacted
+          ? 'rgba(165, 230, 0, 0.15)'
           : 'rgba(255, 255, 255, 0.06)';
         e.currentTarget.style.transform = 'scale(1)';
       }}
     >
-      <span style={{ lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {ANIMATED_EMOJIS[emoji] ? (
-          <img src={ANIMATED_EMOJIS[emoji].url} alt={emoji} style={{ width: 16, height: 16, objectFit: 'contain' }} />
-        ) : emoji}
+      <span
+        style={{
+          lineHeight: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {animatedUrl ? (
+          <img
+            src={animatedUrl}
+            alt={emoji}
+            style={{ width: 16, height: 16, objectFit: 'contain' }}
+          />
+        ) : (
+          emoji
+        )}
       </span>
       <span style={{ fontSize: 11, opacity: 0.9 }}>{count}</span>
     </button>

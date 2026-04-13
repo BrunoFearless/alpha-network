@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, useCallback, useMemo, Fragment } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, uploadUserFile } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { useCommunitySocket } from '@/lib/socket';
 import { Avatar } from '@/components/ui/Avatar';
@@ -68,8 +68,8 @@ function fmtDate(d: string) {
 }
 function fmtEventDate(d: string) { return new Date(d).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
 
-function getLuminance(hex: string) {
-  if (!hex || !hex.startsWith('#')) return 0;
+function getLuminance(hex: string): number {
+  if (!hex?.startsWith('#')) return 0;
   let r = 0, g = 0, b = 0;
   if (hex.length === 4) {
     r = parseInt(hex[1] + hex[1], 16);
@@ -103,9 +103,11 @@ function isSameColor(c1?: string | null, c2?: string | null) {
   if (!c1 || !c2) return c1 === c2;
   return c1.toLowerCase() === c2.toLowerCase();
 }
-function isVideoUrl(url?: string | null) { 
+function isVideoUrl(url?: string | null) {
   if (!url) return false;
-  return url.match(/\.(mp4|webm|mov|ogg|m4v|3gp|flv|quicktime)(?:\?|#|$)/i) || url.startsWith('data:video/') || url.startsWith('blob:') || url.toLowerCase().includes('video');
+  return url.match(/\.(mp4|webm|mov|ogg|m4v|3gp|flv|quicktime)(?:\?|#|$)/i)
+    || url.startsWith('data:video/')
+    || url.startsWith('blob:');
 }
 function memberAccentColor(m: Member, ownerId: string): string {
   if (m.userId === ownerId) return '#F0B132';
@@ -126,7 +128,7 @@ async function uploadFile(file: File, serverId: string): Promise<string> {
 function readAsDataURL(file: File): Promise<string> {
   return new Promise((res, rej) => {
     const r = new FileReader();
-    r.onload = () => res(r.result as string);
+    r.onload  = () => res(r.result as string);
     r.onerror = rej;
     r.readAsDataURL(file);
   });
@@ -320,7 +322,28 @@ function ImageColorPicker({
     </div>
   );
 }
-
+// ─── tipos ────────────────────────────────────────────────────────────────────
+ 
+export interface EditProfileModalProps {
+  user: {
+    profile?: {
+      displayName?:  string | null;
+      username:      string;
+      avatarUrl?:    string | null;
+      bio?:          string | null;
+      bannerUrl?:    string | null;
+      bannerColor?:  string | null;
+      auroraTheme?:  string | null;
+      nameFont?:     string | null;
+      nameEffect?:   string | null;
+      nameColor?:    string | null;
+      status?:       string | null;
+      tags?:         string | null;
+    } | null;
+  };
+  onClose: () => void;
+  onSave:  () => void;
+}
 // ─── EDIT PROFILE MODAL ──────────────────────────────────────────────────────
 function EditProfileModal({ user, serverId, onClose, onSave }: {
   user: { profile?: { displayName?: string | null; username: string; avatarUrl?: string | null; bio?: string | null; bannerUrl?: string | null; bannerColor?: string | null; auroraTheme?: string | null; nameFont?: string | null; nameEffect?: string | null; nameColor?: string | null; status?: string | null; tags?: string | null; } | null };
