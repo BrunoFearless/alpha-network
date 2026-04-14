@@ -1,0 +1,29 @@
+### Variáveis
+@baseUrl = http://localhost:3001/api/v1
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1Y2ZiMzhmYy01MmJmLTQ4MmItOTAyOC02MzY0YzEzMjdjMjMiLCJlbWFpbCI6ImRlbW9AdXNlci5jb20iLCJpYXQiOjE3NzU4NTA5NzksImV4cCI6MTc3NTg1MTg3OX0.SX9wiQDweZwxzC7T0AdfOXdSyAMC-5KKZmGKQh2w_oI
+
+### 1. Buscar perfil public
+GET {{baseUrl}}/users/Adolfo
+
+### 2. Attivar/desativar modos
+PATCH {{baseUrl}}/users/me/modes
+Authorization: BEARER {{token}}
+Content-Type: application/json
+
+{
+  "modes": ["lazer", "developer"]
+}
+
+### 3. Editar Perfil
+PATCH {{baseUrl}}/users/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "displayName": "Adolfo Teste"
+}
+
+
+### 4. Apagar Conta (Soft Delete)
+DELETE {{baseUrl}}/users/me
+Authorization: Bearer {{token}}

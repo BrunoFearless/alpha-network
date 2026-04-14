@@ -1,10 +1,9 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { BadRequestException } from "@nestjs/common";
-import { randomUUID } from "crypto";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { MediaService } from "../common/services/media.service";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { randomUUID } from 'crypto';
+import { mkdir, writeFile, readdir, unlink } from 'fs/promises';
+import { join, extname } from 'path';
 
 interface CreateUserData {
   email: string;
@@ -17,30 +16,40 @@ interface CreateUserData {
 
 @Injectable()
 export class UsersService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly mediaService: MediaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
       include: { profile: true },
     });
+
+    if (!user || user.deletedAt) return null
+
+    return user
   }
 
   async findById(id: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       include: { profile: true },
     });
+
+    if (!user || user.deletedAt) return null
+
+    return user
+
   }
 
   async findByUsername(username: string) {
-    return this.prisma.profile.findUnique({
+    const profile = await this.prisma.profile.findUnique({
       where: { username },
       include: { user: true },
     });
+
+    if (!profile || profile.user.deletedAt) return null
+
+    return profile
   }
 
   async createUser(data: CreateUserData) {
@@ -48,7 +57,7 @@ export class UsersService {
       data: {
         email: data.email,
         passwordHash: data.passwordHash,
-        provider: data.provider || "email",
+        provider: data.provider || 'email',
         profile: {
           create: {
             username: data.username,
@@ -88,20 +97,51 @@ export class UsersService {
     });
   }
 
-  async saveProfileAvatar(userId: string, file: Express.Multer.File) {
-    const url = await this.mediaService.saveValidatedMedia(file, 'profiles', {
-      maxFileSizeMb: 5,
-      allowedMimes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
-      maxVideoDurationSecs: 5,
+  async saveUserUpload(
+    userId: string,
+    type: 'avatar' | 'banner',
+    file: Express.Multer.File,
+  ): Promise<string> {
+    const dir = join(process.cwd(), 'uploads', 'users', userId, type);
+    await mkdir(dir, { recursive: true });
+
+    // Apagar ficheiros antigos do mesmo tipo
+    try {
+      const existing = await readdir(dir);
+      await Promise.all(
+        existing.map(f => unlink(join(dir, f)).catch(() => {})),
+      );
+    } catch { /* pasta vazia */ }
+
+    const ext = extname(file.originalname) || this.mimeToExt(file.mimetype);
+    const filename = `${type}-${Date.now()}${ext}`;
+    await writeFile(join(dir, filename), file.buffer);
+
+    const origin =
+      process.env.API_PUBLIC_ORIGIN ??
+      `http://localhost:${process.env.API_PORT ?? 3001}`;
+
+    return `${origin.replace(/\/$/, '')}/uploads/users/${userId}/${type}/${filename}`;
+  }
+
+  async softDeleteUser(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { deletedAt: new Date() },
     });
-    
-    // Atualizar avatar na base de dados
-    const updated = await this.prisma.profile.update({
-      where: { userId },
-      data: { avatarUrl: url },
-    });
-    
-    return { url, profile: updated };
+  }
+
+  private mimeToExt(mime: string): string {
+    const map: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp',
+      'video/mp4': '.mp4',
+      'video/webm': '.webm',
+      'video/quicktime': '.mov',
+    };
+    return map[mime] ?? '';
   }
 
   async saveProfileBanner(userId: string, file: Express.Multer.File) {

@@ -53,11 +53,6 @@ model Profile {
   avatarUrl   String?
   bannerUrl   String?
   bannerColor String?
-  auroraTheme String?
-  nameFont    String?
-  nameEffect  String?
-  nameColor   String?
-  activeModes String[] @default([])           // ["lazer","developer",...]
   bio         String?
   status      String?
   tags        String?

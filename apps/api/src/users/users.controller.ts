@@ -1,7 +1,7 @@
 import {
   Controller, Get, Patch, Delete, Post,
   Body, Param, UseGuards, HttpCode, HttpStatus,
-  UseInterceptors, UploadedFile,
+  UploadedFile, UseInterceptors, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -12,7 +12,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get('id/:id')
   async getProfileById(@Param('id') id: string) {
@@ -35,19 +35,7 @@ export class UsersController {
     return { success: true, data: { ...profile, id: profile.userId, user: safeUser } };
   }
 
-  // ── Activar/desactivar modos ───────────────────────────────────────
-  // Usado pelo main/page.tsx — PATCH /api/v1/users/me/modes
-  @Patch('me/modes')
-  @UseGuards(JwtAuthGuard)
-  async updateModes(
-    @CurrentUser() user: { id: string },
-    @Body() dto: UpdateModesDto,
-  ) {
-    const updated = await this.usersService.updateActiveModes(user.id, dto.modes);
-    return { success: true, data: updated };
-  }
-
-  // ── Editar perfil ──────────────────────────────────────────────────
+  // ── Editar perfil (campos de texto) ────────────────────────────────
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   async updateProfile(
@@ -60,12 +48,67 @@ export class UsersController {
 
   @Post('me/avatar')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 8 * 1024 * 1024 },
+    fileFilter: (_, file, cb) => {
+      const allowed = [
+        'image/jpeg', 'image/png', 'image/gif',
+        'image/webp', 'video/mp4', 'video/webm',
+      ];
+      if (!allowed.includes(file.mimetype)) {
+        return cb(
+          new BadRequestException('Formato não suportado. Usa JPG, PNG, GIF, WebP, MP4 ou WebM.'),
+          false,
+        );
+      }
+      cb(null, true);
+    },
+  }))
   async uploadAvatar(
     @CurrentUser() user: { id: string },
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return { success: true, data: await this.usersService.saveProfileAvatar(user.id, file) };
+    if (!file) throw new BadRequestException('Ficheiro em falta.');
+    const url = await this.usersService.saveUserUpload(user.id, 'avatar', file);
+    const updated = await this.usersService.updateProfile(user.id, { avatarUrl: url });
+    return { success: true, data: updated };
+  }
+
+  // ── Upload de banner ───────────────────────────────────────────────
+  @Post('me/banner')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 15 * 1024 * 1024 },
+    fileFilter: (_, file, cb) => {
+      const allowed = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/webm', 'video/quicktime',
+      ];
+      if (!allowed.includes(file.mimetype)) {
+        return cb(new BadRequestException('Formato não suportado.'), false);
+      }
+      cb(null, true);
+    },
+  }))
+  async uploadBanner(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Ficheiro em falta.');
+    const url = await this.usersService.saveUserUpload(user.id, 'banner', file);
+    const updated = await this.usersService.updateProfile(user.id, { bannerUrl: url });
+    return { success: true, data: updated };
+  }
+
+  // ── Activar/desactivar modos ───────────────────────────────────────
+  @Patch('me/modes')
+  @UseGuards(JwtAuthGuard)
+  async updateModes(
+    @CurrentUser() user: { id: string },
+    @Body() dto: UpdateModesDto,
+  ) {
+    const updated = await this.usersService.updateActiveModes(user.id, dto.modes);
+    return { success: true, data: updated };
   }
 
   // ── Upload de banner de perfil ────────────────────────────────────────
@@ -80,12 +123,10 @@ export class UsersController {
   }
 
   // ── Apagar conta ───────────────────────────────────────────────────
-  // TODO (Adolfo v2): soft delete com deletedAt
   @Delete('me')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteAccount(@CurrentUser() user: { id: string }) {
-    // Placeholder — Adolfo implementa em v2
-    return;
+    await this.usersService.softDeleteUser(user.id);
   }
 }
