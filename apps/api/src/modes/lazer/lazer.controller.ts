@@ -46,14 +46,36 @@ export class LazerController {
     return this.lazerService.findOnePost(id);
   }
 
+  @Post("/posts/reactions")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  toggleReaction(@Body() toggleRequest: ToggleRequestDTO, @Request() req: any) {
+    return this.lazerService.toggleReaction(toggleRequest, req.user.id);
+  }
+
+  @Get("/users/:userId/posts")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  getUserPosts(@Param("userId") userId: string) {
+    return this.lazerService.getUserPosts(userId);
+  }
+
   @Patch("posts/:id")
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   updatePost(
     @Param("id") id: string,
     @Body() updatePostLazerDto: UpdatePostLazerDto,
+    @Request() req: any,
   ) {
     return this.lazerService.updatePost(id, updatePostLazerDto);
+  }
+
+  @Patch("posts/:id/pin")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  pinPost(@Param("id") id: string, @Request() req: any) {
+    return this.lazerService.pinPost(id, req.user.id);
   }
 
   @Post("posts/:id")
@@ -63,12 +85,6 @@ export class LazerController {
     return this.lazerService.softDeletePost(id, req.user.id);
   }
 
-  @Post("/posts/reactions")
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.OK)
-  toggleReaction(@Body() toggleRequest: ToggleRequestDTO, @Request() req: any) {
-    return this.lazerService.toggleReaction(toggleRequest, req.user.id);
-  }
 
   @Post("/posts/:id/comments")
   @UseGuards(JwtAuthGuard)

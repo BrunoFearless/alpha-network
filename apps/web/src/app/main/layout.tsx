@@ -38,11 +38,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }
 
   const isCommunityServer = pathname?.startsWith('/main/community/') && pathname.split('/').length >= 4;
+  const isLazerMode = pathname?.startsWith('/main/lazer');
+  const hideNavbar = isCommunityServer || isLazerMode;
   const activeModes = user?.profile?.activeModes ?? [];
 
   return (
     <div className="min-h-screen bg-alpha-bg flex flex-col">
-      {!isCommunityServer && <Navbar user={user} onLogout={logout} />}
+      {!hideNavbar && <Navbar user={user} onLogout={logout} />}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Desktop: sidebar oculto até hover no canto esquerdo; mobile: sempre visível */}
         <div className="group relative flex-shrink-0 w-56 max-md:w-56 md:w-0 md:self-stretch min-h-0">

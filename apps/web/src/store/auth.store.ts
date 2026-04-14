@@ -14,6 +14,7 @@ interface UserProfile {
   nameColor?: string | null;
   auroraTheme?: string | null;
   activeModes: string[];
+  lazerData?: any;
 }
 
 interface AuthUser {

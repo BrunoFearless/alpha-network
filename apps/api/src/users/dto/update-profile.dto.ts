@@ -56,4 +56,7 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(256)
   tags?: string;
+
+  @IsOptional()
+  lazerData?: any;
 }

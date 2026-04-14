@@ -78,7 +78,7 @@ export function EmojiRenderer({ content, emojiSize = 22, className, style }: Emo
   const parts = content.split(regex);
 
   return (
-    <span className={className} style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px', verticalAlign: 'middle', ...style }}>
+    <span className={className} style={{ display: 'inline', verticalAlign: 'middle', whiteSpace: 'pre-wrap', ...style }}>
       {parts.map((part, index) => {
         // Tentar shortcode
         const shortcodeEmoji = SHORTCODE_TO_ANIMATED[part];
@@ -89,7 +89,7 @@ export function EmojiRenderer({ content, emojiSize = 22, className, style }: Emo
               src={shortcodeEmoji.url} 
               alt={shortcodeEmoji.label}
               title={part}
-              style={{ width: emojiSize, height: emojiSize, objectFit: 'contain', verticalAlign: 'middle' }}
+              style={{ width: emojiSize, height: emojiSize, objectFit: 'contain', verticalAlign: 'middle', display: 'inline-block', margin: '0 0.05em' }}
             />
           );
         }
@@ -103,12 +103,12 @@ export function EmojiRenderer({ content, emojiSize = 22, className, style }: Emo
               src={`https://fonts.gstatic.com/s/e/notoemoji/latest/${unicodePoint}/512.gif`} 
               alt={part}
               title={part}
-              style={{ width: emojiSize, height: emojiSize, objectFit: 'contain', verticalAlign: 'middle' }}
+              style={{ width: emojiSize, height: emojiSize, objectFit: 'contain', verticalAlign: 'middle', display: 'inline-block', margin: '0 0.05em' }}
             />
           );
         }
 
-        return <span key={index}>{part}</span>;
+        return <span key={index} style={{ verticalAlign: 'middle' }}>{part}</span>;
       })}
     </span>
   );

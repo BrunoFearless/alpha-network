@@ -1942,6 +1942,7 @@ export default function ServerPage() {
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [typingIds, setTypingIds] = useState<Record<string, boolean>>({});
+  const [verifyInput, setVerifyInput] = useState('');
   const [confirmConfig, setConfirmConfig] = useState<{ 
     title: string; 
     message: string; 
@@ -2360,6 +2361,7 @@ export default function ServerPage() {
         input:focus, textarea:focus, select:focus { outline: none !important; box-shadow: none !important; border-color: inherit !important; }
 
         .msg-row:hover { background: rgba(255,255,255,0.025); border-radius: 6px; }
+        .msg-row:hover .msg-actions { opacity: 1 !important; pointer-events: auto !important; }
         button { font-family: inherit; }
 
         @keyframes blink-green {
@@ -2667,7 +2669,7 @@ export default function ServerPage() {
                   <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: '50%', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: isBot ? '1px solid rgba(96,165,250,0.4)' : 'none', transition: 'opacity 0.1s' }}
                     onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>
                     {isBot ? <span style={{ fontSize: 14, fontWeight: 800, color: '#93C5FD' }}>B</span> :
-                      av ? <img src={av} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> :
+                      av ? <Avatar src={av} name={msg.authorName} className="w-full h-full" style={{ width: '100%', height: '100%' }} /> :
                         <span style={{ color: nameClr, fontWeight: 700, fontSize: 16 }}>{msg.authorName[0]?.toUpperCase()}</span>}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -3103,10 +3105,8 @@ export default function ServerPage() {
                     autoFocus 
                     type="text" 
                     placeholder={config.verifyText}
-                    onChange={(e) => {
-                      const btn = document.getElementById('confirm-btn') as HTMLButtonElement;
-                      if (btn) btn.disabled = e.target.value !== config.verifyText;
-                    }}
+                    value={verifyInput}
+                    onChange={(e) => setVerifyInput(e.target.value)}
                     style={{ width: '100%', background: '#000', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', color: TEXT_BRIGHT, fontSize: 14 }}
                   />
                 </div>
@@ -3114,14 +3114,13 @@ export default function ServerPage() {
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                 <button 
-                  onClick={() => setConfirmConfig(null)}
+                  onClick={() => { setConfirmConfig(null); setVerifyInput(''); }}
                   style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '10px 16px' }}>
                   Cancelar
                 </button>
                 <button 
-                  id="confirm-btn"
-                  disabled={!!config.verifyText}
-                  onClick={() => { config.onConfirm(); setConfirmConfig(null); }}
+                  disabled={!!config.verifyText && verifyInput !== config.verifyText}
+                  onClick={() => { config.onConfirm(); setConfirmConfig(null); setVerifyInput(''); }}
                   style={{ 
                     background: config.isDanger ? '#ED4245' : ACCENT, 
                     color: config.isDanger ? '#fff' : '#000', 

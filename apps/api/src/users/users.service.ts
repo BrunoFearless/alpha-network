@@ -68,7 +68,7 @@ export class UsersService {
     });
   }
 
-  async updateProfile(userId: string, data: { displayName?: string; bio?: string; avatarUrl?: string; bannerUrl?: string; bannerColor?: string; auroraTheme?: string; nameFont?: string; nameEffect?: string; nameColor?: string; status?: string; tags?: string }) {
+  async updateProfile(userId: string, data: { displayName?: string; bio?: string; avatarUrl?: string; bannerUrl?: string; bannerColor?: string; auroraTheme?: string; nameFont?: string; nameEffect?: string; nameColor?: string; status?: string; tags?: string; lazerData?: any }) {
     return this.prisma.profile.update({
       where: { userId },
       data: {
@@ -83,6 +83,7 @@ export class UsersService {
         ...(data.nameColor !== undefined && { nameColor: data.nameColor }),
         ...(data.status !== undefined && { status: data.status }),
         ...(data.tags !== undefined && { tags: data.tags }),
+        ...(data.lazerData !== undefined && { lazerData: data.lazerData }),
       },
     });
   }
@@ -98,6 +99,22 @@ export class UsersService {
     const updated = await this.prisma.profile.update({
       where: { userId },
       data: { avatarUrl: url },
+    });
+    
+    return { url, profile: updated };
+  }
+
+  async saveProfileBanner(userId: string, file: Express.Multer.File) {
+    const url = await this.mediaService.saveValidatedMedia(file, 'banners', {
+      maxFileSizeMb: 10, // banners can be slightly larger
+      allowedMimes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
+      maxVideoDurationSecs: 10,
+    });
+    
+    // Atualizar banner na base de dados
+    const updated = await this.prisma.profile.update({
+      where: { userId },
+      data: { bannerUrl: url },
     });
     
     return { url, profile: updated };

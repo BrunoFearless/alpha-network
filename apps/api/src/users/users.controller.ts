@@ -14,8 +14,16 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // ── Perfil público ─────────────────────────────────────────────────
-  // TODO (Adolfo v2): implementar getProfile completo com followersCount
+  @Get('id/:id')
+  async getProfileById(@Param('id') id: string) {
+    const user = await this.usersService.findById(id);
+    if (!user || !user.profile) {
+      return { success: false, error: { message: 'Utilizador não encontrado.' } };
+    }
+    const { passwordHash, deletedAt, emailVerified, ...safeUser } = user as any;
+    return { success: true, data: { ...user.profile, id: user.id, user: safeUser } };
+  }
+
   @Get(':username')
   async getProfile(@Param('username') username: string) {
     const profile = await this.usersService.findByUsername(username);
@@ -24,7 +32,7 @@ export class UsersController {
     }
     const { user } = profile;
     const { passwordHash, deletedAt, emailVerified, ...safeUser } = user as any;
-    return { success: true, data: { ...profile, user: safeUser } };
+    return { success: true, data: { ...profile, id: profile.userId, user: safeUser } };
   }
 
   // ── Activar/desactivar modos ───────────────────────────────────────
@@ -50,7 +58,6 @@ export class UsersController {
     return { success: true, data: updated };
   }
 
-  // ── Upload de foto de perfil ────────────────────────────────────────
   @Post('me/avatar')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
@@ -59,6 +66,17 @@ export class UsersController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     return { success: true, data: await this.usersService.saveProfileAvatar(user.id, file) };
+  }
+
+  // ── Upload de banner de perfil ────────────────────────────────────────
+  @Post('me/banner')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async uploadBanner(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return { success: true, data: await this.usersService.saveProfileBanner(user.id, file) };
   }
 
   // ── Apagar conta ───────────────────────────────────────────────────

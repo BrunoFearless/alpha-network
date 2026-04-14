@@ -20,6 +20,14 @@ export class LazerService {
         authorId,
         content: createPostLazerDto.content,
         imageUrl: createPostLazerDto.imageUrl,
+        tag: createPostLazerDto.tag,
+        isSparkle: createPostLazerDto.isSparkle,
+        titleFont: createPostLazerDto.titleFont,
+        titleColor: createPostLazerDto.titleColor,
+      },
+      include: {
+        author: { include: { profile: true } },
+        _count: { select: { reactions: true, comments: true } },
       },
     });
   }
@@ -27,16 +35,12 @@ export class LazerService {
   async getFeed(cursor?: string, limit = 20) {
     const posts = await this.prisma.lazerPost.findMany({
       where: { deletedAt: null },
-
       orderBy: { createdAt: "desc" },
-
       take: limit + 1,
-
       cursor: cursor ? { id: cursor } : undefined,
-
       skip: cursor ? 1 : 0,
-
       include: {
+        author: { include: { profile: true } },
         _count: { select: { reactions: true, comments: true } },
       },
     });
@@ -50,6 +54,21 @@ export class LazerService {
       },
     };
   }
+
+  async getUserPosts(userId: string) {
+    return await this.prisma.lazerPost.findMany({
+      where: { 
+        authorId: userId,
+        deletedAt: null 
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        author: { include: { profile: true } },
+        _count: { select: { reactions: true, comments: true } },
+      },
+    });
+  }
+
   async findOnePost(id: string): Promise<any> {
     return await this.prisma.lazerPost.findUnique({
       where: { id },
@@ -60,6 +79,16 @@ export class LazerService {
     return await this.prisma.lazerPost.update({
       where: { id },
       data: updatePostLazerDto,
+    });
+  }
+
+  async pinPost(id: string, userId: string) {
+    const post = await this.prisma.lazerPost.findUnique({ where: { id } });
+    if (!post) throw new Error('Post not found');
+    if (post.authorId !== userId) throw new Error('Not authorized to pin this post');
+    return await this.prisma.lazerPost.update({
+      where: { id },
+      data: { isPinned: !post.isPinned },
     });
   }
 
@@ -127,6 +156,9 @@ export class LazerService {
         authorId: authorId,
         content: comment,
       },
+      include: {
+        author: { include: { profile: true } },
+      },
     });
   }
 
@@ -153,6 +185,9 @@ export class LazerService {
       where: {
         postId: postId,
         deletedAt: null,
+      },
+      include: {
+        author: { include: { profile: true } },
       },
       orderBy: { createdAt: "asc" },
     });
