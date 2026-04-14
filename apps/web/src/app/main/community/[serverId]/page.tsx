@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, useCallback, useMemo, Fragment } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, uploadUserFile } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { useCommunitySocket } from '@/lib/socket';
 import { Avatar } from '@/components/ui/Avatar';
@@ -68,8 +68,8 @@ function fmtDate(d: string) {
 }
 function fmtEventDate(d: string) { return new Date(d).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
 
-function getLuminance(hex: string) {
-  if (!hex || !hex.startsWith('#')) return 0;
+function getLuminance(hex: string): number {
+  if (!hex?.startsWith('#')) return 0;
   let r = 0, g = 0, b = 0;
   if (hex.length === 4) {
     r = parseInt(hex[1] + hex[1], 16);
@@ -103,9 +103,11 @@ function isSameColor(c1?: string | null, c2?: string | null) {
   if (!c1 || !c2) return c1 === c2;
   return c1.toLowerCase() === c2.toLowerCase();
 }
-function isVideoUrl(url?: string | null) { 
+function isVideoUrl(url?: string | null) {
   if (!url) return false;
-  return url.match(/\.(mp4|webm|mov|ogg|m4v|3gp|flv|quicktime)(?:\?|#|$)/i) || url.startsWith('data:video/') || url.startsWith('blob:') || url.toLowerCase().includes('video');
+  return url.match(/\.(mp4|webm|mov|ogg|m4v|3gp|flv|quicktime)(?:\?|#|$)/i)
+    || url.startsWith('data:video/')
+    || url.startsWith('blob:');
 }
 function memberAccentColor(m: Member, ownerId: string): string {
   if (m.userId === ownerId) return '#F0B132';
@@ -126,7 +128,7 @@ async function uploadFile(file: File, serverId: string): Promise<string> {
 function readAsDataURL(file: File): Promise<string> {
   return new Promise((res, rej) => {
     const r = new FileReader();
-    r.onload = () => res(r.result as string);
+    r.onload  = () => res(r.result as string);
     r.onerror = rej;
     r.readAsDataURL(file);
   });
@@ -320,7 +322,28 @@ function ImageColorPicker({
     </div>
   );
 }
-
+// ─── tipos ────────────────────────────────────────────────────────────────────
+ 
+export interface EditProfileModalProps {
+  user: {
+    profile?: {
+      displayName?:  string | null;
+      username:      string;
+      avatarUrl?:    string | null;
+      bio?:          string | null;
+      bannerUrl?:    string | null;
+      bannerColor?:  string | null;
+      auroraTheme?:  string | null;
+      nameFont?:     string | null;
+      nameEffect?:   string | null;
+      nameColor?:    string | null;
+      status?:       string | null;
+      tags?:         string | null;
+    } | null;
+  };
+  onClose: () => void;
+  onSave:  () => void;
+}
 // ─── EDIT PROFILE MODAL ──────────────────────────────────────────────────────
 function EditProfileModal({ user, serverId, onClose, onSave }: {
   user: { profile?: { displayName?: string | null; username: string; avatarUrl?: string | null; bio?: string | null; bannerUrl?: string | null; bannerColor?: string | null; auroraTheme?: string | null; nameFont?: string | null; nameEffect?: string | null; nameColor?: string | null; status?: string | null; tags?: string | null; } | null };
@@ -1978,6 +2001,7 @@ export default function ServerPage() {
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [typingIds, setTypingIds] = useState<Record<string, boolean>>({});
+  const [verifyInput, setVerifyInput] = useState('');
   const [confirmConfig, setConfirmConfig] = useState<{ 
     title: string; 
     message: string; 
@@ -2396,8 +2420,7 @@ export default function ServerPage() {
         input:focus, textarea:focus, select:focus { outline: none !important; box-shadow: none !important; border-color: inherit !important; }
 
         .msg-row:hover { background: rgba(255,255,255,0.025); border-radius: 6px; }
-        .msg-row:hover .msg-actions { opacity: 1 !important; }
-        .msg-row { overflow: visible !important; }
+        .msg-row:hover .msg-actions { opacity: 1 !important; pointer-events: auto !important; }
         button { font-family: inherit; }
 
         @keyframes blink-green {
@@ -2705,7 +2728,7 @@ export default function ServerPage() {
                   <div style={{ width: 40, height: 40, flexShrink: 0, borderRadius: '50%', overflow: 'hidden', background: BG_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: isBot ? '1px solid rgba(96,165,250,0.4)' : 'none', transition: 'opacity 0.1s' }}
                     onClick={() => { const m = server?.members.find(x => x.userId === msg.authorId); if (m) setMemberMenuUserId(m.userId); }}>
                     {isBot ? <span style={{ fontSize: 14, fontWeight: 800, color: '#93C5FD' }}>B</span> :
-                      av ? <img src={av} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> :
+                      av ? <Avatar src={av} name={msg.authorName} className="w-full h-full" style={{ width: '100%', height: '100%' }} /> :
                         <span style={{ color: nameClr, fontWeight: 700, fontSize: 16 }}>{msg.authorName[0]?.toUpperCase()}</span>}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -3129,10 +3152,51 @@ export default function ServerPage() {
       {confirmConfig && (() => {
         const config = confirmConfig;
         return (
-          <ConfirmDialog
-            config={config}
-            onClose={() => setConfirmConfig(null)}
-          />
+          <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'fadeIn 0.2s ease' }}>
+            <div style={{ background: '#111214', border: `1px solid ${config.isDanger ? 'rgba(237,66,69,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 16, width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.8)', animation: 'popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+              <h2 style={{ color: config.isDanger ? '#ED4245' : TEXT_BRIGHT, fontSize: 18, fontWeight: 800, margin: '0 0 12px' }}>{config.title}</h2>
+              <p style={{ color: TEXT_NORMAL, fontSize: 14, margin: '0 0 20px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{config.message}</p>
+              
+              {config.verifyText && (
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.04em' }}>Escreve o nome para confirmar</p>
+                  <input 
+                    autoFocus 
+                    type="text" 
+                    placeholder={config.verifyText}
+                    value={verifyInput}
+                    onChange={(e) => setVerifyInput(e.target.value)}
+                    style={{ width: '100%', background: '#000', border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8, padding: '10px 14px', color: TEXT_BRIGHT, fontSize: 14 }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button 
+                  onClick={() => { setConfirmConfig(null); setVerifyInput(''); }}
+                  style={{ background: 'transparent', border: 'none', color: TEXT_BRIGHT, cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '10px 16px' }}>
+                  Cancelar
+                </button>
+                <button 
+                  disabled={!!config.verifyText && verifyInput !== config.verifyText}
+                  onClick={() => { config.onConfirm(); setConfirmConfig(null); setVerifyInput(''); }}
+                  style={{ 
+                    background: config.isDanger ? '#ED4245' : ACCENT, 
+                    color: config.isDanger ? '#fff' : '#000', 
+                    border: 'none', 
+                    borderRadius: 10, 
+                    padding: '10px 24px', 
+                    fontSize: 13, 
+                    fontWeight: 800, 
+                    cursor: 'pointer',
+                    opacity: config.verifyText ? 0.5 : 1,
+                    transition: 'opacity 0.2s'
+                  }}>
+                  {config.confirmText || 'Confirmar'}
+                </button>
+              </div>
+            </div>
+          </div>
         );
       })()}
 

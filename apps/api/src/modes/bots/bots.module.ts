@@ -23,14 +23,14 @@ export class BotsModule implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // Inicializar queue
+    // CORRIGIDO: await garante que a fila e o worker estão prontos
+    // antes de começarmos a enfileirar eventos
     await this.queue.onModuleInit();
 
-    // Subscribe ao Event Bus para enfileirar eventos
+    // Só subscreve o bus depois da fila estar inicializada
     this.eventBus.subscribeAll((event) => {
-      // Enfileirar para processamento async via BullMQ
       this.queue.enqueueEvent(event).catch((err) => {
-        console.warn('[BotQueue] Failed to enqueue event:', err);
+        console.warn('[BotQueue] Falha ao enfileirar evento:', err);
       });
     });
   }

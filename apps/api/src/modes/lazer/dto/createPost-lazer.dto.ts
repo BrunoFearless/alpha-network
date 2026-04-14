@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from "class-validator";
+import { IsOptional, IsString, IsBoolean } from "class-validator";
 
 export class CreatePostLazerDto {
   @IsString()
@@ -6,4 +6,16 @@ export class CreatePostLazerDto {
   @IsString()
   @IsOptional()
   imageUrl?: string;
+  @IsString()
+  @IsOptional()
+  tag?: string;
+  @IsBoolean()
+  @IsOptional()
+  isSparkle?: boolean;
+  @IsString()
+  @IsOptional()
+  titleFont?: string;
+  @IsString()
+  @IsOptional()
+  titleColor?: string;
 }

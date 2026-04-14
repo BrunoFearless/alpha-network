@@ -33,4 +33,17 @@ export class UpdateProfileDto {
 
   @IsOptional() @IsString() @MaxLength(30)
   auroraTheme?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  tags?: string;
+
+  @IsOptional()
+  lazerData?: any;
 }

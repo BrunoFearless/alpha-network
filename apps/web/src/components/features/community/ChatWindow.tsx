@@ -6,7 +6,7 @@ import { formatTime } from '@/lib/format';
 import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
 import { EmojiPicker, useEmojiPickerPopup } from '@/components/community/EmojiPicker';
 import { api } from '@/lib/api';
-import { useCommunitySocket } from '@/lib/useSocket';
+import { useCommunitySocket } from '@/lib/socket';
 import { useAuthStore } from '@/store/auth.store';
 
 interface Message {

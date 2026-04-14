@@ -28,6 +28,7 @@ const sizes = {
 export function Avatar({ src: rawSrc, name, size = 'md', className, style, play = true }: AvatarProps) {
   const [error, setError] = useState(false);
   const [isVideo, setIsVideo] = useState<boolean | null>(null);
+  const [fallbackAttempted, setFallbackAttempted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const src = useMemo(() => {
@@ -43,6 +44,7 @@ export function Avatar({ src: rawSrc, name, size = 'md', className, style, play 
 
   useEffect(() => {
     setError(false);
+    setFallbackAttempted(false);
     if (!src) {
       setIsVideo(false);
       return;
@@ -95,7 +97,7 @@ export function Avatar({ src: rawSrc, name, size = 'md', className, style, play 
           {isVideo ? (
             <video
               ref={videoRef}
-              key={src}
+              key={`${src}-vid`}
               src={src}
               autoPlay={play}
               muted
@@ -104,16 +106,24 @@ export function Avatar({ src: rawSrc, name, size = 'md', className, style, play 
               preload="metadata"
               disablePictureInPicture
               disableRemotePlayback
-              onError={() => setIsVideo(false)}
+              onError={() => {
+                if (isVideo === true && !fallbackAttempted) {
+                  setFallbackAttempted(true);
+                  setIsVideo(false);
+                } else {
+                  setError(true);
+                }
+              }}
               className="w-full h-full object-cover"
             />
           ) : (
             <img
-              key={src}
+              key={`${src}-img`}
               src={src}
               alt=""
               onError={() => {
-                if (isVideo === false) {
+                if (isVideo === false && !fallbackAttempted) {
+                  setFallbackAttempted(true);
                   setIsVideo(true);
                 } else {
                   setError(true);

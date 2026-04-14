@@ -14,6 +14,7 @@ interface UserProfile {
   nameColor?: string | null;
   auroraTheme?: string | null;
   activeModes: string[];
+  lazerData?: any;
 }
 
 interface AuthUser {
@@ -48,35 +49,49 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ user, accessToken, isAuthenticated: true });
   },
 
+  /**
+   * CORRIGIDO: quando user.profile é null (ex: conta Google recém-criada sem
+   * perfil ainda), o spread anterior falhava silenciosamente e não actualizava
+   * nada. Agora criamos um perfil base mínimo nesse caso.
+   */
   updateUserProfile: (profile) => {
-    set(state => ({
-      user: state.user
-        ? {
-            ...state.user,
-            profile: state.user.profile
-              ? { ...state.user.profile, ...profile }
-              : state.user.profile,
-          }
-        : state.user,
-    }));
+    set(state => {
+      if (!state.user) return state;
+
+      const existingProfile = state.user.profile;
+
+      return {
+        user: {
+          ...state.user,
+          profile: existingProfile
+            ? { ...existingProfile, ...profile }
+            // Se profile era null, cria um perfil base com os dados recebidos
+            : {
+                username:    (profile as any).username ?? '',
+                activeModes: (profile as any).activeModes ?? [],
+                ...profile,
+              },
+        },
+      };
+    });
   },
 
   login: async (email, password) => {
     set({ isLoading: true });
     try {
       const res = await fetch(`${API}/api/v1/auth/login`, {
-        method: 'POST',
+        method:      'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        headers:     { 'Content-Type': 'application/json' },
+        body:        JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message ?? 'Erro ao fazer login.');
       set({
-        user: data.data.user,
-        accessToken: data.data.accessToken,
+        user:            data.data.user,
+        accessToken:     data.data.accessToken,
         isAuthenticated: true,
-        isLoading: false,
+        isLoading:       false,
       });
     } catch (err) {
       set({ isLoading: false });
@@ -88,18 +103,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ isLoading: true });
     try {
       const res = await fetch(`${API}/api/v1/auth/register`, {
-        method: 'POST',
+        method:      'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, username }),
+        headers:     { 'Content-Type': 'application/json' },
+        body:        JSON.stringify({ email, password, username }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message ?? 'Erro ao criar conta.');
       set({
-        user: data.data.user,
-        accessToken: data.data.accessToken,
+        user:            data.data.user,
+        accessToken:     data.data.accessToken,
         isAuthenticated: true,
-        isLoading: false,
+        isLoading:       false,
       });
     } catch (err) {
       set({ isLoading: false });
@@ -111,18 +126,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const { accessToken } = get();
     try {
       await fetch(`${API}/api/v1/auth/logout`, {
-        method: 'POST',
+        method:      'POST',
         credentials: 'include',
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        headers:     accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       });
-    } catch { /* ignora erros de rede */ }
+    } catch { /* ignora erros de rede no logout */ }
     set({ user: null, accessToken: null, isAuthenticated: false });
   },
 
   refresh: async () => {
     try {
       const res = await fetch(`${API}/api/v1/auth/refresh`, {
-        method: 'POST',
+        method:      'POST',
         credentials: 'include',
       });
       if (!res.ok) {
@@ -134,7 +149,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       const meRes = await fetch(`${API}/api/v1/auth/me`, {
         credentials: 'include',
-        headers: { Authorization: `Bearer ${newToken}` },
+        headers:     { Authorization: `Bearer ${newToken}` },
       });
       if (!meRes.ok) return false;
       const me = await meRes.json();

@@ -156,7 +156,11 @@ export function DisplayName({ profile, fallbackName, style, className, onClick, 
       style={{ ...baseStyle, ...effectStyle }}
       onClick={onClick}
     >
-      <EmojiRenderer content={name} emojiSize={style?.fontSize || 14} style={{ display: 'inline', verticalAlign: 'inherit' }} />
+      <EmojiRenderer 
+        content={name} 
+        emojiSize={typeof style?.fontSize === 'number' ? style.fontSize : typeof style?.fontSize === 'string' ? parseInt(style.fontSize) || 14 : 14} 
+        style={{ display: 'inline', verticalAlign: 'inherit' }} 
+      />
     </span>
   );
 }

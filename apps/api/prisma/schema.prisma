@@ -38,6 +38,9 @@ model User {
 
   profile       Profile?
   sessions      Session[]
+  lazerPosts    LazerPost[]
+  lazerComments LazerComment[]
+  lazerReactions LazerReaction[]
 
   @@map("users")
 }
@@ -53,11 +56,7 @@ model Profile {
   bio         String?
   status      String?
   tags        String?
-  nameFont    String?
-  nameEffect  String?
-  nameColor   String?
-  auroraTheme String?
-  activeModes String[] @default([])
+  lazerData   Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -85,12 +84,18 @@ model LazerPost {
   authorId  String
   content   String
   imageUrl  String?
+  tag       String?
+  titleFont String?
+  titleColor String?
+  isSparkle Boolean   @default(false)
+  isPinned  Boolean   @default(false)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   reactions LazerReaction[]
   comments  LazerComment[]
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("lazer_posts")
 }
@@ -103,6 +108,7 @@ model LazerReaction {
   createdAt DateTime  @default(now())
 
   post      LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
   @@map("lazer_reactions")
@@ -117,6 +123,7 @@ model LazerComment {
   deletedAt DateTime?
 
   post      LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("lazer_comments")
 }

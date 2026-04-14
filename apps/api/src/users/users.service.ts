@@ -77,18 +77,23 @@ export class UsersService {
     });
   }
 
-  async updateProfile(userId: string, dto: UpdateProfileDto | Record<string, unknown>) {
-    const profile = await this.prisma.profile.findUnique({ where: { userId } });
-    if (!profile) throw new NotFoundException('Perfil não encontrado.');
-
-    const data: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(dto)) {
-      if (value !== undefined) data[key] = value;
-    }
-
+  async updateProfile(userId: string, data: { displayName?: string; bio?: string; avatarUrl?: string; bannerUrl?: string; bannerColor?: string; auroraTheme?: string; nameFont?: string; nameEffect?: string; nameColor?: string; status?: string; tags?: string; lazerData?: any }) {
     return this.prisma.profile.update({
       where: { userId },
-      data,
+      data: {
+        ...(data.displayName !== undefined && { displayName: data.displayName }),
+        ...(data.bio !== undefined && { bio: data.bio }),
+        ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
+        ...(data.bannerUrl !== undefined && { bannerUrl: data.bannerUrl }),
+        ...(data.bannerColor !== undefined && { bannerColor: data.bannerColor }),
+        ...(data.auroraTheme !== undefined && { auroraTheme: data.auroraTheme }),
+        ...(data.nameFont !== undefined && { nameFont: data.nameFont }),
+        ...(data.nameEffect !== undefined && { nameEffect: data.nameEffect }),
+        ...(data.nameColor !== undefined && { nameColor: data.nameColor }),
+        ...(data.status !== undefined && { status: data.status }),
+        ...(data.tags !== undefined && { tags: data.tags }),
+        ...(data.lazerData !== undefined && { lazerData: data.lazerData }),
+      },
     });
   }
 
@@ -137,5 +142,21 @@ export class UsersService {
       'video/quicktime': '.mov',
     };
     return map[mime] ?? '';
+  }
+
+  async saveProfileBanner(userId: string, file: Express.Multer.File) {
+    const url = await this.mediaService.saveValidatedMedia(file, 'banners', {
+      maxFileSizeMb: 10, // banners can be slightly larger
+      allowedMimes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
+      maxVideoDurationSecs: 10,
+    });
+    
+    // Atualizar banner na base de dados
+    const updated = await this.prisma.profile.update({
+      where: { userId },
+      data: { bannerUrl: url },
+    });
+    
+    return { url, profile: updated };
   }
 }
