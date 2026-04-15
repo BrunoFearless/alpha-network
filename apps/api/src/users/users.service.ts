@@ -1,30 +1,17 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateUserDto } from "./dto/update-user.dto";
-import { Prisma } from "@prisma/client";
-
-interface CreateUserData {
-  email: string;
-  passwordHash?: string;
-  provider?: string;
-  username: string;
-  displayName?: string;
-  avatarUrl?: string;
-}
+import { CreateUserDto } from "./dto/createe-user.dto";
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) { }
 
   async findByEmail(email: string) {
-    const user = await this.prisma.user.findUnique({
+    return await this.prisma.user.findUnique({
       where: { email },
       include: { profile: true },
     });
-
-    if (!user || user.deletedAt) return null
-
-    return user
   }
 
   async findById(id: string) {
@@ -50,9 +37,15 @@ export class UsersService {
     return profile
   }
 
-  async findByIdWithDeleted(id: string) {
-    return await this.prisma.user.findUnique({
-      where: { id },
+  async findWithDeleted(identifier: string) {
+    return await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { id: identifier },
+          { email: identifier },
+          { profile: { username: identifier } }
+        ]
+      },
       include: { profile: true }
     });
   }
@@ -191,7 +184,7 @@ export class UsersService {
     });
   }
 
-  async createUser(data: CreateUserData) {
+  async createUser(data: CreateUserDto) {
     return this.prisma.user.create({
       data: {
         email: data.email,

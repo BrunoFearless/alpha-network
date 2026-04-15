@@ -1,6 +1,6 @@
 import {
   Injectable, UnauthorizedException,
-  ConflictException, NotFoundException,
+  ConflictException, NotFoundException, ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -48,9 +48,15 @@ export class AuthService {
 
   // ── Login ─────────────────────────────────────────────────────────
   async login(dto: LoginDto) {
-    const user = await this.users.findByEmail(dto.email);
-    if (!user || !user.passwordHash) {
-      throw new UnauthorizedException('Email ou password incorrectos.');
+    const user = await this.users.findWithDeleted(dto.email);
+    if (!user || !user.passwordHash) throw new UnauthorizedException('Email ou password incorrectos.');
+
+    if (user.deletedAt) {
+      throw new ForbiddenException({
+        message: 'ACCOUNT_DELETED',
+        userId: user.id,
+        provider: user.provider
+      })
     }
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);

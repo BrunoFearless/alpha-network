@@ -1,6 +1,6 @@
 import {
   Controller, Get, Patch, Delete,
-  Body, Param, UseGuards, HttpCode, HttpStatus, Req, Post,
+  Body, Param, UseGuards, HttpCode, HttpStatus, Req, Post, ForbiddenException, NotFoundException, BadRequestException, UnauthorizedException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -19,9 +19,8 @@ export class UsersController {
   @UseGuards(OptionalJwtAuthGuard)
   async getProfile(
     @Param('username') username: string,
-    @Req() req: any // O Passport/JWT costuma injetar o user aqui
+    @Req() req: any
   ) {
-    // Se o utilizador não estiver logado, o id será undefined, e o isFollowing será false
     const requesterId = req.user?.id;
 
     const result = await this.usersService.getFullProfile(username, requesterId);
@@ -85,7 +84,6 @@ export class UsersController {
   }
 
   // ── Parar de seguir ───────────────────────────────────────────────────
-
   @UseGuards(JwtAuthGuard)
   @Delete(':username/follow')
   async unfollow(
@@ -101,7 +99,6 @@ export class UsersController {
   }
 
   // ── Lista de seguidores ───────────────────────────────────────────────────
-
   @Get(':username/followers')
   async followers(@Param('username') username: string) {
     const followers = await this.usersService.getFollowers(username);
@@ -109,12 +106,12 @@ export class UsersController {
 
   }
 
+  // ── Lista de seguindos ───────────────────────────────────────────────────
   @Get(':username/followings')
   async followings(@Param('username') username: string) {
     const followings = await this.usersService.getFollowings(username)
     return { success: true, data: followings }
   }
 
-  // ── Lista de seguindos ───────────────────────────────────────────────────
 
 }

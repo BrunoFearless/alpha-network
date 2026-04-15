@@ -1,6 +1,6 @@
 import {
   Controller, Post, Get, Body, Req, Res,
-  UseGuards, HttpCode, HttpStatus,
+  UseGuards, HttpCode, HttpStatus, NotFoundException, BadRequestException, UnauthorizedException
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -9,10 +9,16 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { RestoreAccountDto } from './dto/restore-account.dto';
+import { UsersService } from '@users/users.service';
+import * as bcrypt from "bcryptjs"
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService
+  ) { }
 
   // ── Registo ────────────────────────────────────────────────────────
   @Post('register')
@@ -35,6 +41,30 @@ export class AuthController {
     const result = await this.authService.login(dto);
     this.setRefreshCookie(res, result.refreshToken);
     return { success: true, data: { accessToken: result.accessToken, user: result.user } };
+  }
+
+  // ── Restaurar conta───────────────────────────────────────────────────
+  @Post('restore')
+  async restoreAccount(
+    @Body() dto: RestoreAccountDto
+  ) {
+    const user = await this.usersService.findWithDeleted(dto.id)
+
+    if (!user) throw new NotFoundException('Utilizador não encontrado')
+    if (!user.deletedAt) throw new BadRequestException('Esta conta já está ativa')
+
+    // se provider for email verificamos se a senha estiver correta
+    if (user.provider === 'email') {
+      if (!dto.password) throw new BadRequestException('Password necessária')
+
+      const isMatchPassword = bcrypt.compare(dto.password, (user as any).passwordHash)
+      if (!isMatchPassword) throw new UnauthorizedException('Email ou password Incorretos')
+    }
+
+    // se provider vir de OAuth, o provider verifica automaticamente
+
+    await this.usersService.restoreAccount(dto.id)
+    return { message: 'Conta ativada com sucesso' }
   }
 
   // ── Google OAuth — Passo 1: iniciar redirect ───────────────────────
@@ -110,9 +140,9 @@ export class AuthController {
   private setRefreshCookie(res: Response, token: string) {
     res.cookie('refreshToken', token, {
       httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge:   30 * 24 * 60 * 60 * 1000, // 30 dias
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
     });
   }
 }

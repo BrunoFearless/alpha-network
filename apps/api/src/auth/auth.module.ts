@@ -17,8 +17,8 @@ import { UsersModule } from '../users/users.module';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret:       config.get('JWT_ACCESS_SECRET'),
-        signOptions:  { expiresIn: config.get('JWT_ACCESS_EXPIRES_IN', '15m') },
+        secret: config.get('JWT_ACCESS_SECRET'),
+        signOptions: { expiresIn: config.get('JWT_ACCESS_EXPIRES_IN', '15m') },
       }),
       inject: [ConfigService],
     }),
@@ -34,4 +34,4 @@ import { UsersModule } from '../users/users.module';
   ],
   exports: [AuthService, JwtModule, JwtAuthGuard],
 })
-export class AuthModule {}
+export class AuthModule { }
