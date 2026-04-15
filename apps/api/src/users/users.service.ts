@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateUserDto } from "./dto/update-user.dto";
+import { Prisma } from "@prisma/client";
 
 interface CreateUserData {
   email: string;
@@ -47,6 +48,13 @@ export class UsersService {
     if (!profile || profile.user.deletedAt) return null
 
     return profile
+  }
+
+  async findByIdWithDeleted(id: string) {
+    return await this.prisma.user.findUnique({
+      where: { id },
+      include: { profile: true }
+    });
   }
 
   async countFollowers(followingId: string) {
@@ -221,4 +229,11 @@ export class UsersService {
     })
   }
 
+
+  async restoreAccount(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { deletedAt: null },
+    })
+  }
 }
