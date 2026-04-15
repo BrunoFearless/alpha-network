@@ -1,34 +1,61 @@
-// cadastro
-POST http://localhost:3001/api/v1/auth/register
-Content-Type: application/json
+### Variáveis de Ambiente
+@baseUrl = http://localhost:3001/api/v1
+@contentType = application/json
+
+# CRIAR CONTA
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
 
 {
-    "username": "DemoUser",
-    "email": "demo@user.com",
-    "password": "demouser1234_"
+    "username": "tester_resiliente",
+    "email": "teste@alpha.com",
+    "password": "SenhaSegura123"
 }
 
 ###
-// login
-POST http://localhost:3001/api/v1/auth/login
-Content-Type: application/json
+
+# LOGIN  
+# @name login_inicial
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
 
 {
-    "email": "demo@user.com",
-    "password": "demouser1234_"
+    "email": "teste@alpha.com",
+    "password": "SenhaSegura123"
+}
+
+### 
+
+# EXTRAIR TOKEN DO LOGIN
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NDliNDNjZC0yYWY1LTQ5ZTctOGQ5NC0xYTM4MjY2NjI0YmIiLCJlbWFpbCI6InRlc3RlQGFscGhhLmNvbSIsImlhdCI6MTc3NjI5NTUzNSwiZXhwIjoxNzc2Mjk2NDM1fQ.WmoOq28Lxe6IJeflvPiGVxnSXLl2qKlEPzbsMBtFjeE
+@userId = 549b43cd-2af5-49e7-8d94-1a38266624bb
+
+###
+
+# APAGAR CONTA (SOFT DELETE)
+DELETE {{baseUrl}}/users/me
+Authorization: Bearer {{authToken}}
+
+###
+
+# 5. TENTAR LOGIN COM CONTA APAGADA
+# @name login_tentativa_falha
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "email": "teste@alpha.com",
+    "password": "SenhaSegura123"
 }
 
 ###
-// log-out
-POST http://localhost:3001/api/v1/auth/logout
-Authorization: BEARER eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1Y2ZiMzhmYy01MmJmLTQ4MmItOTAyOC02MzY0YzEzMjdjMjMiLCJlbWFpbCI6ImRlbW9AdXNlci5jb20iLCJpYXQiOjE3NzU3MzAyNDgsImV4cCI6MTc3NTczMTE0OH0.TDk06fHxfLGjOz2Kp6KHCbPLAr98LqXoIUIhsTp-FmQ
 
-###
-// get me
-@token = yJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1Y2ZiMzhmYy01MmJmLTQ4MmItOTAyOC02MzY0YzEzMjdjMjMiLCJlbWFpbCI6ImRlbW9AdXNlci5jb20iLCJpYXQiOjE3NzU3MzA3MzYsImV4cCI6MTc3NTczMTYzNn0.9nbyl2DQzU-YbJMScU2CNVnAPq4VSMY4tbhSjC0ml2g
-GET http://localhost:3001/api/v1/auth/me
-Authorization: Bearer {{token}}
+# 6. RESTAURAR CONTA 
+POST {{baseUrl}}/auth/restore
+Content-Type: {{contentType}}
 
-###
-// refresh token
-POST http://localhost:3001/api/v1/auth/refresh
+{
+    "id": "{{userId}}",
+    "password": "SenhaSegura123"
+}
