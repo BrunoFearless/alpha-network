@@ -36,45 +36,39 @@ export class LazerController {
     return this.lazerService.findOnePost(id);
   }
 
-  @Post("/posts/reactions")
-  @UseGuards(JwtAuthGuard)
+  @Post('posts/reactions')
   @HttpCode(HttpStatus.OK)
   toggleReaction(@Body() toggleRequest: ToggleRequestDTO, @Request() req: any) {
     return this.lazerService.toggleReaction(toggleRequest, req.user.id);
   }
 
-  @Get("/users/:userId/posts")
-  @UseGuards(JwtAuthGuard)
+  @Get('users/:userId/posts')
   @HttpCode(HttpStatus.OK)
-  getUserPosts(@Param("userId") userId: string) {
+  getUserPosts(@Param('userId') userId: string) {
     return this.lazerService.getUserPosts(userId);
   }
 
-  @Patch("posts/:id")
-  @UseGuards(JwtAuthGuard)
+  @Patch('posts/:id')
   @HttpCode(HttpStatus.OK)
   updatePost(
-    @Param("id") id: string,
+    @Param('id') id: string,
     @Body() updatePostLazerDto: UpdatePostLazerDto,
     @Request() req: any,
   ) {
-    return this.lazerService.updatePost(id, dto, req.user.id);
+    return this.lazerService.updatePost(id, updatePostLazerDto, req.user.id);
   }
 
-  @Patch("posts/:id/pin")
-  @UseGuards(JwtAuthGuard)
+  @Patch('posts/:id/pin')
   @HttpCode(HttpStatus.OK)
-  pinPost(@Param("id") id: string, @Request() req: any) {
+  pinPost(@Param('id') id: string, @Request() req: any) {
     return this.lazerService.pinPost(id, req.user.id);
   }
 
-  @Post("posts/:id")
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  removePost(@Param("id") id: string, @Request() req: any) {
+  @Post('posts/:id')
+  @HttpCode(HttpStatus.OK)
+  removePost(@Param('id') id: string, @Request() req: any) {
     return this.lazerService.softDeletePost(id, req.user.id);
   }
-
 
   // ── Comentários ────────────────────────────────────────────────────
 

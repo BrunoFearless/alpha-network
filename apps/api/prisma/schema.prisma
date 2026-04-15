@@ -1,19 +1,6 @@
 // ════════════════════════════════════════════════════════════════════
 // ALPHA NETWORK — Schema Prisma
 // ════════════════════════════════════════════════════════════════════
-// Owners por módulo:
-//   User, Profile, Session     → Adolfo Figueiredo
-//   LazerPost, LazerReaction,  → Obed Jorge
-//     LazerComment
-//   CreatorArticle,            → Pedro Evaristo
-//     CreatorPortfolioItem
-//   DevProject, DevMember,     → Alexandre Landa
-//     DevFile, DevTask,
-//     DevMessage
-//   Server, Channel, Message,  → Bruno Fearless
-//     ServerMember, Bot,
-//     BotCommand, ServerBot
-// ════════════════════════════════════════════════════════════════════
 
 generator client {
   provider = "prisma-client-js"
@@ -30,7 +17,7 @@ model User {
   id            String    @id @default(uuid())
   email         String    @unique
   passwordHash  String?
-  provider      String    @default("email")   // "email" | "google"
+  provider      String    @default("email")
   emailVerified Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -57,6 +44,18 @@ model Profile {
   status      String?
   tags        String?
   lazerData   Json?
+
+  // Name styling
+  nameFont    String?
+  nameEffect  String?
+  nameColor   String?
+
+  // Aurora theme
+  auroraTheme String?
+
+  // Active modes
+  activeModes String[] @default([])
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -118,6 +117,7 @@ model LazerComment {
   id        String    @id @default(uuid())
   postId    String
   authorId  String
+  parentId  String?
   content   String
   createdAt DateTime  @default(now())
   deletedAt DateTime?
@@ -183,7 +183,7 @@ model DevMember {
   id        String   @id @default(uuid())
   projectId String
   userId    String
-  role      String   @default("member")      // "owner" | "member"
+  role      String   @default("member")
   joinedAt  DateTime @default(now())
 
   project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -321,15 +321,15 @@ model Channel {
   id              String   @id @default(uuid())
   serverId        String
   categoryId      String?
-  parentId        String?  // If type == "thread", this points to the parent Channel
-  parentMessageId String?  // Optional: If thread was created from a message
+  parentId        String?
+  parentMessageId String?
   name            String
   topic           String?
-  type            String   @default("text") // "text" | "voice" | "thread"
+  type            String   @default("text")
   icon            String   @default("#")
   position        Int      @default(0)
   isPrivate       Boolean  @default(false)
-  allowedRoles    Json?  // Array of roleIds that can access this channel
+  allowedRoles    Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -347,9 +347,9 @@ model Message {
   id             String    @id @default(uuid())
   channelId      String
   authorId       String
-  authorType     String    @default("user")     // "user" | "bot"
+  authorType     String    @default("user")
   content        String
-  messageType    String    @default("text")      // text | image | embed
+  messageType    String    @default("text")
   imageUrl       String?
   embedJson      Json?
   replyToId      String?
@@ -399,7 +399,7 @@ model ServerMember {
   id              String    @id @default(uuid())
   serverId        String
   userId          String
-  role            String    @default("member")      // "admin" | "member"
+  role            String    @default("member")
   communityRoleId String?
   mutedUntil      DateTime?
   joinedAt        DateTime  @default(now())
@@ -418,10 +418,10 @@ model CommunityEvent {
   title         String
   description   String?
   location      String?
-  locationType  String    @default("external") // "voice" | "external"
+  locationType  String    @default("external")
   imageUrl      String?
   startDate     DateTime
-  endDate       DateTime?  
+  endDate       DateTime?
   frequency     String    @default("none")
   coverColor    String?
   createdAt     DateTime  @default(now())
@@ -455,11 +455,8 @@ model Bot {
   customColor  String   @default("#C9A84C")
   token        String   @unique @default(uuid())
   prefix       String   @default("!")
-  /// Fluxo do builder visual (JSON: { version, nodes }).
   builderFlow  Json?
-  /// Listagem pública (marketplace).
   isPublic     Boolean  @default(false)
-  /// Incrementa quando o bot é publicado/actualizado para o público.
   version      Int      @default(1)
   createdAt    DateTime @default(now())
 
@@ -491,7 +488,7 @@ model BotCommand {
   botId        String
   trigger      String
   response     String
-  responseType String @default("text") // text | image | embed
+  responseType String @default("text")
   imageUrl     String?
   embedJson    Json?
 

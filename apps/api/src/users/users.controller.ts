@@ -35,7 +35,7 @@ export class UsersController {
     return { success: true, data: { ...profile, id: profile.userId, user: safeUser } };
   }
 
-  // ── Editar perfil (campos de texto) ────────────────────────────────
+  // ── Editar perfil ──────────────────────────────────────────────────
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   async updateProfile(
@@ -46,6 +46,7 @@ export class UsersController {
     return { success: true, data: updated };
   }
 
+  // ── Upload de avatar ──────────────────────────────────────────────
   @Post('me/avatar')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', {
@@ -109,17 +110,6 @@ export class UsersController {
   ) {
     const updated = await this.usersService.updateActiveModes(user.id, dto.modes);
     return { success: true, data: updated };
-  }
-
-  // ── Upload de banner de perfil ────────────────────────────────────────
-  @Post('me/banner')
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
-  async uploadBanner(
-    @CurrentUser() user: { id: string },
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    return { success: true, data: await this.usersService.saveProfileBanner(user.id, file) };
   }
 
   // ── Apagar conta ───────────────────────────────────────────────────

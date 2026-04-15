@@ -23,10 +23,8 @@ export class UsersService {
       where: { email },
       include: { profile: true },
     });
-
-    if (!user || user.deletedAt) return null
-
-    return user
+    if (!user || user.deletedAt) return null;
+    return user;
   }
 
   async findById(id: string) {
@@ -34,11 +32,8 @@ export class UsersService {
       where: { id },
       include: { profile: true },
     });
-
-    if (!user || user.deletedAt) return null
-
-    return user
-
+    if (!user || user.deletedAt) return null;
+    return user;
   }
 
   async findByUsername(username: string) {
@@ -46,10 +41,8 @@ export class UsersService {
       where: { username },
       include: { user: true },
     });
-
-    if (!profile || profile.user.deletedAt) return null
-
-    return profile
+    if (!profile || profile.user.deletedAt) return null;
+    return profile;
   }
 
   async createUser(data: CreateUserData) {
@@ -71,13 +64,27 @@ export class UsersService {
   }
 
   async updateActiveModes(userId: string, modes: string[]) {
+    // activeModes is a String[] in prisma schema
     return this.prisma.profile.update({
       where: { userId },
-      data: { activeModes: modes },
+      data: { activeModes: { set: modes } },
     });
   }
 
-  async updateProfile(userId: string, data: { displayName?: string; bio?: string; avatarUrl?: string; bannerUrl?: string; bannerColor?: string; auroraTheme?: string; nameFont?: string; nameEffect?: string; nameColor?: string; status?: string; tags?: string; lazerData?: any }) {
+  async updateProfile(userId: string, data: {
+    displayName?: string;
+    bio?: string;
+    avatarUrl?: string;
+    bannerUrl?: string;
+    bannerColor?: string;
+    auroraTheme?: string;
+    nameFont?: string;
+    nameEffect?: string;
+    nameColor?: string;
+    status?: string;
+    tags?: string;
+    lazerData?: any;
+  }) {
     return this.prisma.profile.update({
       where: { userId },
       data: {
@@ -142,21 +149,5 @@ export class UsersService {
       'video/quicktime': '.mov',
     };
     return map[mime] ?? '';
-  }
-
-  async saveProfileBanner(userId: string, file: Express.Multer.File) {
-    const url = await this.mediaService.saveValidatedMedia(file, 'banners', {
-      maxFileSizeMb: 10, // banners can be slightly larger
-      allowedMimes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
-      maxVideoDurationSecs: 10,
-    });
-    
-    // Atualizar banner na base de dados
-    const updated = await this.prisma.profile.update({
-      where: { userId },
-      data: { bannerUrl: url },
-    });
-    
-    return { url, profile: updated };
   }
 }
