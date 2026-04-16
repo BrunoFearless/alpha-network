@@ -6,6 +6,7 @@ import { CommunityService } from './community.service';
 import { CommunityGateway } from './community.gateway';
 import { BotsModule } from '../bots/bots.module';
 import { PlatformEventsModule } from '../../platform-events/platform-events.module';
+import { MediaService } from '../../common/services/media.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { PlatformEventsModule } from '../../platform-events/platform-events.modu
     }),
   ],
   controllers: [CommunityController],
-  providers:   [CommunityService, CommunityGateway],
+  providers:   [CommunityService, CommunityGateway, MediaService],
   exports:     [CommunityService],
 })
 export class CommunityModule {}

@@ -209,4 +209,45 @@ export class CommunityController {
   async addBot(@CurrentUser() u: { id: string }, @Param('id') serverId: string, @Param('botId') botId: string) {
     return { success: true, data: await this.svc.addBotToServer(serverId, botId, u.id) };
   }
+
+  @Get('servers/:id/events')
+  async getEvents(@CurrentUser() u: { id: string }, @Param('id') serverId: string) {
+    return { success: true, data: await this.svc.getEvents(serverId, u.id) };
+  }
+
+  @Post('servers/:id/events')
+  async createEvent(@CurrentUser() u: { id: string }, @Param('id') serverId: string, @Body() dto: any) {
+    return { success: true, data: await this.svc.createEvent(serverId, u.id, dto) };
+  }
+
+  @Delete('servers/:id/events/past')
+  async deletePastEvents(@CurrentUser() u: { id: string }, @Param('id') serverId: string) {
+    return { success: true, data: await this.svc.deletePastEvents(serverId, u.id) };
+  }
+
+  @Post('events/:eventId/rsvp')
+  @HttpCode(HttpStatus.OK)
+  async toggleRsvp(@CurrentUser() u: { id: string }, @Param('eventId') eventId: string) {
+    return { success: true, data: await this.svc.toggleEventRsvp(eventId, u.id) };
+  }
+
+  @Delete('servers/:id')
+  async deleteServer(@CurrentUser() u: { id: string }, @Param('id') serverId: string) {
+    return { success: true, data: await this.svc.deleteServer(serverId, u.id) };
+  }
+
+  @Delete('servers/:id/categories/:categoryId')
+  async deleteCategory(@CurrentUser() u: { id: string }, @Param('id') serverId: string, @Param('categoryId') categoryId: string) {
+    return { success: true, data: await this.svc.deleteCategory(serverId, categoryId, u.id) };
+  }
+
+  @Delete('channels/:id')
+  async deleteChannel(@CurrentUser() u: { id: string }, @Param('id') channelId: string) {
+    return { success: true, data: await this.svc.deleteChannel(channelId, u.id) };
+  }
+
+  @Patch('channels/:id')
+  async patchChannel(@CurrentUser() u: { id: string }, @Param('id') channelId: string, @Body() dto: { name?: string; topic?: string }) {
+    return { success: true, data: await this.svc.updateChannel(channelId, u.id, dto) };
+  }
 }

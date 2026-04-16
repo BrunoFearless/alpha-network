@@ -1,19 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@400;500;600&family=Orbitron:wght@400;700&family=Playfair+Display:wght@700&family=Bebas+Neue&family=Dancing+Script:wght@700&family=JetBrains+Mono:wght@500&family=Fredoka:wght@600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #07080D;
-  --surface: #0F1019;
-  --card: #141620;
+  --bg: #0A0E27;
+  --surface: #0A0E27;
+  --card: #1A1F2E;
   --gold: #C9A84C;
   --gold-light: #E8C97A;
+  --aurora-1: #0080ff;
+  --aurora-2: #00ffaa;
+  --aurora-3: #aa00ff;
+  --aurora-4: #00ccff;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  background-color: var(--bg);
 }
 
 body {
@@ -21,16 +29,253 @@ body {
   color: #E8E0F0;
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar       { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1a1d2e; border-radius: 2px; }
+/* ─── ANIMAÇÕES GLOBAIS ─── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideInUp {
+  from { 
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from { 
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from { 
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from { 
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+@keyframes rainbow-text {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes glitch-anim {
+  0% { text-shadow: 2px 0 0 #ff00c1, -2px 0 0 #00fff9; }
+  25% { text-shadow: -2px 0 0 #ff00c1, 2px 0 0 #00fff9; }
+  50% { text-shadow: 2px 0 0 #ff00c1, -2px 0 0 #00fff9; }
+  75% { text-shadow: -1px 0 0 #ff00c1, 1px 0 0 #00fff9; }
+  100% { text-shadow: 2px 0 0 #ff00c1, -2px 0 0 #00fff9; }
+}
+
+@keyframes fire-glow {
+  0% { text-shadow: 0 0 10px #ff4d00, 0 0 20px #ff4d00, 0 0 30px #ff0000; }
+  50% { text-shadow: 0 0 20px #ff8c00, 0 0 30px #ff8c00, 0 0 40px #ff4d00; }
+  100% { text-shadow: 0 0 10px #ff4d00, 0 0 20px #ff4d00, 0 0 30px #ff0000; }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { text-shadow: 0 0 5px var(--neon-color), 0 0 10px var(--neon-color), 0 0 20px var(--neon-color); }
+  50% { text-shadow: 0 0 10px var(--neon-color), 0 0 20px var(--neon-color), 0 0 40px var(--neon-color); }
+}
+
+@keyframes matrix-flicker {
+  0%, 100% { opacity: 1; text-shadow: 0 0 8px #00ff00; }
+  50% { opacity: 0.8; text-shadow: 0 0 15px #00ff00; }
+  90% { opacity: 1; text-shadow: 0 0 5px #00ff00; }
+}
+
+@keyframes aurora-border {
+  from { border-color: var(--aurora-1); }
+  to { border-color: var(--aurora-3); }
+}
+
+@keyframes d1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(230px, 130px) scale(1.14); }
+  50% { transform: translate(90px, 270px) scale(0.93); }
+  75% { transform: translate(-80px, 150px) scale(1.07); }
+}
+
+@keyframes d2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(-210px, -120px) scale(1.11); }
+  65% { transform: translate(-100px, 190px) scale(0.89); }
+}
+
+@keyframes d3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(160px, -110px) scale(1.22); }
+  66% { transform: translate(-110px, 210px) scale(0.84); }
+}
+
+@keyframes d4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-210px, -110px) scale(1.32); }
+}
+
+@keyframes d5 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40% { transform: translate(110px, 300px) scale(0.8); }
+  80% { transform: translate(-170px, -110px) scale(1.2); }
+}
+
+@keyframes d6 {
+  0%, 100% { transform: translate(0, 0); }
+  45% { transform: translate(150px, -170px) scale(1.18); }
+  90% { transform: translate(-90px, 70px) scale(0.92); }
+}
+
+.aorb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+
+/* ─── TRANSIÇÕES SUAVES ─── */
+button,
+a,
+input,
+textarea,
+select {
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── DARK THEME APRIMORADO ─── */
+html {
+  color-scheme: dark;
+}
+
+/* Scrollbar melhorado */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.01); }
+::-webkit-scrollbar-thumb { 
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
 
 /* Focus visível para acessibilidade */
+/* Focus removido conforme solicitado */
 :focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: none;
+}
+
+/* Melhorias de contrast no dark mode */
+*::selection {
+  background-color: rgba(165, 230, 0, 0.25);
+  color: #E8E0F0;
+}
+
+/* Inputs com melhor visual */
+input,
+textarea {
+  background-color: #0B121A;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #E8EDF2;
+  border-radius: 6px;
+}
+
+input:hover,
+textarea:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+}
+
+/* Placeholders */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(232, 237, 242, 0.4);
+}
+
+/* ─── RESPONSIVIDADE BÁSICA ─── */
+@media (max-width: 1024px) {
+  body {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Esconder sidebar em mobile */
+  .sidebar-left {
+    display: none !important;
+  }
+  
+  .sidebar-right {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+}
+
+/* ─── AURORA TEXTURES ─── */
+.dotgrid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(201, 168, 76, 0.08) 1px, transparent 1px);
+  background-size: 40px 40px; /* Reduced for modal density */
+  opacity: 0.6;
 }

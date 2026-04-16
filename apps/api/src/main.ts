@@ -69,7 +69,7 @@ async function bootstrap() {
 
   const port = process.env.API_PORT || 3001;
   await app.listen(port);
-  console.log(`\n🚀 Alpha Network API running on http://localhost:${port}/api/v1`);
+  console.log(`\n✦ A Alpha Network está rodando, acesse o link✦\n  http://localhost:${port}/auth/login`);
 }
 
 bootstrap();

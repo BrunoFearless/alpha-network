@@ -1,99 +1,104 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  UseGuards,
-  Request,
-  HttpCode,
-  HttpStatus,
-} from "@nestjs/common";
-import { LazerService } from "./lazer.service";
-import { CreatePostLazerDto } from "./dto/createPost-lazer.dto";
-import { UpdatePostLazerDto } from "./dto/updatePost-lazer.dto";
-import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { ToggleRequestDTO } from "./dto/toggleRequest-lazer.dto";
-import { CreateCommentsLazerDto } from "./dto/createComments-lazer.dto";
+  Controller, Get, Post, Patch, Delete,
+  Body, Param, Query, UseGuards, Request,
+  HttpCode, HttpStatus,
+} from '@nestjs/common';
+import { LazerService } from './lazer.service';
+import { CreatePostLazerDto } from './dto/createPost-lazer.dto';
+import { UpdatePostLazerDto } from './dto/updatePost-lazer.dto';
+import { CreateCommentsLazerDto } from './dto/createComments-lazer.dto';
+import { ToggleRequestDTO } from './dto/toggleRequest-lazer.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
-@Controller("lazer/")
+@Controller('lazer')
+@UseGuards(JwtAuthGuard)
 export class LazerController {
   constructor(private readonly lazerService: LazerService) {}
 
-  @Post("/posts")
-  @UseGuards(JwtAuthGuard)
+  // ── Posts ──────────────────────────────────────────────────────────
+
+  @Post('posts')
   @HttpCode(HttpStatus.CREATED)
-  createPost(
-    @Body()
-    createPostLazerDto: CreatePostLazerDto,
-    @Request() req: any,
+  createPost(@Body() dto: CreatePostLazerDto, @Request() req: any) {
+    return this.lazerService.createPost(dto, req.user.id);
+  }
+
+  @Get('feed')
+  getFeed(
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.lazerService.createPost(createPostLazerDto, req.user.id);
+    return this.lazerService.getFeed(cursor, limit ? parseInt(limit, 10) : 20);
   }
 
-  @Get("feed")
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.OK)
-  findAllPosts() {
-    return this.lazerService.getFeed();
-  }
-
-  @Get("/posts/:id")
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.OK)
-  findOnePost(@Param("id") id: string) {
+  @Get('posts/:id')
+  findOnePost(@Param('id') id: string) {
     return this.lazerService.findOnePost(id);
   }
 
-  @Patch("posts/:id")
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.OK)
-  updatePost(
-    @Param("id") id: string,
-    @Body() updatePostLazerDto: UpdatePostLazerDto,
-  ) {
-    return this.lazerService.updatePost(id, updatePostLazerDto);
-  }
-
-  @Post("posts/:id")
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  removePost(@Param("id") id: string, @Request() req: any) {
-    return this.lazerService.softDeletePost(id, req.user.id);
-  }
-
-  @Post("/posts/reactions")
-  @UseGuards(JwtAuthGuard)
+  @Post('posts/reactions')
   @HttpCode(HttpStatus.OK)
   toggleReaction(@Body() toggleRequest: ToggleRequestDTO, @Request() req: any) {
     return this.lazerService.toggleReaction(toggleRequest, req.user.id);
   }
 
-  @Post("/posts/:id/comments")
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.CREATED)
-  createComment(
-    @Param("id") postId: string,
-    @Body()
-    comment: CreateCommentsLazerDto,
+  @Get('users/:userId/posts')
+  @HttpCode(HttpStatus.OK)
+  getUserPosts(@Param('userId') userId: string) {
+    return this.lazerService.getUserPosts(userId);
+  }
+
+  @Patch('posts/:id')
+  @HttpCode(HttpStatus.OK)
+  updatePost(
+    @Param('id') id: string,
+    @Body() updatePostLazerDto: UpdatePostLazerDto,
     @Request() req: any,
   ) {
-    
-    return this.lazerService.createComment(postId, req.user.id, comment.content);
+    return this.lazerService.updatePost(id, updatePostLazerDto, req.user.id);
   }
 
-  @Get("/posts/:id/comments")
-  @UseGuards(JwtAuthGuard)
+  @Patch('posts/:id/pin')
   @HttpCode(HttpStatus.OK)
-  getComment(@Param("id") id: string) {
-    return this.lazerService.findComments(id);
+  pinPost(@Param('id') id: string, @Request() req: any) {
+    return this.lazerService.pinPost(id, req.user.id);
   }
 
-  @Post("/posts/:id/comments/soft-delete")
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  softDelete(@Param("id") id: string, @Request() req: any) {
-    return this.lazerService.softDeleteComment(id, req.user.id);
+  @Post('posts/:id')
+  @HttpCode(HttpStatus.OK)
+  removePost(@Param('id') id: string, @Request() req: any) {
+    return this.lazerService.softDeletePost(id, req.user.id);
+  }
+
+  // ── Comentários ────────────────────────────────────────────────────
+
+  @Post('posts/:id/comments')
+  @HttpCode(HttpStatus.CREATED)
+  createComment(
+    @Param('id') postId: string,
+    @Body() dto: CreateCommentsLazerDto,
+    @Request() req: any,
+  ) {
+    return this.lazerService.createComment(postId, req.user.id, dto);
+  }
+
+  @Get('posts/:id/comments')
+  getComments(@Param('id') postId: string) {
+    return this.lazerService.findComments(postId);
+  }
+
+  @Patch('comments/:id')
+  updateComment(
+    @Param('id') commentId: string,
+    @Body() dto: CreateCommentsLazerDto,
+    @Request() req: any,
+  ) {
+    return this.lazerService.updateComment(commentId, req.user.id, dto);
+  }
+
+  @Delete('comments/:id')
+  @HttpCode(HttpStatus.OK)
+  deleteComment(@Param('id') commentId: string, @Request() req: any) {
+    return this.lazerService.softDeleteComment(commentId, req.user.id);
   }
 }

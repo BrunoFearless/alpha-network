@@ -1,51 +1,54 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { BotEngineService } from './bot-engine.service';
 import type { PlatformEvent } from '../../platform-events/platform-events.types';
-import type { BotProcessEventJob, BotQueueOptions, BotQueueStats } from './bot-queue.types';
+import type { BotProcessEventJob, BotQueueStats } from './bot-queue.types';
 
 /**
- * BullMQ Queue Service para processamento de eventos em background
- * Escalável horizontalmente com múltiplos workers
+ * BullMQ Queue Service para processamento de eventos em background.
+ * Escalável horizontalmente com múltiplos workers.
+ *
+ * CORRIGIDO: a classe agora implementa OnModuleInit (além de OnModuleDestroy),
+ * garantindo que o NestJS pode chamar onModuleInit() diretamente se necessário,
+ * e que o BotsModule pode fazer await this.queue.onModuleInit() com segurança.
  */
 @Injectable()
-export class BotQueueService implements OnModuleDestroy {
+export class BotQueueService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BotQueueService.name);
   private queue: Queue<BotProcessEventJob>;
   private worker: Worker<BotProcessEventJob>;
   private queueEvents: QueueEvents;
+  private initialized = false;
 
-  // Redis connection config (padrão: localhost:6379)
   private readonly redisConfig = {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),
-    maxRetriesPerRequest: null, // Important for BullMQ
+    maxRetriesPerRequest: null,
   };
 
   constructor(private readonly engine: BotEngineService) {}
 
-  /**
-   * Inicializar a fila e o worker
-   */
   async onModuleInit() {
-    try {
-      this.logger.log('Initializing BotQueueService...');
+    // Evita dupla inicialização caso NestJS e o BotsModule chamem simultaneamente
+    if (this.initialized) return;
+    this.initialized = true;
 
-      // Criar fila
+    try {
+      this.logger.log('A inicializar BotQueueService...');
+
       this.queue = new Queue<BotProcessEventJob>('bot-events', {
         connection: this.redisConfig,
         defaultJobOptions: {
-          removeOnComplete: { age: 3600 }, // Manter por 1 hora
+          removeOnComplete: { age: 3600 },
           backoff: {
             type: 'exponential',
-            delay: 2000, // 2s inicial
+            delay: 2000,
           },
           attempts: 3,
         },
       });
 
-      // Criar worker (pode rodar em processo separado)
       this.worker = new Worker<BotProcessEventJob>(
         'bot-events',
         async (job) => {
@@ -57,28 +60,28 @@ export class BotQueueService implements OnModuleDestroy {
         },
       );
 
-      // Queue events para logging
       this.queueEvents = new QueueEvents('bot-events', {
         connection: this.redisConfig,
       });
 
-      // Listeners
       this.setupEventListeners();
 
-      this.logger.log('✓ BotQueueService initialized');
+      this.logger.log('✓ BotQueueService inicializado');
     } catch (err) {
-      this.logger.error('Failed to initialize BotQueueService:', err);
+      this.initialized = false;
+      this.logger.error('Falha ao inicializar BotQueueService:', err);
       throw err;
     }
   }
 
-  /**
-   * Adicionar evento à fila para processamento async
-   */
   async enqueueEvent(event: PlatformEvent): Promise<void> {
+    if (!this.initialized || !this.queue) {
+      this.logger.warn('[BotQueue] Fila ainda não está pronta, descartando evento.');
+      return;
+    }
     try {
       const eventId = randomUUID();
-      const job = await this.queue.add(
+      await this.queue.add(
         `event-${eventId}`,
         {
           eventId,
@@ -86,57 +89,43 @@ export class BotQueueService implements OnModuleDestroy {
           createdAt: Date.now(),
         },
         {
-          // Job ID para deduplicação
           jobId: eventId,
           removeOnComplete: { age: 3600 },
         },
       );
-
-      this.logger.debug(`Event enqueued: ${eventId} (job ${job.id})`);
+      this.logger.debug(`Evento enfileirado: ${eventId}`);
     } catch (err) {
-      this.logger.error(`Failed to enqueue event:`, err);
+      this.logger.error('Falha ao enfileirar evento:', err);
       throw err;
     }
   }
 
-  /**
-   * Processar um evento (executado pelo worker)
-   */
   private async processJob(data: BotProcessEventJob): Promise<void> {
     const { eventId, event, createdAt } = data;
     const latency = Date.now() - createdAt;
-
     try {
-      this.logger.debug(`Processing event ${eventId} (latency: ${latency}ms)`);
+      this.logger.debug(`A processar evento ${eventId} (latência: ${latency}ms)`);
       await this.engine.processEvent(event);
-      this.logger.debug(`Event ${eventId} processed successfully`);
     } catch (err) {
-      this.logger.error(`Failed to process event ${eventId}:`, err);
-      throw err; // BullMQ vai fazer retry automaticamente
+      this.logger.error(`Falha ao processar evento ${eventId}:`, err);
+      throw err;
     }
   }
 
-  /**
-   * Setup event listeners
-   */
   private setupEventListeners() {
     this.queueEvents.on('completed', ({ jobId }) => {
-      this.logger.debug(`Job completed: ${jobId}`);
+      this.logger.debug(`Job concluído: ${jobId}`);
     });
-
     this.queueEvents.on('failed', ({ jobId, failedReason }) => {
-      this.logger.warn(`Job failed: ${jobId} - ${failedReason}`);
+      this.logger.warn(`Job falhado: ${jobId} - ${failedReason}`);
     });
-
     this.queueEvents.on('error', (err) => {
-      this.logger.error('Queue error:', err);
+      this.logger.error('Erro na fila:', err);
     });
   }
 
-  /**
-   * Obter estatísticas da fila
-   */
   async getStats(): Promise<BotQueueStats> {
+    if (!this.queue) return { queued: 0, active: 0, completed: 0, failed: 0, delayed: 0, paused: 0 };
     const [queued, active, completed, failed, delayed, paused] = await Promise.all([
       this.queue.getJobCounts('wait'),
       this.queue.getJobCounts('active'),
@@ -145,49 +134,40 @@ export class BotQueueService implements OnModuleDestroy {
       this.queue.getJobCounts('delayed'),
       this.queue.getJobCounts('paused'),
     ]);
-
     return {
-      queued: (queued as any).wait || 0,
-      active: (active as any).active || 0,
+      queued:    (queued    as any).wait      || 0,
+      active:    (active    as any).active    || 0,
       completed: (completed as any).completed || 0,
-      failed: (failed as any).failed || 0,
-      delayed: (delayed as any).delayed || 0,
-      paused: (paused as any).paused || 0,
+      failed:    (failed    as any).failed    || 0,
+      delayed:   (delayed   as any).delayed   || 0,
+      paused:    (paused    as any).paused    || 0,
     };
   }
 
-  /**
-   * Limpar jobs completados/falhados
-   */
-  async cleanOldJobs(olderThan: number = 86400000): Promise<void> {
+  async cleanOldJobs(olderThan = 86400000): Promise<void> {
+    if (!this.queue) return;
     await this.queue.clean(olderThan, 100, 'completed');
-    this.logger.log(`Cleaned old jobs (olderThan: ${olderThan}ms)`);
+    this.logger.log(`Jobs antigos limpos (olderThan: ${olderThan}ms)`);
   }
 
-  /**
-   * Pausar processamento
-   */
   async pause(): Promise<void> {
+    if (!this.queue) return;
     await this.queue.pause();
-    this.logger.log('Queue paused');
+    this.logger.log('Fila pausada');
   }
 
-  /**
-   * Retomar processamento
-   */
   async resume(): Promise<void> {
+    if (!this.queue) return;
     await this.queue.resume();
-    this.logger.log('Queue resumed');
+    this.logger.log('Fila retomada');
   }
 
-  /**
-   * Cleanup ao destruir módulo
-   */
   async onModuleDestroy() {
-    this.logger.log('Cleaning up BotQueueService...');
+    this.logger.log('A encerrar BotQueueService...');
     await this.worker?.close();
     await this.queueEvents?.close();
     await this.queue?.close();
-    this.logger.log('✓ BotQueueService cleaned up');
+    this.initialized = false;
+    this.logger.log('✓ BotQueueService encerrado');
   }
 }

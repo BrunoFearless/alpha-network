@@ -1,7 +1,7 @@
 # Dependências
 node_modules
-apps/api/uploads/
-uploads//
+**/uploads/
+apps/api/uploads/*
 .pnp
 .pnp.js
 

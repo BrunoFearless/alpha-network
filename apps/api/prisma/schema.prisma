@@ -1,19 +1,6 @@
 // ════════════════════════════════════════════════════════════════════
 // ALPHA NETWORK — Schema Prisma
 // ════════════════════════════════════════════════════════════════════
-// Owners por módulo:
-//   User, Profile, Session     → Adolfo Figueiredo
-//   LazerPost, LazerReaction,  → Obed Jorge
-//     LazerComment
-//   CreatorArticle,            → Pedro Evaristo
-//     CreatorPortfolioItem
-//   DevProject, DevMember,     → Alexandre Landa
-//     DevFile, DevTask,
-//     DevMessage
-//   Server, Channel, Message,  → Bruno Fearless
-//     ServerMember, Bot,
-//     BotCommand, ServerBot
-// ════════════════════════════════════════════════════════════════════
 
 generator client {
   provider = "prisma-client-js"
@@ -30,14 +17,17 @@ model User {
   id            String    @id @default(uuid())
   email         String    @unique
   passwordHash  String?
-  provider      String    @default("email") // "email" | "google"
+  provider      String    @default("email")
   emailVerified Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  profile  Profile?
-  sessions Session[]
+  profile        Profile?
+  sessions       Session[]
+  lazerPosts     LazerPost[]
+  lazerComments  LazerComment[]
+  lazerReactions LazerReaction[]
 
   @@map("users")
 }
@@ -48,10 +38,24 @@ model Profile {
   username    String   @unique
   displayName String?
   avatarUrl   String?
-  activeModes String[] @default([]) // ["lazer","developer",...]
+  activeModes String[] @default([])
+  bannerUrl   String?
+  bannerColor String?
   bio         String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      String?
+  tags        String?
+  lazerData   Json?
+
+  // Name styling
+  nameFont   String?
+  nameEffect String?
+  nameColor  String?
+
+  // Aurora theme
+  auroraTheme String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -83,16 +87,22 @@ model Follow {
 // ─── MODO LAZER (Obed) ───────────────────────────────────────────────
 
 model LazerPost {
-  id        String    @id @default(uuid())
-  authorId  String
-  content   String
-  imageUrl  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  id         String    @id @default(uuid())
+  authorId   String
+  content    String
+  imageUrl   String?
+  tag        String?
+  titleFont  String?
+  titleColor String?
+  isSparkle  Boolean   @default(false)
+  isPinned   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
 
   reactions LazerReaction[]
   comments  LazerComment[]
+  author    User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("lazer_posts")
 }
@@ -105,6 +115,7 @@ model LazerReaction {
   createdAt DateTime @default(now())
 
   post LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id])
 
   @@unique([postId, userId])
   @@map("lazer_reactions")
@@ -114,11 +125,14 @@ model LazerComment {
   id        String    @id @default(uuid())
   postId    String
   authorId  String
+  parentId  String?
   content   String
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 
-  post LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post   LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User?     @relation(fields: [userId], references: [id])
+  userId String?
 
   @@map("lazer_comments")
 }
@@ -235,6 +249,8 @@ model Server {
   name        String
   description String?
   imageUrl    String?
+  bannerUrl   String?
+  bannerColor String?
   inviteCode  String    @unique @default(uuid())
   createdAt   DateTime  @default(now())
   deletedAt   DateTime?
@@ -246,6 +262,7 @@ model Server {
   roles             CommunityRole[]
   bans              CommunityBan[]
   auditLogs         CommunityAuditLog[]
+  events            CommunityEvent[]
 
   @@map("community_servers")
 }
@@ -254,6 +271,7 @@ model ChannelCategory {
   id        String   @id @default(uuid())
   serverId  String
   name      String
+  icon      String   @default("📁")
   position  Int      @default(0)
   createdAt DateTime @default(now())
 
@@ -309,13 +327,20 @@ model CommunityBan {
 }
 
 model Channel {
-  id         String   @id @default(uuid())
-  serverId   String
-  categoryId String?
-  name       String
-  type       String   @default("text")
-  position   Int      @default(0)
-  createdAt  DateTime @default(now())
+  id              String   @id @default(uuid())
+  serverId        String
+  categoryId      String?
+  parentId        String?
+  parentMessageId String?
+  name            String
+  topic           String?
+  type            String   @default("text")
+  icon            String   @default("#")
+  position        Int      @default(0)
+  isPrivate       Boolean  @default(false)
+  allowedRoles    Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   server   Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
   category ChannelCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -391,6 +416,39 @@ model ServerMember {
 
   @@unique([serverId, userId])
   @@map("community_members")
+}
+
+model CommunityEvent {
+  id           String    @id @default(uuid())
+  serverId     String
+  creatorId    String
+  title        String
+  description  String?
+  location     String?
+  locationType String    @default("external")
+  imageUrl     String?
+  startDate    DateTime
+  endDate      DateTime?
+  frequency    String    @default("none")
+  coverColor   String?
+  createdAt    DateTime  @default(now())
+
+  server    Server                   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  interests CommunityEventInterest[]
+
+  @@map("community_events")
+}
+
+model CommunityEventInterest {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  event CommunityEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@map("community_event_interests")
 }
 
 // ─── MODO BOT (Bruno) ────────────────────────────────────────────────
