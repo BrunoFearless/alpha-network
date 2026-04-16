@@ -1,8 +1,8 @@
 export class Comments {
-    id:        String   
-    postId:    String
-    userId:    String
-    type:      String    
+    id:        string   
+    postId:    string
+    userId:    string
+    type:      string    
     createdAt: Date  
     post:      any
 }

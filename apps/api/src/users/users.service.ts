@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateUserDto } from "./dto/update-user.dto";
-import { CreateUserDto } from "./dto/createe-user.dto";
+import { CreateUserDto } from "./dto/create-user.dto"
 
 @Injectable()
 export class UsersService {
@@ -132,20 +132,16 @@ export class UsersService {
   }
 
   async getFollowings(username: string) {
-    // 1. Encontrar o perfil do utilizador que queremos ver quem ele segue
     const target = await this.findByUsername(username);
     if (!target) throw new NotFoundException('Utilizador não encontrado');
 
-    // 2. Procurar na tabela follows todos os registos onde este user é o seguidor
     const followRecords = await this.prisma.follow.findMany({
       where: { followerId: target.userId },
       select: { followingId: true }
     });
 
-    // 3. Criar um array apenas com os IDs de quem está a ser seguido
     const followingIds = followRecords.map(f => f.followingId);
 
-    // 4. Buscar os perfis desses IDs para retornar uma lista legível
     return await this.prisma.profile.findMany({
       where: {
         userId: { in: followingIds }
@@ -163,16 +159,13 @@ export class UsersService {
     const target = await this.findByUsername(username);
     if (!target) throw new NotFoundException('Utilizador não encontrado');
 
-    // 2. Buscamos todos os registos onde o 'followingId' é o do alvo
     const followRecords = await this.prisma.follow.findMany({
       where: { followingId: target.userId },
       select: { followerId: true }
     });
 
-    // 3. Extraímos apenas os IDs de quem segue
     const followerIds = followRecords.map(f => f.followerId);
 
-    // 4. Buscamos os dados dos perfis desses IDs
     return await this.prisma.profile.findMany({
       where: { userId: { in: followerIds } },
       select: {

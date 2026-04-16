@@ -1,6 +1,6 @@
 import {
   Controller, Get, Patch, Delete,
-  Body, Param, UseGuards, HttpCode, HttpStatus, Req, Post, ForbiddenException, NotFoundException, BadRequestException, UnauthorizedException,
+  Body, Param, UseGuards, HttpCode, HttpStatus, Req, Post,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -14,7 +14,6 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
   // ── Perfil público ─────────────────────────────────────────────────
-  // TODO (Adolfo v2): implementar getProfile completo com followersCount
   @Get(':username')
   @UseGuards(OptionalJwtAuthGuard)
   async getProfile(
@@ -33,7 +32,6 @@ export class UsersController {
   }
 
   // ── Activar/desactivar modos ───────────────────────────────────────
-  // Usado pelo main/page.tsx — PATCH /api/v1/users/me/modes
   @Patch('me/modes')
   @UseGuards(JwtAuthGuard)
   async updateModes(
@@ -45,7 +43,6 @@ export class UsersController {
   }
 
   // ── Editar perfil ──────────────────────────────────────────────────
-  // TODO (Adolfo v2): implementar PATCH /users/me com bio, displayName, avatarUrl
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   async updateProfile(
@@ -112,6 +109,4 @@ export class UsersController {
     const followings = await this.usersService.getFollowings(username)
     return { success: true, data: followings }
   }
-
-
 }
