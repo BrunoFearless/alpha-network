@@ -179,12 +179,14 @@ pnpm db:seed          # Popular a base de dados com dados de teste
 
 ### Autenticação
 ```
-POST   /auth/register      Criar conta
-POST   /auth/login         Iniciar sessão
-POST   /auth/refresh       Renovar token
-POST   /auth/logout        Terminar sessão
-GET    /auth/me            Perfil do utilizador autenticado
-GET    /auth/google        Login com Google
+POST    /auth/register      Criar conta
+POST    /auth/login         Iniciar sessão
+POST    /auth/refresh       Renovar token
+POST    /auth/logout        Terminar sessão
+GET     /auth/me            Perfil do utilizador autenticado
+GET     /auth/google        Login com Google
+DELETE  /users/me           Deletar conta
+POST    /auth/restore       Restaurar conta
 ```
 
 ### Modo Lazer
@@ -247,7 +249,7 @@ Authorization: Bearer <access_token>
 
 | Membro | Módulo | GitHub |
 |--------|--------|--------|
-| Adolfo Figueiredo | Autenticação | [@ArdFigueiredo](https://github.com/ArdFigueiredo) |
+| Adolfo Figueiredo | Autenticação | [@AdolfoFigueiredo](https://github.com/AdolfoFigueiredo) |
 | Obed Jorge | Modo Lazer | [@ObedJorge](https://github.com/ObedJorge) |
 | Pedro Evaristo | Modo Criador | [@PedroEvaristo](https://github.com/PedroEvaristo) |
 | Alexandre Landa | Modo Desenvolvedor | [@AlexandreLanda](https://github.com/AlexandreLanda) |
