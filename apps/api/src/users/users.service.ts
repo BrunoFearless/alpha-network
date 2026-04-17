@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { randomUUID } from 'crypto';
@@ -116,7 +116,7 @@ export class UsersService {
     try {
       const existing = await readdir(dir);
       await Promise.all(
-        existing.map(f => unlink(join(dir, f)).catch(() => {})),
+        existing.map(f => unlink(join(dir, f)).catch(() => { })),
       );
     } catch { /* pasta vazia */ }
 
@@ -149,5 +149,139 @@ export class UsersService {
       'video/quicktime': '.mov',
     };
     return map[mime] ?? '';
+  }
+
+  // ── Sistema de Seguimento ──────────────────────────────────────────────────
+  async findByIdWithDeleted(id: string) {
+    return await this.prisma.user.findUnique({
+      where: { id },
+      select: { profile: true }
+    })
+  }
+
+  async countFollowers(followingId: string) {
+    return await this.prisma.follow.count({ where: { followingId } })
+  }
+
+  async countFollowings(followerId: string) {
+    return await this.prisma.follow.count({ where: { followerId } })
+  }
+
+  async isFollowing(targetId: string, requesterId: string): Promise<boolean> {
+    const result = await this.prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: requesterId,
+          followingId: targetId,
+        },
+      },
+    });
+
+    return !!result
+  }
+
+  async getFullProfile(username: string, requesterId?: string) {
+    const profile = await this.findByUsername(username);
+
+    if (!profile) return null;
+
+    const [followersCount, followingCount, isFollowing] = await Promise.all([
+      this.countFollowers(profile.userId),
+      this.countFollowings(profile.userId),
+      requesterId
+        ? this.isFollowing(profile.userId, requesterId)
+        : false
+    ])
+
+    const { emailVerified, passwordHash, deletedAt, ...safeUser } = profile.user as any;
+
+    return {
+      id: profile.id,
+      username: profile.username,
+      displayName: profile.displayName,
+      avatarUrl: profile.avatarUrl,
+      bio: profile.bio,
+      activeModes: profile.activeModes,
+      followersCount,
+      followingCount,
+      isFollowing,
+      createdAt: profile.createdAt,
+      user: safeUser
+    };
+  }
+
+  async follow(followerId: string, targetUsername: string) {
+    const target = await this.findByUsername(targetUsername)
+    if (!target) throw new NotFoundException('utilizador não encontrado')
+    if (target.userId === followerId) throw new BadRequestException('não pode seguir-te a ti mesmo')
+
+    return await this.prisma.follow.upsert({
+      where: {
+        followerId_followingId: {
+          followerId,
+          followingId: target.userId
+        }
+      },
+      update: {},
+      create: { followerId, followingId: target.userId },
+    })
+  }
+
+  async unfollow(followerId: string, targetUsername: string) {
+    const target = await this.findByUsername(targetUsername)
+    if (!target) throw new NotFoundException("Utilizador não encontrado")
+
+    return await this.prisma.follow.deleteMany({
+      where: {
+        followerId: followerId,
+        followingId: target.userId
+      }
+    })
+  }
+
+  async getFollowings(username: string) {
+    const target = await this.findByUsername(username);
+    if (!target) throw new NotFoundException('Utilizador não encontrado');
+
+    const followRecords = await this.prisma.follow.findMany({
+      where: { followerId: target.userId },
+      select: { followingId: true }
+    });
+
+    const followingIds = followRecords.map(f => f.followingId);
+
+    return await this.prisma.profile.findMany({
+      where: {
+        userId: { in: followingIds }
+      },
+      select: {
+        userId: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true
+      }
+    });
+  }
+
+  async getFollowers(username: string) {
+    const target = await this.findByUsername(username);
+    if (!target) throw new NotFoundException('Utilizador não encontrado');
+
+    const followRecords = await this.prisma.follow.findMany({
+      where: { followingId: target.userId },
+      select: { followerId: true }
+    });
+
+    const followerIds = followRecords.map(f => f.followerId);
+
+    return await this.prisma.profile.findMany({
+      where: { userId: { in: followerIds } },
+      select: {
+        userId: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true
+      }
+    });
   }
 }
