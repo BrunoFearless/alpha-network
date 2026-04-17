@@ -14,7 +14,10 @@ import { BotPlatformModule } from './modes/bot-platform/bot-platform.module';
 @Module({
   imports: [
     // Variáveis de ambiente disponíveis em toda a aplicação
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '../../.env'
+    }),
 
     // Rate limiting — máximo 100 pedidos por minuto por IP
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
@@ -33,4 +36,4 @@ import { BotPlatformModule } from './modes/bot-platform/bot-platform.module';
     BotPlatformModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

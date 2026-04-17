@@ -9,16 +9,16 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  
+
   // Setup uploads directory with full diagnostics
   const uploadsPath = join(process.cwd(), 'uploads');
   const botsPath = join(uploadsPath, 'bots');
-  
+
   console.log(`\n📁 Setup de Uploads:`);
   console.log(`   Working Dir: ${process.cwd()}`);
   console.log(`   Uploads Dir: ${uploadsPath}`);
   console.log(`   Bots Dir: ${botsPath}`);
-  
+
   // Create base uploads directory
   try {
     if (!existsSync(uploadsPath)) {
@@ -42,7 +42,7 @@ async function bootstrap() {
   } catch (e) {
     console.error(`   ✗ Error creating bots dir:`, e.message);
   }
-  
+
   // Configure static file serving
   app.useStaticAssets(uploadsPath, { prefix: '/uploads' });
   console.log(`📱 Static files serving:`);
