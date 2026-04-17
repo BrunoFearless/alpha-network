@@ -49,6 +49,7 @@ model User {
   // Lazer Communities
   lazerCommunitiesOwned      LazerCommunity[]       @relation("LazerCommunityOwner")
   lazerCommunityMemberships  LazerCommunityMember[]
+  lazerCheckIns              LazerCheckIn[]
 
   @@map("users")
 }
@@ -65,6 +66,7 @@ model Profile {
   status      String?
   tags        String?
   lazerData   Json?
+  youtubeChannelId String?
 
   // Name styling
   nameFont    String?
@@ -181,6 +183,21 @@ model LazerTropeTrend {
   @@map("lazer_trope_trends")
 }
 
+model LazerCheckIn {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String   // e.g. "Solo Leveling"
+  episode   String   // e.g. "EP 12"
+  emoji     String   // e.g. "⚔️"
+  genre     String?  // e.g. "Ação"
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([title, createdAt])
+  @@map("lazer_checkins")
+}
+
 // ─── LAZER COMMUNITIES (Bruno) ───────────────────────────────────────
 
 model LazerCommunity {
@@ -191,6 +208,7 @@ model LazerCommunity {
   bannerUrl   String?
   iconUrl     String?
   iconEmoji   String   @default("🌐")
+  youtubeChannelId String?
   accentColor String?  @default("#fbbf24")
   themeColor  String?  @default("#fbbf24")
   isPublic    Boolean  @default(true)

@@ -248,6 +248,90 @@ export class LazerService {
     return { success: true, data: trending };
   }
 
+  // ── Watching Now / Simulcasts ──────────────────────────────────────
+
+  async getWatchingNow() {
+    // 1. Catálogo simulado (Simulcast Schedule)
+    const CATALOG = [
+      { id: 'solo', title: 'Solo Leveling', ep: 'EP 12', genre: 'Ação', emoji: '⚔️' },
+      { id: 'frieren', title: 'Frieren: Beyond Journey\'s End', ep: 'EP 28', genre: 'Aventura', emoji: '🌿' },
+      { id: 'dandadan', title: 'Dandadan', ep: 'EP 4', genre: 'Comédia', emoji: '👻' },
+      { id: 'blue_lock', title: 'Blue Lock', ep: 'EP 18', genre: 'Desporto', emoji: '⚽' },
+      { id: 'kaiju', title: 'Kaiju No. 8', ep: 'EP 1', genre: 'Ação', emoji: '🦖' },
+    ];
+
+    const yesterday = new Date();
+    yesterday.setHours(yesterday.getHours() - 24);
+
+    // 2. Procurar check-ins das últimas 24h
+    const recentCheckIns = await this.prisma.lazerCheckIn.findMany({
+      where: { createdAt: { gte: yesterday } },
+      include: {
+        user: { include: { profile: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // 3. Agrupar por título e retirar avatares, incluindo títulos customizados dos utilizadores
+    const resultMap = new Map<string, any>();
+
+    CATALOG.forEach(item => {
+      resultMap.set(item.title, { ...item, totalCheckIns: 0, recentAvatars: [] });
+    });
+
+    // Preencher títulos customizados que não estão no catálogo
+    recentCheckIns.forEach(c => {
+      if (!resultMap.has(c.title)) {
+        resultMap.set(c.title, {
+          id: c.id, // usamos o id do checkin como chave temporária
+          title: c.title,
+          ep: c.episode,
+          genre: c.genre || 'Comunidade',
+          emoji: c.emoji || '👀',
+          totalCheckIns: 0,
+          recentAvatars: []
+        });
+      }
+    });
+
+    // Contabilizar users únicos por título
+    Array.from(resultMap.keys()).forEach(title => {
+      const checkInsForTitle = recentCheckIns.filter(c => c.title === title);
+      const uniqueUsers = Array.from(new Map(checkInsForTitle.map(c => [c.userId, c.user])).values());
+      const avatars = (uniqueUsers as any[]).slice(0, 3).map(u => u?.profile?.avatarUrl).filter(Boolean);
+      const item = resultMap.get(title);
+      
+      item.totalCheckIns = uniqueUsers.length;
+      item.recentAvatars = avatars;
+    });
+
+    const result = Array.from(resultMap.values());
+    // Ordenar para meter os mais vistos no topo
+    result.sort((a, b) => b.totalCheckIns - a.totalCheckIns);
+
+    // Se a lista ficar gigante devido aos custom, top 10 chega
+    return { success: true, data: result.slice(0, 10) };
+  }
+
+  async createCheckIn(userId: string, title: string, episode: string, emoji: string, genre?: string) {
+    const recentDate = new Date();
+    recentDate.setHours(recentDate.getHours() - 2);
+
+    const existing = await this.prisma.lazerCheckIn.findFirst({
+      where: { userId, title, createdAt: { gte: recentDate } }
+    });
+
+    if (existing) {
+      return { success: true, data: existing };
+    }
+
+    const checkIn = await this.prisma.lazerCheckIn.create({
+      data: { userId, title, episode, emoji, genre }
+    });
+
+    return { success: true, data: checkIn };
+  }
+
   // ── Reactions ─────────────────────────────────────────────────────
 
   async toggleReaction(dto: ToggleRequestDTO, userId: string) {

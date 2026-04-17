@@ -49,6 +49,25 @@ export class LazerController {
     return this.lazerService.createTrope(name, description, iconEmoji, category);
   }
 
+  // ── Watching Now ───────────────────────────────────────────────────
+
+  @Get('watching')
+  getWatchingNow() {
+    return this.lazerService.getWatchingNow();
+  }
+
+  @Post('watching/checkin')
+  @HttpCode(HttpStatus.OK)
+  createCheckIn(
+    @Body('title') title: string,
+    @Body('episode') episode: string,
+    @Body('emoji') emoji: string,
+    @Body('genre') genre: string,
+    @Request() req: any
+  ) {
+    return this.lazerService.createCheckIn(req.user.id, title, episode, emoji, genre);
+  }
+
   // ── Posts ──────────────────────────────────────────────────────────
 
   @Post('posts')
