@@ -1,6 +1,23 @@
 import { create } from 'zustand';
 import { useAuthStore } from './auth.store';
 
+export interface LazerTrope {
+  id: string;
+  name: string;
+  description?: string | null;
+  iconEmoji: string;
+  category: string;
+}
+
+export interface TrendingTrope extends LazerTrope {
+  metrics: {
+    sparkles: number;
+    talking: number;
+    postCount: number;
+  };
+  score: number;
+}
+
 export interface LazerPost {
   id: string;
   authorId: string;
@@ -11,7 +28,9 @@ export interface LazerPost {
       nameFont?: string | null; nameEffect?: string | null; nameColor?: string | null;
     }
   };
-  content: string; imageUrl?: string | null; tag?: string | null;
+  content: string; imageUrl?: string | null; 
+  tropes?: LazerTrope[];
+  communityId?: string | null;
   isSparkle: boolean; isPinned: boolean;
   isLiked?: boolean; // persists in store, never reset between renders
   titleFont?: string | null; titleColor?: string | null; createdAt: string;
@@ -42,11 +61,15 @@ export interface LazerCommunity {
   description?: string | null;
   iconUrl?: string | null;
   bannerUrl?: string | null;
+  iconEmoji?: string;
+  themeColor?: string;
+  accentColor?: string;
   isPublic: boolean;
   membersCount: number;
   onlineCount: number;
-  role: string;
+  role: 'admin' | 'member' | 'none' | string;
   inviteCode?: string;
+  tags?: string[];
 }
 
 interface LazerStoreState {
@@ -54,12 +77,13 @@ interface LazerStoreState {
   comments: Record<string, LazerComment[]>;
   friends: string[]; friendRequests: FriendRequest[]; sentRequests: string[];
   myCommunities: LazerCommunity[]; exploreCommunities: LazerCommunity[];
+  trendingTropes: TrendingTrope[];
   isLoading: boolean;
   fetchFeed: () => Promise<void>;
   fetchUserPosts: (userId: string) => Promise<void>;
-  createPost: (content: string, imageUrl?: string, tag?: string, isSparkle?: boolean, titleFont?: string, titleColor?: string) => Promise<boolean>;
+  createPost: (content: string, imageUrl?: string, tropeNames?: string[], isSparkle?: boolean, titleFont?: string, titleColor?: string, communityId?: string) => Promise<boolean>;
   deletePost: (id: string) => Promise<boolean>;
-  editPost: (id: string, content: string, imageUrl?: string, tag?: string, titleFont?: string, titleColor?: string) => Promise<boolean>;
+  editPost: (id: string, content: string, imageUrl?: string, tropeNames?: string[], titleFont?: string, titleColor?: string) => Promise<boolean>;
   pinPost: (id: string) => Promise<boolean>;
   fetchComments: (postId: string) => Promise<void>;
   addComment: (postId: string, content: string, parentId?: string) => Promise<boolean>;
@@ -77,6 +101,7 @@ interface LazerStoreState {
   isFriend: (userId: string) => boolean;
   hasSentRequest: (userId: string) => boolean;
   hasReceivedRequest: (userId: string) => FriendRequest | undefined;
+  fetchTrendingTropes: () => Promise<void>;
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -91,7 +116,18 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
   feedPosts: [], userPosts: [], comments: {},
   friends: [], friendRequests: [], sentRequests: [],
   myCommunities: [], exploreCommunities: [],
+  trendingTropes: [],
   isLoading: false,
+
+  fetchTrendingTropes: async () => {
+    try {
+      const res = await fetch(`${API}/api/v1/lazer/tropes/trending`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        set({ trendingTropes: data.data || [] });
+      }
+    } catch (e) { console.error('fetchTrendingTropes error', e); }
+  },
 
   fetchFeed: async () => {
     set({ isLoading: true });
@@ -122,11 +158,11 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
     finally { set({ isLoading: false }); }
   },
 
-  createPost: async (content, imageUrl, tag, isSparkle, titleFont, titleColor) => {
+  createPost: async (content, imageUrl, tropeNames, isSparkle, titleFont, titleColor, communityId) => {
     try {
       const res = await fetch(`${API}/api/v1/lazer/posts`, {
         method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ content, imageUrl, tag, isSparkle, titleFont, titleColor }),
+        body: JSON.stringify({ content, imageUrl, tropeNames, isSparkle, titleFont, titleColor, communityId }),
       });
       if (res.ok) {
         const newPost = await res.json();
@@ -158,11 +194,11 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
     } catch { return false; }
   },
 
-  editPost: async (id, content, imageUrl, tag, titleFont, titleColor) => {
+  editPost: async (id, content, imageUrl, tropeNames, titleFont, titleColor) => {
     try {
       const res = await fetch(`${API}/api/v1/lazer/posts/${id}`, {
         method: 'PATCH', headers: authHeaders(),
-        body: JSON.stringify({ content, imageUrl, tag, titleFont, titleColor }),
+        body: JSON.stringify({ content, imageUrl, tropeNames, titleFont, titleColor }),
       });
       if (res.ok) {
         const updated = await res.json(); const p = updated.data || updated;

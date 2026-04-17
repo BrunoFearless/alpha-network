@@ -90,12 +90,13 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
 
 interface ProfileViewProps {
   user: LazerUserProfile;
+  isOwnProfile?: boolean;
   onEdit?: () => void;
   onPostClick?: (postId: string) => void;
   viewingUserId?: string;
 }
 
-export function LazerProfileView({ user, onEdit, onPostClick, viewingUserId }: ProfileViewProps) {
+export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId }: ProfileViewProps) {
   const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend } = useLazerStore();
   
   const fStatus = viewingUserId ? (isFriend(viewingUserId) ? 'friend' : hasSentRequest(viewingUserId) ? 'sent' : 'none') : 'none';

@@ -6,9 +6,9 @@ export class CreatePostLazerDto {
   @IsString()
   @IsOptional()
   imageUrl?: string;
-  @IsString()
+  @IsString({ each: true })
   @IsOptional()
-  tag?: string;
+  tropeNames?: string[];
   @IsBoolean()
   @IsOptional()
   isSparkle?: boolean;

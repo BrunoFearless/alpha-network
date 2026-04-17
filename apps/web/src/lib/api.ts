@@ -110,4 +110,8 @@ export const lazerApi = {
   // Rules
   addRule: (communityId: string, text: string) => api.post(`/lazer/communities/${communityId}/rules`, { text }),
   deleteRule: (ruleId: string) => api.delete(`/lazer/communities/rules/${ruleId}`),
+  
+  // Tropes
+  getAllTropes: () => api.get<any[]>('/lazer/tropes'),
+  createTrope: (data: { name: string; description: string; category: string; iconEmoji: string }) => api.post('/lazer/tropes', data),
 };

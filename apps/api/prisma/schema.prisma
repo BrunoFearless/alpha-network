@@ -104,7 +104,6 @@ model LazerPost {
   authorId  String
   content   String
   imageUrl  String?
-  tag       String?
   titleFont String?
   titleColor String?
   isSparkle Boolean   @default(false)
@@ -116,6 +115,7 @@ model LazerPost {
   reactions LazerReaction[]
   comments  LazerComment[]
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tropes    LazerTrope[]
 
   // Link to community if applicable
   communityId String?
@@ -151,6 +151,34 @@ model LazerComment {
   author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("lazer_comments")
+}
+
+model LazerTrope {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g. "EnemiesToLovers"
+  description String?
+  iconEmoji   String   @default("✨")
+  category    String   @default("General")
+  createdAt   DateTime @default(now())
+
+  posts       LazerPost[]
+
+  @@map("lazer_tropes")
+}
+
+model LazerTropeTrend {
+  id            String   @id @default(uuid())
+  tropeId       String
+  date          DateTime // Represents the day of the trend
+  sparklesCount Int      @default(0) // Total reactions
+  talkingCount  Int      @default(0) // Total comments
+  rank          Int?
+
+  // We could establish a relation, but it's often easier to just query by tropeId
+  // trope LazerTrope @relation(fields: [tropeId], references: [id], onDelete: Cascade)
+
+  @@unique([tropeId, date])
+  @@map("lazer_trope_trends")
 }
 
 // ─── LAZER COMMUNITIES (Bruno) ───────────────────────────────────────

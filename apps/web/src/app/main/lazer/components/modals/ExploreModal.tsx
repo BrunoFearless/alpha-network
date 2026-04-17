@@ -60,23 +60,20 @@ const WATCHING_NOW = [
   { title: 'Blue Lock', ep: 'EP 16', genre: 'Desporto', emoji: '⚽' },
 ];
 
-const COMMUNITIES = [
-  { name: 'Star Walkers Guild', members: '1.2k', emoji: '⭐', color: '#fbbf24' },
-  { name: 'RomCom Fans', members: '8.2k', emoji: '💕', color: '#a78bfa' },
-  { name: 'Tearjerkers', members: '5.6k', emoji: '💧', color: '#60a5fa' },
-];
+// (COMMUNITIES mockup removed in favor of real store data)
 
 interface ExploreProps {
   onClose: () => void;
   onPostClick?: (postId: string) => void;
   onProfileClick?: (userId: string) => void;
+  onCommunityClick?: (communityId: string) => void;
   themeColor: string;
   themeMode: 'light' | 'dark';
 }
 
-export function ExploreModal({ onClose, onPostClick, onProfileClick, themeColor: c, themeMode }: ExploreProps) {
+export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunityClick, themeColor: c, themeMode }: ExploreProps) {
   const { user: authUser } = useAuthStore();
-  const { feedPosts, sendFriendRequest, cancelFriendRequest, isFriend, hasSentRequest } = useLazerStore();
+  const { feedPosts, sendFriendRequest, cancelFriendRequest, isFriend, hasSentRequest, myCommunities, fetchMyCommunities } = useLazerStore();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [creators, setCreators] = useState<any[]>([]);
@@ -89,6 +86,11 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, themeColor:
   const textSecondary = isLight ? 'text-black/60' : 'text-white/60';
   const cardBg = isLight ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)';
   const borderCol = isLight ? `${c}40` : `${c}18`;
+  const isVideo = (url?: string | null) => url?.match(/\.(mp4|webm|mov)(\?|$)/i);
+
+  useEffect(() => {
+    fetchMyCommunities();
+  }, []);
 
   // Compute stats for creators & rankings
   useEffect(() => {
@@ -205,17 +207,25 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, themeColor:
             {/* My Communities */}
             <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
                <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] mb-5 ${textSecondary}`}>Minhas Comunidades</h3>
-               <div className="flex flex-col gap-2.5">
-                 {COMMUNITIES.map((com, i) => (
-                   <button key={i} className="flex items-center gap-3 w-full bg-transparent border-none cursor-pointer text-left rounded-2xl p-2 transition-all hover:bg-black/5 dark:hover:bg-white/5">
-                     <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl shrink-0 shadow-sm" style={{ background: `${com.color}20`, border: `1px solid ${com.color}40` }}>{com.emoji}</div>
-                     <div className="flex-1 min-w-0">
-                       <p className={`text-[13px] font-extrabold truncate ${textPrimary}`}>{com.name}</p>
-                       <p className={`text-[11px] font-bold mt-0.5 ${textSecondary}`}>{com.members} membros</p>
-                     </div>
-                   </button>
-                 ))}
-               </div>
+                <div className="flex flex-col gap-2.5">
+                  {myCommunities.length === 0 ? (
+                    <p className={`text-[11px] italic opacity-50 py-2 ${textSecondary}`}>Ainda não te juntaste a nenhuma community.</p>
+                  ) : myCommunities.slice(0, 5).map((com) => (
+                    <button key={com.id} onClick={() => onCommunityClick?.(com.id)}
+                      className="flex items-center gap-3 w-full bg-transparent border-none cursor-pointer text-left rounded-2xl p-2 transition-all hover:bg-black/5 dark:hover:bg-white/5">
+                      <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden" 
+                        style={{ background: com.iconUrl ? 'transparent' : `${com.accentColor || '#666'}20`, border: `1px solid ${com.accentColor || '#666'}40` }}>
+                        {isVideo(com.iconUrl) ? <video src={com.iconUrl!} autoPlay loop muted playsInline className="w-full h-full object-cover"/>
+                          : com.iconUrl ? <img src={com.iconUrl} alt="" className="w-full h-full object-cover"/>
+                          : (com as any).iconEmoji || '🌐'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-[13px] font-extrabold truncate ${textPrimary}`}>{com.name}</p>
+                        <p className={`text-[11px] font-bold mt-0.5 ${textSecondary}`}>{(com.membersCount ?? 0).toLocaleString()} membros</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
             </div>
 
             {/* Watching Now */}

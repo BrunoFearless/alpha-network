@@ -34,6 +34,7 @@ const POST_INCLUDE = {
       comments: true,
     },
   },
+  tropes: true,
 } as const;
 
 const COMMENT_INCLUDE = {
@@ -48,19 +49,31 @@ const COMMENT_INCLUDE = {
 export class LazerService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // ── Posts ──────────────────────────────────────────────────────────
+  async createPost(dto: any, userId: string) {
+    let tropeConnections: { id: string }[] = [];
 
-  async createPost(dto: CreatePostLazerDto, userId: string) {
+    if (dto.tropeNames && dto.tropeNames.length > 0) {
+      for (let name of dto.tropeNames) {
+        let cleanName = name.replace('#', '').trim();
+        if (!cleanName) continue;
+        
+        let trope = await this.prisma.lazerTrope.findUnique({ where: { name: cleanName } });
+        if (trope) {
+          tropeConnections.push({ id: trope.id });
+        }
+      }
+    }
+
     const post = await this.prisma.lazerPost.create({
       data: {
         content: dto.content,
         imageUrl: dto.imageUrl,
-        tag: dto.tag,
         isSparkle: dto.isSparkle ?? false,
         titleFont: dto.titleFont,
         titleColor: dto.titleColor,
         authorId: userId,
         communityId: dto.communityId || null,
+        tropes: tropeConnections.length > 0 ? { connect: tropeConnections } : undefined,
       },
       include: POST_INCLUDE,
     });
@@ -99,19 +112,34 @@ export class LazerService {
     return { success: true, data: posts };
   }
 
-  async updatePost(id: string, dto: UpdatePostLazerDto, userId: string) {
+  async updatePost(id: string, dto: any, userId: string) {
     const post = await this.prisma.lazerPost.findUnique({ where: { id } });
     if (!post) throw new NotFoundException('Post não encontrado.');
     if (post.authorId !== userId) throw new ForbiddenException('Sem permissão.');
+
+    let tropeConnections: { id: string }[] | undefined = undefined;
+
+    if (dto.tropeNames) {
+      tropeConnections = [];
+      for (let name of dto.tropeNames) {
+        let cleanName = name.replace('#', '').trim();
+        if (!cleanName) continue;
+        
+        let trope = await this.prisma.lazerTrope.findUnique({ where: { name: cleanName } });
+        if (trope) {
+          tropeConnections.push({ id: trope.id });
+        }
+      }
+    }
 
     const updated = await this.prisma.lazerPost.update({
       where: { id },
       data: {
         content: dto.content,
         imageUrl: dto.imageUrl,
-        tag: dto.tag,
         titleFont: dto.titleFont,
         titleColor: dto.titleColor,
+        tropes: tropeConnections ? { set: tropeConnections } : undefined,
       },
       include: POST_INCLUDE,
     });
@@ -142,6 +170,82 @@ export class LazerService {
       include: POST_INCLUDE,
     });
     return { success: true, data: updated };
+  }
+
+  // ── Tropes ─────────────────────────────────────────────────────────
+
+  async getAllTropes() {
+    const tropes = await this.prisma.lazerTrope.findMany({
+      orderBy: { name: 'asc' }
+    });
+    return { success: true, data: tropes };
+  }
+
+  async createTrope(name: string, description?: string, iconEmoji?: string, category?: string) {
+    // Check if it exists
+    const existing = await this.prisma.lazerTrope.findUnique({ where: { name } });
+    if (existing) return { success: true, data: existing };
+
+    const trope = await this.prisma.lazerTrope.create({
+      data: {
+        name,
+        description,
+        iconEmoji: iconEmoji || '✨',
+        category: category || 'General',
+      }
+    });
+    return { success: true, data: trope };
+  }
+
+  async getTrendingTropes() {
+    // Aggregation logic for Tropes used in Communities in the last 24h
+    // We get posts created in the last 24 hours that belong to a community
+    const yesterday = new Date();
+    yesterday.setHours(yesterday.getHours() - 24);
+
+    const posts = await this.prisma.lazerPost.findMany({
+      where: {
+        deletedAt: null,
+        communityId: { not: null }, // ONLY posts from a community
+        createdAt: { gte: yesterday }
+      },
+      include: {
+        tropes: true,
+        _count: {
+          select: { reactions: true, comments: true }
+        }
+      }
+    });
+
+    const metricsMap = new Map<string, { trope: any, sparkles: number, talking: number, count: number }>();
+
+    posts.forEach(post => {
+      post.tropes.forEach(trope => {
+        if (!metricsMap.has(trope.id)) {
+          metricsMap.set(trope.id, { trope, sparkles: 0, talking: 0, count: 0 });
+        }
+        const data = metricsMap.get(trope.id)!;
+        data.sparkles += post._count.reactions;
+        data.talking += post._count.comments;
+        data.count += 1;
+      });
+    });
+
+    const trending = Array.from(metricsMap.values())
+      .map(item => ({
+        ...item.trope,
+        metrics: {
+          sparkles: item.sparkles,
+          talking: item.talking,
+          postCount: item.count
+        },
+        // Score logic: 1 post = 10pts, 1 sparkle = 2pts, 1 comment = 5pts
+        score: (item.count * 10) + (item.sparkles * 2) + (item.talking * 5)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 50); // Get top 50
+
+    return { success: true, data: trending };
   }
 
   // ── Reactions ─────────────────────────────────────────────────────

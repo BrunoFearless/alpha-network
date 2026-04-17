@@ -26,6 +26,29 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 export class LazerController {
   constructor(private readonly lazerService: LazerService) {}
 
+  // ── Tropes ─────────────────────────────────────────────────────────
+
+  @Get('tropes')
+  getAllTropes() {
+    return this.lazerService.getAllTropes();
+  }
+
+  @Get('tropes/trending')
+  getTrendingTropes() {
+    return this.lazerService.getTrendingTropes();
+  }
+
+  @Post('tropes')
+  @HttpCode(HttpStatus.CREATED)
+  createTrope(
+    @Body('name') name: string,
+    @Body('description') description?: string,
+    @Body('iconEmoji') iconEmoji?: string,
+    @Body('category') category?: string,
+  ) {
+    return this.lazerService.createTrope(name, description, iconEmoji, category);
+  }
+
   // ── Posts ──────────────────────────────────────────────────────────
 
   @Post('posts')

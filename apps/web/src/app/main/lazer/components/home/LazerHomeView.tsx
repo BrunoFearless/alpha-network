@@ -9,6 +9,7 @@ import { useLazerStore } from '@/store/lazer.store';
 import { useAuthStore } from '@/store/auth.store';
 import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
 import { EmojiPicker } from '@/components/community/EmojiPicker';
+import { TropesModal } from '../modals/TropesModal';
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 const IconComment = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
@@ -322,6 +323,9 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
   const menuBg = isLight ? 'rgba(255,255,255,0.95)' : 'rgba(10,10,18,0.97)';
   const PREMIUM_COLORS = [...PREMIUM_COLORS_LIST, { id: 'dynamic', value: isLight ? '#000' : '#fff', label: isLight ? 'Black' : 'Pure' }];
 
+  // Ensure rawPost is typed correctly if possible, or default to any.
+  const tropesList = rawPost?.tropes || post.tropes || [];
+
   return (
     <div className={`rounded-3xl border-[1.5px] backdrop-blur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_8px_32px_rgba(0,0,0,0.12)] ${cardBg}`} style={{ borderColor: isPinned ? c : borderCol }}>
       {isPinned && (
@@ -413,7 +417,19 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
               </div>
             </div>
           ) : (
-            <div className="mb-3">{formatContent(post.content, rawPost?.titleFont, rawPost?.titleColor, isLight)}</div>
+            <>
+              <div className="mb-3">{formatContent(post.content, rawPost?.titleFont, rawPost?.titleColor, isLight)}</div>
+              {tropesList.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {tropesList.map((trope: any) => (
+                    <span key={trope.id} className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md"
+                          style={{ background: `${c}15`, color: c, border: `1px solid ${c}40` }}>
+                      {trope.iconEmoji} #{trope.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
           )}
           {(rawPost?.imageUrl || post.imageUrl) && !editing && (
             <img src={rawPost?.imageUrl || post.imageUrl} alt="post" className="w-full rounded-xl object-cover max-h-[300px] block mb-3"/>
@@ -547,28 +563,38 @@ const HOT_DISCUSSIONS = [
   { title: 'Arc favorito de Frieren', replies: 67, heat: 54 },
 ];
 
-function TrendingWidget({ c, isLight, textPrimary, textSecondary, borderCol, cardBg, onTagClick }: {
+function TrendingWidget({ c, isLight, textPrimary, textSecondary, borderCol, cardBg, onTagClick, onVerTodas }: {
   c: string; isLight: boolean; textPrimary: string; textSecondary: string; borderCol: string; cardBg: string;
   onTagClick: (tag: string) => void;
+  onVerTodas: () => void;
 }) {
+  const { trendingTropes } = useLazerStore();
+
   return (
     <div className={`rounded-3xl border-[1.5px] backdrop-blur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
       <div className="flex items-center gap-2 mb-3">
         <IconFlame/>
         <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Trending Tropes</h3>
+        <button onClick={onVerTodas} className="ml-auto text-[10px] font-black uppercase tracking-widest bg-transparent border-none cursor-pointer" style={{ color: c }}>Ver todas</button>
       </div>
       <div className="flex flex-col gap-2">
-        {TRENDING_TROPES.map(t => (
-          <button key={t.rank} onClick={() => onTagClick(t.tag)}
-            className="flex items-center gap-2.5 w-full bg-transparent border-none cursor-pointer text-left rounded-xl px-2 py-1.5 transition-all hover:scale-[1.02] group"
-            style={{ background: 'transparent' }}
-            onMouseEnter={e => (e.currentTarget.style.background = `${t.color}15`)}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-            <span className="font-black text-[13px] w-5 text-center opacity-50" style={{ color: t.rank === 1 ? '#fbbf24' : (isLight ? '#aaa' : '#555') }}>{t.rank}</span>
-            <span className="flex-1 font-bold text-[12px]" style={{ color: t.color }}>{t.tag}</span>
-            <span className={`text-[10px] font-bold ${textSecondary}`}>{t.count} ✨</span>
-          </button>
-        ))}
+        {trendingTropes.length === 0 ? (
+           <p className={`text-[10px] text-center py-4 italic ${textSecondary} opacity-50`}>Ainda não há tropos em alta.</p>
+        ) : (
+          trendingTropes.slice(0, 5).map((t, idx) => (
+            <button key={t.id} onClick={() => onTagClick(t.name)}
+              className="flex items-center gap-2.5 w-full bg-transparent border-none cursor-pointer text-left rounded-xl px-2 py-1.5 transition-all hover:scale-[1.02] group"
+              style={{ background: 'transparent' }}
+              onMouseEnter={e => (e.currentTarget.style.background = `${c}15`)}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <span className="font-black text-[13px] w-5 text-center opacity-50" style={{ color: idx === 0 ? '#fbbf24' : (isLight ? '#aaa' : '#555') }}>{idx + 1}</span>
+              <span className="flex-1 flex gap-1 items-center font-bold text-[12px]" style={{ color: c }}>
+                <span>{t.iconEmoji}</span> #{t.name}
+              </span>
+              <span className={`text-[10px] font-bold ${textSecondary}`}>{t.metrics?.sparkles + t.metrics?.talking || 0} ✨</span>
+            </button>
+          ))
+        )}
       </div>
     </div>
   );
@@ -870,7 +896,7 @@ const TABS = ['For You', 'Following', 'Anime', 'Manga'];
 
 export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialPostId, onPostOpened }: LazerHomeViewProps) {
   const { user: authUser } = useAuthStore();
-  const { feedPosts, createPost, fetchComments, comments, fetchFriends, fetchMyCommunities, fetchExploreCommunities } = useLazerStore();
+  const { feedPosts, createPost, fetchComments, comments, fetchFriends, fetchMyCommunities, fetchExploreCommunities, trendingTropes, fetchTrendingTropes } = useLazerStore();
   const { exploreCommunities } = useLazerStore();
 
   const [activeTab, setActiveTab] = useState('For You');
@@ -887,6 +913,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activeDiscussion, setActiveDiscussion] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [showTropesModal, setShowTropesModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isLight = user?.themeMode === 'light';
@@ -905,6 +932,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
     fetchFriends();
     fetchMyCommunities();
     fetchExploreCommunities();
+    fetchTrendingTropes();
   }, []);
 
   useEffect(() => {
@@ -934,7 +962,20 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
   const handleCreate = async () => {
     if (!postText.trim()) return;
     setIsPosting(true);
-    await createPost(postText, imageUrl || undefined, tag || undefined, isSparkle, selectedFont !== 'default' ? selectedFont : undefined, selectedColor || undefined);
+    
+    // Convert tags #a #b into an array ['a', 'b']
+    const tropeNames = tag.split(' ')
+      .map(t => t.replace('#', '').trim())
+      .filter(Boolean);
+
+    await createPost(
+      postText, 
+      imageUrl || undefined, 
+      tropeNames.length > 0 ? tropeNames : undefined, 
+      isSparkle, 
+      selectedFont !== 'default' ? selectedFont : undefined, 
+      selectedColor || undefined
+    );
     setPostText(''); setImagePreview(''); setImageUrl('');
     if (fileInputRef.current) fileInputRef.current.value = '';
     setTag(''); setIsSparkle(false); setShowTag(false); setSelectedFont('default'); setSelectedColor('');
@@ -948,10 +989,17 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
 
   // Filter posts based on active tab/tag
   const displayPosts = feedPosts.filter(p => {
-    if (activeTag && p.tag !== activeTag.replace('#', '')) return false;
+    if (activeTag) {
+      const tagToMatch = activeTag.replace('#', '').toLowerCase();
+      const hasTrope = p.tropes?.some((t: any) => t.name.toLowerCase() === tagToMatch);
+      if (!hasTrope) return false;
+    }
     if (activeTab !== 'For You' && activeTab !== 'Following') {
       const tabMap: Record<string, string> = { 'Anime': 'anime', 'Manga': 'manga' };
-      if (tabMap[activeTab] && p.tag !== tabMap[activeTab]) return false;
+      if (tabMap[activeTab]) {
+        const hasTrope = p.tropes?.some((t: any) => t.name.toLowerCase() === tabMap[activeTab]);
+        if (!hasTrope) return false;
+      }
     }
     return true;
   });
@@ -959,6 +1007,15 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
   return (
     <div className="min-h-full font-[Nunito,sans-serif] pb-32 relative rounded-3xl shadow-2xl border-[1.5px] backdrop-blur-3xl" style={{ isolation: 'isolate', borderColor: borderCol }}>
       <div className="absolute inset-0 rounded-3xl overflow-hidden -z-10 pointer-events-none"><ThemeBg color={c} mode={user?.themeMode || 'dark'}/></div>
+
+      {showTropesModal && (
+        <TropesModal
+           c={c}
+           isLight={isLight}
+           onClose={() => setShowTropesModal(false)}
+           onTropeClick={(t) => { setActiveTag(t); setActiveTab(''); setShowTropesModal(false); }}
+        />
+      )}
 
       <PostDetailModal
         selectedPostId={selectedPostId} setSelectedPostId={setSelectedPostId}
@@ -1140,7 +1197,8 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
           <TrendingWidget
             c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary}
             borderCol={borderCol} cardBg={cardBg}
-            onTagClick={(tag) => { setActiveTag(tag); setActiveTab(''); }}/>
+            onTagClick={(tag) => { setActiveTag(tag); setActiveTab(''); }}
+            onVerTodas={() => setShowTropesModal(true)} />
 
           <WatchingWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}/>
 

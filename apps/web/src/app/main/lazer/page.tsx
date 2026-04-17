@@ -254,6 +254,7 @@ export default function LazerPage() {
       {/* Full-screen modals */}
       {activeView === 'explore' && (
         <ExploreModal onClose={() => setActiveView('feed')} onPostClick={navigateToPost}
+          onCommunityClick={navigateToCommunity}
           onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
       )}
       {activeView === 'notifications' && (
