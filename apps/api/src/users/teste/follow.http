@@ -1,0 +1,75 @@
+// Configurações Globais
+@base_url = http://localhost:3001/api/v1
+
+// --- DADOS DO ALVO (TARGET) ---
+@target_username = paulinho 
+@target_email = paulinho@gmail.com
+@target_password = paulinho1234
+
+// --- DADOS DO PEDINTE (REQUESTER) ---
+@req_username = josemar 
+@req_email = josemar@gmail.com
+@req_password = josemar1234
+
+// Token do Josemar (O Pedinte) após fazer login
+@token_josemar = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5Y2ViZTU3OS0wOWRhLTRhYjktOTk1Zi1lNTRiYzNmZDMyMTYiLCJlbWFpbCI6Impvc2VtYXJAZ21haWwuY29tIiwiaWF0IjoxNzc2NDQ2NzA0LCJleHAiOjE3NzY0NDc2MDR9.PcJN8SKzFXHX5vxi72skku046z3qPuiADYc1yJTx6Tc
+// =========================================================
+// 1. SETUP DE UTILIZADORES
+// =========================================================
+
+### Cadastro do Alvo (Paulinho)
+POST {{base_url}}/auth/register
+Content-Type: application/json
+
+{
+    "username": "{{target_username}}",
+    "email": "{{target_email}}",
+    "password": "{{target_password}}"
+}
+
+### Cadastro do Pedinte (Josemar)
+POST {{base_url}}/auth/register
+Content-Type: application/json
+
+{
+    "username": "{{req_username}}",
+    "email": "{{req_email}}",
+    "password": "{{req_password}}"
+}
+
+### Login do Josemar (Para obter o token de quem vai seguir)
+# @name login_josemar
+POST {{base_url}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "{{req_email}}",
+    "password": "{{req_password}}"
+}
+
+// =========================================================
+// 2. AÇÕES SOCIAIS (Josemar segue Paulinho)
+// =========================================================
+
+### Seguir o Paulinho
+# O Josemar (token) envia um pedido para a rota do Paulinho
+POST {{base_url}}/users/{{target_username}}/follow
+Authorization: Bearer {{token_josemar}}
+
+### Verificar Perfil do Paulinho (Contador deve ser 1 e isFollowing: true)
+GET {{base_url}}/users/{{target_username}}
+Authorization: Bearer {{token_josemar}}
+
+### Deixar de seguir o Paulinho
+DELETE {{base_url}}/users/{{target_username}}/follow
+Authorization: Bearer {{token_josemar}}
+
+### Verificar Perfil do Paulinho de novo (Contador 0 e isFollowing: false)
+GET {{base_url}}/users/{{target_username}}
+Authorization: Bearer {{token_josemar}}
+
+### Lista de seguidores
+GET {{base_url}}/users/{{target_username}}/followers
+
+### Lista de Seguindos
+GET {{base_url}}/users/{{target_username}}/followings
