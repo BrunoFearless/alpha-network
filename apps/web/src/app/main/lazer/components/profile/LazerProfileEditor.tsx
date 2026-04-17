@@ -406,6 +406,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
                      <div className="rounded-full border-2 border-alpha-bg bg-[#1e1e2e] relative inline-flex shrink-0">
                        <Avatar src={form.avatarUrl} name={form.displayName} size="lg" className="!w-14 !h-14 border" style={{ borderColor: accentColor }} />
                      </div>
+                     <div className="w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white absolute bottom-0.5 right-0.5 z-10" />
                   </div>
                   
                   <div className="mt-1.5">

@@ -10,6 +10,7 @@ import { DeveloperModule } from './modes/developer/developer.module';
 import { CommunityModule } from './modes/community/community.module';
 import { BotsModule } from './modes/bots/bots.module';
 import { BotPlatformModule } from './modes/bot-platform/bot-platform.module';
+import { FriendsModule } from './users/friends.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { BotPlatformModule } from './modes/bot-platform/bot-platform.module';
     CommunityModule,
     BotsModule,
     BotPlatformModule,
+    FriendsModule,
   ],
 })
 export class AppModule {}

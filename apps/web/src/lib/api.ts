@@ -81,3 +81,33 @@ export async function uploadUserFile(
   if (!url) throw new Error(`O servidor não devolveu o URL do ${type}.`);
   return url;
 }
+
+/**
+ * Lazer Communities
+ */
+export async function uploadLazerCommunityFile(file: File, communityId: string): Promise<string> {
+  const form = new FormData();
+  form.append('file', file);
+  const result = await api.postForm<{ url: string }>(`/lazer/communities/${communityId}/upload`, form);
+  return result.url;
+}
+
+export const lazerApi = {
+  // Posts
+  getFeed: (cursor?: string, communityId?: string) => 
+    api.get<any[]>(`/lazer/feed?${cursor ? `cursor=${cursor}&` : ''}${communityId ? `communityId=${communityId}` : ''}`),
+  createPost: (data: any) => api.post('/lazer/posts', data),
+  
+  // Communities
+  getMyCommunities: () => api.get<any[]>('/lazer/communities/my'),
+  exploreCommunities: () => api.get<any[]>('/lazer/communities/explore'),
+  getCommunity: (id: string) => api.get<any>(`/lazer/communities/${id}`),
+  createCommunity: (data: any) => api.post('/lazer/communities', data),
+  updateCommunity: (id: string, data: any) => api.patch(`/lazer/communities/${id}`, data),
+  joinCommunity: (inviteCode: string) => api.post('/lazer/communities/join', { inviteCode }),
+  leaveCommunity: (id: string) => api.delete(`/lazer/communities/${id}/leave`),
+  
+  // Rules
+  addRule: (communityId: string, text: string) => api.post(`/lazer/communities/${communityId}/rules`, { text }),
+  deleteRule: (ruleId: string) => api.delete(`/lazer/communities/rules/${ruleId}`),
+};

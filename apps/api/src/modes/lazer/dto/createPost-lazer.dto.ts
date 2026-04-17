@@ -18,4 +18,8 @@ export class CreatePostLazerDto {
   @IsString()
   @IsOptional()
   titleColor?: string;
+
+  @IsString()
+  @IsOptional()
+  communityId?: string;
 }

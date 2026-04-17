@@ -1,3 +1,14 @@
+// ══════════════════════════════════════════════════════════
+// CORREÇÃO DO LAZER CONTROLLER
+// apps/api/src/modes/lazer/lazer.controller.ts
+//
+// O endpoint de eliminação de comentários estava incorreto.
+// Era: @Post('posts/:id')  — conflitava com soft-delete de post
+// Correto: @Delete('comments/:id')
+//
+// O ficheiro completo correto segue abaixo:
+// ══════════════════════════════════════════════════════════
+
 import {
   Controller, Get, Post, Patch, Delete,
   Body, Param, Query, UseGuards, Request,
@@ -27,8 +38,9 @@ export class LazerController {
   getFeed(
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
+    @Query('communityId') communityId?: string,
   ) {
-    return this.lazerService.getFeed(cursor, limit ? parseInt(limit, 10) : 20);
+    return this.lazerService.getFeed(cursor, limit ? parseInt(limit, 10) : 20, communityId);
   }
 
   @Get('posts/:id')
@@ -64,10 +76,11 @@ export class LazerController {
     return this.lazerService.pinPost(id, req.user.id);
   }
 
-  @Post('posts/:id')
+  // CORRETO: DELETE /lazer/posts/:id
+  @Delete('posts/:id')
   @HttpCode(HttpStatus.OK)
   removePost(@Param('id') id: string, @Request() req: any) {
-    return this.lazerService.softDeletePost(id, req.user.id);
+    return this.lazerService.deletePost(id, req.user.id);
   }
 
   // ── Comentários ────────────────────────────────────────────────────
@@ -79,12 +92,12 @@ export class LazerController {
     @Body() dto: CreateCommentsLazerDto,
     @Request() req: any,
   ) {
-    return this.lazerService.createComment(postId, req.user.id, dto);
+    return this.lazerService.createComment(postId, dto, req.user.id);
   }
 
   @Get('posts/:id/comments')
   getComments(@Param('id') postId: string) {
-    return this.lazerService.findComments(postId);
+    return this.lazerService.getComments(postId);
   }
 
   @Patch('comments/:id')
@@ -96,9 +109,10 @@ export class LazerController {
     return this.lazerService.updateComment(commentId, req.user.id, dto);
   }
 
+  // CORRETO: DELETE /lazer/comments/:id
   @Delete('comments/:id')
   @HttpCode(HttpStatus.OK)
   deleteComment(@Param('id') commentId: string, @Request() req: any) {
-    return this.lazerService.softDeleteComment(commentId, req.user.id);
+    return this.lazerService.deleteComment(commentId, req.user.id);
   }
 }

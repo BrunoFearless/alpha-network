@@ -6,63 +6,55 @@ export interface LazerPost {
   authorId: string;
   author?: {
     profile: {
-      username: string;
-      displayName: string;
-      avatarUrl?: string;
-      themeColor?: string;
-      themeMode?: string;
-      bio?: string;
+      username: string; displayName: string | null; avatarUrl?: string | null;
+      themeColor?: string | null; themeMode?: string | null; bio?: string | null;
+      nameFont?: string | null; nameEffect?: string | null; nameColor?: string | null;
     }
   };
-  content: string;
-  imageUrl?: string | null;
-  tag?: string | null;
-  isSparkle: boolean;
-  isPinned: boolean;
-  isLiked?: boolean;
-  titleFont?: string;
-  titleColor?: string;
-  createdAt: string;
+  content: string; imageUrl?: string | null; tag?: string | null;
+  isSparkle: boolean; isPinned: boolean;
+  isLiked?: boolean; // persists in store, never reset between renders
+  titleFont?: string | null; titleColor?: string | null; createdAt: string;
   _count?: { reactions: number; comments: number };
 }
 
 export interface LazerComment {
-  id: string;
-  postId: string;
-  authorId: string;
-  parentId?: string | null;
+  id: string; postId: string; authorId: string; parentId?: string | null;
   author?: {
     profile: {
-      username: string;
-      displayName: string;
-      avatarUrl?: string;
+      username: string; displayName: string | null; avatarUrl?: string | null;
+      nameFont?: string | null; nameEffect?: string | null; nameColor?: string | null;
     }
   };
-  content: string;
-  isLiked?: boolean;
-  _count?: { reactions: number };
-  createdAt: string;
+  content: string; isLiked?: boolean; _count?: { reactions: number }; createdAt: string;
 }
 
 export interface FriendRequest {
-  id: string;
-  fromUserId: string;
-  toUserId: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  fromUser?: { profile: { username: string; displayName: string; avatarUrl?: string } };
-  toUser?: { profile: { username: string; displayName: string; avatarUrl?: string } };
+  id: string; fromUserId: string; toUserId: string; status: 'pending' | 'accepted' | 'rejected';
+  fromUser?: { id: string; profile: { username: string; displayName: string | null; avatarUrl?: string | null } };
+  toUser?: { id: string; profile: { username: string; displayName: string | null; avatarUrl?: string | null } };
   createdAt: string;
 }
 
-interface LazerStoreState {
-  feedPosts: LazerPost[];
-  userPosts: LazerPost[];
-  comments: Record<string, LazerComment[]>;
-  friends: string[];
-  friendRequests: FriendRequest[];
-  sentRequests: string[];
-  isLoading: boolean;
+export interface LazerCommunity {
+  id: string;
+  name: string;
+  description?: string | null;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
+  isPublic: boolean;
+  membersCount: number;
+  onlineCount: number;
+  role: string;
+  inviteCode?: string;
+}
 
+interface LazerStoreState {
+  feedPosts: LazerPost[]; userPosts: LazerPost[];
+  comments: Record<string, LazerComment[]>;
+  friends: string[]; friendRequests: FriendRequest[]; sentRequests: string[];
+  myCommunities: LazerCommunity[]; exploreCommunities: LazerCommunity[];
+  isLoading: boolean;
   fetchFeed: () => Promise<void>;
   fetchUserPosts: (userId: string) => Promise<void>;
   createPost: (content: string, imageUrl?: string, tag?: string, isSparkle?: boolean, titleFont?: string, titleColor?: string) => Promise<boolean>;
@@ -74,35 +66,31 @@ interface LazerStoreState {
   deleteComment: (postId: string, commentId: string) => Promise<boolean>;
   toggleCommentReaction: (postId: string, commentId: string) => Promise<{ liked: boolean; reactionCount: number } | null>;
   toggleReaction: (postId: string) => Promise<{ liked: boolean; reactionCount: number } | null>;
-
-  // Friends
   fetchFriends: () => Promise<void>;
   sendFriendRequest: (userId: string) => Promise<boolean>;
   cancelFriendRequest: (userId: string) => Promise<boolean>;
   acceptFriendRequest: (requestId: string, fromUserId: string) => Promise<boolean>;
   rejectFriendRequest: (requestId: string) => Promise<boolean>;
   removeFriend: (userId: string) => Promise<boolean>;
+  fetchMyCommunities: () => Promise<void>;
+  fetchExploreCommunities: () => Promise<void>;
   isFriend: (userId: string) => boolean;
   hasSentRequest: (userId: string) => boolean;
   hasReceivedRequest: (userId: string) => FriendRequest | undefined;
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 const authHeaders = (): Record<string, string> => {
   const token = useAuthStore.getState().accessToken;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  return headers;
+  const h: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) h['Authorization'] = `Bearer ${token}`;
+  return h;
 };
 
 export const useLazerStore = create<LazerStoreState>((set, get) => ({
-  feedPosts: [],
-  userPosts: [],
-  comments: {},
-  friends: [],
-  friendRequests: [],
-  sentRequests: [],
+  feedPosts: [], userPosts: [], comments: {},
+  friends: [], friendRequests: [], sentRequests: [],
+  myCommunities: [], exploreCommunities: [],
   isLoading: false,
 
   fetchFeed: async () => {
@@ -111,82 +99,73 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
       const res = await fetch(`${API}/api/v1/lazer/feed`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
-        const posts: LazerPost[] = data.data || [];
-        posts.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
-        set({ feedPosts: posts });
+        const incoming: LazerPost[] = data.data || [];
+        incoming.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+        // Preserve isLiked from local state so reaction doesn't reset on refetch
+        const existing = get().feedPosts;
+        const merged = incoming.map(p => {
+          const old = existing.find(e => e.id === p.id);
+          return old ? { ...p, isLiked: old.isLiked ?? p.isLiked } : p;
+        });
+        set({ feedPosts: merged });
       }
-    } catch (e) {
-      console.error('fetchFeed error', e);
-    } finally {
-      set({ isLoading: false });
-    }
+    } catch (e) { console.error('fetchFeed error', e); }
+    finally { set({ isLoading: false }); }
   },
 
   fetchUserPosts: async (userId: string) => {
     set({ isLoading: true });
     try {
       const res = await fetch(`${API}/api/v1/lazer/users/${userId}/posts`, { headers: authHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        set({ userPosts: data.data || data || [] });
-      }
-    } catch (e) {
-      console.error('fetchUserPosts error', e);
-    } finally {
-      set({ isLoading: false });
-    }
+      if (res.ok) { const data = await res.json(); set({ userPosts: data.data || data || [] }); }
+    } catch (e) { console.error('fetchUserPosts error', e); }
+    finally { set({ isLoading: false }); }
   },
 
   createPost: async (content, imageUrl, tag, isSparkle, titleFont, titleColor) => {
     try {
       const res = await fetch(`${API}/api/v1/lazer/posts`, {
-        method: 'POST',
-        headers: authHeaders(),
+        method: 'POST', headers: authHeaders(),
         body: JSON.stringify({ content, imageUrl, tag, isSparkle, titleFont, titleColor }),
       });
       if (res.ok) {
         const newPost = await res.json();
         const post = newPost.data || newPost;
-        set(state => ({
-          feedPosts: [post, ...state.feedPosts],
-          userPosts: [post, ...state.userPosts],
-        }));
+        // Immediately enrich with author info so the post displays correctly
+        const myProfile = useAuthStore.getState().user?.profile;
+        const myId = useAuthStore.getState().user?.id;
+        const enriched = myProfile
+          ? { ...post, authorId: myId || post.authorId, author: { profile: myProfile } }
+          : post;
+        set(state => ({ feedPosts: [enriched, ...state.feedPosts], userPosts: [enriched, ...state.userPosts] }));
         return true;
       }
       return false;
-    } catch (e) {
-      console.error('createPost error', e);
-      return false;
-    }
+    } catch (e) { return false; }
   },
 
+  // deletePost removes from feedPosts → automatically drops it from the
+  // "my posts with activity" count → notif badge decrements without extra logic
   deletePost: async (id: string) => {
     set(state => ({
       feedPosts: state.feedPosts.filter(p => p.id !== id),
       userPosts: state.userPosts.filter(p => p.id !== id),
     }));
     try {
-      const res = await fetch(`${API}/api/v1/lazer/posts/${id}`, {
-        method: 'POST', // soft delete via POST
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${API}/api/v1/lazer/posts/${id}`, { method: 'DELETE', headers: authHeaders() });
+      if (!res.ok) get().fetchFeed(); // restore on failure
       return res.ok;
-    } catch (e) {
-      console.error('deletePost error', e);
-      return false;
-    }
+    } catch { return false; }
   },
 
   editPost: async (id, content, imageUrl, tag, titleFont, titleColor) => {
     try {
       const res = await fetch(`${API}/api/v1/lazer/posts/${id}`, {
-        method: 'PATCH',
-        headers: authHeaders(),
+        method: 'PATCH', headers: authHeaders(),
         body: JSON.stringify({ content, imageUrl, tag, titleFont, titleColor }),
       });
       if (res.ok) {
-        const updated = await res.json();
-        const p = updated.data || updated;
+        const updated = await res.json(); const p = updated.data || updated;
         set(state => ({
           feedPosts: state.feedPosts.map(fp => fp.id === id ? { ...fp, ...p } : fp),
           userPosts: state.userPosts.map(fp => fp.id === id ? { ...fp, ...p } : fp),
@@ -194,31 +173,19 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
         return true;
       }
       return false;
-    } catch (e) {
-      console.error('editPost error', e);
-      return false;
-    }
+    } catch { return false; }
   },
 
   pinPost: async (id: string) => {
     try {
-      const res = await fetch(`${API}/api/v1/lazer/posts/${id}/pin`, {
-        method: 'PATCH',
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${API}/api/v1/lazer/posts/${id}/pin`, { method: 'PATCH', headers: authHeaders() });
       if (res.ok) {
-        const updated = await res.json();
-        const p = updated.data || updated;
-        set(state => ({
-          feedPosts: state.feedPosts.map(fp => fp.id === id ? { ...fp, isPinned: p.isPinned } : fp),
-        }));
+        const updated = await res.json(); const p = updated.data || updated;
+        set(state => ({ feedPosts: state.feedPosts.map(fp => fp.id === id ? { ...fp, isPinned: p.isPinned } : fp) }));
         return true;
       }
       return false;
-    } catch (e) {
-      console.error('pinPost error', e);
-      return false;
-    }
+    } catch { return false; }
   },
 
   fetchComments: async (postId: string) => {
@@ -226,60 +193,59 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
       const res = await fetch(`${API}/api/v1/lazer/posts/${postId}/comments`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
-        set(state => ({
-          comments: { ...state.comments, [postId]: data.data || data || [] },
-        }));
+        const comments = data.data || data || [];
+        const myId = useAuthStore.getState().user?.id;
+        const myProfile = useAuthStore.getState().user?.profile;
+        const enriched = comments.map((c: LazerComment) => {
+          if (c.authorId === myId && myProfile && !c.author?.profile?.username) {
+            return { ...c, author: { profile: { ...myProfile, ...c.author?.profile } } };
+          }
+          return c;
+        });
+        set(state => ({ comments: { ...state.comments, [postId]: enriched } }));
       }
-    } catch (e) {
-      console.error('fetchComments error', e);
-    }
+    } catch (e) { console.error('fetchComments error', e); }
   },
 
   addComment: async (postId: string, content: string, parentId?: string) => {
     try {
       const res = await fetch(`${API}/api/v1/lazer/posts/${postId}/comments`, {
-        method: 'POST',
-        headers: authHeaders(),
+        method: 'POST', headers: authHeaders(),
         body: JSON.stringify({ content, parentId }),
       });
       if (res.ok) {
-        const newComment = await res.json();
-        const comment = newComment.data || newComment;
+        const newComment = await res.json(); const comment = newComment.data || newComment;
+        const myProfile = useAuthStore.getState().user?.profile;
+        const myId = useAuthStore.getState().user?.id;
+        const enriched = myProfile
+          ? { ...comment, authorId: myId || comment.authorId, author: { profile: myProfile } }
+          : comment;
         set(state => ({
-          comments: {
-            ...state.comments,
-            [postId]: [...(state.comments[postId] || []), comment],
-          },
+          comments: { ...state.comments, [postId]: [...(state.comments[postId] || []), enriched] },
           feedPosts: state.feedPosts.map(p =>
-            p.id === postId ? { ...p, _count: { ...p._count!, reactions: p._count?.reactions || 0, comments: (p._count?.comments || 0) + 1 } } : p
+            p.id === postId ? { ...p, _count: { reactions: p._count?.reactions || 0, comments: (p._count?.comments || 0) + 1 } } : p
           ),
         }));
         return true;
       }
       return false;
-    } catch (e) {
-      console.error('addComment error', e);
-      return false;
-    }
+    } catch { return false; }
   },
 
+  // deleteComment decrements comment count → affects notif badge immediately
   deleteComment: async (postId: string, commentId: string) => {
     set(state => ({
-      comments: {
-        ...state.comments,
-        [postId]: (state.comments[postId] || []).filter(c => c.id !== commentId),
-      },
+      comments: { ...state.comments, [postId]: (state.comments[postId] || []).filter(c => c.id !== commentId) },
+      feedPosts: state.feedPosts.map(p =>
+        p.id === postId
+          ? { ...p, _count: { reactions: p._count?.reactions || 0, comments: Math.max(0, (p._count?.comments || 1) - 1) } }
+          : p
+      ),
     }));
     try {
-      const res = await fetch(`${API}/api/v1/lazer/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${API}/api/v1/lazer/comments/${commentId}`, { method: 'DELETE', headers: authHeaders() });
       return res.ok;
-    } catch (e) {
-      console.error('deleteComment error', e);
-      return false;
-    }
+    } catch { return false; }
   },
 
   toggleCommentReaction: async (postId: string, commentId: string) => {
@@ -294,13 +260,11 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
       },
     }));
     try {
-      const res = await fetch(`${API}/api/v1/lazer/comments/${commentId}/react`, {
-        method: 'POST',
-        headers: authHeaders(),
+      const res = await fetch(`${API}/api/v1/lazer/posts/reactions`, {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({ postId: commentId }),
       });
       if (res.ok) {
-        const result = await res.json();
-        const r = result.data || result;
+        const r = (await res.json()).data || await res.json();
         set(state => ({
           comments: {
             ...state.comments,
@@ -312,76 +276,64 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
         return r;
       }
       return null;
-    } catch (e) {
-      console.error('toggleCommentReaction error', e);
-      return null;
-    }
+    } catch { return null; }
   },
 
+  // toggleReaction — isLiked is persisted in the store, never lost between renders
   toggleReaction: async (postId: string) => {
     set(state => ({
       feedPosts: state.feedPosts.map(p =>
         p.id === postId
-          ? { ...p, isLiked: !p.isLiked, _count: { ...p._count!, reactions: (p._count?.reactions || 0) + (p.isLiked ? -1 : 1), comments: p._count?.comments || 0 } }
+          ? { ...p, isLiked: !p.isLiked, _count: { reactions: (p._count?.reactions || 0) + (p.isLiked ? -1 : 1), comments: p._count?.comments || 0 } }
           : p
       ),
     }));
     try {
       const res = await fetch(`${API}/api/v1/lazer/posts/reactions`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ postId }),
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({ postId }),
       });
       if (res.ok) {
-        const result = await res.json();
-        const r = result.data || result;
+        const result = await res.json(); const r = result.data || result;
         set(state => ({
-          feedPosts: state.feedPosts.map(p => p.id === postId ? { ...p, isLiked: r.liked, _count: { ...p._count!, reactions: r.reactionCount } } : p),
-          userPosts: state.userPosts.map(p => p.id === postId ? { ...p, isLiked: r.liked, _count: { ...p._count!, reactions: r.reactionCount } } : p),
+          feedPosts: state.feedPosts.map(p =>
+            p.id === postId ? { ...p, isLiked: r.liked, _count: { ...p._count!, reactions: r.reactionCount } } : p
+          ),
+          userPosts: state.userPosts.map(p =>
+            p.id === postId ? { ...p, isLiked: r.liked, _count: { ...p._count!, reactions: r.reactionCount } } : p
+          ),
         }));
         return r;
       }
       return null;
-    } catch (e) {
-      console.error('toggleReaction error', e);
-      return null;
-    }
+    } catch { return null; }
   },
-
-  // ── Friends System ────────────────────────────────────────────────────────
 
   fetchFriends: async () => {
     try {
-      const [friendsRes, requestsRes] = await Promise.allSettled([
+      const [fRes, rRes] = await Promise.allSettled([
         fetch(`${API}/api/v1/users/me/friends`, { headers: authHeaders() }),
         fetch(`${API}/api/v1/users/me/friend-requests`, { headers: authHeaders() }),
       ]);
-
-      if (friendsRes.status === 'fulfilled' && friendsRes.value.ok) {
-        const data = await friendsRes.value.json();
-        const friends = (data.data || data || []).map((f: any) => f.id || f.userId || f);
-        set({ friends });
+      if (fRes.status === 'fulfilled' && fRes.value.ok) {
+        const data = await fRes.value.json();
+        const list = data.data || data || [];
+        set({ friends: list.map((f: any) => f.id || f.userId || f).filter(Boolean) });
       }
-
-      if (requestsRes.status === 'fulfilled' && requestsRes.value.ok) {
-        const data = await requestsRes.value.json();
+      if (rRes.status === 'fulfilled' && rRes.value.ok) {
+        const data = await rRes.value.json();
         const requests: FriendRequest[] = data.data || data || [];
         const myId = useAuthStore.getState().user?.id;
         const sent = requests.filter(r => r.fromUserId === myId && r.status === 'pending').map(r => r.toUserId);
         set({ friendRequests: requests, sentRequests: sent });
       }
-    } catch (e) {
-      console.error('fetchFriends error', e);
-    }
+    } catch (e) { console.error('fetchFriends error', e); }
   },
 
   sendFriendRequest: async (userId: string) => {
     set(state => ({ sentRequests: [...state.sentRequests, userId] }));
     try {
       const res = await fetch(`${API}/api/v1/users/friend-requests`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ toUserId: userId }),
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({ toUserId: userId }),
       });
       if (res.ok) return true;
       set(state => ({ sentRequests: state.sentRequests.filter(id => id !== userId) }));
@@ -391,62 +343,59 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
       return false;
     }
   },
-
   cancelFriendRequest: async (userId: string) => {
     set(state => ({ sentRequests: state.sentRequests.filter(id => id !== userId) }));
     try {
-      const res = await fetch(`${API}/api/v1/users/friend-requests/${userId}`, {
-        method: 'DELETE',
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${API}/api/v1/users/friend-requests/${userId}`, { method: 'DELETE', headers: authHeaders() });
       return res.ok;
     } catch { return false; }
   },
-
   acceptFriendRequest: async (requestId: string, fromUserId: string) => {
     try {
-      const res = await fetch(`${API}/api/v1/users/friend-requests/${requestId}/accept`, {
-        method: 'POST',
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${API}/api/v1/users/friend-requests/${requestId}/accept`, { method: 'POST', headers: authHeaders() });
       if (res.ok) {
         set(state => ({
           friends: [...state.friends, fromUserId],
-          friendRequests: state.friendRequests.map(r =>
-            r.id === requestId ? { ...r, status: 'accepted' as const } : r
-          ),
+          friendRequests: state.friendRequests.map(r => r.id === requestId ? { ...r, status: 'accepted' as const } : r),
         }));
         return true;
       }
       return false;
     } catch { return false; }
   },
-
   rejectFriendRequest: async (requestId: string) => {
     try {
-      const res = await fetch(`${API}/api/v1/users/friend-requests/${requestId}/reject`, {
-        method: 'POST',
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        set(state => ({
-          friendRequests: state.friendRequests.filter(r => r.id !== requestId),
-        }));
-        return true;
-      }
+      const res = await fetch(`${API}/api/v1/users/friend-requests/${requestId}/reject`, { method: 'POST', headers: authHeaders() });
+      if (res.ok) { set(state => ({ friendRequests: state.friendRequests.filter(r => r.id !== requestId) })); return true; }
       return false;
     } catch { return false; }
   },
-
   removeFriend: async (userId: string) => {
     set(state => ({ friends: state.friends.filter(id => id !== userId) }));
     try {
-      const res = await fetch(`${API}/api/v1/users/friends/${userId}`, {
-        method: 'DELETE',
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${API}/api/v1/users/friends/${userId}`, { method: 'DELETE', headers: authHeaders() });
       return res.ok;
     } catch { return false; }
+  },
+
+  fetchMyCommunities: async () => {
+    try {
+      const res = await fetch(`${API}/api/v1/lazer/communities/my`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        set({ myCommunities: data.data || [] });
+      }
+    } catch (e) { console.error('fetchMyCommunities error', e); }
+  },
+
+  fetchExploreCommunities: async () => {
+    try {
+      const res = await fetch(`${API}/api/v1/lazer/communities/explore`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        set({ exploreCommunities: data.data || [] });
+      }
+    } catch (e) { console.error('fetchExploreCommunities error', e); }
   },
 
   isFriend: (userId: string) => get().friends.includes(userId),

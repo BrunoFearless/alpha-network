@@ -21,7 +21,7 @@ describe('LazerService', () => {
       update:     jest.fn(),
     },
     lazerReaction: {
-      findUnique: jest.fn(),
+      findFirst:  jest.fn(),
       create:     jest.fn(),
       delete:     jest.fn(),
       deleteMany: jest.fn(),
@@ -75,7 +75,7 @@ describe('LazerService', () => {
       prismaMock.lazerPost.create.mockResolvedValue(mockPost);
 
       const result = await service.createPost({ content: 'Olá Alpha!' }, 'user-1');
-      expect(result).toEqual(mockPost);
+      expect(result.data).toEqual(mockPost);
       expect(prismaMock.lazerPost.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ authorId: 'user-1', content: 'Olá Alpha!' }) }),
       );
@@ -85,36 +85,36 @@ describe('LazerService', () => {
   describe('toggleReaction', () => {
     it('adiciona reação quando não existe', async () => {
       prismaMock.lazerPost.findUnique.mockResolvedValue({ id: 'post-1', deletedAt: null });
-      prismaMock.lazerReaction.findUnique.mockResolvedValue(null);
+      prismaMock.lazerReaction.findFirst.mockResolvedValue(null);
       prismaMock.lazerReaction.create.mockResolvedValue({});
       prismaMock.lazerReaction.count.mockResolvedValue(1);
 
       const result = await service.toggleReaction({ postId: 'post-1' }, 'user-1');
-      expect(result.liked).toBe(true);
-      expect(result.reactionCount).toBe(1);
+      expect(result.data.liked).toBe(true);
+      expect(result.data.reactionCount).toBe(1);
     });
 
     it('remove reação quando já existe', async () => {
       prismaMock.lazerPost.findUnique.mockResolvedValue({ id: 'post-1', deletedAt: null });
-      prismaMock.lazerReaction.findUnique.mockResolvedValue({ id: 'r-1' });
+      prismaMock.lazerReaction.findFirst.mockResolvedValue({ id: 'r-1' });
       prismaMock.lazerReaction.delete.mockResolvedValue({});
       prismaMock.lazerReaction.count.mockResolvedValue(0);
 
       const result = await service.toggleReaction({ postId: 'post-1' }, 'user-1');
-      expect(result.liked).toBe(false);
-      expect(result.reactionCount).toBe(0);
+      expect(result.data.liked).toBe(false);
+      expect(result.data.reactionCount).toBe(0);
     });
   });
 
-  describe('softDeletePost', () => {
+  describe('deletePost', () => {
     it('lança ForbiddenException se o utilizador não for o autor', async () => {
       prismaMock.lazerPost.findUnique.mockResolvedValue({ id: 'post-1', authorId: 'outro-user', deletedAt: null });
-      await expect(service.softDeletePost('post-1', 'user-1')).rejects.toThrow();
+      await expect(service.deletePost('post-1', 'user-1')).rejects.toThrow();
     });
 
     it('lança NotFoundException se o post não existir', async () => {
       prismaMock.lazerPost.findUnique.mockResolvedValue(null);
-      await expect(service.softDeletePost('post-inexistente', 'user-1')).rejects.toThrow();
+      await expect(service.deletePost('post-inexistente', 'user-1')).rejects.toThrow();
     });
   });
 });

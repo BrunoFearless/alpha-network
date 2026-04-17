@@ -57,7 +57,7 @@ importers:
         specifier: ^7.6.0
         version: 7.6.0
       '@prisma/client':
-        specifier: ^5.8.1
+        specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
       bcryptjs:
         specifier: ^2.4.3
@@ -157,7 +157,7 @@ importers:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@20.19.37)(ts-node@10.9.2(@types/node@20.19.37)(typescript@5.9.3))
       prisma:
-        specifier: ^5.8.1
+        specifier: ^5.22.0
         version: 5.22.0
       ts-jest:
         specifier: ^29.2.5

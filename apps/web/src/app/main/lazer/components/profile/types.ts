@@ -1,5 +1,5 @@
 export interface LazerChronicle {
-  id: number;
+  id: string;
   side: "left" | "right";
   title: string;
   quote: string;

@@ -6,6 +6,7 @@ import { DisplayName } from '@/components/ui/DisplayName';
 import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
 import { ThemeBg } from './ThemeBg';
 import { LazerUserProfile, LazerChronicle } from './types';
+import { useLazerStore } from '@/store/lazer.store';
 
 interface ChronicleProps {
   item: LazerChronicle;
@@ -30,8 +31,14 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
               className={`${cardBg} backdrop-blur-2xl rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.15)] border-[1.5px] inline-block text-left w-full sm:max-w-[340px] transition-transform hover:-translate-y-1 cursor-pointer group`} 
               style={{ borderColor: borderCol }}
             >
-              <div className="relative overflow-hidden">
-                <img src={item.img} alt={item.title} className="w-full h-[160px] sm:h-[180px] object-cover transition-transform group-hover:scale-110" />
+              <div className="relative overflow-hidden bg-gradient-to-br from-black/20 to-black/5 min-h-[160px]">
+                {item.img ? (
+                  <img src={item.img} alt={item.title} className="w-full h-[160px] sm:h-[180px] object-cover transition-transform group-hover:scale-110" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}>
+                     <span className="text-4xl opacity-40 mix-blend-overlay" style={{ color }}>✦</span>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                    <div className="opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0 text-white font-bold text-xs uppercase tracking-widest bg-black/40 px-4 py-2 rounded-full backdrop-blur-md">Ver Post</div>
                 </div>
@@ -42,14 +49,14 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
             </div>
           </div>
           <div className="w-4 h-4 rounded-full shrink-0 relative z-10 mx-auto bg-white border-4" style={{ borderColor: color, boxShadow: `0 0 15px ${color}80` }} />
-          <div className="flex-1 pl-6 lg:pl-12">
-            <p className={`m-0 text-[13px] lg:text-sm italic leading-relaxed font-medium ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>"<EmojiRenderer content={item.quote} emojiSize={14} style={{ display: 'inline' }} />"</p>
+          <div className="flex-1 pl-6 lg:pl-12 min-w-0">
+            <p className={`m-0 text-[13px] lg:text-sm italic leading-relaxed font-medium break-words md-line-clamp-6 ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>"<EmojiRenderer content={item.quote} emojiSize={14} style={{ display: 'inline' }} />"</p>
           </div>
         </>
       ) : (
         <>
-          <div className="flex-1 pr-6 lg:pr-12 text-right">
-            <p className={`m-0 text-[13px] lg:text-sm italic leading-relaxed font-medium ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>"<EmojiRenderer content={item.quote} emojiSize={14} style={{ display: 'inline' }} />"</p>
+          <div className="flex-1 pr-6 lg:pr-12 text-right min-w-0">
+            <p className={`m-0 text-[13px] lg:text-sm italic leading-relaxed font-medium break-words md-line-clamp-6 ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>"<EmojiRenderer content={item.quote} emojiSize={14} style={{ display: 'inline' }} />"</p>
           </div>
           <div className="w-4 h-4 rounded-full shrink-0 relative z-10 mx-auto bg-white border-4" style={{ borderColor: color, boxShadow: `0 0 15px ${color}80` }} />
           <div className="flex-1 pl-6 lg:pl-12">
@@ -58,8 +65,14 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
                 className={`${cardBg} backdrop-blur-2xl rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.15)] border-[1.5px] inline-block text-left w-full sm:max-w-[340px] transition-transform hover:-translate-y-1 cursor-pointer group`} 
                 style={{ borderColor: borderCol }}
               >
-              <div className="relative overflow-hidden">
-                <img src={item.img} alt={item.title} className="w-full h-[160px] sm:h-[180px] object-cover transition-transform group-hover:scale-110" />
+              <div className="relative overflow-hidden bg-gradient-to-br from-black/20 to-black/5 min-h-[160px]">
+                {item.img ? (
+                  <img src={item.img} alt={item.title} className="w-full h-[160px] sm:h-[180px] object-cover transition-transform group-hover:scale-110" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}>
+                     <span className="text-4xl opacity-40 mix-blend-overlay" style={{ color }}>✦</span>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                    <div className="opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0 text-white font-bold text-xs uppercase tracking-widest bg-black/40 px-4 py-2 rounded-full backdrop-blur-md">Ver Post</div>
                 </div>
@@ -77,11 +90,23 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
 
 interface ProfileViewProps {
   user: LazerUserProfile;
-  onEdit: () => void;
+  onEdit?: () => void;
   onPostClick?: (postId: string) => void;
+  viewingUserId?: string;
 }
 
-export function LazerProfileView({ user, onEdit, onPostClick }: ProfileViewProps) {
+export function LazerProfileView({ user, onEdit, onPostClick, viewingUserId }: ProfileViewProps) {
+  const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend } = useLazerStore();
+  
+  const fStatus = viewingUserId ? (isFriend(viewingUserId) ? 'friend' : hasSentRequest(viewingUserId) ? 'sent' : 'none') : 'none';
+
+  const handleFriendBtn = () => {
+    if (!viewingUserId) return;
+    if (fStatus === 'friend') removeFriend(viewingUserId);
+    else if (fStatus === 'sent') cancelFriendRequest(viewingUserId);
+    else sendFriendRequest(viewingUserId);
+  };
+
   const isLight = user.themeMode === "light";
   const c = user.themeColor || '#e879f9';
   const textPrimary = isLight ? "text-gray-900" : "text-gray-100";
@@ -111,13 +136,6 @@ export function LazerProfileView({ user, onEdit, onPostClick }: ProfileViewProps
                background: `linear-gradient(to bottom, transparent 20%, ${isLight ? "rgba(249,250,251,1)" : "rgba(9,9,11,1)"} 100%)`
             }} 
           />
-          <button 
-            onClick={onEdit} 
-            className="absolute top-4 right-4 sm:top-8 sm:right-8 lg:top-12 lg:right-12 border-none text-white rounded-full px-5 py-2.5 text-sm font-bold cursor-pointer backdrop-blur-md transition-all hover:scale-105 shadow-xl flex items-center gap-2 z-20"
-            style={{ backgroundColor: `${c}cc` }}
-          >
-            <span>✏️</span> Editar Perfil
-          </button>
         </div>
 
         {/* Content Container - 2 columns on Desktop */}
@@ -175,18 +193,27 @@ export function LazerProfileView({ user, onEdit, onPostClick }: ProfileViewProps
 
               {/* Actions */}
               <div className="flex gap-3 mb-6">
-                <button 
-                  className="flex-[1.5] text-white border-none rounded-full py-3.5 font-bold text-sm cursor-pointer transition-transform hover:scale-[1.03] flex items-center justify-center gap-2 shadow-xl"
-                  style={{ backgroundColor: c, boxShadow: `0 8px 30px ${c}50` }}
-                >
-                  <span className="text-lg">👥</span> {user.primaryAction}
-                </button>
-                <button 
-                   className={`flex-1 bg-transparent border-[2px] rounded-full py-3.5 font-bold text-sm cursor-pointer transition-colors hover:bg-white/10 flex items-center justify-center gap-2 ${textPrimary}`}
-                   style={{ borderColor: borderCol, color: isLight ? '#111827' : '#f3f4f6' }}
-                >
-                  <span className="text-lg">💬</span> Chat
-                </button>
+                {onEdit ? (
+                  <button onClick={onEdit} className="flex-[1.5] text-white border-none rounded-full py-3.5 font-bold text-sm cursor-pointer transition-transform hover:scale-[1.03] flex items-center justify-center gap-2 shadow-xl" style={{ backgroundColor: c, boxShadow: `0 8px 30px ${c}50` }}>
+                    <span className="text-lg">✏️</span> Editar Perfil
+                  </button>
+                ) : (
+                  <>
+                  <button 
+                    onClick={handleFriendBtn}
+                    className="flex-[1.5] text-white border-none rounded-full py-3.5 font-bold text-sm cursor-pointer transition-transform hover:scale-[1.03] flex items-center justify-center gap-2 shadow-xl"
+                    style={{ backgroundColor: fStatus === 'friend' ? '#ef4444' : c, boxShadow: `0 8px 30px ${fStatus === 'friend' ? '#ef4444' : c}50` }}
+                  >
+                    <span className="text-lg">{fStatus === 'friend' ? '👤x' : fStatus === 'sent' ? '⏳' : '👥'}</span> {fStatus === 'friend' ? 'Remover amigo' : fStatus === 'sent' ? 'Cancelar pedido' : 'Adicionar amigo'}
+                  </button>
+                  <button 
+                     className={`flex-1 bg-transparent border-[2px] rounded-full py-3.5 font-bold text-sm cursor-pointer transition-colors hover:bg-white/10 flex items-center justify-center gap-2 ${textPrimary}`}
+                     style={{ borderColor: borderCol, color: isLight ? '#111827' : '#f3f4f6' }}
+                  >
+                    <span className="text-lg">💬</span> Chat
+                  </button>
+                  </>
+                )}
               </div>
 
               {/* Quick Actions */}

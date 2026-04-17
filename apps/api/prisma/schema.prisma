@@ -13,6 +13,21 @@ datasource db {
 
 // ─── AUTH (Adolfo) ───────────────────────────────────────────────────
 
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String
+  friendId  String
+  status    String   @default("pending") // "pending" | "accepted"
+  createdAt DateTime @default(now())
+
+  user   User @relation("FriendshipUser",   fields: [userId],   references: [id], onDelete: Cascade)
+  friend User @relation("FriendshipFriend", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -28,6 +43,12 @@ model User {
   lazerPosts    LazerPost[]
   lazerComments LazerComment[]
   lazerReactions LazerReaction[]
+  friendships Friendship[] @relation("FriendshipUser")
+  friendOf    Friendship[] @relation("FriendshipFriend")
+
+  // Lazer Communities
+  lazerCommunitiesOwned      LazerCommunity[]       @relation("LazerCommunityOwner")
+  lazerCommunityMemberships  LazerCommunityMember[]
 
   @@map("users")
 }
@@ -96,6 +117,10 @@ model LazerPost {
   comments  LazerComment[]
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
+  // Link to community if applicable
+  communityId String?
+  community   LazerCommunity? @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
   @@map("lazer_posts")
 }
 
@@ -126,6 +151,57 @@ model LazerComment {
   author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("lazer_comments")
+}
+
+// ─── LAZER COMMUNITIES (Bruno) ───────────────────────────────────────
+
+model LazerCommunity {
+  id          String   @id @default(uuid())
+  ownerId     String
+  name        String
+  description String?
+  bannerUrl   String?
+  iconUrl     String?
+  iconEmoji   String   @default("🌐")
+  accentColor String?  @default("#fbbf24")
+  themeColor  String?  @default("#fbbf24")
+  isPublic    Boolean  @default(true)
+  inviteCode  String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  owner       User                   @relation("LazerCommunityOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     LazerCommunityMember[]
+  rules       LazerCommunityRule[]
+  posts       LazerPost[]
+
+  @@map("lazer_communities")
+}
+
+model LazerCommunityMember {
+  id          String   @id @default(uuid())
+  communityId String
+  userId      String
+  role        String   @default("member") // "admin" | "member"
+  joinedAt    DateTime @default(now())
+
+  community   LazerCommunity @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId])
+  @@map("lazer_community_members")
+}
+
+model LazerCommunityRule {
+  id          String   @id @default(uuid())
+  communityId String
+  text        String
+  createdAt   DateTime @default(now())
+
+  community   LazerCommunity @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@map("lazer_community_rules")
 }
 
 // ─── MODO CRIADOR (Pedro) ────────────────────────────────────────────

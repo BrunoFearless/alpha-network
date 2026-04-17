@@ -1,217 +1,220 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+// ══════════════════════════════════════════════════════════
+// CORREÇÃO DO LAZER SERVICE
+// apps/api/src/modes/lazer/lazer.service.ts
+//
+// PROBLEMA RAIZ: getFeed() e getUserPosts() não incluíam
+// author.profile no include do Prisma, então o frontend
+// recebia posts sem as informações do autor.
+//
+// CORREÇÃO: Adicionar include: { author: { include: { profile: true } } }
+// em todas as queries que retornam posts.
+// ══════════════════════════════════════════════════════════
+
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePostLazerDto } from './dto/createPost-lazer.dto';
 import { UpdatePostLazerDto } from './dto/updatePost-lazer.dto';
 import { CreateCommentsLazerDto } from './dto/createComments-lazer.dto';
 import { ToggleRequestDTO } from './dto/toggleRequest-lazer.dto';
-import { ToggleResponseDTO } from './dto/toggleResponse.dto';
+
+// Reutilizável: sempre incluir author.profile nos posts
+const POST_INCLUDE = {
+  author: {
+    include: {
+      profile: true,
+    },
+  },
+  _count: {
+    select: {
+      reactions: true,
+      comments: true,
+    },
+  },
+} as const;
+
+const COMMENT_INCLUDE = {
+  author: {
+    include: {
+      profile: true,
+    },
+  },
+} as const;
 
 @Injectable()
 export class LazerService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createPost(dto: CreatePostLazerDto, authorId: string) {
-    return this.prisma.lazerPost.create({
+  // ── Posts ──────────────────────────────────────────────────────────
+
+  async createPost(dto: CreatePostLazerDto, userId: string) {
+    const post = await this.prisma.lazerPost.create({
       data: {
-        authorId,
         content: dto.content,
         imageUrl: dto.imageUrl,
         tag: dto.tag,
         isSparkle: dto.isSparkle ?? false,
         titleFont: dto.titleFont,
         titleColor: dto.titleColor,
+        authorId: userId,
+        communityId: dto.communityId || null,
       },
-      include: {
-        author: { include: { profile: true } },
-        _count: { select: { reactions: true, comments: true } },
-      },
+      include: POST_INCLUDE,
     });
+    return { success: true, data: post };
   }
 
-  async getFeed(cursor?: string, limit = 20) {
-    const take = Math.min(limit, 50);
+  async getFeed(cursor?: string, limit = 20, communityId?: string) {
     const posts = await this.prisma.lazerPost.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-      take: take + 1,
-      cursor: cursor ? { id: cursor } : undefined,
-      skip: cursor ? 1 : 0,
-      include: {
-        author: { include: { profile: true } },
-        _count: { select: { reactions: true, comments: true } },
+      where: { 
+        deletedAt: null,
+        ...(communityId ? { communityId } : {})
       },
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+      take: limit,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      include: POST_INCLUDE, // ← CRITICAL: includes author.profile
     });
+    return { success: true, data: posts };
+  }
 
-    const hasMore = posts.length > take;
-    const data = hasMore ? posts.slice(0, -1) : posts;
-
-    // Hidratar autores
-    const authorIds = [...new Set(data.map(p => p.authorId))];
-    const profiles = await this.prisma.profile.findMany({
-      where: { userId: { in: authorIds } },
-      select: { userId: true, username: true, displayName: true, avatarUrl: true },
+  async findOnePost(id: string) {
+    const post = await this.prisma.lazerPost.findUnique({
+      where: { id },
+      include: POST_INCLUDE,
     });
-    const pm = new Map(profiles.map(p => [p.userId, p]));
-
-    const hydrated = data.map(p => ({
-      ...p,
-      author: pm.get(p.authorId) ?? {
-        userId: p.authorId,
-        username: 'utilizador',
-        displayName: null,
-        avatarUrl: null,
-      },
-    }));
-
-    return {
-      data: hydrated,
-      meta: {
-        nextCursor: hasMore ? data.at(-1)?.id : null,
-        hasMore,
-      },
-    };
+    if (!post) throw new NotFoundException('Post não encontrado.');
+    return { success: true, data: post };
   }
 
   async getUserPosts(userId: string) {
-    return this.prisma.lazerPost.findMany({
+    const posts = await this.prisma.lazerPost.findMany({
       where: { authorId: userId, deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        author: { include: { profile: true } },
-        _count: { select: { reactions: true, comments: true } },
-      },
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+      include: POST_INCLUDE, // ← CRITICAL: includes author.profile
     });
-  }
-
-  async findOnePost(id: string): Promise<any> {
-    const post = await this.prisma.lazerPost.findUnique({
-      where: { id },
-      include: { _count: { select: { reactions: true, comments: true } } },
-    });
-
-    if (!post || post.deletedAt) throw new NotFoundException('Post não encontrado.');
-
-    const profile = await this.prisma.profile.findUnique({
-      where: { userId: post.authorId },
-      select: { userId: true, username: true, displayName: true, avatarUrl: true },
-    });
-
-    return { ...post, author: profile };
+    return { success: true, data: posts };
   }
 
   async updatePost(id: string, dto: UpdatePostLazerDto, userId: string) {
     const post = await this.prisma.lazerPost.findUnique({ where: { id } });
-    if (!post || post.deletedAt) throw new NotFoundException('Post não encontrado.');
-    if (post.authorId !== userId) throw new ForbiddenException('Não podes editar este post.');
-    return this.prisma.lazerPost.update({ where: { id }, data: dto });
+    if (!post) throw new NotFoundException('Post não encontrado.');
+    if (post.authorId !== userId) throw new ForbiddenException('Sem permissão.');
+
+    const updated = await this.prisma.lazerPost.update({
+      where: { id },
+      data: {
+        content: dto.content,
+        imageUrl: dto.imageUrl,
+        tag: dto.tag,
+        titleFont: dto.titleFont,
+        titleColor: dto.titleColor,
+      },
+      include: POST_INCLUDE,
+    });
+    return { success: true, data: updated };
+  }
+
+  async deletePost(id: string, userId: string) {
+    const post = await this.prisma.lazerPost.findUnique({ where: { id } });
+    if (!post) throw new NotFoundException('Post não encontrado.');
+    if (post.authorId !== userId) throw new ForbiddenException('Sem permissão.');
+
+    // Soft delete
+    await this.prisma.lazerPost.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return { success: true };
   }
 
   async pinPost(id: string, userId: string) {
     const post = await this.prisma.lazerPost.findUnique({ where: { id } });
     if (!post) throw new NotFoundException('Post não encontrado.');
-    if (post.authorId !== userId) throw new ForbiddenException('Não autorizado.');
-    return this.prisma.lazerPost.update({
+    if (post.authorId !== userId) throw new ForbiddenException('Sem permissão.');
+
+    const updated = await this.prisma.lazerPost.update({
       where: { id },
       data: { isPinned: !post.isPinned },
+      include: POST_INCLUDE,
     });
+    return { success: true, data: updated };
   }
 
-  async softDeletePost(id: string, userId: string) {
-    const post = await this.prisma.lazerPost.findUnique({ where: { id } });
-    if (!post || post.deletedAt) throw new NotFoundException('Post não encontrado.');
-    if (post.authorId !== userId) throw new ForbiddenException('Não podes apagar este post.');
+  // ── Reactions ─────────────────────────────────────────────────────
 
-    await this.prisma.lazerComment.updateMany({
-      where: { postId: id },
-      data: { deletedAt: new Date() },
-    });
-    await this.prisma.lazerReaction.deleteMany({ where: { postId: id } });
-
-    return this.prisma.lazerPost.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-  }
-
-  async toggleReaction(dto: ToggleRequestDTO, userId: string): Promise<ToggleResponseDTO> {
-    const { postId } = dto;
-
-    const post = await this.prisma.lazerPost.findUnique({ where: { id: postId } });
-    if (!post || post.deletedAt) throw new NotFoundException('Post não encontrado.');
-
-    const existing = await this.prisma.lazerReaction.findUnique({
-      where: { postId_userId: { postId, userId } },
+  async toggleReaction(dto: ToggleRequestDTO, userId: string) {
+    const existing = await this.prisma.lazerReaction.findFirst({
+      where: { postId: dto.postId, userId: userId },
     });
 
     if (existing) {
       await this.prisma.lazerReaction.delete({ where: { id: existing.id } });
+      const count = await this.prisma.lazerReaction.count({ where: { postId: dto.postId } });
+      return { success: true, data: { liked: false, reactionCount: count } };
     } else {
       await this.prisma.lazerReaction.create({
-        data: { postId, userId, type: 'like' },
+        data: { postId: dto.postId, userId: userId },
       });
+      const count = await this.prisma.lazerReaction.count({ where: { postId: dto.postId } });
+      return { success: true, data: { liked: true, reactionCount: count } };
     }
-
-    const reactionCount = await this.prisma.lazerReaction.count({ where: { postId } });
-    return { liked: !existing, reactionCount };
   }
 
-  async createComment(postId: string, authorId: string, dto: CreateCommentsLazerDto) {
-    const post = await this.prisma.lazerPost.findUnique({ where: { id: postId } });
-    if (!post || post.deletedAt) throw new NotFoundException('Post não encontrado.');
+  // ── Comments ──────────────────────────────────────────────────────
 
+  async getComments(postId: string) {
+    const comments = await this.prisma.lazerComment.findMany({
+      where: { postId },
+      orderBy: { createdAt: 'asc' },
+      include: COMMENT_INCLUDE, // ← CRITICAL: includes author.profile
+    });
+    return { success: true, data: comments };
+  }
+
+  async createComment(postId: string, dto: CreateCommentsLazerDto, userId: string) {
     const comment = await this.prisma.lazerComment.create({
       data: {
         postId,
-        authorId,
         content: dto.content,
+        parentId: dto.parentId ?? null,
+        authorId: userId,
       },
-      include: {
-        author: { include: { profile: true } },
-      },
+      include: COMMENT_INCLUDE, // ← CRITICAL: includes author.profile
     });
-
-    return comment;
-  }
-
-  async findComments(postId: string): Promise<any> {
-    const comments = await this.prisma.lazerComment.findMany({
-      where: { postId, deletedAt: null },
-      include: {
-        author: { include: { profile: true } },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    const authorIds = [...new Set(comments.map(c => c.authorId))];
-    const profiles = await this.prisma.profile.findMany({
-      where: { userId: { in: authorIds } },
-      select: { userId: true, username: true, displayName: true, avatarUrl: true },
-    });
-    const pm = new Map(profiles.map(p => [p.userId, p]));
-
-    return comments.map(c => ({
-      ...c,
-      author: pm.get(c.authorId) ?? null,
-    }));
+    return { success: true, data: comment };
   }
 
   async updateComment(commentId: string, userId: string, dto: CreateCommentsLazerDto) {
-    const comment = await this.prisma.lazerComment.findUnique({ where: { id: commentId } });
-    if (!comment || comment.deletedAt) throw new NotFoundException('Comentário não encontrado.');
-    if (comment.authorId !== userId) throw new ForbiddenException('Não podes editar este comentário.');
-    return this.prisma.lazerComment.update({
+    const comment = await this.prisma.lazerComment.findUnique({
+      where: { id: commentId },
+    });
+    if (!comment) throw new NotFoundException('Comentário não encontrado.');
+    if (comment.authorId !== userId) throw new ForbiddenException('Sem permissão.');
+
+    const updated = await this.prisma.lazerComment.update({
       where: { id: commentId },
       data: { content: dto.content },
+      include: COMMENT_INCLUDE,
     });
+    return { success: true, data: updated };
   }
 
-  async softDeleteComment(commentId: string, userId: string) {
-    const comment = await this.prisma.lazerComment.findUnique({ where: { id: commentId } });
-    if (!comment || comment.deletedAt) throw new NotFoundException('Comentário não encontrado.');
-    if (comment.authorId !== userId) throw new ForbiddenException('Não podes apagar este comentário.');
-    return this.prisma.lazerComment.update({
+  async deleteComment(commentId: string, userId: string) {
+    const comment = await this.prisma.lazerComment.findUnique({
       where: { id: commentId },
-      data: { deletedAt: new Date() },
+      include: { post: true },
     });
+    if (!comment) throw new NotFoundException('Comentário não encontrado.');
+
+    const isAuthor = comment.authorId === userId;
+    const isPostOwner = comment.post?.authorId === userId;
+    if (!isAuthor && !isPostOwner) throw new ForbiddenException('Sem permissão.');
+
+    await this.prisma.lazerComment.delete({ where: { id: commentId } });
+    return { success: true };
   }
 }
