@@ -405,4 +405,56 @@ export class LazerService {
     await this.prisma.lazerComment.delete({ where: { id: commentId } });
     return { success: true };
   }
+
+  // ── YouTube Proxy ────────────────────────────────────────────────────
+
+  async searchYouTube(query: string, maxResults = 12) {
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    if (!apiKey) return { success: false, data: [], message: 'YouTube API key not configured.' };
+
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query)}&maxResults=${maxResults}&key=${apiKey}&safeSearch=none`;
+
+    try {
+      const res = await fetch(url);
+      const json = await res.json() as any;
+      if (!res.ok) return { success: false, data: [], message: json.error?.message || 'YouTube API error.' };
+
+      const videos = (json.items || []).map((item: any) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle,
+        thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
+        publishedAt: item.snippet.publishedAt,
+        description: item.snippet.description,
+      }));
+      return { success: true, data: videos };
+    } catch (e) {
+      return { success: false, data: [], message: 'Failed to reach YouTube API.' };
+    }
+  }
+
+  async getChannelVideos(channelId: string, maxResults = 8) {
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    if (!apiKey) return { success: false, data: [], message: 'YouTube API key not configured.' };
+
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=${maxResults}&key=${apiKey}`;
+
+    try {
+      const res = await fetch(url);
+      const json = await res.json() as any;
+      if (!res.ok) return { success: false, data: [], message: json.error?.message || 'YouTube API error.' };
+
+      const videos = (json.items || []).map((item: any) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle,
+        thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
+        publishedAt: item.snippet.publishedAt,
+        description: item.snippet.description,
+      }));
+      return { success: true, data: videos };
+    } catch (e) {
+      return { success: false, data: [], message: 'Failed to reach YouTube API.' };
+    }
+  }
 }

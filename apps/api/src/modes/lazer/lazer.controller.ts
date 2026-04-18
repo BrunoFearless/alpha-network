@@ -12,19 +12,25 @@
 import {
   Controller, Get, Post, Patch, Delete,
   Body, Param, Query, UseGuards, Request,
-  HttpCode, HttpStatus,
+  HttpCode, HttpStatus, Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { LazerService } from './lazer.service';
 import { CreatePostLazerDto } from './dto/createPost-lazer.dto';
 import { UpdatePostLazerDto } from './dto/updatePost-lazer.dto';
 import { CreateCommentsLazerDto } from './dto/createComments-lazer.dto';
 import { ToggleRequestDTO } from './dto/toggleRequest-lazer.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { SpotifyService } from './spotify.service';
+import { Public } from '../../auth/decorators/public.decorator';
 
 @Controller('lazer')
 @UseGuards(JwtAuthGuard)
 export class LazerController {
-  constructor(private readonly lazerService: LazerService) {}
+  constructor(
+    private readonly lazerService: LazerService,
+    private readonly spotifyService: SpotifyService,
+  ) {}
 
   // ── Tropes ─────────────────────────────────────────────────────────
 
@@ -156,5 +162,49 @@ export class LazerController {
   @HttpCode(HttpStatus.OK)
   deleteComment(@Param('id') commentId: string, @Request() req: any) {
     return this.lazerService.deleteComment(commentId, req.user.id);
+  }
+
+  // ── YouTube Proxy ─────────────────────────────────────────────────────
+
+  @Get('youtube/search')
+  searchYouTube(
+    @Query('q') q: string,
+    @Query('maxResults') maxResults?: string,
+  ) {
+    return this.lazerService.searchYouTube(q || 'anime trailer', maxResults ? parseInt(maxResults, 10) : 12);
+  }
+
+  @Get('youtube/channel/:channelId')
+  getChannelVideos(
+    @Param('channelId') channelId: string,
+    @Query('maxResults') maxResults?: string,
+  ) {
+    return this.lazerService.getChannelVideos(channelId, maxResults ? parseInt(maxResults, 10) : 8);
+  }
+
+  // ── Spotify Integration ───────────────────────────────────────────────
+
+  @Public()
+  @Get('spotify/auth')
+  getSpotifyAuthUrl(@Query('userId') userId: string, @Res() res: Response) {
+    const url = this.spotifyService.getAuthUrl(userId);
+    return res.redirect(url);
+  }
+
+  @Public()
+  @Get('spotify/callback')
+  async spotifyCallback(
+    @Query('code') code: string, 
+    @Query('state') userId: string,
+    @Res() res: Response
+  ) {
+    await this.spotifyService.handleCallback(code, userId);
+    // Redirect back to frontend
+    return res.redirect('http://localhost:3000/main/lazer?spotify=success');
+  }
+
+  @Get('profile/:userId/playback')
+  getSpotifyPlayback(@Param('userId') userId: string) {
+    return this.spotifyService.getCurrentlyPlaying(userId);
   }
 }

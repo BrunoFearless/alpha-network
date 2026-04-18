@@ -67,6 +67,12 @@ model Profile {
   tags        String?
   lazerData   Json?
   youtubeChannelId String?
+  
+  // Spotify Integration
+  spotifyRefreshToken String?
+  spotifyEnabled      Boolean  @default(false)
+  lastPlayedTrack     Json?    // Stores { title, artist, albumArt, url, timestamp }
+
 
   // Name styling
   nameFont    String?
