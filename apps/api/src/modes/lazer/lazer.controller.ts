@@ -22,6 +22,7 @@ import { CreateCommentsLazerDto } from './dto/createComments-lazer.dto';
 import { ToggleRequestDTO } from './dto/toggleRequest-lazer.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SpotifyService } from './spotify.service';
+import { DiscoverService } from './discover.service';
 import { Public } from '../../auth/decorators/public.decorator';
 
 @Controller('lazer')
@@ -30,7 +31,34 @@ export class LazerController {
   constructor(
     private readonly lazerService: LazerService,
     private readonly spotifyService: SpotifyService,
+    private readonly discoverService: DiscoverService,
   ) {}
+
+  // ── Discovery ──────────────────────────────────────────────────────
+
+  @Get('discover/trending')
+  getTrending(@Query('category') category: string) {
+    if (category === 'anime') return this.discoverService.getTrendingAnime();
+    if (category === 'manga') return this.discoverService.getTrendingMangas();
+    if (category === 'games') return this.discoverService.getTrendingGames();
+    if (category === 'cinema') return this.discoverService.getCinemaContent();
+    return { success: false, error: 'Invalid category' };
+  }
+
+  @Get('discover/wiki/:title')
+  getWikiArticle(@Param('title') title: string) {
+    return this.discoverService.getWikipediaArticle(title);
+  }
+
+  @Get('discover/search')
+  searchUniversal(@Query('q') query: string) {
+    return this.discoverService.searchUniversal(query);
+  }
+
+  @Get('discover/detail')
+  getDetail(@Query('type') type: string, @Query('id') id: string) {
+    return this.discoverService.getDetail(type, id);
+  }
 
   // ── Tropes ─────────────────────────────────────────────────────────
 
