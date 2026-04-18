@@ -417,6 +417,23 @@ export class LazerService {
     try {
       const res = await fetch(url);
       const json = await res.json() as any;
+      
+      // DIAGNÓSTICO DE QUOTA: Se a quota exceder, usamos o Motor de Emergência
+      const isQuotaError = !res.ok && (json.error?.message?.includes('quota') || json.error?.code === 403);
+      
+      if (isQuotaError) {
+        // PLAYLIST ALPHA CURADA (Fallback)
+        const curatedVideos = [
+          { id: 'm6GndzK0aXk', title: 'Solo Leveling - Official Trailer', channel: 'Alpha Curated', thumbnail: 'https://img.youtube.com/vi/m6GndzK0aXk/mqdefault.jpg' },
+          { id: 'KxI_vU1I2xU', title: 'Frieren: Beyond Journey\'s End - Opening', channel: 'Alpha Curated', thumbnail: 'https://img.youtube.com/vi/KxI_vU1I2xU/mqdefault.jpg' },
+          { id: 'tW8XyOqWz9U', title: 'Dandadan - Official Trailer', channel: 'Alpha Curated', thumbnail: 'https://img.youtube.com/vi/tW8XyOqWz9U/mqdefault.jpg' },
+          { id: '4V7X6MclF44', title: 'Blue Lock VS. U-20 JAPAN - PV', channel: 'Alpha Curated', thumbnail: 'https://img.youtube.com/vi/4V7X6MclF44/mqdefault.jpg' },
+          { id: '7n3_vj5XvWw', title: 'Kaiju No. 8 - Official Trailer', channel: 'Alpha Curated', thumbnail: 'https://img.youtube.com/vi/7n3_vj5XvWw/mqdefault.jpg' },
+          { id: 'ZRtdQ81jPUQ', title: 'Oshi No Ko - Opening | YOASOBI', channel: 'Alpha Curated', thumbnail: 'https://img.youtube.com/vi/ZRtdQ81jPUQ/mqdefault.jpg' },
+        ];
+        return { success: true, data: curatedVideos, message: 'Alpha Emergency Engine Active (Quota Reached)' };
+      }
+
       if (!res.ok) return { success: false, data: [], message: json.error?.message || 'YouTube API error.' };
 
       const videos = (json.items || []).map((item: any) => ({

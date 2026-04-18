@@ -56,8 +56,18 @@ export class LazerController {
   }
 
   @Get('discover/detail')
-  getDetail(@Query('type') type: string, @Query('id') id: string) {
-    return this.discoverService.getDetail(type, id);
+  getDetail(@Query('type') type: string, @Query('id') id: string, @Query('q') q?: string, @Query('page') page?: string) {
+    return this.discoverService.getDetail(type, id, q, Number(page) || 1);
+  }
+
+  @Get('discover/reddit-trends')
+  getRedditTrends(@Query('subreddit') subreddit?: string) {
+    return this.discoverService.getRedditTrends(subreddit);
+  }
+
+  @Get('discover/gallery')
+  getGallery(@Query('q') q: string, @Query('page') page?: string) {
+    return this.discoverService.getAestheticGallery(q, page ? parseInt(page, 10) : 1);
   }
 
   // ── Tropes ─────────────────────────────────────────────────────────
