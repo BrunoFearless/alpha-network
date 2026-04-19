@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
 import { EmojiPicker } from '@/components/community/EmojiPicker';
 import { TropesModal } from '../modals/TropesModal';
+import { YoutubeEmbed, extractYoutubeId } from '@/components/ui/YoutubeEmbed';
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 const IconComment = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
@@ -86,11 +87,14 @@ const PREMIUM_FONTS = [
 ];
 
 const PREMIUM_COLORS_LIST = [
+  { id: 'L-green', value: '#A5E600', label: 'Green' },
   { id: 'pink', value: '#ff9ef0', label: 'Neon' },
   { id: 'gold', value: '#ffeb3b', label: 'Gold' },
-  { id: 'blue', value: '#7dd3fc', label: 'Alpha' },
+  { id: 'blue', value: '#22d3ee', label: 'Alpha' },
   { id: 'green', value: '#86efac', label: 'Green' },
   { id: 'orange', value: '#ffb07c', label: 'Flame' },
+  { id: 'red', value: "#ef4444", label: 'Red' },
+  
 ];
 
 function formatContent(content: string, postTitleFont?: string | null, postTitleColor?: string | null, isLight?: boolean) {
@@ -431,6 +435,12 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
               )}
             </>
           )}
+          {/* YouTube Embed Detection */}
+          {!editing && (() => {
+            const ytId = extractYoutubeId(post.content || '');
+            if (!ytId) return null;
+            return <div className="mb-3" onClick={e => e.stopPropagation()}><YoutubeEmbed videoId={ytId} accentColor={c}/></div>;
+          })()}
           {(rawPost?.imageUrl || post.imageUrl) && !editing && (
             <img src={rawPost?.imageUrl || post.imageUrl} alt="post" className="w-full rounded-xl object-cover max-h-[300px] block mb-3"/>
           )}
@@ -600,32 +610,114 @@ function TrendingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
   );
 }
 
-function WatchingWidget({ c, isLight, textPrimary, textSecondary, borderCol, cardBg }: any) {
+function WatchingWidget({ c, isLight, textPrimary, textSecondary, borderCol, cardBg, watchingNow, onSubmitCheckIn }: any) {
   const [selected, setSelected] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isCustomOpen, setIsCustomOpen] = useState(false);
+  const [customTitle, setCustomTitle] = useState('');
+  const [customEp, setCustomEp] = useState('');
+  const [customEmoji, setCustomEmoji] = useState('🎬');
+
+  const handleCustomSubmit = async () => {
+    if (!customTitle.trim() || !customEp.trim()) return;
+    setIsSubmitting(true);
+    await onSubmitCheckIn(customTitle, customEp, customEmoji, 'Comunidade');
+    setIsSubmitting(false);
+    setIsCustomOpen(false);
+    setCustomTitle('');
+    setCustomEp('');
+  };
+
+  const handleCheckIn = async (item: any, idx: number) => {
+    setIsSubmitting(true);
+    await onSubmitCheckIn(item.title, item.ep, item.emoji, item.genre);
+    setIsSubmitting(false);
+    setSelected(null); // Fecha a selecção após sucesso
+  };
+
   return (
     <div className={`rounded-3xl border-[1.5px] backdrop-blur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
       <div className="flex items-center gap-2 mb-3">
         <IconTv/>
-        <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>A ver agora</h3>
+        <div className="flex-1">
+          <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary} leading-none`}>A ver agora</h3>
+          <p className={`text-[9px] ${textSecondary} mt-0.5`}>Simulcast Sync</p>
+        </div>
+        <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse"/>
       </div>
       <div className="flex flex-col gap-1.5">
-        {WATCHING_NOW.map((w, i) => (
-          <button key={i} onClick={() => setSelected(selected === i ? null : i)}
-            className="flex items-center gap-3 w-full rounded-xl px-2.5 py-2 transition-all border-[1.5px] cursor-pointer text-left"
-            style={{
-              background: selected === i ? `${c}18` : 'transparent',
-              borderColor: selected === i ? `${c}50` : 'transparent',
-            }}>
-            <span className="text-xl">{w.emoji}</span>
-            <div className="flex-1 min-w-0">
-              <p className={`text-[12px] font-bold truncate ${textPrimary}`}>{w.title}</p>
-              <p className={`text-[10px] ${textSecondary}`}>{w.ep} · {w.genre}</p>
+        {watchingNow?.length === 0 ? (
+          <p className={`text-[10px] text-center py-4 italic ${textSecondary} opacity-50`}>A carregar grelha...</p>
+        ) : (
+          watchingNow?.map((w: any, i: number) => (
+            <div key={w.id} className="w-full flex flex-col gap-1">
+              <button onClick={() => setSelected(selected === i ? null : i)}
+                className="flex items-center gap-3 w-full rounded-xl px-2.5 py-2 transition-all border-[1.5px] cursor-pointer text-left"
+                style={{
+                  background: selected === i ? `${c}10` : 'transparent',
+                  borderColor: selected === i ? `${c}40` : 'transparent',
+                }}>
+                <span className="text-xl">{w.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[12px] font-bold truncate ${textPrimary}`}>{w.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-[10px] ${textSecondary}`}>{w.ep}</span>
+                    <div className="flex -space-x-1.5">
+                      {w.recentAvatars?.map((av: string, i: number) => (
+                        <div key={i} className="w-4 h-4 rounded-full overflow-hidden border border-white dark:border-[#1e1e1e]">
+                           <img src={av} alt="" className="w-full h-full object-cover"/>
+                        </div>
+                      ))}
+                    </div>
+                    {w.totalCheckIns > 3 && (
+                      <span className={`text-[9px] font-bold ${textSecondary} ml-1`}>+{w.totalCheckIns - 3}</span>
+                    )}
+                  </div>
+                </div>
+                {selected !== i && w.totalCheckIns > 0 && <span className="text-[10px] font-black" style={{ color: c }}>{w.totalCheckIns} 👀</span>}
+                {selected === i && <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: c }}/>}
+              </button>
+
+              {/* Expand Check-in Panel */}
+              {selected === i && (
+                <div className="mx-2 mb-1 p-2 rounded-xl border border-dashed flex flex-col items-center gap-2 animate-in slide-in-from-top-2" style={{ borderColor: `${c}30`, background: `${c}08` }}>
+                   <p className={`text-[10px] font-bold text-center ${textPrimary}`}>Fazer check-in neste episódio?</p>
+                   <button onClick={() => handleCheckIn(w, i)} disabled={isSubmitting} className="w-full py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-white border-none cursor-pointer hover:scale-105 transition-transform" style={{ background: c }}>
+                     {isSubmitting ? '...' : 'Sim, Estou a ver ✓'}
+                   </button>
+                </div>
+              )}
             </div>
-            {selected === i && <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: c }}/>}
-          </button>
-        ))}
+          ))
+        )}
       </div>
-      <p className={`text-center text-[10px] mt-2 ${textSecondary} opacity-50`}>Clica para mostrar no teu perfil</p>
+
+      {/* Custom Add Button / Form */}
+      <div className="mt-2">
+        {!isCustomOpen ? (
+          <button onClick={() => setIsCustomOpen(true)} className={`w-full py-2 rounded-xl border border-dashed text-[10px] font-bold cursor-pointer transition-all ${textSecondary} hover:${textPrimary}`} style={{ borderColor: borderCol, background: 'transparent' }}>
+            + Adicionar outro...
+          </button>
+        ) : (
+          <div className="p-2.5 rounded-xl border flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200" style={{ borderColor: borderCol, background: `${c}08` }}>
+            <div className="flex gap-2">
+              <input value={customEmoji} onChange={e => setCustomEmoji(e.target.value)} maxLength={2} className="w-8 text-center bg-transparent border-b outline-none text-lg" style={{ borderColor: `${c}40`, color: isLight ? '#000' : '#fff' }} placeholder="⚽"/>
+              <input value={customTitle} onChange={e => setCustomTitle(e.target.value)} autoFocus className="flex-1 bg-transparent border-b outline-none text-[11px] font-bold" style={{ borderColor: `${c}40`, color: isLight ? '#000' : '#fff' }} placeholder="Nome da obra (Ex: One Piece)"/>
+            </div>
+            <input value={customEp} onChange={e => setCustomEp(e.target.value)} className="w-full bg-transparent border-b outline-none text-[10px]" style={{ borderColor: `${c}40`, color: isLight ? '#000' : '#fff' }} placeholder="Nº do Episódio (Ex: EP 1000)"/>
+            
+            <div className="flex gap-2 mt-1">
+              <button onClick={() => setIsCustomOpen(false)} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold border-none cursor-pointer ${textSecondary}`} style={{ background: isLight ? '#e5e7eb' : '#27272a' }}>Cancelar</button>
+              <button onClick={handleCustomSubmit} disabled={isSubmitting || !customTitle.trim() || !customEp.trim()} className="flex-1 py-1.5 rounded-lg text-[10px] font-bold border-none cursor-pointer text-white disabled:opacity-50" style={{ background: c }}>
+                {isSubmitting ? '...' : 'Adicionar ✓'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <p className={`text-center text-[9px] mt-3 ${textSecondary} opacity-50 uppercase tracking-widest`}>Assinala no teu perfil</p>
     </div>
   );
 }
@@ -897,7 +989,7 @@ const TABS = ['For You', 'Following', 'Anime', 'Manga'];
 export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialPostId, onPostOpened }: LazerHomeViewProps) {
   const { user: authUser } = useAuthStore();
   const { feedPosts, createPost, fetchComments, comments, fetchFriends, fetchMyCommunities, fetchExploreCommunities, trendingTropes, fetchTrendingTropes } = useLazerStore();
-  const { exploreCommunities } = useLazerStore();
+  const { exploreCommunities, watchingNow, fetchWatchingNow, submitCheckIn } = useLazerStore();
 
   const [activeTab, setActiveTab] = useState('For You');
   const [postText, setPostText] = useState('');
@@ -933,6 +1025,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
     fetchMyCommunities();
     fetchExploreCommunities();
     fetchTrendingTropes();
+    fetchWatchingNow();
   }, []);
 
   useEffect(() => {
@@ -1200,7 +1293,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
             onTagClick={(tag) => { setActiveTag(tag); setActiveTab(''); }}
             onVerTodas={() => setShowTropesModal(true)} />
 
-          <WatchingWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}/>
+          <WatchingWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg} watchingNow={watchingNow} onSubmitCheckIn={submitCheckIn}/>
 
           <HotDiscussionsWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}
             onDiscussionClick={(title: string) => setActiveDiscussion(title)}/>

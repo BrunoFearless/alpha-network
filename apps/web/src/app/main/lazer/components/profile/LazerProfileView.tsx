@@ -7,6 +7,8 @@ import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
 import { ThemeBg } from './ThemeBg';
 import { LazerUserProfile, LazerChronicle } from './types';
 import { useLazerStore } from '@/store/lazer.store';
+import { SpotifyCard } from './SpotifyCard';
+import { useEffect } from 'react';
 
 interface ChronicleProps {
   item: LazerChronicle;
@@ -97,7 +99,22 @@ interface ProfileViewProps {
 }
 
 export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId }: ProfileViewProps) {
-  const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend } = useLazerStore();
+  const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend, spotifyPlayback, fetchSpotifyPlayback } = useLazerStore();
+  
+  // Real-time Spotify Polling
+  useEffect(() => {
+    if (!user.spotifyEnabled || !user.userId) return;
+    
+    // Initial fetch
+    fetchSpotifyPlayback(user.userId);
+    
+    // Poll every 30s
+    const interval = setInterval(() => {
+      fetchSpotifyPlayback(user.userId);
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user.spotifyEnabled, user.userId]);
   
   const fStatus = viewingUserId ? (isFriend(viewingUserId) ? 'friend' : hasSentRequest(viewingUserId) ? 'sent' : 'none') : 'none';
 
@@ -171,7 +188,13 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                   <EmojiRenderer content={user.bio} emojiSize={18} />
                 </p>
 
-                {user.listening && (
+                {/* Spotify Playback (Priority) */}
+                {user.spotifyEnabled && spotifyPlayback?.isPlaying && (
+                  <div className="mb-6"><SpotifyCard playback={spotifyPlayback} accentColor={c} isLight={isLight} /></div>
+                )}
+
+                {/* Static Listening (Fallback) */}
+                {(!user.spotifyEnabled || !spotifyPlayback?.isPlaying) && user.listening && (
                   <div 
                      className="inline-flex items-center gap-2.5 rounded-full px-5 py-2.5 border-[1.5px] w-full justify-center mb-6 shadow-sm"
                      style={{ backgroundColor: `${c}18`, borderColor: `${c}40` }}

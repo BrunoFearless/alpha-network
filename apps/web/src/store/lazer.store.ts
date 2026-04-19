@@ -18,6 +18,16 @@ export interface TrendingTrope extends LazerTrope {
   score: number;
 }
 
+export interface WatchingSimulcast {
+  id: string;
+  title: string;
+  ep: string;
+  genre: string;
+  emoji: string;
+  totalCheckIns: number;
+  recentAvatars: string[];
+}
+
 export interface LazerPost {
   id: string;
   authorId: string;
@@ -30,6 +40,7 @@ export interface LazerPost {
   };
   content: string; imageUrl?: string | null; 
   tropes?: LazerTrope[];
+  tag?: string | null;
   communityId?: string | null;
   isSparkle: boolean; isPinned: boolean;
   isLiked?: boolean; // persists in store, never reset between renders
@@ -78,7 +89,9 @@ interface LazerStoreState {
   friends: string[]; friendRequests: FriendRequest[]; sentRequests: string[];
   myCommunities: LazerCommunity[]; exploreCommunities: LazerCommunity[];
   trendingTropes: TrendingTrope[];
+  watchingNow: WatchingSimulcast[];
   isLoading: boolean;
+  spotifyPlayback: any | null;
   fetchFeed: () => Promise<void>;
   fetchUserPosts: (userId: string) => Promise<void>;
   createPost: (content: string, imageUrl?: string, tropeNames?: string[], isSparkle?: boolean, titleFont?: string, titleColor?: string, communityId?: string) => Promise<boolean>;
@@ -102,6 +115,10 @@ interface LazerStoreState {
   hasSentRequest: (userId: string) => boolean;
   hasReceivedRequest: (userId: string) => FriendRequest | undefined;
   fetchTrendingTropes: () => Promise<void>;
+  fetchWatchingNow: () => Promise<void>;
+  submitCheckIn: (title: string, episode: string, emoji: string, genre: string) => Promise<boolean>;
+  fetchSpotifyPlayback: (userId: string) => Promise<void>;
+  connectSpotify: () => Promise<void>;
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -118,6 +135,7 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
   myCommunities: [], exploreCommunities: [],
   trendingTropes: [],
   isLoading: false,
+  spotifyPlayback: null,
 
   fetchTrendingTropes: async () => {
     try {
@@ -127,6 +145,33 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
         set({ trendingTropes: data.data || [] });
       }
     } catch (e) { console.error('fetchTrendingTropes error', e); }
+  },
+
+  watchingNow: [],
+
+  fetchWatchingNow: async () => {
+    try {
+      const res = await fetch(`${API}/api/v1/lazer/watching`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        set({ watchingNow: data.data || [] });
+      }
+    } catch (e) { console.error('fetchWatchingNow error', e); }
+  },
+
+  submitCheckIn: async (title, episode, emoji, genre) => {
+    try {
+      const res = await fetch(`${API}/api/v1/lazer/watching/checkin`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, episode, emoji, genre }),
+      });
+      if (res.ok) {
+        get().fetchWatchingNow();
+        return true;
+      }
+    } catch (e) { console.error('submitCheckIn error', e); }
+    return false;
   },
 
   fetchFeed: async () => {
@@ -440,4 +485,35 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
     const myId = useAuthStore.getState().user?.id;
     return get().friendRequests.find(r => r.fromUserId === userId && r.toUserId === myId && r.status === 'pending');
   },
+
+  // ── Spotify Actions ──────────────────────────────────────────────────
+
+  fetchSpotifyPlayback: async (userId: string) => {
+    try {
+      const res = await fetch(`${API}/api/v1/lazer/profile/${userId}/playback`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        set({ spotifyPlayback: data });
+      } else {
+        set({ spotifyPlayback: null });
+      }
+    } catch (e) { 
+      set({ spotifyPlayback: null });
+    }
+  },
+
+  connectSpotify: async () => {
+    try {
+      const res = await fetch(`${API}/api/v1/lazer/spotify/auth`, { headers: authHeaders() });
+      if (res.ok) {
+        const { url } = await res.json();
+        if (url) {
+          // Abrir numa nova aba para evitar conflitos com o modal e refresh da página
+          window.open(url, '_blank');
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao conectar Spotify:', e);
+    }
+  }
 }));

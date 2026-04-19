@@ -12,6 +12,7 @@ export interface LazerStat {
 }
 
 export interface LazerUserProfile {
+  userId: string;
   displayName: string;
   username: string;
   status: string;
@@ -31,10 +32,13 @@ export interface LazerUserProfile {
   themeColor: string;
   themeMode: "light" | "dark";
   bannerColor?: string;
+  spotifyEnabled?: boolean;
+  lastPlayedTrack?: any;
   chronicles: LazerChronicle[];
 }
 
 export const DEMO_USER: LazerUserProfile = {
+  userId: "",
   displayName: "Hikari",
   username: "hikari_chan",
   status: "Exploring the skies",

@@ -32,6 +32,22 @@ export default function LazerPage() {
 
   const { userPosts, feedPosts, fetchFeed, fetchUserPosts, fetchFriends, friendRequests } = useLazerStore();
 
+  // Detect Spotify callback success and refresh user session
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('spotify') === 'success') {
+      // Remove param from URL without reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      // Refresh user data so spotifyEnabled is up to date
+      const { refresh } = useAuthStore.getState();
+      refresh().then(() => {
+        // Navigate to profile so the SpotifyCard appears immediately
+        setActiveView('profile');
+      });
+    }
+  }, []);
+
   useEffect(() => { fetchFeed(); fetchFriends(); }, []);
 
   useEffect(() => {
@@ -75,6 +91,7 @@ export default function LazerPage() {
     const p = authUser.profile || ((authUser as any).username ? authUser : {}) as any;
     const laz = p.lazerData || {};
     return {
+      userId: authUser.id || '',
       displayName: p.displayName || authUser.email?.split('@')[0] || p.username,
       username: p.username || 'unknown',
       status: p.status || '', bio: p.bio || '',
@@ -88,6 +105,8 @@ export default function LazerPage() {
       nameFont: p.nameFont || 'default', nameEffect: p.nameEffect || 'none', nameColor: p.nameColor || '#e879f9',
       themeColor: laz.themeColor || '#e879f9', themeMode: laz.themeMode || 'dark',
       bannerColor: p.bannerColor, chronicles: [],
+      spotifyEnabled: p.spotifyEnabled || false,
+      lastPlayedTrack: p.lastPlayedTrack || null,
     };
   }, [authUser]);
 
@@ -105,6 +124,7 @@ export default function LazerPage() {
     const p = viewingUser.profile || viewingUser as any;
     const laz = p.lazerData || {};
     return {
+      userId: viewingUser.id || '',
       displayName: p.displayName || p.username || 'Utilizador',
       username: p.username || 'unknown',
       status: p.status || '', bio: p.bio || '',
@@ -116,8 +136,10 @@ export default function LazerPage() {
       relics: laz.relics || ['🗡️', '🛡️'],
       nameFont: p.nameFont || 'default', nameEffect: p.nameEffect || 'none', nameColor: p.nameColor || '#e879f9',
       themeColor: laz.themeColor || p.nameColor || '#e879f9',
-      themeMode: myProfileData.themeMode, // always keep MY dark/light mode
+      themeMode: myProfileData.themeMode,
       bannerColor: p.bannerColor,
+      spotifyEnabled: p.spotifyEnabled || false,
+      lastPlayedTrack: p.lastPlayedTrack || null,
       chronicles: userPosts.map((post: any, idx: number) => ({
         id: post.id, side: idx % 2 === 0 ? 'left' : 'right',
         title: post.tag || 'Publicação', quote: post.content,

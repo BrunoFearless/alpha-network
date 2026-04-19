@@ -15,6 +15,8 @@ interface UserProfile {
   auroraTheme?: string | null;
   activeModes: string[];
   lazerData?: any;
+  spotifyEnabled?: boolean;
+  listening?: string | null;
 }
 
 interface AuthUser {

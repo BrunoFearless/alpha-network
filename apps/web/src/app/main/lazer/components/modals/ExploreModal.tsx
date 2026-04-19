@@ -1,21 +1,45 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
 import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
 import { ThemeBg } from '../profile/ThemeBg';
 import { useLazerStore } from '@/store/lazer.store';
 import { useAuthStore } from '@/store/auth.store';
+import { YoutubeEmbed } from '@/components/ui/YoutubeEmbed';
+import { DiscoverDetailModal } from './DiscoverDetailModal';
+import { WikiModal } from './WikiModal';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const CATEGORIES = ['All', 'Romance', 'Slice of Life', 'Drama', 'Fantasy', 'Comedy', 'School Life'];
+const CATEGORIES = [
+  'All',
+  '🏮 Animes',
+  '📖 Mangás',
+  '🎮 Jogos',
+  '🍿 Cinema',
+  'Galeria 🏮',
+  '🎥 Watch Mode'
+];
+
+const catMap: Record<string, string> = {
+  '🏮 Animes': 'anime',
+  '📖 Mangás': 'manga',
+  '🎮 Jogos': 'games',
+  '🍿 Cinema': 'cinema'
+};
+
+const getNeonColor = (category: string) => {
+  if (category.includes('Animes')) return '#00f2ff'; // Cyan
+  if (category.includes('Mangás')) return '#bc13fe'; // Purple
+  if (category.includes('Jogos')) return '#39ff14'; // Lime
+  if (category.includes('Cinema')) return '#ff003c'; // Cyber Red
+  return '#ffffff';
+};
 
 // Icons
 const IconFlame = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>;
-const IconTv = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>;
 const IconMessageSquare = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
-const IconHash = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>;
 const IconStar = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
 const IconSearch = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>;
 
@@ -44,7 +68,6 @@ function formatContent(content: string, postTitleFont?: string | null, postTitle
   );
 }
 
-// Sidebar Widgets Config
 const TRENDING_TROPES = [
   { rank: 1, tag: '#EnemiesToLovers', count: '15.2k', color: '#f472b6' },
   { rank: 2, tag: '#SchoolFestival', count: '8.4k', color: '#fb923c' },
@@ -60,8 +83,6 @@ const WATCHING_NOW = [
   { title: 'Blue Lock', ep: 'EP 16', genre: 'Desporto', emoji: '⚽' },
 ];
 
-// (COMMUNITIES mockup removed in favor of real store data)
-
 interface ExploreProps {
   onClose: () => void;
   onPostClick?: (postId: string) => void;
@@ -74,6 +95,7 @@ interface ExploreProps {
 export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunityClick, themeColor: c, themeMode }: ExploreProps) {
   const { user: authUser } = useAuthStore();
   const { feedPosts, sendFriendRequest, cancelFriendRequest, isFriend, hasSentRequest, myCommunities, fetchMyCommunities } = useLazerStore();
+  
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [creators, setCreators] = useState<any[]>([]);
@@ -81,16 +103,188 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Watch Mode state
+  const [ytResults, setYtResults] = useState<any[]>([]);
+  const [ytQuery, setYtQuery] = useState('');
+  const [ytLoading, setYtLoading] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<any>(null);
+  const [galSearch, setGalSearch] = useState('');
+  const [galSearchFocus, setGalSearchFocus] = useState(false);
+
+  // Discover state
+  const [discoverData, setDiscoverData] = useState<any[]>([]);
+  const [discoverLoading, setDiscoverLoading] = useState(false);
+  const [universalResults, setUniversalResults] = useState<any[]>([]);
+  const [wikiResult, setWikiResult] = useState<any>(null);
+  const [activeDetail, setActiveDetail] = useState<{ type: any; id: string; metadata?: any } | null>(null);
+  const [activeWiki, setActiveWiki] = useState<string | null>(null);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('alpha_search_history');
+    if (saved) setSearchHistory(JSON.parse(saved));
+  }, []);
+
+  const addToHistory = (q: string) => {
+    if (!q.trim()) return;
+    const newHist = [q, ...searchHistory.filter(i => i !== q)].slice(0, 8);
+    setSearchHistory(newHist);
+    localStorage.setItem('alpha_search_history', JSON.stringify(newHist));
+  };
+
+  const isWatchMode = activeCategory === '🎥 Watch Mode';
+  const isGalleryMode = activeCategory === 'Galeria 🏮';
+  const isDiscoverCategory = ['🏮 Animes', '📖 Mangás', '🎮 Jogos', '🍿 Cinema'].includes(activeCategory);
+
   const isLight = themeMode === 'light';
   const textPrimary = isLight ? 'text-black' : 'text-white';
   const textSecondary = isLight ? 'text-black/60' : 'text-white/60';
   const cardBg = isLight ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)';
   const borderCol = isLight ? `${c}40` : `${c}18`;
   const isVideo = (url?: string | null) => url?.match(/\.(mp4|webm|mov)(\?|$)/i);
+  
+  // Gallery state in Hub
+  const [hubGallery, setHubGallery] = useState<any[]>([]);
+  const [hubGalLoading, setHubGalLoading] = useState(false);
+  const [hubGalPage, setHubGalPage] = useState(1);
+  const [hasMoreGal, setHasMoreGal] = useState(true);
+  const galleryEndRef = useRef<HTMLDivElement>(null);
+
+  // Masonry Stability Logic
+  const [numCols, setNumCols] = useState(4);
+  useEffect(() => {
+     const updateCols = () => {
+        if (typeof window === 'undefined') return;
+        if (window.innerWidth < 640) setNumCols(2);
+        else if (window.innerWidth < 1024) setNumCols(3);
+        else setNumCols(4);
+     };
+     updateCols();
+     window.addEventListener('resize', updateCols);
+     return () => window.removeEventListener('resize', updateCols);
+  }, []);
+
+  const galleryColumns = Array.from({ length: numCols }, () => [] as any[]);
+  hubGallery.forEach((img, i) => {
+     galleryColumns[i % numCols].push(img);
+  });
 
   useEffect(() => {
     fetchMyCommunities();
   }, []);
+
+  // Handle external wiki article opens from detail modal
+  useEffect(() => {
+    const handleOpenWiki = (e: any) => {
+      if (e.detail) {
+        setActiveWiki(e.detail);
+        setIsSearching(false);
+      }
+    };
+    window.addEventListener('alpha-open-wiki', handleOpenWiki);
+    return () => window.removeEventListener('alpha-open-wiki', handleOpenWiki);
+  }, []);
+
+  const fetchHubGal = async (page = 1, append = false) => {
+    if (hubGalLoading) return;
+    setHubGalLoading(true);
+    try {
+      const token = (useAuthStore.getState() as any).accessToken;
+      const query = (galSearch.trim() || search.trim());
+      const res = await fetch(`${API}/api/v1/lazer/discover/gallery?q=${encodeURIComponent(query)}&page=${page}`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      const json = await res.json();
+      const newImages = Array.isArray(json) ? json : [];
+      
+      if (append) {
+        setHubGallery(prev => {
+          const currentUrls = new Set(prev.map(img => img.url));
+          const unique = newImages.filter(img => !currentUrls.has(img.url));
+          return [...prev, ...unique];
+        });
+      } else {
+        setHubGallery(newImages);
+      }
+      
+      setHasMoreGal(newImages.length > 4);
+    } catch { 
+      setHasMoreGal(false); 
+    } finally { 
+      setHubGalLoading(false); 
+    }
+  };
+
+  useEffect(() => {
+    if (!isGalleryMode) return;
+    setHubGalPage(1);
+    setHasMoreGal(true);
+    fetchHubGal(1, false);
+  }, [isGalleryMode, search, galSearch]);
+
+  useEffect(() => {
+    if (!isGalleryMode || !hasMoreGal || hubGalLoading) return;
+    
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        const next = hubGalPage + 1;
+        setHubGalPage(next);
+        fetchHubGal(next, true);
+      }
+    }, { threshold: 0.1 });
+
+    if (galleryEndRef.current) obs.observe(galleryEndRef.current);
+    return () => obs.disconnect();
+  }, [isGalleryMode, hasMoreGal, hubGalPage, hubGalLoading]);
+
+  // Fetch Discover results
+  useEffect(() => {
+    if (!isDiscoverCategory) return;
+    const fetchDiscover = async () => {
+      setDiscoverLoading(true);
+      try {
+        const catMap: any = {
+          '🏮 Animes': 'anime',
+          '📖 Mangás': 'manga',
+          '🎮 Jogos': 'games',
+          '🍿 Cinema': 'cinema'
+        };
+        const token = (useAuthStore.getState() as any).accessToken;
+        const res = await fetch(`${API}/api/v1/lazer/discover/trending?category=${catMap[activeCategory]}`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        const json = await res.json();
+        if (json.success) {
+          setDiscoverData(json.data || []);
+        } else {
+          setDiscoverData([]);
+        }
+      } catch (err) { 
+        setDiscoverData([]);
+      }
+      finally { setDiscoverLoading(false); }
+    };
+    fetchDiscover();
+  }, [activeCategory, isDiscoverCategory]);
+
+  // Fetch YouTube results
+  useEffect(() => {
+    if (!isWatchMode) return;
+    const fetchYt = async () => {
+      setYtLoading(true);
+      try {
+        const token = (useAuthStore.getState() as any).accessToken;
+        const res = await fetch(`${API}/api/v1/lazer/youtube/search?q=${encodeURIComponent(ytQuery || 'anime trailer')}&maxResults=12`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        const json = await res.json();
+        if (json.success) setYtResults(json.data || []);
+      } catch { /* silently fail */ }
+      finally { setYtLoading(false); }
+    };
+    fetchYt();
+  }, [isWatchMode, ytQuery]);
 
   // Compute stats for creators & rankings
   useEffect(() => {
@@ -115,31 +309,54 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
     });
 
     const sortedUsers = Array.from(map.values()).sort((a,b) => b.score - a.score);
-    
-    // Set Ranked Users (Leaderboard)
     setRankedUsers(sortedUsers);
-
-    // Set Featured Creators (Include auth user in features)
     setCreators(sortedUsers.slice(0, 3));
   }, [feedPosts, authUser]);
 
-  // Search API
+  // Universal Search API
   useEffect(() => {
-    if (!search.trim()) { setSearchResults([]); return; }
+    if (!search.trim()) { 
+      setSearchResults([]); 
+      setUniversalResults([]);
+      setWikiResult(null);
+      return; 
+    }
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
         const token = (useAuthStore.getState() as any).accessToken;
-        const res = await fetch(`${API}/api/v1/users/search?q=${encodeURIComponent(search)}`, {
+        
+        // 1. Search Users
+        const userRes = await fetch(`${API}/api/v1/users/search?q=${encodeURIComponent(search)}`, {
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         });
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults((data.data || data || []).filter((u: any) => u.userId !== authUser?.id));
+        if (userRes.ok) {
+          const data = await userRes.json();
+          const rawData = data.data || data || [];
+          const userList = Array.isArray(rawData) ? rawData : [];
+          setSearchResults(userList.filter((u: any) => (u.userId || u.id) !== authUser?.id));
         }
-      } catch { /* silently fail */ }
+
+        // 2. Universal Discover Search
+        const discoverRes = await fetch(`${API}/api/v1/lazer/discover/search?q=${encodeURIComponent(search)}`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        const dJson = await discoverRes.json();
+        if (dJson.success) {
+          const universalData = dJson.data || [];
+          setUniversalResults(Array.isArray(universalData) ? universalData : []);
+          setWikiResult(dJson.wiki || null);
+        } else {
+          setUniversalResults([]);
+          setWikiResult(null);
+        }
+      } catch (err) { 
+        setUniversalResults([]);
+        setSearchResults([]);
+        setWikiResult(null);
+      }
       finally { setIsSearching(false); }
-    }, 350);
+    }, 400);
     return () => clearTimeout(timer);
   }, [search, authUser]);
 
@@ -154,7 +371,6 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
     return true;
   });
   
-  // Find my rank position
   const myRankIndex = rankedUsers.findIndex(u => u.userId === authUser?.id);
   const myRank = myRankIndex >= 0 ? myRankIndex + 1 : '-';
   const displayTopRanks = rankedUsers.slice(0, 5);
@@ -171,7 +387,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
           Voltar
         </button>
-        <span className="text-sm font-extrabold tracking-widest uppercase" style={{ color: c }}>Explorar Anime & Redes</span>
+        <span className="text-sm font-extrabold tracking-widest uppercase" style={{ color: c }}>Hub de Descoberta Alpha</span>
         <div className="w-20"/>
       </div>
 
@@ -180,13 +396,11 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
 
           {/* ─────────────────── LEFT SIDEBAR ─────────────────── */}
           <aside className="hidden lg:flex flex-col gap-6 sticky top-6">
-            
-            {/* My Profile Quick Look */}
             {authUser?.profile && (
               <div className={`rounded-[32px] overflow-hidden border-[1.5px] backdrop-blur-xl shadow-lg ${cardBg}`} style={{ borderColor: borderCol }}>
                 <div className="h-24 relative" style={{ background: `linear-gradient(135deg, ${c}80, ${c}20)` }}>
                   {authUser.profile.bannerUrl && (
-                    authUser.profile.bannerUrl.includes('.mp4') || authUser.profile.bannerUrl.includes('.webm') ? (
+                    isVideo(authUser.profile.bannerUrl) ? (
                        <video src={authUser.profile.bannerUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
                        <img src={authUser.profile.bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -204,7 +418,6 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
               </div>
             )}
 
-            {/* My Communities */}
             <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
                <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] mb-5 ${textSecondary}`}>Minhas Comunidades</h3>
                 <div className="flex flex-col gap-2.5">
@@ -228,7 +441,6 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                 </div>
             </div>
 
-            {/* Watching Now */}
             <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
                <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] mb-5 ${textSecondary}`}>A Ver Agora</h3>
                <div className="flex flex-col gap-2">
@@ -243,31 +455,28 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                  ))}
                </div>
             </div>
-
           </aside>
 
           {/* ─────────────────── MAIN FEED ─────────────────── */}
           <main className="flex flex-col gap-8 w-full">
             
-            {/* Search Bar */}
             <div className="relative z-20 group">
               <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none transition-colors group-focus-within:text-white" style={{ color: isLight ? '#999' : '#666' }}>
                 <IconSearch/>
               </div>
               <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Procurar séries, criadores ou tropos..."
+                placeholder="Google, Animes, Jogos, Educação..."
                 className={`w-full py-5 pl-14 pr-6 rounded-[24px] border-[2px] font-extrabold text-[15px] outline-none transition-all shadow-lg focus:shadow-[0_8px_30px_rgba(0,0,0,0.2)] focus:-translate-y-1 ${textPrimary} ${cardBg}`}
                 style={{ borderColor: search.trim() ? c : borderCol, backdropFilter: 'blur(30px)', backgroundColor: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.5)' }}/>
             </div>
 
-            {/* Tags / Categories */}
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
               {CATEGORIES.map(cat => (
                 <button key={cat} onClick={() => setActiveCategory(cat)}
                   className="px-6 py-3 rounded-full text-[13px] font-black tracking-wide border-none cursor-pointer transition-all shrink-0 hover:scale-[1.03]"
                   style={{
-                    background: activeCategory === cat ? c : cardBg,
-                    boxShadow: activeCategory === cat ? `0 8px 24px ${c}50` : '0 2px 10px rgba(0,0,0,0.05)',
+                    background: activeCategory === cat ? (cat.includes('Watch') ? '#ef4444' : c) : cardBg,
+                    boxShadow: activeCategory === cat ? `0 8px 24px ${cat.includes('Watch') ? '#ef444480' : c + '50'}` : '0 2px 10px rgba(0,0,0,0.05)',
                     color: activeCategory === cat ? '#fff' : (isLight ? '#333' : '#eee'),
                     border: `1.5px solid ${activeCategory === cat ? 'transparent' : borderCol}`
                   }}>
@@ -276,135 +485,430 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
               ))}
             </div>
 
-            {/* Criadores em Destaque (Featured Romance Series style) */}
-            {!search.trim() && creators.length > 0 && (
-              <section>
-                <div className="flex items-center justify-between mb-5 px-2">
-                  <h2 className={`text-[18px] font-black tracking-tight ${textPrimary}`}>Criadores em Destaque</h2>
-                  <span className={`text-[12px] font-black cursor-pointer uppercase tracking-widest hover:underline`} style={{ color: c }}>Ver Todos</span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-                  {creators.map((cr) => {
-                    const fStatus = isFriend(cr.userId) ? 'friend' : hasSentRequest(cr.userId) ? 'sent' : 'none';
-                    return (
-                      <div key={cr.userId} className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer group shadow-lg min-h-[260px]"
-                        style={{ borderColor: borderCol }}
-                        onClick={() => onProfileClick?.(cr.userId)}>
-                        
-                        {/* Background cover effect */}
-                        <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-110" 
-                             style={{ backgroundImage: `url(${cr.profile?.bannerUrl || cr.avatar})`, opacity: 0.5, filter: 'blur(8px) brightness(0.7)' }}/>
-                        <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.85) 100%)` }}/>
-                        
-                        <div className="relative p-6 flex flex-col items-center text-center h-full pt-8">
-                          <Avatar src={cr.avatar} name={cr.name} className="w-[80px] h-[80px] rounded-[28px] shadow-2xl mb-4 border-2" style={{ borderColor: c }}/>
-                          <DisplayName profile={cr.profile} fallbackName={cr.name} className={`font-black text-[16px] truncate max-w-full text-white`} style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}/>
-                          <p className="text-[12px] font-bold text-white/80 mb-6 drop-shadow-md">{cr.score} Pontos · {cr.postCount} Posts</p>
-                          <button onClick={e => { e.stopPropagation(); fStatus === 'none' ? sendFriendRequest(cr.userId) : fStatus === 'sent' ? cancelFriendRequest(cr.userId) : null; }}
-                            className="mt-auto px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-transform hover:scale-105 active:scale-95 border-none w-full"
-                            style={{
-                              background: fStatus !== 'none' ? 'rgba(255,255,255,0.2)' : c,
-                              color: '#fff',
-                              boxShadow: fStatus === 'none' ? `0 8px 24px ${c}60` : 'none',
-                              backdropFilter: 'blur(10px)'
-                            }}>
-                            {fStatus === 'friend' ? '✓ Aliado' : fStatus === 'sent' ? 'Pendente' : '+ Seguir'}
-                          </button>
-                        </div>
+
+            {/* ── SEARCH RESULTS ── */}
+            {search.trim() && (
+              <div className="flex flex-col gap-8">
+                 {isSearching && (
+                    <div className="flex flex-col items-center py-20 animate-pulse">
+                       <div className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin mb-4" style={{ borderColor: c }} />
+                       <p className={`text-sm font-bold ${textSecondary}`}>A explorar os confins da rede...</p>
+                    </div>
+                 )}
+
+                 {!isSearching && universalResults.length === 0 && searchResults.length === 0 && (
+                    <div className={`p-16 text-center rounded-[40px] border-[1.5px] ${cardBg}`} style={{ borderColor: borderCol }}>
+                       <span className="text-4xl block mb-4">🕵️‍♂️</span>
+                       <p className={`text-[15px] font-black ${textPrimary}`}>Não encontramos nada para "{search}"</p>
+                       <p className={`text-[12px] font-bold mt-2 ${textSecondary}`}>Tenta pesquisar por animes, jogos ou tecnologias específicas.</p>
+                    </div>
+                 )}
+
+                 {!isSearching && wikiResult && (
+                    <section className="animate-in fade-in slide-in-from-top-6 duration-700">
+                       <h3 className={`text-[12px] font-black uppercase tracking-widest mb-4 opacity-60 ${textPrimary}`}>Wiki Hub / Resumo</h3>
+                       <div className={`p-6 md:p-8 rounded-[40px] border-[2px] shadow-2xl relative overflow-hidden ${cardBg} transition-all duration-500`}
+                         style={{ 
+                            borderColor: `${c}80`,
+                            boxShadow: `0 0 30px ${c}30, inset 0 0 20px ${c}10` 
+                         }}>
+                          
+                          {/* Cyber Decorative Lines */}
+                          <div className="absolute top-0 right-10 w-20 h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50 blur-sm"></div>
+                          <div className="absolute bottom-0 left-10 w-20 h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50 blur-sm"></div>
+
+                          {/* Decorative Background Icon */}
+                          <div className="absolute -right-4 -top-4 text-[120px] opacity-[0.05] pointer-events-none select-none blur-[1px]">📖</div>
+                          
+                          <div className="flex flex-col md:flex-row gap-6 items-start relative z-10">
+                             {wikiResult.imageUrl && (
+                                <div className="w-full md:w-32 h-44 rounded-[24px] overflow-hidden shrink-0 shadow-2xl border-4 border-white/10 group">
+                                   <img src={wikiResult.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                </div>
+                             )}
+                             <div className="flex-1">
+                                <h4 className={`text-xl md:text-3xl font-black mb-3 ${textPrimary} tracking-tighter`}>{wikiResult.title}</h4>
+                                <p className={`text-[13px] md:text-[14px] leading-relaxed font-bold opacity-70 ${textPrimary} line-clamp-5`}>
+                                   {wikiResult.extract}
+                                </p>
+                                <div className="mt-8 flex flex-wrap gap-4">
+                                   <button 
+                                     onClick={() => {
+                                        addToHistory(search);
+                                        setActiveWiki(wikiResult.canonicalTitle || wikiResult.title);
+                                     }}
+                                     className="px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest text-white border-none transition-all hover:scale-110 active:scale-95 shadow-[0_10px_30px_rgba(0,0,0,0.4)] cursor-pointer group relative overflow-hidden"
+                                     style={{ background: c }}>
+                                      <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                                      <span className="relative">Ler Artigo Nativo 📖</span>
+                                   </button>
+                                   <span className={`px-5 py-3 rounded-full text-[10px] font-black border-[1.5px] uppercase tracking-tighter ${textSecondary} backdrop-blur-md`} style={{ borderColor: borderCol }}>
+                                      Fonte: Wikipedia (PT)
+                                   </span>
+                                </div>
+                             </div>
+                          </div>
+                       </div>
+                    </section>
+                 )}
+
+                 {!isSearching && universalResults.length > 0 && (
+                      <section>
+                         <h3 className={`text-[12px] font-black uppercase tracking-widest mb-6 opacity-60 ${textPrimary} flex items-center gap-2`}>
+                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_#06b6d4]"/>
+                            Web Discover / Global
+                         </h3>
+                         <div className="flex flex-col gap-4">
+                            {universalResults.map((u: any, index: number) => (
+                              <div key={`${u.type}-${u.id}`} 
+                                className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer shadow-xl transition-all hover:scale-[1.01] flex items-center p-3 gap-5 animate-in fade-in slide-in-from-right-8 duration-700"
+                                style={{ 
+                                   background: cardBg, 
+                                   borderColor: `${getNeonColor('Animes')}40`,
+                                   animationDelay: `${index * 80}ms`
+                                }}
+                                onClick={() => {
+                                   addToHistory(search);
+                                   u.type === 'video' ? setActiveVideo({ id: u.id, title: u.title, channel: u.source }) : setActiveDetail({ type: u.type, id: u.id });
+                                }}>
+                                 
+                                 <div className="w-16 h-16 md:w-24 md:h-24 rounded-[22px] overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-white/5">
+                                    {u.imageUrl ? (
+                                       <img src={u.imageUrl} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                       <div className="w-full h-full flex items-center justify-center relative overflow-hidden">
+                                          <div className="absolute inset-0 opacity-20" style={{ background: `linear-gradient(45deg, ${c}, transparent)` }} />
+                                          <span className="text-2xl md:text-3xl filter grayscale opacity-40">🌐</span>
+                                          <div className="absolute inset-0 flex items-center justify-center p-2">
+                                             <span className="text-[8px] font-black uppercase text-white/20 text-center line-clamp-2">{u.title}</span>
+                                          </div>
+                                       </div>
+                                    )}
+                                 </div>
+
+                                 <div className="flex-1 min-w-0 pr-4">
+                                    <div className="flex items-center gap-2 mb-1">
+                                       <span className="px-2 py-0.5 rounded-full bg-white/5 text-[9px] font-black uppercase tracking-widest text-white/50 border border-white/5">{u.source}</span>
+                                       {u.type === 'video' && <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">● LIVE / VIDEO</span>}
+                                    </div>
+                                    <p className={`text-[14px] md:text-[16px] font-black ${textPrimary} truncate tracking-tight mb-1`}>{u.title}</p>
+                                    <p className={`text-[11px] md:text-[12px] font-bold ${textSecondary} line-clamp-2 leading-relaxed opacity-70`}>
+                                       {u.description || 'Explora este conteúdo na rede descentralizada Alpha...'}
+                                    </p>
+                                 </div>
+                              </div>
+                            ))}
+                         </div>
+                      </section>
+                 )}
+
+                 {searchResults.length > 0 && (
+                    <section>
+                      <h3 className={`text-[12px] font-black uppercase tracking-widest mb-4 opacity-60 ${textPrimary}`}>Cidadãos da Rede</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {searchResults.map((u: any) => {
+                            const uid = u.userId || u.id;
+                            const fStatus = isFriend(uid) ? 'friend' : hasSentRequest(uid) ? 'sent' : 'none';
+                            return (
+                              <div key={uid} className="flex items-center gap-4 p-4 rounded-[28px] border-[1.5px] cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+                                style={{ background: cardBg, borderColor: borderCol, backdropFilter: 'blur(20px)' }}
+                                onClick={() => onProfileClick?.(uid)}>
+                                <Avatar src={u.avatarUrl} name={u.displayName || u.username} className="w-14 h-14 rounded-[20px] shrink-0 border-2" style={{ borderColor: c }}/>
+                                <div className="flex-1 min-w-0">
+                                  <DisplayName profile={u} fallbackName={u.displayName || u.username} className={`font-black text-[15px] truncate ${textPrimary}`} />
+                                  <div className={`text-[11px] font-bold mt-0.5 ${textSecondary}`}>@{u.username}</div>
+                                </div>
+                                <button
+                                  onClick={e => { e.stopPropagation(); fStatus === 'sent' ? cancelFriendRequest(uid) : fStatus === 'none' ? sendFriendRequest(uid) : null; }}
+                                  className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[16px] font-bold border-[2px] transition-all hover:scale-110 shadow-md"
+                                  style={{
+                                    background: fStatus === 'friend' ? `${c}20` : fStatus === 'sent' ? 'rgba(249,115,22,0.12)' : c,
+                                    borderColor: fStatus === 'friend' ? c : fStatus === 'sent' ? '#f97316' : c,
+                                    color: fStatus === 'friend' ? c : fStatus === 'sent' ? '#f97316' : '#fff',
+                                  }}>
+                                  {fStatus === 'friend' ? '✓' : fStatus === 'sent' ? '…' : '+'}
+                                </button>
+                              </div>
+                            );
+                          })}
                       </div>
-                    );
-                  })}
-                </div>
+                    </section>
+                 )}
+              </div>
+            )}
+
+            {/* ── GALLERY CATEGORY (Pinterest Hub) ── */}
+            {!search.trim() && isGalleryMode && (
+              <section className="animate-in fade-in slide-in-from-top-6 duration-1000">
+                 <div className="flex flex-col md:flex-row md:items-center gap-6 mb-12 px-4 group">
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded-[28px] bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl backdrop-blur-3xl transition-all group-hover:scale-110 group-hover:rotate-3">
+                         <span className="text-4xl text-shadow-glow">🏮</span>
+                      </div>
+                      <div>
+                         <h3 className={`text-[20px] font-black uppercase tracking-[5px] ${textPrimary} mb-1 drop-shadow-2xl`}>Mural Estético Alpha</h3>
+                         <p className="text-[11px] font-bold opacity-30 uppercase tracking-[4px]">Curadoria Inteligente & Visão Sintética</p>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 relative max-w-md ml-auto">
+                       <div className={`relative group/input transition-all duration-500 ${galSearchFocus ? 'scale-[1.02]' : ''}`}>
+                          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-white/30 group-focus-within/input:text-white transition-colors">
+                             <IconSearch/>
+                          </div>
+                          <input 
+                            value={galSearch}
+                            onChange={(e) => setGalSearch(e.target.value)}
+                            onFocus={() => setGalSearchFocus(true)}
+                            onBlur={() => setTimeout(() => setGalSearchFocus(false), 200)}
+                            placeholder="Pesquisar personagens, lugares, estética..."
+                            className={`w-full py-4 pl-14 pr-6 rounded-3xl border-[2px] font-extrabold text-[13px] outline-none transition-all shadow-2xl ${textPrimary}`}
+                            style={{ 
+                               borderColor: galSearchFocus ? c : 'rgba(255,255,255,0.05)',
+                               background: 'rgba(255,255,255,0.03)',
+                               backdropFilter: 'blur(30px)'
+                            }}
+                          />
+                       </div>
+
+                       {/* Suggested Tags (Pinterest Style) */}
+                       {galSearchFocus && (
+                          <div className="absolute top-full left-0 right-0 mt-4 p-4 rounded-[32px] border border-white/10 backdrop-blur-3xl bg-black/60 shadow-[0_20px_60px_rgba(0,0,0,0.8)] z-50 animate-in fade-in zoom-in-95 duration-300">
+                             <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-3 ml-2">Tendências Estéticas</p>
+                             <div className="flex flex-wrap gap-2">
+                                {['#Cyberpunk', '#Makima', '#AnimeArt', '#Gothic', '#Lofi', '#Scenery', '#Arcane', '#Vaporwave'].map(tag => (
+                                   <button 
+                                     key={tag}
+                                     onClick={() => setGalSearch(tag.replace('#', ''))}
+                                     className="px-4 py-2 rounded-full text-[10px] font-bold text-white/70 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all cursor-pointer">
+                                      {tag}
+                                   </button>
+                                ))}
+                             </div>
+                          </div>
+                       )}
+                    </div>
+                 </div>
+
+                 {hubGalLoading && hubGallery.length === 0 ? (
+                    <div className="py-32 flex flex-col items-center justify-center animate-pulse">
+                       <div className="w-14 h-14 rounded-full border-4 border-t-transparent animate-spin mb-6" style={{ borderColor: c }} />
+                       <p className="text-[12px] font-black uppercase tracking-[4px] opacity-30">Sintonizando frequências estéticas...</p>
+                    </div>
+                 ) : (
+                    <div className="flex gap-6 pb-20 relative px-2">
+                       {galleryColumns.map((col, colIdx) => (
+                          <div key={colIdx} className="flex-1 flex flex-col gap-6">
+                             {col.map((img, i) => (
+                                <div key={`${img.url}-${i}`} 
+                                  className="group relative rounded-[40px] overflow-hidden bg-[#0d0d0d] border border-white/5 shadow-[0_12px_45px_rgba(0,0,0,0.5)] hover:shadow-[0_50px_100px_rgba(0,0,0,0.9)] transition-all duration-700 hover:-translate-y-3 cursor-pointer"
+                                  onClick={() => setActiveDetail({ type: 'image', id: img.url, metadata: img })}>
+                                   
+                                   {/* Glassmorphism Source Badge */}
+                                   <div className="absolute top-6 left-6 z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 transform -translate-x-6 group-hover:translate-x-0">
+                                      <div className="px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[3px] text-white shadow-2xl backdrop-blur-[32px] border border-white/20 bg-white/5 transition-all">
+                                         {img.source}
+                                      </div>
+                                   </div>
+
+                                   {/* Immersive Image with Parallax Zoom */}
+                                   <div className="overflow-hidden bg-black/40 aspect-auto">
+                                      <img 
+                                         src={img.url} 
+                                         alt="" 
+                                         className="w-full h-auto object-cover transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-115 group-hover:rotate-2 group-hover:brightness-110" 
+                                         loading="lazy"
+                                      />
+                                   </div>
+                                   
+                                   {/* Dreamy Gradient Overlay & Content */}
+                                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 flex items-end p-10">
+                                      <div className="flex flex-col gap-3 transform translate-y-10 group-hover:translate-y-0 transition-all duration-700 ease-out">
+                                         <div className="flex items-center gap-2.5">
+                                            <div className="w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_currentColor]" style={{ backgroundColor: c }} />
+                                            <p className="text-[11px] font-black text-white/40 uppercase tracking-[4px]">Alpha Neural Engine</p>
+                                         </div>
+                                         <h4 className="text-[15px] font-black text-white leading-[1.3] uppercase tracking-tight line-clamp-4 drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
+                                            {img.prompt || 'Alpha Aesthetic Vision'}
+                                         </h4>
+                                      </div>
+                                   </div>
+                                </div>
+                             ))}
+                          </div>
+                       ))}
+                       
+                       {/* Final Observer for Discoveries */}
+                       <div ref={galleryEndRef} className="absolute bottom-0 left-0 right-0 h-[600px] pointer-events-none" />
+                    </div>
+                 )}
               </section>
             )}
 
-            {/* Trending Captures / Publicações */}
-            <section className="mb-12">
-              <div className="flex items-center justify-between mb-5 px-2">
-                <h2 className={`text-[18px] font-black tracking-tight ${textPrimary}`}>
-                  {search.trim() ? 'Resultados de Publicações' : 'Publicações Trendings'}
-                </h2>
-                <span className={`text-[12px] font-black cursor-pointer uppercase tracking-widest hover:underline`} style={{ color: c }}>Ver Todas</span>
-              </div>
-                {filteredPosts.length === 0 ? (
-                  <div className={`p-12 text-center rounded-[32px] border-[1.5px] ${cardBg}`} style={{ borderColor: borderCol }}>
-                     <p className={`text-sm italic font-bold ${textSecondary} opacity-50`}>Nenhuma captura encontrada para esta categoria.</p>
+            {/* ── DISCOVER CATEGORIES ── */}
+            {!search.trim() && isDiscoverCategory && (
+              <section>
+                 <div className="flex items-center gap-3 mb-6 px-2">
+                    <span className="text-2xl">{activeCategory.split(' ')[0]}</span>
+                    <h2 className={`text-[18px] font-black tracking-tight ${textPrimary}`}>{activeCategory.split(' ')[1]} Global</h2>
+                 </div>
+
+                 {discoverLoading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 animate-pulse">
+                       {[...Array(8)].map((_, i) => (
+                         <div key={i} className="aspect-[10/14] rounded-[24px] bg-white/5" />
+                       ))}
+                    </div>
+                 ) : discoverData.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                       {discoverData.map((item, index) => {
+                          const neonColor = getNeonColor(activeCategory);
+                          return (
+                            <div key={`${item.type}-${item.id}`} 
+                              className="relative aspect-[10/14] rounded-[28px] overflow-hidden cursor-pointer group shadow-2xl border-[2px] transition-all hover:scale-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700"
+                              style={{ 
+                                borderColor: `${neonColor}40`,
+                                boxShadow: `0 10px 30px rgba(0,0,0,0.5)`,
+                                animationDelay: `${index * 60}ms`
+                              }}
+                              onClick={() => {
+                                 addToHistory(search);
+                                 if (item.isWiki) {
+                                    setActiveWiki(item.title);
+                                 } else {
+                                    setActiveDetail({ type: item.type, id: item.id });
+                                 }
+                              }}>
+                               <img src={item.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                               
+                               {/* Neon Glow Overlay on Hover */}
+                               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                                 style={{ boxShadow: `inset 0 0 50px ${neonColor}40` }} />
+
+                               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-5 flex flex-col justify-end">
+                                  <div className="flex items-center gap-2 mb-2">
+                                     <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: neonColor, boxShadow: `0 0 8px ${neonColor}` }} />
+                                     <p className="text-[10px] font-black tracking-widest text-white/60 uppercase">{item.isWiki ? '📙 Wikipedia' : item.type}</p>
+                                  </div>
+                                  <p className="text-[14px] font-black text-white line-clamp-2 leading-tight tracking-tight">{item.title}</p>
+                                  
+                                  {item.rating && (
+                                     <div className="mt-2 flex items-center gap-1">
+                                        <span className="text-[10px] font-black text-gold">⭐ {item.rating}</span>
+                                     </div>
+                                  )}
+                               </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                 ) : (
+                    <div className={`p-10 text-center rounded-[32px] border-[1.5px] ${cardBg}`} style={{ borderColor: borderCol }}>
+                       <p className={`text-sm font-bold ${textSecondary}`}>O conteúdo está a sincronizar com o Google... tenta daqui a pouco!</p>
+                    </div>
+                 )}
+              </section>
+            )}
+
+            {/* ── WATCH MODE ── */}
+            {!search.trim() && isWatchMode && (
+              <section>
+                 <div className="flex items-center justify-between mb-5 px-2">
+                    <div className="flex items-center gap-2">
+                       <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse"/>
+                       <h2 className={`text-[18px] font-black tracking-tight ${textPrimary}`}>Watch Mode</h2>
+                    </div>
+                 </div>
+
+                 <div className="mb-6">
+                    <input value={ytQuery} onChange={e => setYtQuery(e.target.value)}
+                      placeholder="Pesquisar trailers, gameplays..."
+                      className={`w-full py-3 px-6 rounded-full border bg-black/10 text-[13px] font-bold ${textPrimary} outline-none`}
+                      style={{ borderColor: '#ef444440' }}/>
+                 </div>
+
+                 {ytLoading ? (
+                    <div className="flex justify-center py-20"><div className="w-10 h-10 rounded-full border-4 border-t-red-500 animate-spin"/></div>
+                 ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                       {ytResults.map(v => (
+                         <div key={v.id} className="flex flex-col gap-2 cursor-pointer group" onClick={() => setActiveVideo(v)}>
+                            <div className="rounded-[20px] overflow-hidden border-[1.5px]" style={{ borderColor: '#ef444428' }}>
+                               <YoutubeEmbed videoId={v.id} title={v.title} channel={v.channel} thumbnail={v.thumbnail} accentColor="#ef4444"/>
+                            </div>
+                            <p className="text-[12px] font-bold line-clamp-2 px-1 text-white group-hover:opacity-80">{v.title}</p>
+                         </div>
+                       ))}
+                    </div>
+                 )}
+
+                 {activeVideo && (
+                    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
+                       <div className="w-full max-w-5xl">
+                          <button onClick={() => setActiveVideo(null)} className="mb-4 text-white font-black text-sm uppercase tracking-widest cursor-pointer bg-transparent border-none">✕ Fechar Player</button>
+                          <YoutubeEmbed videoId={activeVideo.id} title={activeVideo.title} channel={activeVideo.channel} accentColor="#ef4444" compact={false}/>
+                          <h2 className="text-white mt-6 text-xl font-black">{activeVideo.title}</h2>
+                       </div>
+                    </div>
+                 )}
+              </section>
+            )}
+
+            {/* ── FEED MODE (All) ── */}
+            {!search.trim() && activeCategory === 'All' && (
+              <>
+                <section className="mb-10">
+                  <h2 className={`text-[18px] font-black tracking-tight mb-5 ${textPrimary}`}>Criadores em Destaque</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+                    {creators.map(cr => {
+                      const fStatus = isFriend(cr.userId) ? 'friend' : hasSentRequest(cr.userId) ? 'sent' : 'none';
+                      return (
+                        <div key={cr.userId} className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer group shadow-lg min-h-[260px]"
+                          style={{ borderColor: borderCol }} onClick={() => onProfileClick?.(cr.userId)}>
+                          <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-110" 
+                               style={{ backgroundImage: `url(${cr.profile?.bannerUrl || cr.avatar})`, opacity: 0.5, filter: 'blur(8px) brightness(0.7)' }}/>
+                          <div className="absolute inset-0 bg-gradient-to-bottom from-transparent to-black/90"/>
+                          <div className="relative p-6 flex flex-col items-center text-center h-full pt-8">
+                             <Avatar src={cr.avatar} name={cr.name} className="w-[80px] h-[80px] rounded-[28px] shadow-2xl mb-4 border-2" style={{ borderColor: c }}/>
+                             <DisplayName profile={cr.profile} fallbackName={cr.name} className="font-black text-[16px] text-white"/>
+                             <p className="text-[11px] font-bold text-white/60 mb-6">{cr.score} Pontos</p>
+                             <button className="mt-auto px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white border-none w-full"
+                               style={{ background: fStatus !== 'none' ? 'rgba(255,255,255,0.2)' : c, backdropFilter: 'blur(10px)' }}>
+                               {fStatus === 'friend' ? '✓ Aliado' : fStatus === 'sent' ? 'Pendente' : '+ Seguir'}
+                             </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ) : (
+                </section>
+
+                <section>
+                  <h2 className={`text-[18px] font-black tracking-tight mb-5 ${textPrimary}`}>Publicações Trendings</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {filteredPosts.map(p => (
                       <div key={p.id} className="relative rounded-[36px] overflow-hidden cursor-pointer group shadow-xl aspect-[3/4] border-[1.5px]"
-                        style={{ borderColor: borderCol }}
-                        onClick={() => onPostClick?.(p.id)}>
-                        
-                        {/* Always use image as deep background, or fallback to gradient */}
-                        <div className="absolute inset-0 transition-transform duration-700 ease-out flex items-center justify-center group-hover:scale-110">
-                           {p.imageUrl ? (
-                              <img src={p.imageUrl} alt="" className="w-full h-full object-cover"/>
-                           ) : (
-                              <>
-                                <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${c}60, ${c}20)` }}/>
-                                <span className="text-7xl font-black opacity-30 mix-blend-overlay z-0" style={{ color: isLight ? '#000' : '#fff' }}>✦</span>
-                              </>
-                           )}
+                        style={{ borderColor: borderCol }} onClick={() => onPostClick?.(p.id)}>
+                        <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-110">
+                           {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> 
+                           : <div className="w-full h-full bg-gradient-to-br" style={{ backgroundImage: `linear-gradient(135deg, ${c}60, ${c}20)` }}/>}
                         </div>
-                        {/* Elegant Vignette overlay */}
-                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.9) 100%)' }}/>
-                        
-                        <div className="absolute inset-0 p-6 flex flex-col justify-end pointer-events-none">
-                          <div className="pointer-events-auto flex items-center gap-2 mb-4 bg-black/30 w-fit px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg border hover:bg-black/50 transition-colors" 
-                               style={{ borderColor: 'rgba(255,255,255,0.1)' }}
-                               onClick={e => { e.stopPropagation(); onProfileClick?.(p.authorId); }}>
-                            <Avatar src={p.author?.profile?.avatarUrl} name={p.author?.profile?.displayName || 'User'} className="w-6 h-6 rounded-full shrink-0"/>
-                            <DisplayName profile={p.author?.profile} fallbackName={p.author?.profile?.displayName || p.author?.profile?.username || 'User'} className="text-[12px] font-bold truncate text-white" />
-                          </div>
-                          
-                          {/* Rich Formatted Title right over the image */}
-                          <div className="max-h-[140px] overflow-hidden mb-1">
-                             {formatContent(p.content, p.titleFont, p.titleColor, false)}
-                          </div>
-                          
-                          <div className="flex items-center gap-5 mt-3 text-white/90 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.15)' }}>
-                            <div className="flex items-center gap-2 text-[12px] font-black"><IconFlame/> {p._count?.reactions || 0}</div>
-                            <div className="flex items-center gap-2 text-[12px] font-black"><IconMessageSquare/> {p._count?.comments || 0}</div>
-                            {p.tag && <div className="ml-auto text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-lg bg-white/20 backdrop-blur-md">{p.tag}</div>}
-                          </div>
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/90"/>
+                        <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                           <div className="max-h-[140px] overflow-hidden mb-1">
+                              {formatContent(p.content, p.titleFont, p.titleColor, false)}
+                           </div>
+                           <div className="flex items-center gap-5 mt-3 text-white/90 pt-3 border-t border-white/10">
+                              <div className="flex items-center gap-2 text-[12px] font-black"><IconFlame/> {p._count?.reactions || 0}</div>
+                              <div className="flex items-center gap-2 text-[12px] font-black"><IconMessageSquare/> {p._count?.comments || 0}</div>
+                              {p.tag && <div className="ml-auto text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-lg bg-white/20">{p.tag}</div>}
+                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </section>
-
-            {/* Search Results Display */}
-            {search.trim() && searchResults.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 {searchResults.map((u: any) => {
-                    const uid = u.userId || u.id;
-                    const fStatus = isFriend(uid) ? 'friend' : hasSentRequest(uid) ? 'sent' : 'none';
-                    return (
-                      <div key={uid} className="flex items-center gap-4 p-4 rounded-[28px] border-[1.5px] cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
-                        style={{ background: cardBg, borderColor: borderCol, backdropFilter: 'blur(20px)' }}
-                        onClick={() => onProfileClick?.(uid)}>
-                        <Avatar src={u.avatarUrl} name={u.displayName || u.username} className="w-14 h-14 rounded-[20px] shrink-0 border-2" style={{ borderColor: c }}/>
-                        <div className="flex-1 min-w-0">
-                          <DisplayName profile={u} fallbackName={u.displayName || u.username} className={`font-black text-[15px] truncate ${textPrimary}`} />
-                          <div className={`text-[11px] font-bold mt-0.5 ${textSecondary}`}>@{u.username}</div>
-                        </div>
-                        <button
-                          onClick={e => { e.stopPropagation(); fStatus === 'sent' ? cancelFriendRequest(uid) : fStatus === 'none' ? sendFriendRequest(uid) : null; }}
-                          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[16px] font-bold border-[2px] transition-all hover:scale-110 shadow-md"
-                          style={{
-                            background: fStatus === 'friend' ? `${c}20` : fStatus === 'sent' ? 'rgba(249,115,22,0.12)' : c,
-                            borderColor: fStatus === 'friend' ? c : fStatus === 'sent' ? '#f97316' : c,
-                            color: fStatus === 'friend' ? c : fStatus === 'sent' ? '#f97316' : '#fff',
-                          }}>
-                          {fStatus === 'friend' ? '✓' : fStatus === 'sent' ? '…' : '+'}
-                        </button>
-                      </div>
-                    );
-                  })}
-              </div>
+                </section>
+              </>
             )}
 
           </main>
@@ -469,13 +973,33 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                       <span className={`block text-[11px] font-bold ${textSecondary}`}>{t.count} menções</span>
                     </div>
                   </button>
-                ))}
+                 ))}
               </div>
             </div>
 
           </aside>
         </div>
       </div>
+
+      {/* Discovery Detail Modal Layer */}
+      {activeDetail && (
+        <DiscoverDetailModal 
+          type={activeDetail.type} 
+          id={activeDetail.id} 
+          onClose={() => setActiveDetail(null)} 
+          themeColor={c} 
+          themeMode={themeMode} 
+          q={activeDetail.metadata?.prompt}
+        />
+      )}
+      {activeWiki && (
+        <WikiModal 
+          initialTitle={activeWiki} 
+          onClose={() => setActiveWiki(null)} 
+          themeColor={c} 
+          themeMode={themeMode} 
+        />
+      )}
     </div>
   );
 }

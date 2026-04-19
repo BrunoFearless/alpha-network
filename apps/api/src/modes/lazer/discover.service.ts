@@ -9,6 +9,8 @@ export class DiscoverService {
   private readonly RAWG_KEY = process.env.RAWG_API_KEY || '';
   private readonly YT_KEY = process.env.YOUTUBE_API_KEY || '';
   private readonly TMDB_KEY = process.env.TMDB_API_KEY || '';
+  private readonly GOOGLE_SEARCH_KEY = process.env.GOOGLE_SEARCH_KEY || '';
+  private readonly GOOGLE_SEARCH_CX = process.env.GOOGLE_SEARCH_CX || '';
 
   // Cache de Emergência Estético (Imagens de Alta Qualidade de Reserva - Alpha Signature)
   private readonly FALLBACK_GALLERY = [
@@ -20,48 +22,95 @@ export class DiscoverService {
     { url: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1200', source: 'Alpha Reserve', prompt: 'Cyberpunk Aesthetic Masterpiece', color: '#ff00ff' }
   ];
 
-  private seaartToken: string = '';
-  private seaartTokenExpiry: number = 0;
+  // No longer needed after Civitai migration
 
   constructor() {
     this.logger.log(`Alpha Resilience Shield Active. YT: ${!!this.YT_KEY}, TMDB: ${!!this.TMDB_KEY}`);
   }
 
-  private async getSeaArtToken() {
-    if (this.seaartToken && Date.now() < this.seaartTokenExpiry) return this.seaartToken;
-    try {
-      const res = await this.fetchWithTimeout('https://www.seaart.ai/api/v1/user/tourist_login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-App-Id': '100' },
-        body: JSON.stringify({ device_id: `alpha_${Math.random().toString(36).substring(7)}` })
-      });
-      const data = await res.json();
-      if (data.code === 0) {
-        this.seaartToken = data.data.token;
-        this.seaartTokenExpiry = Date.now() + 3600000; // 1h cache
-        return this.seaartToken;
-      }
-    } catch (e) {
-      this.logger.error(`SeaArt Login Failed: ${e.message}`);
+  private getCoreQuery(query: string): string {
+    if (!query) return '';
+    const isShort = query.split(' ').length <= 3;
+    // Poda de prompt para motores de busca (extrai a essência sujeito + atributos chave)
+    const noise = ['background', 'style', 'inspired by', 'cinematic', 'lighting', 'highly detailed', 'masterpiece', '4k', '8k', 'render', 'illustration'];
+    let clean = query.toLowerCase();
+    
+    // Se for curto, não remove ruído para não perder precisão (ex: "4k wallpaper")
+    if (!isShort) {
+      noise.forEach(n => { clean = clean.split(n).join(''); });
     }
-    return null;
+    
+    const words = clean.split(/[\s,]+/).filter(w => w.length > 2);
+    // Retorna até 10 palavras significativas para maior precisão em buscas
+    return words.slice(0, 10).join(' ');
   }
 
-  private async fetchSeaArt(query: string, page = 1) {
-    const token = await this.getSeaArtToken();
-    if (!token) return { data: { items: [] } };
+  private async fetchCivitai(query: string, page = 1) {
     try {
-      const res = await this.fetchWithTimeout('https://www.seaart.ai/api/v1/common/get_work_list', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-App-Id': '100',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ keywords: query, page, page_size: 15, order_by: 'hot' })
-      });
+      const core = this.getCoreQuery(query);
+      // Civitai API: Sort by Most Reactions p/ garantir Elite Art
+      const url = `https://civitai.com/api/v1/images?query=${encodeURIComponent(core)}&limit=20&sort=Most%20Reactions&period=AllTime`;
+      const res = await this.fetchWithTimeout(url);
       return await res.json();
-    } catch (e) { return { data: { items: [] } }; }
+    } catch (e) {
+      this.logger.error(`Civitai Fetch Error: ${e.message}`);
+      return { items: [] };
+    }
+  }
+
+  private async fetchSafebooru(tags: string, limit = 20) {
+    try {
+      // Safebooru: Mestre em Personagens e Séries
+      const cleanTags = tags.toLowerCase().replace(/ /g, '_').replace(/ /g, '+');
+      const url = `https://safebooru.org/index.php?page=dapi&s=post&q=index&tags=${encodeURIComponent(cleanTags)}+rating:safe&limit=${limit}&json=1`;
+      const res = await this.fetchWithTimeout(url);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  private async fetchGlobalNetwork(query: string, limit = 20) {
+    // Redireciona para o Google Oficial se a chave estiver presente, senão usa o Fallback de Elite
+    if (this.GOOGLE_SEARCH_KEY && this.GOOGLE_SEARCH_CX) {
+      return this.fetchGoogleImages(query, 1);
+    }
+    try {
+      // Fallback: Ponte Alpha via Lexica para manter a aplicação viva sem chaves
+      const url = `https://lexica.art/api/v1/search?q=${encodeURIComponent(query + ' high quality artistic')}`;
+      const res = await this.fetchWithTimeout(url);
+      const data = await res.json();
+      return (data.images || []).map((img: any) => ({
+        url: img.srcSmall || img.src,
+        width: img.width, height: img.height,
+        source: 'Galeria Alpha (Global Bridge)', prompt: img.prompt || query
+      }));
+    } catch (e) {
+       return [];
+    }
+  }
+
+  private async fetchGoogleImages(query: string, page = 1) {
+    if (!this.GOOGLE_SEARCH_KEY || !this.GOOGLE_SEARCH_CX) return [];
+    try {
+      const start = (page - 1) * 10 + 1;
+      const url = `https://www.googleapis.com/customsearch/v1?key=${this.GOOGLE_SEARCH_KEY}&cx=${this.GOOGLE_SEARCH_CX}&q=${encodeURIComponent(query)}&searchType=image&num=10&start=${start}&safe=active`;
+      const res = await this.fetchWithTimeout(url);
+      const data = await res.json();
+      
+      return (data.items || []).map((item: any) => ({
+        url: item.link,
+        width: item.image?.width,
+        height: item.image?.height,
+        source: 'Google Images (Oficial)',
+        prompt: item.title,
+        link: item.image?.contextLink
+      }));
+    } catch (e) {
+      this.logger.error(`Google Search Error: ${e.message}`);
+      return [];
+    }
   }
 
   // Helper de Resiliência: Timeout + Retries + Error Handling
@@ -117,6 +166,28 @@ export class DiscoverService {
     } catch (e) { return []; }
   }
 
+  async searchAnilistCharacter(query: string) {
+    try {
+      const q = `
+        query ($search: String) {
+          Character (search: $search) {
+            name { full native }
+            image { large }
+            description
+            media (perPage: 1) { nodes { title { romaji } } }
+          }
+        }
+      `;
+      const res = await this.fetchWithTimeout(this.ANILIST_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, variables: { search: query } })
+      });
+      const data = await res.json();
+      return data.data?.Character || null;
+    } catch (e) { return null; }
+  }
+
   async getRedditTrends(subreddit: string = 'anime') {
     try {
       const res = await this.fetchWithTimeout(`https://www.reddit.com/r/${subreddit}/hot.json?limit=6`, {
@@ -138,286 +209,99 @@ export class DiscoverService {
   async getAestheticGallery(query: string, page = 1) {
     try {
       const cleanQ = query?.trim();
-      const queriesToFetch: any[] = [];
 
-      if (!cleanQ) {
-        // Pilares de Curadoria Alpha: Equilíbrio ARTICIAL (Lexica) vs NATURAL (Unsplash)
-        const pillars = [
-          // Imagem 1 - Goth anime girl autumn park
-          {
-            art: "dark skin anime girl, short black blue hair, blue glowing eyes, lace dress, choker, cross necklace, sitting on bench with pet rats, autumn fire background",
-            nat: "gothic aesthetic girl sitting outdoors, dark skin, edgy jewelry, lace outfit, warm autumn bokeh background",
-            style: "modern anime illustration, detailed shading, cinematic lighting",
-            mood: "mysterious, melancholic, cool confidence",
-            palette: "deep orange, midnight blue, warm amber, black"
-          },
+      // ═══════════════════════════════════════════════════
+      // GOOGLE FIRST: O Google é sempre o motor principal.
+      // Ele é chamado ANTES de tudo e lidera o feed.
+      // ═══════════════════════════════════════════════════
+      const trendingStyles = ['anime aesthetic art', 'cyberpunk character art', 'dark academia aesthetic', 'vaporwave scenery', 'ethereal fantasy art', 'gothic aesthetic portrait'];
+      const googleQuery = cleanQ || trendingStyles[Math.floor(Math.random() * trendingStyles.length)];
+      
+      this.logger.log(`Alpha Penta-Mix [P${page}] | Google Primary: "${googleQuery}"`);
 
-          // Imagem 2 - Tattoo face anime girl dark
-          {
-            art: "anime girl close-up, blank white eyes, face tattoos, kanji shoulder tattoo, black outfit, finger over lips, dark moody background",
-            nat: "alternative girl with face tattoos, dramatic dark portrait, finger on lips pose, dark underground aesthetic",
-            style: "semi-realistic anime, heavy ink lines, low saturation",
-            mood: "enigmatic, edgy, secretive",
-            palette: "muted beige, charcoal, warm shadow tones"
-          },
+      // Google runs first and awaited — its results LEAD the array
+      const googleResults = await this.fetchGoogleImages(googleQuery, page).catch(() => []);
 
-          // Imagem 3 - Punk anime girl selfie
-          {
-            art: "anime girl, white platinum hair with red highlights, pink eyes, punk graphic tee, pleated black mini skirt, chain belt, spike choker, smiling selfie pose, tattoos on arm",
-            nat: "punk girl selfie, dyed hair, edgy accessories, graphic band tee, chain belt, alternative fashion",
-            style: "high detail modern anime, bright clean render",
-            mood: "rebellious, energetic, playful",
-            palette: "hot pink, crisp white, jet black, silver chain"
-          },
+      // ═══════════════════════════════════════════════════
+      // MOTORES SECUNDÁRIOS: Correm em paralelo após o Google
+      // ═══════════════════════════════════════════════════
+      const artQuery = cleanQ || googleQuery;
+      const natQuery = cleanQ || 'aesthetic luxury architecture portrait';
 
-          // Imagem 4 - Lo-fi music anime boy
-          {
-            art: "anime boy sitting cross-legged, pink green braided hair, oversized hoodie, ripped jeans, headphones, holding phone, eyes closed, solid color background",
-            nat: "lo-fi aesthetic boy listening to music, colorful braids, streetwear hoodie, relaxed floor sitting pose",
-            style: "flat anime illustration, retro poster aesthetic, bold outlines",
-            mood: "peaceful, introspective, lo-fi chill",
-            palette: "mustard yellow background, soft pink, sage green, denim blue"
-          },
+      const [civitaiRes, unsplashRes, lexicaRes, aniChar, booruRaw] = await Promise.all([
+        this.fetchCivitai(artQuery, page).catch(() => ({ items: [] })),
+        this.fetchWithTimeout(`https://unsplash.com/napi/search/photos?query=${encodeURIComponent(this.getCoreQuery(natQuery))}&page=${page}&per_page=12`)
+          .then(r => r.json()).catch(() => ({ results: [] })),
+        this.fetchWithTimeout(`https://lexica.art/api/v1/search?q=${encodeURIComponent(this.getCoreQuery(artQuery))}`)
+          .then(r => r.json()).catch(() => ({ images: [] })),
+        cleanQ ? this.searchAnilistCharacter(cleanQ).catch(() => null) : Promise.resolve(null),
+        cleanQ ? this.fetchSafebooru(cleanQ, 20).catch(() => []) : Promise.resolve([]),
+      ]);
 
-          // Imagem 5 - Manga editorial collage girl
-          {
-            art: "manga style girl, black short hair, black turtleneck crop top, dark pants, hand in hair pose, surrounded by manga panel collage background, grayscale",
-            nat: "dark aesthetic girl editorial photo, black outfit, short hair, hand in hair, moody black and white",
-            style: "manga ink illustration, panel collage layout, high contrast B&W",
-            mood: "cold, intense, brooding",
-            palette: "pure black, white, mid-gray"
-          },
-
-          // Imagem 6 - Clean anime girl bun dress
-          {
-            art: "anime girl top-down angle, black hair bun, blue eyes, off-shoulder gray bodycon dress, sitting pose, clean white background",
-            nat: "elegant asian girl, hair bun, gray fitted dress, top-down portrait angle, minimal white background",
-            style: "clean semi-realistic anime, soft shading, studio lighting",
-            mood: "soft, elegant, approachable",
-            palette: "silver gray, jet black, porcelain skin, white"
-          },
-
-          // Imagem 7 - Dark academia boy portrait
-          {
-            art: "anime boy side profile, curly dark brown hair, black blazer, white shirt collar, moody outdoor background, desaturated tones",
-            nat: "dark academia aesthetic boy, side profile, curly hair, blazer, desaturated moody photography",
-            style: "cinematic film grain, desaturated realism",
-            mood: "melancholic, intellectual, brooding",
-            palette: "dark brown, charcoal, faded warm gray, shadow tones"
-          },
-
-          // Imagem 8 - Mystery book boy aesthetic
-          {
-            art: "anime boy reclined, dark messy hair, vest over white shirt, book covering face, dim room, framed painting on wall",
-            nat: "mystery aesthetic boy covering face with book, vest outfit, moody indoor lighting, vintage room",
-            style: "candid low-light photography aesthetic, desaturated realism",
-            mood: "mysterious, introverted, cinematic",
-            palette: "warm sepia, muted gray, soft amber"
-          },
-
-          // Imagem 9 - Cozy girl glasses cafe
-          {
-            art: "real-style anime girl, messy hair bun with bangs, round gold glasses, off-shoulder beige knit sweater, eyes closed soft smile, cozy cluttered kitchen background",
-            nat: "asian girl cozy morning vibe, round glasses, messy bun, knit sweater, warm kitchen bokeh, film photo aesthetic",
-            style: "film photography, warm grain, soft focus bokeh",
-            mood: "cozy, warm, intimate, soft",
-            palette: "warm cream, dusty rose, golden hour light, soft shadow"
-          },
-
-          // Imagem 10 - E-girl anime selfie wink
-          {
-            art: "anime girl selfie, green hair updo, winged eyeliner, sheer black mesh top, black bralette, pearl necklace, gold hoop earrings, peace sign, tongue out, gray wall",
-            nat: "e-girl aesthetic selfie, green hair, mesh top, hoop earrings, pearl necklace, peace sign pose, bold makeup",
-            style: "high contrast modern anime, clean cel shading, selfie angle",
-            mood: "bold, provocative, playful",
-            palette: "emerald green, deep black, pearl white, gold accent"
-          },
-
-          // Imagem 11 - Soft anime girl floor sunlight
-          {
-            art: "anime girl lying on wooden floor, curly green hair spread out, mint crop top, white shorts, eyes closed, warm sunlight rays, relaxed pose",
-            nat: "soft aesthetic girl lying on floor in sunlight, green hair, pastel outfit, lazy morning vibe",
-            style: "soft anime render, warm sunlight shading, dreamy atmosphere",
-            mood: "serene, dreamy, lazy day",
-            palette: "mint green, warm oak wood, soft white, golden light"
-          },
-
-          // Imagem 12 - Cyberpunk anime girl club
-          {
-            art: "dark skin anime girl, long black hair with red highlights, glowing green eyes, leather collar, harness straps, bar/club neon background, smirk",
-            nat: "cyberpunk aesthetic girl in neon bar, dark skin, edgy harness outfit, glowing neon red purple lighting, confident smirk",
-            style: "neon noir anime, high contrast glow lighting, cinematic",
-            mood: "dangerous, seductive, mysterious",
-            palette: "neon red, electric purple, deep black, glowing green"
-          },
-
-          // Imagem 13 - E-girl crop top aesthetic
-          {
-            art: "anime girl torso, silver lavender long hair, white crop tube top, open beige jacket, studded belt, low-rise jeans, star necklace, photo wall background",
-            nat: "e-girl aesthetic outfit photo, silver dyed hair, white crop top, studded belt, low rise jeans, vintage photo wall backdrop",
-            style: "aesthetic photography, warm film tones, close-up fashion shot",
-            mood: "casual cool, trendy, effortless",
-            palette: "silver lavender, cream white, denim blue, warm neutral"
-          },
-
-          // Imagem 14 - Anime girl hallway knit outfit
-          {
-            art: "anime girl full body, black bob hair with bangs, blue-gray eyes, rust orange knit crop turtleneck, black denim cut-off shorts, brown boots, indoor hallway setting",
-            nat: "asian girl in hallway, black bob hair, cropped knit sweater, black shorts, combat boots, clean indoor natural light",
-            style: "detailed modern anime, realistic indoor lighting, full body shot",
-            mood: "shy, cute, casual",
-            palette: "rust orange, jet black, warm beige tile, brown leather"
-          },
-
-          // Imagem 15 - Manga ink girl dynamic pose
-          {
-            art: "manga ink girl, short black hair, open robe, black bralette, dynamic arms-raised pose, tongue out, lined paper background, bold ink strokes",
-            nat: "alternative girl bold pose, open kimono robe, dark bralette, dynamic arms up, black and white editorial",
-            style: "manga ink illustration, high contrast hatching, sticker cut-out style",
-            mood: "wild, free, unapologetic",
-            palette: "black ink, stark white, lined paper gray"
-          },
-
-          // Imagem 16 - Anime girl brick wall athletic
-          {
-            art: "anime girl, platinum silver long hair, gray-green eyes, tied white crop top, black shorts, arms raised behind head, warm brick wall background, golden light",
-            nat: "athletic girl against brick wall, silver blonde hair, tied crop top, glowing golden afternoon light, confident pose",
-            style: "cinematic anime, warm volumetric lighting, high detail",
-            mood: "intense, athletic, sun-drenched confidence",
-            palette: "warm gold, brick orange, platinum silver, cream white"
-          },
-
-          // Imagem 17 - Anime girl Christmas cozy
-          {
-            art: "anime girl, dark brown wavy hair, warm red eyes, Santa hat, red strapless holiday dress with fur trim, surrounded by Christmas gifts and tree, warm glow",
-            nat: "cozy christmas girl aesthetic, dark hair, holiday red outfit, warm fairy light bokeh, gift-filled room",
-            style: "warm anime illustration, holiday glow lighting, rich color render",
-            mood: "festive, warm, inviting",
-            palette: "crimson red, warm gold, deep brown, fairy light amber"
-          },
-
-          // Imagem 18 - Korean girl e-girl aesthetic outfit
-          {
-            art: "anime-style real girl full body, black bob hair, green long sleeve crop top, black mini shorts, green white striped knee socks, black platform shoes, indoor natural light",
-            nat: "korean e-girl full body outfit photo, black bob, green crop top, striped thigh socks, platform sneakers, bright indoor setting",
-            style: "clean fashion photography, natural window light, full body frame",
-            mood: "cute, confident, playful",
-            palette: "emerald green, crisp white, jet black, natural light"
-          },
-
-          // Imagem 19 - Soft anime girl pajama cute
-          {
-            art: "anime girl full body, long blonde hair, red eyes, black graphic crop sweatshirt, pink Hello Kitty pajama pants, hands behind head, neutral background",
-            nat: "cute girl in pajama outfit, blonde hair, graphic sweatshirt, character print jogger pants, relaxed home aesthetic",
-            style: "clean anime render, flat neutral background, full body character sheet",
-            mood: "cute, cozy, soft baddie",
-            palette: "blush pink, midnight black, warm blonde, neutral gray"
-          },
-
-          // Imagem 20 - Alt goth girl soft grunge outfit
-          {
-            art: "anime real-style girl, black short bob, pink open-knit mesh crop sweater, black tactical mini skirt with buckles, fishnet tights with tattoo, leather choker with cross charm",
-            nat: "soft grunge girl outfit close-up, black bob, pink mesh sweater, tactical skirt, fishnet tights, gothic accessories, dim moody lighting",
-            style: "dark fashion photography, low exposure, aesthetic editorial",
-            mood: "soft goth, rebellious, sensual",
-            palette: "dusty pink, matte black, dark shadow, leather brown"
-          },
-
-          {
-            art: "minimalist anime elf girl with long silver hair, wearing round sunglasses, clean outfit, calm expression, editorial composition with framed background and secondary faded character scene",
-
-            nat: "high fashion editorial portrait, pale tones, soft lighting, luxury minimal aesthetic, magazine cover style, neutral background with subtle graphic layout",
-
-            style: "minimal anime, editorial design, clean lines, soft shading, low contrast",
-
-            mood: "calm, elegant, introspective, ethereal",
-
-            palette: "white, light gray, soft blue, desaturated tones"
-          },
-
-          {
-            art: "goth anime girl with short white hair, big expressive eyes, tattoos, wearing punk outfit with spikes, sitting in a neon-lit alley surrounded by black cats, urban graffiti background",
-
-            nat: "cyberpunk street photography, neon lights, night city, underground alternative fashion, urban alley with graffiti and posters",
-
-            style: "stylized anime, cyberpunk, high contrast, glowing neon lighting, detailed environment",
-
-            mood: "rebellious, edgy, mysterious, nocturnal",
-
-            palette: "neon purple, electric blue, hot pink, deep shadows"
-          }
-        ];
-
-        // Seleciona 4 pilares para a página atual
-        const hourSeed = Math.floor(Date.now() / (1000 * 60 * 15)); // Muda a cada 15 min
-        for (let i = 0; i < 4; i++) {
-          const pillar = pillars[(page * 4 + i + hourSeed) % pillars.length];
-          // Adicionamos ambos ao pool para garantir o mix
-          queriesToFetch.push({ art: pillar.art, nat: pillar.nat });
-        }
-      } else {
-        queriesToFetch.push({ art: cleanQ, nat: `${cleanQ} alternative fashion` });
+      // Extra Safebooru preciso se Anilist identificou o personagem
+      let booruResults = booruRaw as any[];
+      const characterData = aniChar;
+      if (aniChar && (aniChar as any).name?.full) {
+        const series = (aniChar as any).media?.nodes?.[0]?.title?.romaji || '';
+        const preciseTags = `${(aniChar as any).name.full} ${series}`;
+        const extraBooru = await this.fetchSafebooru(preciseTags, 20).catch(() => []);
+        booruResults = [...booruResults, ...extraBooru];
       }
 
-      this.logger.log(`Alpha Hybrid Mix [P${page}]: ${queriesToFetch.length} pillars active.`);
-
-      // Parallel fetch for all pillars (Triple Engine: Lexica + Unsplash + SeaArt)
-      const fetchPromises = queriesToFetch.flatMap((p: any) => {
-        const artQuery = p.art + (p.style ? `, ${p.style}` : '') + (p.mood ? `, ${p.mood}` : '');
-        const natQuery = p.nat + (p.style ? ` ${p.style}` : '') + (p.palette ? ` ${p.palette}` : '');
-
-        return [
-          this.fetchSeaArt(artQuery, page)
-            .then(r => r.data || { items: [] })
-            .catch(() => ({ items: [] })),
-          this.fetchWithTimeout(`https://unsplash.com/napi/search/photos?query=${encodeURIComponent(natQuery)}&page=${page}&per_page=10`)
-            .then(r => r.json().catch(() => ({ results: [] })))
-            .catch(() => ({ results: [] })),
-          this.fetchWithTimeout(`https://lexica.art/api/v1/search?q=${encodeURIComponent(page > 1 ? `${artQuery} version ${page}` : artQuery)}`)
-            .then(r => r.json().catch(() => ({ images: [] })))
-            .catch(() => ({ images: [] }))
-        ];
-      });
-
-      const rawResults = await Promise.all(fetchPromises);
       const combined: any[] = [];
 
-      rawResults.forEach((res, idx) => {
-        const engineIdx = idx % 3;
+      // ── 1. GOOGLE FIRST (Sempre no topo) ────────────────
+      (googleResults as any[]).forEach(img => {
+        combined.push({
+          url: img.url,
+          width: img.width, height: img.height,
+          source: 'Google Images (Oficial)', prompt: img.prompt || googleQuery, color: '#fbbc05'
+        });
+      });
 
-        if (engineIdx === 0) { // SeaArt (Principal) - Quota Expandida
-          (res.items || []).slice(0, 10).forEach((img: any) => combined.push({
-            url: img.banner || img.cover || img.url,
-            width: img.width, height: img.height,
-            source: 'Artificial (SeaArt)', prompt: img.title || 'SeaArt Alpha Generation', color: '#ff0055'
-          }));
-        } else if (engineIdx === 1) { // Unsplash (Natural)
-          (res.results || []).slice(0, 6).forEach((img: any) => combined.push({
-            url: img.urls?.small || img.urls?.regular,
-            width: img.width, height: img.height,
-            source: 'Natural (Photo)', prompt: img.alt_description || img.description || 'Alpha Subculture', color: '#ffb300'
-          }));
-        } else { // Lexica (Secundário)
-          (res.images || []).slice(0, 6).forEach((img: any) => combined.push({
-            url: img.srcSmall || img.src,
-            width: img.width, height: img.height,
-            source: 'Artificial (Lexica)', prompt: img.prompt, color: '#00f2ff'
-          }));
-        }
+      // ── 2. SAFEBOORU (Mestre de Personagens) ─────────────
+      booruResults.forEach(img => {
+        if (!img.directory || !img.image) return;
+        combined.push({
+          url: `https://safebooru.org/images/${img.directory}/${img.image}`,
+          width: img.width, height: img.height,
+          source: 'Galeria Alpha (Safebooru)', prompt: (characterData as any)?.name?.full || artQuery, color: '#bc13fe'
+        });
+      });
+
+      // ── 3. CIVITAI (Elite AI Art) ─────────────────────────
+      ((civitaiRes as any).items || []).slice(0, cleanQ ? 20 : 15).forEach((img: any) => {
+        if (!img.url) return;
+        combined.push({
+          url: img.url,
+          width: img.width, height: img.height,
+          source: 'Elite Art (Civitai)', prompt: img.meta?.prompt || 'Alpha AI Generation', color: '#ff0055'
+        });
+      });
+
+      // ── 4. UNSPLASH (Natural Photo) ───────────────────────
+      ((unsplashRes as any).results || []).slice(0, cleanQ ? 6 : 8).forEach((img: any) => {
+        combined.push({
+          url: img.urls?.small || img.urls?.regular,
+          width: img.width, height: img.height,
+          source: 'Natural (Photo)', prompt: img.alt_description || img.description || 'Alpha Subculture', color: '#ffb300'
+        });
+      });
+
+      // ── 5. LEXICA (Digital Art) ───────────────────────────
+      ((lexicaRes as any).images || []).slice(0, cleanQ ? 10 : 8).forEach((img: any) => {
+        combined.push({
+          url: img.srcSmall || img.src,
+          width: img.width, height: img.height,
+          source: 'Artificial (Lexica)', prompt: img.prompt, color: '#00f2ff'
+        });
       });
 
       if (combined.length === 0) throw new Error('Empty Alpha Mix (Network Failure)');
 
-      // Fisher-Yates Shuffle for true visual variety
-      for (let i = combined.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [combined[i], combined[j]] = [combined[j], combined[i]];
-      }
-
       return combined;
     } catch (e) {
       this.logger.error(`Alpha Safety Mode Activated: ${e.message}`);
-      // Devolve modo de segurança com baralhamento para não ser sempre igual
       return [...this.FALLBACK_GALLERY].sort(() => Math.random() - 0.5);
     }
   }
