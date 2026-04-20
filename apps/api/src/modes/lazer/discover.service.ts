@@ -206,103 +206,172 @@ export class DiscoverService {
     } catch (e) { return []; }
   }
 
+  // Cache em memoria para evitar chamadas repetidas ao Google (TTL 5 min)
+  private readonly galCache = new Map<string, { data: any[]; ts: number }>();
+  private readonly CACHE_TTL = 5 * 60 * 1000;
+
   async getAestheticGallery(query: string, page = 1) {
     try {
       const cleanQ = query?.trim();
 
-      // ═══════════════════════════════════════════════════
-      // GOOGLE FIRST: O Google é sempre o motor principal.
-      // Ele é chamado ANTES de tudo e lidera o feed.
-      // ═══════════════════════════════════════════════════
-      const trendingStyles = ['anime aesthetic art', 'cyberpunk character art', 'dark academia aesthetic', 'vaporwave scenery', 'ethereal fantasy art', 'gothic aesthetic portrait'];
-      const googleQuery = cleanQ || trendingStyles[Math.floor(Math.random() * trendingStyles.length)];
-      
-      this.logger.log(`Alpha Penta-Mix [P${page}] | Google Primary: "${googleQuery}"`);
-
-      // Google runs first and awaited — its results LEAD the array
-      const googleResults = await this.fetchGoogleImages(googleQuery, page).catch(() => []);
-
-      // ═══════════════════════════════════════════════════
-      // MOTORES SECUNDÁRIOS: Correm em paralelo após o Google
-      // ═══════════════════════════════════════════════════
-      const artQuery = cleanQ || googleQuery;
-      const natQuery = cleanQ || 'aesthetic luxury architecture portrait';
-
-      const [civitaiRes, unsplashRes, lexicaRes, aniChar, booruRaw] = await Promise.all([
-        this.fetchCivitai(artQuery, page).catch(() => ({ items: [] })),
-        this.fetchWithTimeout(`https://unsplash.com/napi/search/photos?query=${encodeURIComponent(this.getCoreQuery(natQuery))}&page=${page}&per_page=12`)
-          .then(r => r.json()).catch(() => ({ results: [] })),
-        this.fetchWithTimeout(`https://lexica.art/api/v1/search?q=${encodeURIComponent(this.getCoreQuery(artQuery))}`)
-          .then(r => r.json()).catch(() => ({ images: [] })),
-        cleanQ ? this.searchAnilistCharacter(cleanQ).catch(() => null) : Promise.resolve(null),
-        cleanQ ? this.fetchSafebooru(cleanQ, 20).catch(() => []) : Promise.resolve([]),
-      ]);
-
-      // Extra Safebooru preciso se Anilist identificou o personagem
-      let booruResults = booruRaw as any[];
-      const characterData = aniChar;
-      if (aniChar && (aniChar as any).name?.full) {
-        const series = (aniChar as any).media?.nodes?.[0]?.title?.romaji || '';
-        const preciseTags = `${(aniChar as any).name.full} ${series}`;
-        const extraBooru = await this.fetchSafebooru(preciseTags, 20).catch(() => []);
-        booruResults = [...booruResults, ...extraBooru];
+      // ── MEMORY CACHE INTERCEPTOR (0ms Latency) ──
+      const cacheKey = `${cleanQ || 'trending'}_p${page}`;
+      const cached = this.galCache.get(cacheKey);
+      if (cached && Date.now() - cached.ts < this.CACHE_TTL) {
+         this.logger.log(`Twin Core [P${page}]: Cache Hit for "${cacheKey}" ⚡ (0ms)`);
+         return cached.data;
       }
 
-      const combined: any[] = [];
+      // Tags base para o feed de tendências (sem pesquisa)
+      // Formato Booru usa _ em vez de espaços
+      const trendingPool = [
+        'highres',
+        'cyberpunk scenery',
+        'scenery',
+        'blue_lock',
+        'jujutsu_kaisen',
+        'chainsaw_man',
+        'makima_(chainsaw_man)',
+        'itoshi_rin'
+      ];
+      
+      let booruQuery = '';
+      if (cleanQ) {
+         booruQuery = cleanQ.toLowerCase(); // Boorus ONLY accept lowercase tags
+         // Se a pesquisa não tiver underscores, assumimos que foi o utilizador a digitar (ex: 'maki zenin')
+         // Transformamos os espaços do utilizador em underscores para a API ativar a sua engine de "Alias" (ex: maki_zenin -> zenin_maki)
+         if (!booruQuery.includes('_')) {
+            booruQuery = booruQuery.replace(/\s+/g, '_');
+         }
+      } else {
+         booruQuery = trendingPool[(page + Math.floor(Date.now() / 300000)) % trendingPool.length];
+      }
 
-      // ── 1. GOOGLE FIRST (Sempre no topo) ────────────────
-      (googleResults as any[]).forEach(img => {
-        combined.push({
-          url: img.url,
-          width: img.width, height: img.height,
-          source: 'Google Images (Oficial)', prompt: img.prompt || googleQuery, color: '#fbbc05'
-        });
-      });
+      this.logger.log(`Twin Core [P${page}]: "${booruQuery}" (Booru) | "${cleanQ || booruQuery.replace(/_/g, ' ')}" (DeviantArt)`);
 
-      // ── 2. SAFEBOORU (Mestre de Personagens) ─────────────
-      booruResults.forEach(img => {
-        if (!img.directory || !img.image) return;
-        combined.push({
-          url: `https://safebooru.org/images/${img.directory}/${img.image}`,
-          width: img.width, height: img.height,
-          source: 'Galeria Alpha (Safebooru)', prompt: (characterData as any)?.name?.full || artQuery, color: '#bc13fe'
-        });
-      });
+      // ── THE TWIN CORE: Parallel Fetch ──
+      const danbooruPromise = (async () => {
+         try {
+            // "Censorship Protocol": Forcefully inject safe rating and restrict to SFW logic
+            const booruSafeQuery = `${booruQuery} rating:safe`;
+            const url = `https://danbooru.donmai.us/posts.json?tags=${encodeURIComponent(booruSafeQuery)}&limit=30&page=${page}`;
+            
+            const res = await this.fetchWithTimeout(url, { headers: { 'User-Agent': 'AlphaNetwork/1.0' } });
+            if (!res.ok) return [];
+            const posts = await res.json();
+            if (!Array.isArray(posts)) return [];
+            
+            return posts
+              .filter((img: any) => img.large_file_url || img.file_url)
+              .filter((img: any) => img.rating === 's' || img.rating === 'g') // Double Validation
+              .filter((img: any) => {
+                 const url = img.large_file_url || img.file_url;
+                 return !url.endsWith('.mp4') && !url.endsWith('.webm') && !url.endsWith('.zip');
+              })
+              .map((img: any) => ({
+                url: img.large_file_url || img.file_url,
+                width: img.image_width,
+                height: img.image_height,
+                source: 'Danbooru',
+                prompt: img.tag_string,
+                color: '#bc13fe'
+              }));
+         } catch { return []; }
+      })();
 
-      // ── 3. CIVITAI (Elite AI Art) ─────────────────────────
-      ((civitaiRes as any).items || []).slice(0, cleanQ ? 20 : 15).forEach((img: any) => {
-        if (!img.url) return;
-        combined.push({
-          url: img.url,
-          width: img.width, height: img.height,
-          source: 'Elite Art (Civitai)', prompt: img.meta?.prompt || 'Alpha AI Generation', color: '#ff0055'
-        });
-      });
+      const devQuery = cleanQ || trendingPool[(page + Math.floor(Date.now() / 300000)) % trendingPool.length].replace(/_/g, ' ');
+      const deviantartPromise = this.fetchDeviantArt(devQuery, page);
 
-      // ── 4. UNSPLASH (Natural Photo) ───────────────────────
-      ((unsplashRes as any).results || []).slice(0, cleanQ ? 6 : 8).forEach((img: any) => {
-        combined.push({
-          url: img.urls?.small || img.urls?.regular,
-          width: img.width, height: img.height,
-          source: 'Natural (Photo)', prompt: img.alt_description || img.description || 'Alpha Subculture', color: '#ffb300'
-        });
-      });
+      const [danbooruPosts, deviantartPosts] = await Promise.all([danbooruPromise, deviantartPromise]);
 
-      // ── 5. LEXICA (Digital Art) ───────────────────────────
-      ((lexicaRes as any).images || []).slice(0, cleanQ ? 10 : 8).forEach((img: any) => {
-        combined.push({
-          url: img.srcSmall || img.src,
-          width: img.width, height: img.height,
-          source: 'Artificial (Lexica)', prompt: img.prompt, color: '#00f2ff'
-        });
-      });
+      const combined = [...danbooruPosts, ...deviantartPosts].sort(() => Math.random() - 0.5);
 
-      if (combined.length === 0) throw new Error('Empty Alpha Mix (Network Failure)');
+      if (combined.length === 0) throw new Error('Empty Twin Core Mix');
+
+      // Save to memory cache to ensure instantaneous subsequent loads
+      this.galCache.set(cacheKey, { data: combined, ts: Date.now() });
 
       return combined;
     } catch (e) {
-      this.logger.error(`Alpha Safety Mode Activated: ${e.message}`);
+      this.logger.error(`Twin Core Nexus Error: ${e.message}`);
+      // Se for a primeira página, devolvemos o fallback para a galeria não ficar vazia
+      // Se for página > 1, devolvemos array vazio para parar o loop infinito do frontend
+      if (page > 1) return [];
       return [...this.FALLBACK_GALLERY].sort(() => Math.random() - 0.5);
+    }
+  }
+
+  // ── DeviantArt Native RSS Extractor ──
+  private async fetchDeviantArt(query: string, page: number): Promise<any[]> {
+    try {
+      const q = encodeURIComponent(query);
+      const offset = (page - 1) * 30;
+      const url = `https://backend.deviantart.com/rss.xml?q=${q}&offset=${offset}`;
+      
+      const res = await this.fetchWithTimeout(url, { headers: { 'User-Agent': 'AlphaNetwork/1.0' } });
+      if (!res.ok) return [];
+      const xml = await res.text();
+      
+      const items: any[] = [];
+      const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+      let match;
+      
+      while ((match = itemRegex.exec(xml)) !== null) {
+        const itemBody = match[1];
+        
+        const mediaMatch = itemBody.match(/<media:content[^>]+url="([^"]+)"/);
+        const thumbMatch = itemBody.match(/<media:thumbnail[^>]+url="([^"]+)"/);
+        
+        const titleMatch = itemBody.match(/<title>([\s\S]*?)<\/title>/);
+        const creditMatch = itemBody.match(/<media:credit[^>]*>([\s\S]*?)<\/media:credit>/);
+        
+        let urlMatch = mediaMatch?.[1] || thumbMatch?.[1];
+        if (!urlMatch) continue;
+        
+        urlMatch = urlMatch.replace(/&amp;/g, '&');
+        // Prevent literature formats or layout templates
+        if (!urlMatch.match(/\.(jpeg|jpg|png|webp|gif)(\?.*)?$/i)) continue;
+        
+        // Alpha Purifier: Forcefully eject any image encrypted with DeviantArt's CDN blur or marked mature
+        if (urlMatch.includes('/blur_') || itemBody.includes('<media:rating>adult</media:rating>')) continue;
+        
+        let promptStr = titleMatch ? titleMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim() : 'Digital Art';
+        if (creditMatch) promptStr = `${promptStr} by ${creditMatch[1].trim()}`;
+
+        items.push({
+          url: urlMatch,
+          width: 0,
+          height: 0,
+          source: 'DeviantArt',
+          prompt: promptStr,
+          color: '#05cc47' // DeviantArt signature green
+        });
+        
+        if (items.length >= 30) break; // Limit to 30 items per payload
+      }
+      return items;
+    } catch {
+      return [];
+    }
+  }
+  // Alpha Neural Auto-Suggest (Booru Gateway)
+  async getTagSuggestions(query: string) {
+    if (!query || query.trim().length < 2) return [];
+    try {
+      const q = query.trim().toLowerCase().replace(/\s+/g, '_');
+      const url = `https://danbooru.donmai.us/tags.json?search[name_matches]=*${encodeURIComponent(q)}*&search[order]=count&limit=8`;
+      const res = await this.fetchWithTimeout(url, { headers: { 'User-Agent': 'AlphaNetwork/1.0' } });
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      
+      const tags = await res.json();
+      return tags.map((t: any) => ({
+         name: t.name,
+         count: t.post_count,
+         category: t.category === 4 ? 'character' : t.category === 3 ? 'series' : t.category === 1 ? 'artist' : 'general'
+      }));
+    } catch (e) {
+      this.logger.error(`Tag Suggestion Error: ${e.message}`);
+      return [];
     }
   }
 
@@ -683,8 +752,14 @@ export class DiscoverService {
   async getDetail(type: string, id: string, q?: string, page = 1) {
     try {
       if (type === 'image') {
-        // Motor de Relações: Busca conteúdos similares baseado no prompt da imagem (Paginado)
-        const related = await this.getAestheticGallery(q || 'aesthetic', page);
+        // Motor de Relações para Danbooru: API não autenticada só aceita 2 tags.
+        // O `q` contém dezenas de tags (img.prompt). Extraímos as 2 primeiras tags.
+        let searchTags = q || 'aesthetic';
+        if (searchTags.includes(' ')) {
+           searchTags = searchTags.split(/\s+/).slice(0, 2).join(' ');
+        }
+        
+        const related = await this.getAestheticGallery(searchTags, page);
         return {
           success: true,
           data: {

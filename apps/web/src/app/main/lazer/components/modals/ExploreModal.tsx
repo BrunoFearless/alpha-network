@@ -121,6 +121,51 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  const isWatchMode = activeCategory === '🎥 Watch Mode';
+  const isGalleryMode = activeCategory === 'Galeria 🏮';
+  const isDiscoverCategory = ['🏮 Animes', '📖 Mangás', '🎮 Jogos', '🍿 Cinema'].includes(activeCategory);
+
+  // Auto-Suggest State
+  const [tagSuggestions, setTagSuggestions] = useState<any[]>([]);
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const [tagLoading, setTagLoading] = useState(false);
+
+  // Debounce hook for auto-suggest
+  const activeSearchQuery = isGalleryMode ? galSearch : search;
+
+  useEffect(() => {
+    if (!activeSearchQuery.trim() || activeSearchQuery.trim().length < 2) {
+       setTagSuggestions([]);
+       setShowTagSuggestions(false);
+       return;
+    }
+    
+    const timeoutId = setTimeout(async () => {
+      setTagLoading(true);
+      try {
+        const token = (useAuthStore.getState() as any).accessToken;
+        const res = await fetch(`${API}/api/v1/lazer/discover/tags?q=${encodeURIComponent(activeSearchQuery.trim())}`, {
+           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+        });
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+           setTagSuggestions(data);
+           setShowTagSuggestions(true);
+        } else {
+           setTagSuggestions([]);
+           setShowTagSuggestions(false);
+        }
+      } catch {
+        setTagSuggestions([]);
+        setShowTagSuggestions(false);
+      } finally {
+        setTagLoading(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timeoutId);
+  }, [activeSearchQuery]);
+
   useEffect(() => {
     const saved = localStorage.getItem('alpha_search_history');
     if (saved) setSearchHistory(JSON.parse(saved));
@@ -132,10 +177,6 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
     setSearchHistory(newHist);
     localStorage.setItem('alpha_search_history', JSON.stringify(newHist));
   };
-
-  const isWatchMode = activeCategory === '🎥 Watch Mode';
-  const isGalleryMode = activeCategory === 'Galeria 🏮';
-  const isDiscoverCategory = ['🏮 Animes', '📖 Mangás', '🎮 Jogos', '🍿 Cinema'].includes(activeCategory);
 
   const isLight = themeMode === 'light';
   const textPrimary = isLight ? 'text-black' : 'text-white';
@@ -218,9 +259,14 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
 
   useEffect(() => {
     if (!isGalleryMode) return;
-    setHubGalPage(1);
-    setHasMoreGal(true);
-    fetchHubGal(1, false);
+    
+    const timeoutId = setTimeout(() => {
+       setHubGalPage(1);
+       setHasMoreGal(true);
+       fetchHubGal(1, false);
+    }, 600);
+    
+    return () => clearTimeout(timeoutId);
   }, [isGalleryMode, search, galSearch]);
 
   useEffect(() => {
@@ -460,14 +506,44 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
           {/* ─────────────────── MAIN FEED ─────────────────── */}
           <main className="flex flex-col gap-8 w-full">
             
-            <div className="relative z-20 group">
+            <div className="relative z-50 group">
               <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none transition-colors group-focus-within:text-white" style={{ color: isLight ? '#999' : '#666' }}>
                 <IconSearch/>
               </div>
-              <input value={search} onChange={e => setSearch(e.target.value)}
+              <input value={search} 
+                onChange={e => { setSearch(e.target.value); setShowTagSuggestions(true); }}
+                onFocus={() => { if (search.trim().length >= 2 && tagSuggestions.length > 0) setShowTagSuggestions(true); }}
+                onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
                 placeholder="Google, Animes, Jogos, Educação..."
-                className={`w-full py-5 pl-14 pr-6 rounded-[24px] border-[2px] font-extrabold text-[15px] outline-none transition-all shadow-lg focus:shadow-[0_8px_30px_rgba(0,0,0,0.2)] focus:-translate-y-1 ${textPrimary} ${cardBg}`}
+                className={`w-full py-5 pl-14 pr-6 ${showTagSuggestions && isGalleryMode ? 'rounded-t-[24px] rounded-b-none' : 'rounded-[24px]'} border-[2px] font-extrabold text-[15px] outline-none transition-all shadow-lg focus:shadow-[0_8px_30px_rgba(0,0,0,0.2)] ${!showTagSuggestions && 'focus:-translate-y-1'} ${textPrimary} ${cardBg}`}
                 style={{ borderColor: search.trim() ? c : borderCol, backdropFilter: 'blur(30px)', backgroundColor: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.5)' }}/>
+
+              {/* Alpha Neural Dropdown (Main Bar) */}
+              {showTagSuggestions && !isGalleryMode && (tagSuggestions.length > 0 || tagLoading) && (
+                 <div className="absolute top-full left-0 right-0 bg-black/50 backdrop-blur-[50px] border-[2px] border-t-0 rounded-b-[32px] shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col z-[100] transition-all animate-in fade-in slide-in-from-top-2"
+                      style={{ borderColor: c }}>
+                    {tagLoading ? (
+                       <div className="p-8 text-center text-[10px] font-black uppercase text-white/50 tracking-[4px] animate-pulse">A Sincronizar Lexicon...</div>
+                    ) : (
+                       tagSuggestions.map((tag, idx) => {
+                         const catColor = tag.category === 'character' ? '#39ff14' : tag.category === 'series' ? '#bc13fe' : tag.category === 'artist' ? '#fbbc05' : '#00f2ff';
+                         return (
+                         <button key={idx} 
+                           onMouseDown={(e) => { e.preventDefault(); setSearch(tag.name); setShowTagSuggestions(false); }}
+                           className="flex items-center justify-between p-4 px-6 relative overflow-hidden group border-b border-white/5 transition-all duration-300 cursor-pointer text-left focus:outline-none hover:pl-8">
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500" style={{ background: `linear-gradient(90deg, ${catColor}, transparent)` }} />
+                            <div className="flex items-center gap-4 relative z-10">
+                               <div className="w-2 h-2 rounded-full shadow-[0_0_12px_currentColor] group-hover:scale-150 transition-transform duration-300" style={{ backgroundColor: catColor, color: catColor }} />
+                               <span className="font-extrabold text-white text-[15px] drop-shadow-md">{tag.name}</span>
+                            </div>
+                            <span className="text-[9px] uppercase tracking-[2px] font-black text-white/70 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 group-hover:border-white/30 transition-colors relative z-10 shadow-sm">
+                               {tag.category} • {(tag.count / 1000).toFixed(1)}K P.
+                            </span>
+                         </button>
+                       )})
+                    )}
+                 </div>
+              )}
             </div>
 
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
@@ -658,11 +734,11 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                           </div>
                           <input 
                             value={galSearch}
-                            onChange={(e) => setGalSearch(e.target.value)}
-                            onFocus={() => setGalSearchFocus(true)}
-                            onBlur={() => setTimeout(() => setGalSearchFocus(false), 200)}
+                            onChange={(e) => { setGalSearch(e.target.value); setShowTagSuggestions(true); }}
+                            onFocus={() => { setGalSearchFocus(true); if (galSearch.trim().length >= 2) setShowTagSuggestions(true); }}
+                            onBlur={() => setTimeout(() => { setGalSearchFocus(false); setShowTagSuggestions(false); }, 200)}
                             placeholder="Pesquisar personagens, lugares, estética..."
-                            className={`w-full py-4 pl-14 pr-6 rounded-3xl border-[2px] font-extrabold text-[13px] outline-none transition-all shadow-2xl ${textPrimary}`}
+                            className={`w-full py-4 pl-14 pr-6 ${showTagSuggestions ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl'} border-[2px] font-extrabold text-[13px] outline-none transition-all shadow-2xl ${textPrimary}`}
                             style={{ 
                                borderColor: galSearchFocus ? c : 'rgba(255,255,255,0.05)',
                                background: 'rgba(255,255,255,0.03)',
@@ -671,20 +747,30 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                           />
                        </div>
 
-                       {/* Suggested Tags (Pinterest Style) */}
-                       {galSearchFocus && (
-                          <div className="absolute top-full left-0 right-0 mt-4 p-4 rounded-[32px] border border-white/10 backdrop-blur-3xl bg-black/60 shadow-[0_20px_60px_rgba(0,0,0,0.8)] z-50 animate-in fade-in zoom-in-95 duration-300">
-                             <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-3 ml-2">Tendências Estéticas</p>
-                             <div className="flex flex-wrap gap-2">
-                                {['#Cyberpunk', '#Makima', '#AnimeArt', '#Gothic', '#Lofi', '#Scenery', '#Arcane', '#Vaporwave'].map(tag => (
-                                   <button 
-                                     key={tag}
-                                     onClick={() => setGalSearch(tag.replace('#', ''))}
-                                     className="px-4 py-2 rounded-full text-[10px] font-bold text-white/70 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all cursor-pointer">
-                                      {tag}
-                                   </button>
-                                ))}
-                             </div>
+                       {/* Alpha Neural Dropdown (Gallery Inner Bar) */}
+                       {showTagSuggestions && (tagSuggestions.length > 0 || tagLoading) && (
+                          <div className="absolute top-full left-0 right-0 bg-black/50 backdrop-blur-[50px] border border-white/10 border-t-0 rounded-b-[32px] shadow-[0_50px_100px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col z-[100] transition-all animate-in fade-in slide-in-from-top-2"
+                               style={{ borderColor: c }}>
+                             {tagLoading ? (
+                                <div className="p-8 text-center text-[10px] font-black uppercase text-white/50 tracking-[4px] animate-pulse">A Sincronizar Lexicon...</div>
+                             ) : (
+                                tagSuggestions.map((tag, idx) => {
+                                  const catColor = tag.category === 'character' ? '#39ff14' : tag.category === 'series' ? '#bc13fe' : tag.category === 'artist' ? '#fbbc05' : '#00f2ff';
+                                  return (
+                                  <button key={idx} 
+                                    onMouseDown={(e) => { e.preventDefault(); setGalSearch(tag.name); setShowTagSuggestions(false); }}
+                                    className="flex items-center justify-between p-4 px-6 relative overflow-hidden group border-b border-white/5 transition-all duration-300 cursor-pointer text-left focus:outline-none hover:pl-8">
+                                     <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500" style={{ background: `linear-gradient(90deg, ${catColor}, transparent)` }} />
+                                     <div className="flex items-center gap-4 relative z-10">
+                                        <div className="w-2 h-2 rounded-full shadow-[0_0_12px_currentColor] group-hover:scale-150 transition-transform duration-300" style={{ backgroundColor: catColor, color: catColor }} />
+                                        <span className="font-extrabold text-white text-[14px] drop-shadow-md">{tag.name}</span>
+                                     </div>
+                                     <span className="text-[9px] uppercase tracking-[2px] font-black text-white/70 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 group-hover:border-white/30 transition-colors relative z-10 shadow-sm">
+                                        {tag.category} • {(tag.count / 1000).toFixed(1)}K P.
+                                     </span>
+                                  </button>
+                                )})
+                             )}
                           </div>
                        )}
                     </div>
@@ -701,32 +787,40 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                           <div key={colIdx} className="flex-1 flex flex-col gap-6">
                              {col.map((img, i) => (
                                 <div key={`${img.url}-${i}`} 
-                                  className="group relative rounded-[40px] overflow-hidden bg-[#0d0d0d] border border-white/5 shadow-[0_12px_45px_rgba(0,0,0,0.5)] hover:shadow-[0_50px_100px_rgba(0,0,0,0.9)] transition-all duration-700 hover:-translate-y-3 cursor-pointer"
+                                  className="group relative rounded-[40px] overflow-hidden bg-[#0d0d0d] border border-white/5 shadow-[0_12px_45px_rgba(0,0,0,0.5)] hover:shadow-[0_50px_100px_rgba(0,0,0,0.9)] transition-all duration-700 hover:-translate-y-3 cursor-pointer animate-in fade-in slide-in-from-top-12 fill-mode-both"
+                                  style={{ animationDuration: '800ms', animationDelay: `${Math.min((i % 15) * 120, 1500)}ms` }}
                                   onClick={() => setActiveDetail({ type: 'image', id: img.url, metadata: img })}>
                                    
                                    {/* Glassmorphism Source Badge */}
                                    <div className="absolute top-6 left-6 z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 transform -translate-x-6 group-hover:translate-x-0">
-                                      <div className="px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[3px] text-white shadow-2xl backdrop-blur-[32px] border border-white/20 bg-white/5 transition-all">
+                                      <div className="px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-[3px] text-white shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-[32px] transition-all flex items-center gap-3"
+                                           style={{ border: `1px solid ${img.color}50`, backgroundColor: `${img.color}15` }}>
+                                         <div className="w-1.5 h-1.5 rounded-full shadow-[0_0_10px_currentColor] animate-pulse" style={{ backgroundColor: img.color, color: img.color }} />
                                          {img.source}
                                       </div>
                                    </div>
 
                                    {/* Immersive Image with Parallax Zoom */}
-                                   <div className="overflow-hidden bg-black/40 aspect-auto">
-                                      <img 
-                                         src={img.url} 
-                                         alt="" 
-                                         className="w-full h-auto object-cover transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-115 group-hover:rotate-2 group-hover:brightness-110" 
-                                         loading="lazy"
-                                      />
-                                   </div>
+                                   <div className="overflow-hidden bg-[#0d0d0d] aspect-auto relative">
+                                       <div className="absolute inset-0 bg-white/5 animate-pulse" />
+                                       <img 
+                                          src={img.url} 
+                                          alt="" 
+                                          className="w-full h-auto object-cover transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-115 group-hover:rotate-2 group-hover:brightness-110 relative z-10" 
+                                          loading="lazy"
+                                          decoding="async"
+                                          style={{ opacity: 0, transition: 'opacity 0.6s ease-in' }}
+                                          onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
+                                          onError={(e) => { const p = e.currentTarget.closest('.group') as HTMLElement | null; if (p) p.style.display = 'none'; }}
+                                       />
+                                    </div>
                                    
                                    {/* Dreamy Gradient Overlay & Content */}
                                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 flex items-end p-10">
                                       <div className="flex flex-col gap-3 transform translate-y-10 group-hover:translate-y-0 transition-all duration-700 ease-out">
                                          <div className="flex items-center gap-2.5">
-                                            <div className="w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_currentColor]" style={{ backgroundColor: c }} />
-                                            <p className="text-[11px] font-black text-white/40 uppercase tracking-[4px]">Alpha Neural Engine</p>
+                                            <div className="w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_currentColor]" style={{ backgroundColor: img.color || c, color: img.color || c }} />
+                                            <p className="text-[11px] font-black text-white/40 uppercase tracking-[4px]" style={{ color: img.color ? `${img.color}90` : undefined }}>Alpha Twin Core</p>
                                          </div>
                                          <h4 className="text-[15px] font-black text-white leading-[1.3] uppercase tracking-tight line-clamp-4 drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
                                             {img.prompt || 'Alpha Aesthetic Vision'}

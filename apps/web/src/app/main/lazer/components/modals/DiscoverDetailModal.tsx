@@ -275,11 +275,17 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                                document.querySelector('.custom-scrollbar')?.scrollTo({ top: 0, behavior: 'smooth' });
                             }}>
                              
+                             {/* Optimized Skeleton + Async Image */}
+                             <div className="absolute inset-0 bg-white/5 animate-pulse" />
                              <img 
                                 src={img.url} 
                                 alt="" 
-                                className="w-full h-auto object-cover opacity-90 group-hover:opacity-100 transition-all duration-700 group-hover:scale-110" 
+                                className="w-full h-auto object-cover opacity-90 group-hover:opacity-100 transition-all duration-700 group-hover:scale-110 relative z-10" 
                                 loading="lazy"
+                                decoding="async"
+                                style={{ opacity: 0, transition: 'opacity 0.6s ease-in' }}
+                                onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
+                                onError={(e) => { const p = e.currentTarget.closest('.group') as HTMLElement | null; if (p) p.style.display = 'none'; }}
                              />
                              
                              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-8">

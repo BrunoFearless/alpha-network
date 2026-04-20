@@ -70,6 +70,12 @@ export class LazerController {
     return this.discoverService.getAestheticGallery(q, page ? parseInt(page, 10) : 1);
   }
 
+  @Public()
+  @Get('discover/tags')
+  getTagSuggestions(@Query('q') q: string) {
+    return this.discoverService.getTagSuggestions(q);
+  }
+
   // ── Tropes ─────────────────────────────────────────────────────────
 
   @Get('tropes')
