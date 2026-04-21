@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui';
@@ -10,6 +10,8 @@ import { useAuthStore } from '@/store/auth.store';
 import { YoutubeEmbed } from '@/components/ui/YoutubeEmbed';
 import { DiscoverDetailModal } from './DiscoverDetailModal';
 import { WikiModal } from './WikiModal';
+import { BrowserModal } from './BrowserModal';
+import { AlphaReaderModal } from './AlphaReaderModal';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const CATEGORIES = [
@@ -18,7 +20,7 @@ const CATEGORIES = [
   '📖 Mangás',
   '🎮 Jogos',
   '🍿 Cinema',
-  'Galeria 🏮',
+  '🏮 Galeria ',
   '🎥 Watch Mode'
 ];
 
@@ -118,6 +120,10 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
   const [wikiResult, setWikiResult] = useState<any>(null);
   const [activeDetail, setActiveDetail] = useState<{ type: any; id: string; metadata?: any } | null>(null);
   const [activeWiki, setActiveWiki] = useState<string | null>(null);
+  const [activeWebUrl, setActiveWebUrl] = useState<string | null>(null);
+  const [readerArticle, setReaderArticle] = useState<any>(null);
+  const [readerLoading, setReaderLoading] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -643,14 +649,35 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                    borderColor: `${getNeonColor('Animes')}40`,
                                    animationDelay: `${index * 80}ms`
                                 }}
-                                onClick={() => {
+                                onClick={async () => {
                                    addToHistory(search);
+                                   if (u.type === 'web_link') {
+                                      setReaderLoading(true);
+                                      try {
+                                        const res = await fetch(`${API}/api/v1/lazer/proxy/readability?target=${encodeURIComponent(u.url)}`);
+                                        const data = await res.json();
+                                        if (data.success && data.article) {
+                                          setReaderArticle(data.article);
+                                          setActiveWebUrl(u.url);
+                                        } else {
+                                          // Em vez de window.open direto, mostramos o aviso de redirecionamento
+                                          setRedirectUrl(u.url);
+                                        }
+                                      } catch (err) {
+                                        setRedirectUrl(u.url);
+                                      } finally {
+                                        setReaderLoading(false);
+                                      }
+                                      return;
+                                   }
                                    u.type === 'video' ? setActiveVideo({ id: u.id, title: u.title, channel: u.source }) : setActiveDetail({ type: u.type, id: u.id });
                                 }}>
                                  
-                                 <div className="w-16 h-16 md:w-24 md:h-24 rounded-[22px] overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-white/5">
+                                 <div className="w-16 h-16 md:w-24 md:h-24 rounded-[22px] overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-white/5 flex items-center justify-center">
                                     {u.imageUrl ? (
                                        <img src={u.imageUrl} alt="" className="w-full h-full object-cover" />
+                                    ) : u.favicon ? (
+                                       <img src={u.favicon} alt="" className="w-10 h-10 object-contain drop-shadow-md rounded-[8px]" />
                                     ) : (
                                        <div className="w-full h-full flex items-center justify-center relative overflow-hidden">
                                           <div className="absolute inset-0 opacity-20" style={{ background: `linear-gradient(45deg, ${c}, transparent)` }} />
@@ -666,6 +693,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                     <div className="flex items-center gap-2 mb-1">
                                        <span className="px-2 py-0.5 rounded-full bg-white/5 text-[9px] font-black uppercase tracking-widest text-white/50 border border-white/5">{u.source}</span>
                                        {u.type === 'video' && <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">● LIVE / VIDEO</span>}
+                                       {u.type === 'web_link' && <span className="text-[9px] font-black uppercase tracking-widest text-[#00f2ff]">● URL</span>}
                                     </div>
                                     <p className={`text-[14px] md:text-[16px] font-black ${textPrimary} truncate tracking-tight mb-1`}>{u.title}</p>
                                     <p className={`text-[11px] md:text-[12px] font-bold ${textSecondary} line-clamp-2 leading-relaxed opacity-70`}>
@@ -1093,6 +1121,78 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
           themeColor={c} 
           themeMode={themeMode} 
         />
+      )}
+      {activeWebUrl && readerArticle && (
+        <AlphaReaderModal
+          article={readerArticle}
+          originalUrl={activeWebUrl}
+          themeColor={c}
+          themeMode={themeMode}
+          onClose={() => {
+            setActiveWebUrl(null);
+            setReaderArticle(null);
+          }}
+        />
+      )}
+
+      {readerLoading && (
+        <div className="fixed inset-0 z-[250] flex flex-col items-center justify-center bg-black/80 backdrop-blur-3xl animate-in fade-in duration-500">
+           <div className="w-20 h-20 rounded-full border-4 border-t-transparent animate-spin mb-8 shadow-[0_0_30px_rgba(0,242,255,0.3)]" style={{ borderColor: c }} />
+           <div className="flex flex-col items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[6px] text-white/40 mb-2">Alpha Neural Network</span>
+              <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic">Decodificando Internet...</h2>
+              <p className="text-[11px] font-bold text-white/50 animate-pulse tracking-wide uppercase">Extraindo Estrutura Nativa do Artigo</p>
+           </div>
+        </div>
+      )}
+
+      {/* External Redirect Confirmation Modal */}
+      {redirectUrl && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-2xl animate-in zoom-in-95 duration-300">
+           <div className={`max-w-md w-full rounded-[40px] border-[2px] p-10 flex flex-col items-center text-center shadow-2xl relative overflow-hidden ${isLight ? 'bg-white' : 'bg-[#0a0a0a]'}`}
+                style={{ borderColor: `${c}40` }}>
+              
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ background: `radial-gradient(circle at top, ${c}, transparent 70%)` }} />
+              
+              <div className="w-20 h-20 rounded-[30px] bg-white/5 flex items-center justify-center border border-white/10 mb-8 shadow-xl relative z-10">
+                 <span className="text-4xl">🌐</span>
+                 <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-orange-500 animate-ping opacity-20" />
+                 <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-[10px] font-black text-white border-2 border-white/20">!</div>
+              </div>
+
+              <h2 className={`text-2xl font-black tracking-tighter uppercase mb-4 relative z-10 ${textPrimary}`}>
+                 Sair da Plataforma?
+              </h2>
+              
+              <p className={`text-[13px] font-bold leading-relaxed mb-10 opacity-70 relative z-10 ${textPrimary}`}>
+                 O site selecionado exige uma navegação externa ou bloqueou a leitura nativa do Alpha. Deseja abrir no seu navegador padrão?
+              </p>
+
+              <div className="flex flex-col w-full gap-3 relative z-10">
+                 <button 
+                   onClick={() => {
+                      window.open(redirectUrl, '_blank', 'noopener,noreferrer');
+                      setRedirectUrl(null);
+                   }}
+                   className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-white border-none transition-all hover:scale-105 active:scale-95 shadow-lg group relative overflow-hidden"
+                   style={{ background: c }}>
+                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                    <span className="relative">Sim, Visitar Site</span>
+                 </button>
+                 
+                 <button 
+                   onClick={() => setRedirectUrl(null)}
+                   className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest bg-transparent border-[2px] transition-all hover:bg-white/5 ${textPrimary}`}
+                   style={{ borderColor: borderCol }}>
+                    Não, Voltar ao Alpha
+                 </button>
+              </div>
+
+              <div className="mt-8 opacity-20 text-[8px] font-black uppercase tracking-[4px]">
+                 Redirecionamento Seguro Shielded by Alpha
+              </div>
+           </div>
+        </div>
       )}
     </div>
   );

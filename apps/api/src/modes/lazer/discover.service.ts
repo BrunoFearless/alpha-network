@@ -11,6 +11,7 @@ export class DiscoverService {
   private readonly TMDB_KEY = process.env.TMDB_API_KEY || '';
   private readonly GOOGLE_SEARCH_KEY = process.env.GOOGLE_SEARCH_KEY || '';
   private readonly GOOGLE_SEARCH_CX = process.env.GOOGLE_SEARCH_CX || '';
+  private readonly SERPER_API_KEY = process.env.SERPER_API_KEY || '';
 
   // Cache de Emergência Estético (Imagens de Alta Qualidade de Reserva - Alpha Signature)
   private readonly FALLBACK_GALLERY = [
@@ -621,6 +622,56 @@ export class DiscoverService {
     }
   }
 
+  async searchSerperWeb(query: string) {
+    if (!this.SERPER_API_KEY) {
+      this.logger.warn('SERPER_API_KEY não configurada. A retornar fallback (Web General).');
+      return { success: true, data: await this.searchWebGeneral(query) };
+    }
+
+    try {
+      this.logger.log(`Performing Serper (Google) Web Search for: "${query}"`);
+      const url = `https://google.serper.dev/search`;
+      
+      const res = await this.fetchWithTimeout(url, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.SERPER_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ q: query, num: 5, gl: 'pt' })
+      });
+      
+      const data = await res.json();
+      
+      const webResults = (data.organic || []).map((item: any) => {
+        let faviconUrl: string | null = null;
+        try {
+           faviconUrl = `https://icons.duckduckgo.com/ip3/${new URL(item.link).hostname}.ico`;
+        } catch {}
+
+        return {
+          id: item.link,
+          type: 'web_link',
+          title: item.title,
+          description: item.snippet,
+          source: 'Google (Via Serper)',
+          url: item.link,
+          imageUrl: item.imageUrl || null,
+          favicon: faviconUrl,
+        };
+      });
+
+      return {
+        success: true,
+        data: webResults
+      };
+    } catch (e) {
+      this.logger.error(`Serper Search failed: ${e.message}`);
+      // Fallback
+      return { success: true, data: await this.searchWebGeneral(query) };
+    }
+  }
+
   async searchWebGeneral(query: string) {
     try {
       // 1. Wikipedia Search (List of titles)
@@ -686,7 +737,7 @@ export class DiscoverService {
         this.YT_KEY
           ? this.fetchWithTimeout(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query + ' noticia')}&maxResults=5&type=video&key=${this.YT_KEY}`).then(r => r.json()).catch(() => ({ items: [] }))
           : Promise.resolve({ items: [] }),
-        this.searchWebGeneral(query)
+        this.searchSerperWeb(query).then(r => r.data)
       ];
 
       if (this.TMDB_KEY) {
@@ -929,6 +980,114 @@ export class DiscoverService {
     } catch (e) {
       this.logger.error(`Error in getDetail: ${e.message}`);
       return { success: false, error: 'Failed' };
+    }
+  }
+
+  // ── MangaDex Integration (Native Reading Engine) ───────────────────────
+  private readonly MANGADEX_API = 'https://api.mangadex.org';
+
+  async searchMangaDex(title: string) {
+    try {
+      const url = `${this.MANGADEX_API}/manga?title=${encodeURIComponent(title)}&limit=10&contentRating[]=safe&contentRating[]=suggestive&includes[]=cover_art`;
+      const res = await this.fetchWithTimeout(url);
+      const data = await res.json();
+
+      return (data.data || []).map((m: any) => {
+        const coverRel = m.relationships.find((r: any) => r.type === 'cover_art');
+        const fileName = coverRel?.attributes?.fileName;
+        const imageUrl = fileName ? `https://uploads.mangadex.org/covers/${m.id}/${fileName}.256.jpg` : null;
+
+        return {
+          id: m.id,
+          title: m.attributes.title.en || m.attributes.title.romaji || Object.values(m.attributes.title)[0],
+          description: m.attributes.description.en || Object.values(m.attributes.description)[0],
+          imageUrl,
+          status: m.attributes.status,
+          year: m.attributes.year,
+        };
+      });
+    } catch (e) {
+      this.logger.error(`MangaDex search failed: ${e.message}`);
+      return [];
+    }
+  }
+
+  async getMangaChapters(mangaId: string) {
+    try {
+      let realId = mangaId;
+
+      // ── Alpha Bridge: MAL to MangaDex ──────────────────────────────────
+      // Se o ID for numérico, é um MAL ID da Jikan. Precisamos do UUID da MangaDex.
+      if (!mangaId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+         this.logger.log(`Alpha Bridge: Mapping MAL ID ${mangaId} to MangaDex...`);
+         const jikanRes = await this.fetchWithTimeout(`${this.JIKAN_API}/manga/${mangaId}`);
+         const jikanData = await jikanRes.json();
+         const title = jikanData.data?.title;
+
+         if (title) {
+            const searchMD = await this.searchMangaDex(title);
+            if (searchMD.length > 0) {
+               realId = searchMD[0].id; // Use the best match
+               this.logger.log(`Alpha Bridge: Found MangaDex UUID ${realId} for "${title}"`);
+            }
+         }
+      }
+
+      // Prioridade: pt-br, fallback: en
+      const url = `${this.MANGADEX_API}/manga/${realId}/feed?translatedLanguage[]=pt-br&translatedLanguage[]=en&order[chapter]=asc&limit=500&includeEmptyPages=0`;
+      const res = await this.fetchWithTimeout(url);
+      const data = await res.json();
+
+      // Agrupar capítulos para evitar duplicados por idioma (escolher pt-br se disponível)
+      const chapterMap = new Map<string, any>();
+
+      (data.data || []).forEach((c: any) => {
+        const nr = c.attributes.chapter;
+        if (!nr) return;
+
+        const lang = c.attributes.translatedLanguage;
+        const existing = chapterMap.get(nr);
+
+        if (!existing || (lang === 'pt-br' && existing.lang !== 'pt-br')) {
+          chapterMap.set(nr, {
+            id: c.id,
+            chapter: nr,
+            count: c.attributes.pages,
+            title: c.attributes.title || `Capítulo ${nr}`,
+            lang: lang,
+            publishAt: c.attributes.publishAt
+          });
+        }
+      });
+
+      return Array.from(chapterMap.values()).sort((a, b) => parseFloat(a.chapter) - parseFloat(b.chapter));
+    } catch (e) {
+      this.logger.error(`MangaDex feed failed: ${e.message}`);
+      return [];
+    }
+  }
+
+  async getChapterPages(chapterId: string) {
+    try {
+      const url = `${this.MANGADEX_API}/at-home/server/${chapterId}`;
+      const res = await this.fetchWithTimeout(url);
+      const data = await res.json();
+
+      const host = data.baseUrl;
+      const hash = data.chapter.hash;
+      const pageFiles = data.chapter.data; // data = original quality
+
+      const pages = pageFiles.map((file: string) => `${host}/data/${hash}/${file}`);
+
+      return {
+        success: true,
+        host,
+        hash,
+        pages
+      };
+    } catch (e) {
+      this.logger.error(`MangaDex pages failed: ${e.message}`);
+      return { success: false, error: 'Failed to fetch pages' };
     }
   }
 }

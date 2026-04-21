@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { YoutubeEmbed } from '@/components/ui/YoutubeEmbed';
 import { useAuthStore } from '@/store/auth.store';
+import { MangaReaderModal } from './MangaReaderModal';
 
 interface DetailModalProps {
   type: string;
@@ -30,6 +31,9 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
   const [relatedPage, setRelatedPage] = useState(1);
   const [hasMoreRelated, setHasMoreRelated] = useState(true);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  const [mangaChapters, setMangaChapters] = useState<any[]>([]);
+  const [loadingChapters, setLoadingChapters] = useState(false);
+  const [readingChapter, setReadingChapter] = useState<{id: string, chapter: string} | null>(null);
   const relatedEndRef = useRef<HTMLDivElement>(null);
 
   // Initial fetch for main content
@@ -52,6 +56,24 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
       finally { setLoading(false); }
     };
     fetchDetail();
+
+    if (currentType === 'manga') {
+      const fetchChapters = async () => {
+        setLoadingChapters(true);
+        try {
+          const token = (useAuthStore.getState() as any).accessToken;
+          const res = await fetch(`${API}/api/v1/lazer/discover/manga/${currentId}/chapters`, {
+            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          });
+          const json = await res.json();
+          if (Array.isArray(json)) setMangaChapters(json);
+        } catch (err) { console.error(err); }
+        finally { setLoadingChapters(false); }
+      };
+      fetchChapters();
+    } else {
+      setMangaChapters([]);
+    }
   }, [currentId, currentType, currentQ]);
 
   // Fetch More Related (Infinite Scroll)
@@ -97,6 +119,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
 
   const textPrimary = isLight ? 'text-black' : 'text-white';
   const textSecondary = isLight ? 'text-black/60' : 'text-white/60';
+  const borderCol = isLight ? `${c}40` : `${c}18`;
   const bg = isLight ? 'bg-white' : 'bg-[#0a0a0a]';
 
   if (loading) {
@@ -160,7 +183,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                   {isImage && (
                     <div className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
                        <a href={data?.imageUrl || currentId} target="_blank" download className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-3xl flex items-center justify-center text-white shadow-2xl border border-white/20 hover:bg-white/20 transition-all hover:scale-110">
-                          <span className="text-xl">⬇️</span>
+                          <span className="text-xl">⬇</span>
                        </a>
                     </div>
                   )}
@@ -234,12 +257,62 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                         onClick={() => {
                            window.dispatchEvent(new CustomEvent('alpha-open-wiki', { detail: currentId }));
                            onClose();
-                        }}
+                         }}
                         className="px-12 py-6 rounded-[32px] font-black text-white border-none shadow-[0_25px_50px_rgba(0,0,0,0.4)] transition-all hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group"
                         style={{ background: c }}>
                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
                         <span className="relative text-[13px] uppercase tracking-[4px]">Native Article 📖</span>
                      </button>
+                  )}
+                  {/* Manga Chapters Section */}
+                  {currentType === 'manga' && (
+                     <div className="mt-10 p-8 rounded-[40px] border-[1.5px] bg-white/5 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-6 duration-700" style={{ borderColor: borderCol }}>
+                        <div className="flex items-center justify-between mb-6">
+                           <div className="flex flex-col">
+                              <span className="text-[10px] font-black uppercase tracking-[3px] opacity-30">Biblioteca Nativa Alpha 🏮</span>
+                              <h3 className={`text-xl font-black ${textPrimary} uppercase`}>Capítulos Disponíveis</h3>
+                           </div>
+                           {!loadingChapters && mangaChapters.length > 0 && (
+                              <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-white/40">
+                                 {mangaChapters.length} TOTAL
+                              </div>
+                           )}
+                        </div>
+
+                        {loadingChapters ? (
+                           <div className="flex flex-col items-center justify-center py-12 gap-4">
+                              <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: `${c}40`, borderTopColor: c }} />
+                              <span className="text-[10px] font-black uppercase tracking-[4px] text-white/30 animate-pulse">Sincronizando MangaDex...</span>
+                           </div>
+                        ) : mangaChapters.length > 0 ? (
+                           <div className="max-h-[320px] overflow-y-auto pr-2 flex flex-col gap-3 custom-scrollbar">
+                              {mangaChapters.map((ch: any) => (
+                                 <div key={ch.id} className="flex items-center justify-between p-5 rounded-3xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group hover:border-white/20">
+                                    <div className="flex flex-col">
+                                       <div className="flex items-center gap-2 mb-1">
+                                          <span className={`text-[15px] font-black ${textPrimary}`}>Capítulo {ch.chapter}</span>
+                                          {ch.lang === 'pt-br' && <span className="text-[9px] px-2 py-0.5 rounded-md bg-green-500/20 text-green-400 font-bold border border-green-500/20">PT-BR</span>}
+                                       </div>
+                                       <span className="text-[12px] font-bold opacity-40 truncate max-w-[200px] md:max-w-md">{ch.title}</span>
+                                    </div>
+                                    <button 
+                                      onClick={() => setReadingChapter({ id: ch.id, chapter: ch.chapter })}
+                                      className="px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white shadow-lg transition-all hover:scale-110 active:scale-95 cursor-pointer relative overflow-hidden group/btn"
+                                      style={{ background: c }}>
+                                       <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
+                                       <span className="relative">LER AGORA</span>
+                                    </button>
+                                 </div>
+                              ))}
+                           </div>
+                        ) : (
+                           <div className="py-10 text-center opacity-30 flex flex-col items-center">
+                              <span className="text-3xl mb-4">📭</span>
+                              <p className="text-[11px] font-bold uppercase tracking-widest">Nenhum capítulo nativo encontrado</p>
+                              <p className="text-[9px] mt-2">Tente buscar o título exato no Hub</p>
+                           </div>
+                        )}
+                     </div>
                   )}
                </div>
             </div>
@@ -312,6 +385,20 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
 
         </div>
       </div>
+
+      {readingChapter && (
+        <MangaReaderModal
+          mangaId={currentId}
+          chapterId={readingChapter.id}
+          chapterNumber={readingChapter.chapter}
+          mangaTitle={data?.title || 'Mangá Alpha'}
+          onClose={() => setReadingChapter(null)}
+          onChapterChange={(id, nr) => setReadingChapter({ id, chapter: nr })}
+          chapters={mangaChapters}
+          themeColor={c}
+          themeMode={themeMode}
+        />
+      )}
     </div>
   );
 }

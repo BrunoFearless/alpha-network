@@ -55,6 +55,11 @@ export class LazerController {
     return this.discoverService.searchUniversal(query);
   }
 
+  @Get('discover/web-search')
+  searchSerperWeb(@Query('q') query: string) {
+    return this.discoverService.searchSerperWeb(query);
+  }
+
   @Get('discover/detail')
   getDetail(@Query('type') type: string, @Query('id') id: string, @Query('q') q?: string, @Query('page') page?: string) {
     return this.discoverService.getDetail(type, id, q, Number(page) || 1);
@@ -74,6 +79,23 @@ export class LazerController {
   @Get('discover/tags')
   getTagSuggestions(@Query('q') q: string) {
     return this.discoverService.getTagSuggestions(q);
+  }
+
+  // ── MangaDex Endpoints ──────────────────────────────────────────────
+  
+  @Get('discover/manga/search')
+  searchMangaDex(@Query('q') q: string) {
+    return this.discoverService.searchMangaDex(q);
+  }
+
+  @Get('discover/manga/:id/chapters')
+  getMangaChapters(@Param('id') id: string) {
+    return this.discoverService.getMangaChapters(id);
+  }
+
+  @Get('discover/manga/chapter/:id/pages')
+  getMangaPages(@Param('id') id: string) {
+    return this.discoverService.getChapterPages(id);
   }
 
   // ── Tropes ─────────────────────────────────────────────────────────
