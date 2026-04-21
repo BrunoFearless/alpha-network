@@ -178,7 +178,14 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                         <YoutubeEmbed videoId={videoId} accentColor={c} compact={false} />
                     </div>
                   ) : (
-                    <img src={data?.imageUrl || currentId} alt="" className="w-full h-auto max-h-[75vh] object-contain" />
+                    <img 
+                      src={isImage 
+                        ? `${API}/api/v1/lazer/proxy/image?url=${encodeURIComponent(data?.imageUrl || currentId)}&referer=${encodeURIComponent(data?.source === 'Danbooru' ? 'https://danbooru.donmai.us/' : 'https://www.deviantart.com/')}` 
+                        : (data?.imageUrl || currentId)
+                      } 
+                      alt="" 
+                      className="w-full h-auto max-h-[75vh] object-contain" 
+                    />
                   )}
                   {isImage && (
                     <div className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
@@ -351,7 +358,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                              {/* Optimized Skeleton + Async Image */}
                              <div className="absolute inset-0 bg-white/5 animate-pulse" />
                              <img 
-                                src={img.url} 
+                                src={`${API}/api/v1/lazer/proxy/image?url=${encodeURIComponent(img.url)}&referer=${encodeURIComponent(img.source === 'Danbooru' ? 'https://danbooru.donmai.us/' : 'https://www.deviantart.com/')}`} 
                                 alt="" 
                                 className="w-full h-auto object-cover opacity-90 group-hover:opacity-100 transition-all duration-700 group-hover:scale-110 relative z-10" 
                                 loading="lazy"

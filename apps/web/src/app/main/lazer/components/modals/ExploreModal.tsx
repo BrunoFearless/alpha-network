@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui';
@@ -128,7 +128,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
   const [showHistory, setShowHistory] = useState(false);
 
   const isWatchMode = activeCategory === '🎥 Watch Mode';
-  const isGalleryMode = activeCategory === 'Galeria 🏮';
+  const isGalleryMode = activeCategory === '🏮 Galeria ';
   const isDiscoverCategory = ['🏮 Animes', '📖 Mangás', '🎮 Jogos', '🍿 Cinema'].includes(activeCategory);
 
   // Auto-Suggest State
@@ -832,7 +832,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                    <div className="overflow-hidden bg-[#0d0d0d] aspect-auto relative">
                                        <div className="absolute inset-0 bg-white/5 animate-pulse" />
                                        <img 
-                                          src={img.url} 
+                                          src={`${API}/api/v1/lazer/proxy/image?url=${encodeURIComponent(img.url)}&referer=${encodeURIComponent(img.source === 'Danbooru' ? 'https://danbooru.donmai.us/' : 'https://www.deviantart.com/')}`} 
                                           alt="" 
                                           className="w-full h-auto object-cover transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-115 group-hover:rotate-2 group-hover:brightness-110 relative z-10" 
                                           loading="lazy"

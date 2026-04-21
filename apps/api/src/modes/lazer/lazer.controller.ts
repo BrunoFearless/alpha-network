@@ -23,6 +23,7 @@ import { ToggleRequestDTO } from './dto/toggleRequest-lazer.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SpotifyService } from './spotify.service';
 import { DiscoverService } from './discover.service';
+import { ProxyService } from './proxy.service';
 import { Public } from '../../auth/decorators/public.decorator';
 
 @Controller('lazer')
@@ -32,6 +33,7 @@ export class LazerController {
     private readonly lazerService: LazerService,
     private readonly spotifyService: SpotifyService,
     private readonly discoverService: DiscoverService,
+    private readonly proxyService: ProxyService,
   ) {}
 
   // ── Discovery ──────────────────────────────────────────────────────
@@ -272,5 +274,26 @@ export class LazerController {
   @Get('profile/:userId/playback')
   getSpotifyPlayback(@Param('userId') userId: string) {
     return this.spotifyService.getCurrentlyPlaying(userId);
+  }
+
+  // ── Alpha Shield Proxy ──────────────────────────────────────────────
+  
+  @Public()
+  @Get('proxy')
+  getProxy(@Query('target') target: string, @Res() res: Response) {
+    return this.proxyService.streamProxy(target, res);
+  }
+
+  @Public()
+  @Get('proxy/readability')
+  async getReadability(@Query('target') target: string) {
+    if (!target) return { success: false, error: 'Missing target URL' };
+    return this.proxyService.extractArticle(target);
+  }
+
+  @Public()
+  @Get('proxy/image')
+  async getProxyImage(@Query('url') url: string, @Query('referer') referer: string, @Res() res: Response) {
+    return this.proxyService.proxyImage(url, referer, res);
   }
 }
