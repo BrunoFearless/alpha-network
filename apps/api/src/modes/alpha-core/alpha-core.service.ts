@@ -39,18 +39,17 @@ export class AlphaCoreService implements OnModuleInit {
         return await this.executeGroqChat(message, history, systemPrompt);
       } catch (error) {
         console.error('❌ Alpha Core Groq Error:', error.message || error);
-        // Se falhar, tenta Gemini como fallback
       }
     }
 
     // 2. Tentar Gemini se Groq falhou ou não existe
     if (this.genAI && geminiKey) {
       try {
+        console.log('[Alpha Core] Gerando resposta via Gemini...');
         return await this.executeGeminiChat(message, history, systemPrompt, 'gemini-flash-latest');
       } catch (error) {
         console.error('❌ Alpha Core Gemini Error:', error.message || error);
         
-        // Fallback Gemini Lite
         if (error.message?.includes('503') || error.message?.includes('429')) {
           try {
             return await this.executeGeminiChat(message, history, systemPrompt, 'gemini-2.0-flash-lite');
@@ -76,22 +75,7 @@ export class AlphaCoreService implements OnModuleInit {
       { role: 'user', content: message }
     ];
 
-    const tools = [
-      {
-        type: 'function',
-        function: {
-          name: 'search_user',
-          description: 'Procura um utilizador na Alpha Network pelo seu username.',
-          parameters: {
-            type: 'object',
-            properties: {
-              username: { type: 'string', description: 'Username (ex: @bruno)' }
-            },
-            required: ['username']
-          }
-        }
-      }
-    ];
+    const tools = this.getToolDefinitions('groq');
 
     const response = await this.groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
@@ -104,22 +88,20 @@ export class AlphaCoreService implements OnModuleInit {
 
     const responseMessage = response.choices[0].message;
 
-    // Lidar com Tool Calls (Standard JSON)
     if (responseMessage.tool_calls) {
       const toolCall = responseMessage.tool_calls[0];
-      if (toolCall.function.name === 'search_user') {
-        const args = JSON.parse(toolCall.function.arguments);
-        const username = args.username.replace('@', '');
-        console.log(`[Alpha Core - Groq] Tool Search: @${username}`);
-        
-        const userData = await this.searchUserTool(username);
-        
+      const functionName = toolCall.function.name;
+      const args = JSON.parse(toolCall.function.arguments);
+      
+      const toolResult = await this.handleToolCall(functionName, args);
+      
+      if (toolResult) {
         messages.push(responseMessage);
         messages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
-          name: 'search_user',
-          content: JSON.stringify(userData)
+          name: functionName,
+          content: JSON.stringify(toolResult)
         });
 
         const secondResponse = await this.groq.chat.completions.create({
@@ -132,18 +114,17 @@ export class AlphaCoreService implements OnModuleInit {
       }
     }
 
-    // Fallback caso o modelo use o formato <function=... (hallucination comum em alguns modelos Groq)
+    // Fallback Regex para Llama hallucination
     if (responseMessage.content?.includes('<function=')) {
-      console.log('[Alpha Core - Groq] Detectado formato de função não-padrão. Corrigindo...');
       const match = responseMessage.content.match(/<function=(\w+)(.*)>/);
-      if (match && match[1] === 'search_user') {
+      if (match) {
+        const functionName = match[1];
         try {
-          const argsRaw = match[2].trim();
-          const args = JSON.parse(argsRaw);
-          const userData = await this.searchUserTool(args.username.replace('@', ''));
+          const args = JSON.parse(match[2].trim() || '{}');
+          const toolResult = await this.handleToolCall(functionName, args);
           
           messages.push({ role: 'assistant', content: responseMessage.content });
-          messages.push({ role: 'user', content: `Resultado da ferramenta: ${JSON.stringify(userData)}` });
+          messages.push({ role: 'user', content: `Resultado da ferramenta: ${JSON.stringify(toolResult)}` });
 
           const thirdResponse = await this.groq.chat.completions.create({
             model: 'llama-3.3-70b-versatile',
@@ -151,9 +132,7 @@ export class AlphaCoreService implements OnModuleInit {
             temperature: 0.7
           });
           return thirdResponse.choices[0].message.content;
-        } catch (e) {
-          console.error('Falha ao processar função customizada');
-        }
+        } catch (e) {}
       }
     }
 
@@ -163,19 +142,7 @@ export class AlphaCoreService implements OnModuleInit {
   // ─── IMPLEMENTAÇÃO GEMINI ──────────────────────────────────────────
 
   private async executeGeminiChat(message: string, history: { role: string, content: string }[], systemPrompt: string, modelName: string) {
-    const tools = [{
-      functionDeclarations: [{
-        name: 'search_user',
-        description: 'Procura um utilizador na Alpha Network pelo seu username.',
-        parameters: {
-          type: 'object',
-          properties: {
-            username: { type: 'string', description: 'Username (ex: @bruno)' }
-          },
-          required: ['username']
-        }
-      }]
-    }];
+    const tools = this.getToolDefinitions('gemini');
 
     const model = this.genAI.getGenerativeModel({ 
       model: modelName,
@@ -197,54 +164,112 @@ export class AlphaCoreService implements OnModuleInit {
     const calls = response.functionCalls();
     if (calls && calls.length > 0) {
       const call = calls[0];
-      if (call.name === 'search_user') {
-        const username = (call.args as any).username.replace('@', '');
-        const userData = await this.searchUserTool(username);
-        result = await chat.sendMessage([{
-          functionResponse: { name: 'search_user', response: { content: userData } }
-        }]);
-        response = await result.response;
-      }
+      const functionName = call.name;
+      const args = call.args as any;
+      
+      const toolResult = await this.handleToolCall(functionName, args);
+      
+      result = await chat.sendMessage([{
+        functionResponse: { name: functionName, response: { content: toolResult } }
+      }]);
+      response = await result.response;
     }
 
     return response.text();
   }
 
-  // ─── FERRAMENTAS COMUNS ────────────────────────────────────────────
+  // ─── GESTÃO DE FERRAMENTAS (TOOLS) ─────────────────────────────────
 
-  private async searchUserTool(username: string) {
-    try {
-      const profile = await this.prisma.profile.findUnique({
-        where: { username },
-        include: {
-          user: {
-            include: {
-              lazerPosts: {
-                take: 5,
-                orderBy: { createdAt: 'desc' },
-                select: { content: true, createdAt: true }
-              }
-            }
-          }
+  private getToolDefinitions(format: 'groq' | 'gemini') {
+    const defs = [
+      {
+        name: 'search_user',
+        description: 'Procura um utilizador na Alpha Network pelo seu username.',
+        parameters: {
+          type: 'object',
+          properties: { username: { type: 'string', description: 'Username (ex: @bruno)' } },
+          required: ['username']
         }
-      });
+      },
+      {
+        name: 'get_trending_tropes',
+        description: 'Obtém os temas (tropes) mais populares do momento no Modo Lazer.',
+        parameters: { type: 'object', properties: {} }
+      },
+      {
+        name: 'get_communities',
+        description: 'Lista comunidades no Modo Lazer da Alpha Network.',
+        parameters: {
+          type: 'object',
+          properties: { search: { type: 'string', description: 'Pesquisa opcional' } }
+        }
+      },
+      {
+        name: 'get_watching_now',
+        description: 'Lista o que os utilizadores estão a ver no momento (Check-ins).',
+        parameters: { type: 'object', properties: {} }
+      }
+    ];
 
-      if (!profile) return `Utilizador @${username} não encontrado.`;
+    if (format === 'gemini') return [{ functionDeclarations: defs }];
+    return defs.map(d => ({ type: 'function', function: d }));
+  }
 
-      return {
-        username: profile.username,
-        displayName: profile.displayName,
-        bio: profile.bio,
-        status: profile.status,
-        tags: profile.tags,
-        activeModes: profile.activeModes,
-        avatarUrl: profile.avatarUrl,
-        postCount: profile.user.lazerPosts.length,
-        recentPosts: profile.user.lazerPosts
-      };
+  private async handleToolCall(name: string, args: any) {
+    console.log(`[Alpha Core] Executando: ${name}`, args);
+    try {
+      if (name === 'search_user') return await this.searchUserTool(args.username?.replace('@', ''));
+      if (name === 'get_trending_tropes') return await this.getTrendingTropesTool();
+      if (name === 'get_communities') return await this.getCommunitiesTool(args.search);
+      if (name === 'get_watching_now') return await this.getWatchingNowTool();
     } catch (e) {
-      console.error('Search User Tool Error:', e);
       return 'Erro ao aceder à base de dados.';
     }
+  }
+  private async searchUserTool(username: string) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { username },
+      include: {
+        user: {
+          include: {
+            lazerPosts: { take: 5, orderBy: { createdAt: 'desc' }, select: { content: true, createdAt: true } }
+          }
+        }
+      }
+    });
+    if (!profile) return { error: `Utilizador @${username} não encontrado.` };
+    return {
+      username: profile.username,
+      displayName: profile.displayName,
+      bio: profile.bio,
+      status: profile.status,
+      tags: profile.tags,
+      activeModes: profile.activeModes,
+      recentPosts: profile.user.lazerPosts
+    };
+  }
+
+  private async getTrendingTropesTool() {
+    return await this.prisma.lazerTropeTrend.findMany({
+      take: 10,
+      orderBy: { sparklesCount: 'desc' },
+      select: { tropeId: true, sparklesCount: true, talkingCount: true }
+    });
+  }
+
+  private async getCommunitiesTool(search?: string) {
+    return await this.prisma.lazerCommunity.findMany({
+      where: search ? { name: { contains: search, mode: 'insensitive' } } : {},
+      take: 10,
+      select: { name: true, description: true, iconEmoji: true, inviteCode: true }
+    });
+  }
+
+  private async getWatchingNowTool() {
+    return await this.prisma.lazerCheckIn.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      select: { title: true, episode: true, emoji: true, createdAt: true }
+    });
   }
 }
