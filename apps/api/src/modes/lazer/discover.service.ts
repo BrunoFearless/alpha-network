@@ -644,18 +644,24 @@ export class DiscoverService {
       const data = await res.json();
       
       const webResults = (data.organic || []).map((item: any) => {
+        let link = item.link;
+        // 🏮 Alpha Domain Sanitizer
+        if (link.includes('animefire')) {
+           link = link.replace(/animefire\.(?:lat|plus|tv|net|info|io|me|online|app|vip|club|top|xyz|site|co)/g, 'animefire.cv');
+        }
+
         let faviconUrl: string | null = null;
         try {
-           faviconUrl = `https://icons.duckduckgo.com/ip3/${new URL(item.link).hostname}.ico`;
+           faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${new URL(link).hostname}`;
         } catch {}
 
         return {
-          id: item.link,
+          id: link,
           type: 'web_link',
           title: item.title,
           description: item.snippet,
           source: 'Google (Via Serper)',
-          url: item.link,
+          url: link,
           imageUrl: item.imageUrl || null,
           favicon: faviconUrl,
         };
@@ -784,20 +790,88 @@ export class DiscoverService {
         });
       }
 
-      // 4. Niches (Anime, Manga, Games)
+      // 4. Alpha Native Scan (V2 Search Priority)
+      try {
+         const nativeSearch = await this.searchNativeSources(query);
+         nativeSearch.forEach(item => results.unshift(item)); // Coloca no topo
+      } catch {}
+
+      // 5. Niches (Anime, Manga, Games)
       if (animeRes?.data) animeRes.data.forEach((i: any) => results.push({ id: i.mal_id.toString(), type: 'anime', title: i.title, imageUrl: i.images?.jpg?.image_url, source: 'Jikan' }));
       if (mangaRes?.data) mangaRes.data.forEach((i: any) => results.push({ id: i.mal_id.toString(), type: 'manga', title: i.title, imageUrl: i.images?.jpg?.image_url, source: 'Jikan' }));
       if (gamesRes?.results) gamesRes.results.forEach((i: any) => results.push({ id: i.id.toString(), type: 'game', title: i.name, imageUrl: i.background_image, source: 'RAWG' }));
 
       return {
         success: true,
-        data: results.slice(0, 24),
+        data: results.slice(0, 30), // Aumentado para 30
         wiki: wikiRes
       };
     } catch (e) {
       this.logger.error(`Universal search failed: ${e.message}`);
       return { success: false, error: 'Search failed' };
     }
+  }
+
+  /**
+   * Alpha Native Search Engine
+   * Busca em fontes diretas suportadas pela Alpha Video Bridge
+   */
+  private async searchNativeSources(query: string) {
+    const results: any[] = [];
+    try {
+       const { JSDOM } = require('jsdom');
+       
+       // Paralelizar busca em múltiplas fontes
+       const [fireHtml, tubeHtml] = await Promise.all([
+          fetch(`https://animefire.cv/pesquisar/${encodeURIComponent(query)}`).then(r => r.text()).catch(() => ''),
+          fetch(`https://www.anitube.vip/busca.php?s=${encodeURIComponent(query)}`).then(r => r.text()).catch(() => '')
+       ]);
+
+       if (fireHtml) {
+          const doc = new JSDOM(fireHtml).window.document;
+          const items = Array.from(doc.querySelectorAll('.video-block, .article-anime')).slice(0, 3);
+          items.forEach((item: any) => {
+             const a = item.querySelector('a');
+             const img = item.querySelector('img');
+             if (a) {
+                results.push({
+                   id: a.getAttribute('href'),
+                   type: 'tv',
+                   title: item.textContent.trim().split('\n')[0].trim(),
+                   imageUrl: img?.getAttribute('data-src') || img?.getAttribute('src'),
+                   favicon: 'https://animefire.cv/favicon.ico',
+                   source: 'Alpha Native (Anime Fire)',
+                   isNative: true,
+                   accentColor: '#00f2ff'
+                });
+             }
+          });
+       }
+
+       if (tubeHtml) {
+          const doc = new JSDOM(tubeHtml).window.document;
+          const items = Array.from(doc.querySelectorAll('.search_ani_nome')).slice(0, 3);
+          items.forEach((item: any) => {
+             const a = item.querySelector('a');
+             const img = item.closest('.search_ani_box')?.querySelector('img') || item.parentElement?.querySelector('img');
+             if (a) {
+                results.push({
+                   id: a.getAttribute('href'),
+                   type: 'tv',
+                   title: a.textContent.trim(),
+                   imageUrl: img?.getAttribute('src'),
+                   favicon: 'https://www.anitube.vip/favicon.ico',
+                   source: 'Alpha Native (Anitube)',
+                   isNative: true,
+                   accentColor: '#ff0055'
+                });
+             }
+          });
+       }
+    } catch (e) {
+       this.logger.error(`Native Source Search failed: ${e.message}`);
+    }
+    return results;
   }
 
   async getDetail(type: string, id: string, q?: string, page = 1) {

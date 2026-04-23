@@ -475,8 +475,8 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                 <div className="flex flex-col gap-2.5">
                   {myCommunities.length === 0 ? (
                     <p className={`text-[11px] italic opacity-50 py-2 ${textSecondary}`}>Ainda não te juntaste a nenhuma community.</p>
-                  ) : myCommunities.slice(0, 5).map((com) => (
-                    <button key={com.id} onClick={() => onCommunityClick?.(com.id)}
+                  ) : myCommunities.slice(0, 5).map((com, idx) => (
+                    <button key={`${com.id}-${idx}`} onClick={() => onCommunityClick?.(com.id)}
                       className="flex items-center gap-3 w-full bg-transparent border-none cursor-pointer text-left rounded-2xl p-2 transition-all hover:bg-black/5 dark:hover:bg-white/5">
                       <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden" 
                         style={{ background: com.iconUrl ? 'transparent' : `${com.accentColor || '#666'}20`, border: `1px solid ${com.accentColor || '#666'}40` }}>
@@ -642,7 +642,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                          </h3>
                          <div className="flex flex-col gap-4">
                             {universalResults.map((u: any, index: number) => (
-                              <div key={`${u.type}-${u.id}`} 
+                              <div key={`${u.type}-${u.id}-${index}`} 
                                 className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer shadow-xl transition-all hover:scale-[1.01] flex items-center p-3 gap-5 animate-in fade-in slide-in-from-right-8 duration-700"
                                 style={{ 
                                    background: cardBg, 
@@ -651,8 +651,17 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                 }}
                                 onClick={async () => {
                                    addToHistory(search);
-                                   if (u.type === 'web_link') {
-                                      setReaderLoading(true);
+                                    if (u.type === 'web_link') {
+                                       function sanitizeDomain(url: string): string {
+                                          if (!url) return url;
+                                          return url.replace(/animefire\.(?:lat|plus|tv|net|info|io|me|online|app|vip|club|top|xyz|site|co|link|live|re|cc|cv|to)/g, 'animefire.cv');
+                                       }
+                                       const isCine = (url: string) => ['animefire', 'anitube', 'flix2day', 'crunchyroll', 'betteranime', 'animesonline', 'gogoanime'].some(d => url.toLowerCase().includes(d));
+                                       if (isCine(u.url)) {
+                                          setActiveDetail({ type: 'tv', id: sanitizeDomain(u.url) });
+                                          return;
+                                       }
+                                       setReaderLoading(true);
                                       try {
                                         const res = await fetch(`${API}/api/v1/lazer/proxy/readability?target=${encodeURIComponent(u.url)}`);
                                         const data = await res.json();
@@ -660,7 +669,6 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                           setReaderArticle(data.article);
                                           setActiveWebUrl(u.url);
                                         } else {
-                                          // Em vez de window.open direto, mostramos o aviso de redirecionamento
                                           setRedirectUrl(u.url);
                                         }
                                       } catch (err) {
@@ -691,8 +699,14 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
 
                                  <div className="flex-1 min-w-0 pr-4">
                                     <div className="flex items-center gap-2 mb-1">
-                                       <span className="px-2 py-0.5 rounded-full bg-white/5 text-[9px] font-black uppercase tracking-widest text-white/50 border border-white/5">{u.source}</span>
-                                       {u.type === 'video' && <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">● LIVE / VIDEO</span>}
+                                       {u.isNative ? (
+                                          <span className="px-3 py-1 rounded-full bg-white/10 text-[9px] font-black uppercase tracking-[2px] text-white border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.3)] anim-glow">
+                                             🍿 Alpha Native Assistir
+                                          </span>
+                                       ) : (
+                                          <span className="px-2 py-0.5 rounded-full bg-white/5 text-[9px] font-black uppercase tracking-widest text-white/50 border border-white/5">{u.source}</span>
+                                       )}
+                                       {u.type === 'video' && !u.isNative && <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">● LIVE / VIDEO</span>}
                                        {u.type === 'web_link' && <span className="text-[9px] font-black uppercase tracking-widest text-[#00f2ff]">● URL</span>}
                                     </div>
                                     <p className={`text-[14px] md:text-[16px] font-black ${textPrimary} truncate tracking-tight mb-1`}>{u.title}</p>
@@ -710,11 +724,11 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                     <section>
                       <h3 className={`text-[12px] font-black uppercase tracking-widest mb-4 opacity-60 ${textPrimary}`}>Cidadãos da Rede</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {searchResults.map((u: any) => {
+                        {searchResults.map((u: any, index: number) => {
                             const uid = u.userId || u.id;
                             const fStatus = isFriend(uid) ? 'friend' : hasSentRequest(uid) ? 'sent' : 'none';
                             return (
-                              <div key={uid} className="flex items-center gap-4 p-4 rounded-[28px] border-[1.5px] cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+                              <div key={`${uid}-${index}`} className="flex items-center gap-4 p-4 rounded-[28px] border-[1.5px] cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
                                 style={{ background: cardBg, borderColor: borderCol, backdropFilter: 'blur(20px)' }}
                                 onClick={() => onProfileClick?.(uid)}>
                                 <Avatar src={u.avatarUrl} name={u.displayName || u.username} className="w-14 h-14 rounded-[20px] shrink-0 border-2" style={{ borderColor: c }}/>
@@ -886,7 +900,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                        {discoverData.map((item, index) => {
                           const neonColor = getNeonColor(activeCategory);
                           return (
-                            <div key={`${item.type}-${item.id}`} 
+                            <div key={`${item.type}-${item.id}-${index}`} 
                               className="relative aspect-[10/14] rounded-[28px] overflow-hidden cursor-pointer group shadow-2xl border-[2px] transition-all hover:scale-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700"
                               style={{ 
                                 borderColor: `${neonColor}40`,
@@ -953,9 +967,9 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                     <div className="flex justify-center py-20"><div className="w-10 h-10 rounded-full border-4 border-t-red-500 animate-spin"/></div>
                  ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                       {ytResults.map(v => (
-                         <div key={v.id} className="flex flex-col gap-2 cursor-pointer group" onClick={() => setActiveVideo(v)}>
-                            <div className="rounded-[20px] overflow-hidden border-[1.5px]" style={{ borderColor: '#ef444428' }}>
+                       {ytResults.map((v, index) => (
+                         <div key={`${v.id}-${index}`} className="flex flex-col gap-2 cursor-pointer group" onClick={() => setActiveVideo(v)}>
+                            <div className="rounded-[20px] overflow-hidden border-[1.5px] border-transparent" style={{ borderColor: '#ef444428' }}>
                                <YoutubeEmbed videoId={v.id} title={v.title} channel={v.channel} thumbnail={v.thumbnail} accentColor="#ef4444"/>
                             </div>
                             <p className="text-[12px] font-bold line-clamp-2 px-1 text-white group-hover:opacity-80">{v.title}</p>
@@ -982,10 +996,10 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                 <section className="mb-10">
                   <h2 className={`text-[18px] font-black tracking-tight mb-5 ${textPrimary}`}>Criadores em Destaque</h2>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-                    {creators.map(cr => {
+                    {creators.map((cr, index) => {
                       const fStatus = isFriend(cr.userId) ? 'friend' : hasSentRequest(cr.userId) ? 'sent' : 'none';
                       return (
-                        <div key={cr.userId} className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer group shadow-lg min-h-[260px]"
+                        <div key={`${cr.userId}-${index}`} className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer group shadow-lg min-h-[260px]"
                           style={{ borderColor: borderCol }} onClick={() => onProfileClick?.(cr.userId)}>
                           <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-110" 
                                style={{ backgroundImage: `url(${cr.profile?.bannerUrl || cr.avatar})`, opacity: 0.5, filter: 'blur(8px) brightness(0.7)' }}/>
@@ -1008,8 +1022,8 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                 <section>
                   <h2 className={`text-[18px] font-black tracking-tight mb-5 ${textPrimary}`}>Publicações Trendings</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {filteredPosts.map(p => (
-                      <div key={p.id} className="relative rounded-[36px] overflow-hidden cursor-pointer group shadow-xl aspect-[3/4] border-[1.5px]"
+                    {filteredPosts.map((p, index) => (
+                      <div key={`${p.id}-${index}`} className="relative rounded-[36px] overflow-hidden cursor-pointer group shadow-xl aspect-[3/4] border-[1.5px]"
                         style={{ borderColor: borderCol }} onClick={() => onPostClick?.(p.id)}>
                         <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-110">
                            {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> 
@@ -1052,7 +1066,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                    <p className={`text-[12px] italic text-center py-4 ${textSecondary}`}>Sem atividade registada na rede.</p>
                  )}
                  {displayTopRanks.map((u, i) => (
-                   <div key={u.userId} className="flex items-center gap-3 w-full cursor-pointer group" onClick={() => onProfileClick?.(u.userId)}>
+                   <div key={`${u.userId}-${i}`} className="flex items-center gap-3 w-full cursor-pointer group" onClick={() => onProfileClick?.(u.userId)}>
                      {/* Rank Badge */}
                      <span className="w-6 font-black text-[16px] text-center shrink-0 transition-transform group-hover:scale-125" 
                            style={{ color: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#b45309' : (isLight ? '#aaa' : '#666'), textShadow: i < 3 ? '0 2px 10px rgba(0,0,0,0.2)' : 'none' }}>
@@ -1087,8 +1101,8 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                 <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] ${textPrimary}`}>Trending Tropes</h3>
               </div>
               <div className="flex flex-col gap-3">
-                {TRENDING_TROPES.map(t => (
-                  <button key={t.rank} className="flex items-center gap-3 w-full bg-transparent border-none cursor-pointer text-left rounded-xl transition-transform hover:translate-x-1.5 focus:outline-none">
+                {TRENDING_TROPES.map((t, i) => (
+                  <button key={`${t.rank}-${i}`} className="flex items-center gap-3 w-full bg-transparent border-none cursor-pointer text-left rounded-xl transition-transform hover:translate-x-1.5 focus:outline-none">
                     <span className="font-black text-[15px] w-5 text-center opacity-30 text-black dark:text-white group-hover:opacity-100">{t.rank}</span>
                     <div className="flex-1">
                       <span className="block font-black text-[14px] tracking-tight mb-0.5" style={{ color: t.color }}>{t.tag}</span>

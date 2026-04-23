@@ -38,6 +38,7 @@ export class LazerController {
 
   // ── Discovery ──────────────────────────────────────────────────────
 
+  @Public()
   @Get('discover/trending')
   getTrending(@Query('category') category: string) {
     if (category === 'anime') return this.discoverService.getTrendingAnime();
@@ -47,36 +48,43 @@ export class LazerController {
     return { success: false, error: 'Invalid category' };
   }
 
+  @Public()
   @Get('discover/wiki/:title')
   getWikiArticle(@Param('title') title: string) {
     return this.discoverService.getWikipediaArticle(title);
   }
 
+  @Public()
   @Get('discover/search')
   searchUniversal(@Query('q') query: string) {
     return this.discoverService.searchUniversal(query);
   }
 
+  @Public()
   @Get('discover/web-search')
   searchSerperWeb(@Query('q') query: string) {
     return this.discoverService.searchSerperWeb(query);
   }
 
+  @Public()
   @Get('discover/detail')
   getDetail(@Query('type') type: string, @Query('id') id: string, @Query('q') q?: string, @Query('page') page?: string) {
     return this.discoverService.getDetail(type, id, q, Number(page) || 1);
   }
 
+  @Public()
   @Get('discover/reddit-trends')
   getRedditTrends(@Query('subreddit') subreddit?: string) {
     return this.discoverService.getRedditTrends(subreddit);
   }
 
+  @Public()
   @Get('discover/gallery')
   getGallery(@Query('q') q: string, @Query('page') page?: string) {
     return this.discoverService.getAestheticGallery(q, page ? parseInt(page, 10) : 1);
   }
 
+  @Public()
   @Public()
   @Get('discover/tags')
   getTagSuggestions(@Query('q') q: string) {
@@ -85,16 +93,19 @@ export class LazerController {
 
   // ── MangaDex Endpoints ──────────────────────────────────────────────
   
+  @Public()
   @Get('discover/manga/search')
   searchMangaDex(@Query('q') q: string) {
     return this.discoverService.searchMangaDex(q);
   }
 
+  @Public()
   @Get('discover/manga/:id/chapters')
   getMangaChapters(@Param('id') id: string) {
     return this.discoverService.getMangaChapters(id);
   }
 
+  @Public()
   @Get('discover/manga/chapter/:id/pages')
   getMangaPages(@Param('id') id: string) {
     return this.discoverService.getChapterPages(id);
@@ -280,8 +291,8 @@ export class LazerController {
   
   @Public()
   @Get('proxy')
-  getProxy(@Query('target') target: string, @Res() res: Response) {
-    return this.proxyService.streamProxy(target, res);
+  getProxy(@Query('target') target: string, @Res() res: Response, @Request() req: any) {
+    return this.proxyService.streamProxy(target, res, req);
   }
 
   @Public()
@@ -295,5 +306,12 @@ export class LazerController {
   @Get('proxy/image')
   async getProxyImage(@Query('url') url: string, @Query('referer') referer: string, @Res() res: Response) {
     return this.proxyService.proxyImage(url, referer, res);
+  }
+
+  @Public()
+  @Get('proxy/video')
+  async getProxyVideo(@Query('target') target: string) {
+    if (!target) return { success: false, error: 'Missing target URL' };
+    return this.proxyService.extractVideo(target);
   }
 }

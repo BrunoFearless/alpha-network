@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { YoutubeEmbed } from '@/components/ui/YoutubeEmbed';
 import { useAuthStore } from '@/store/auth.store';
 import { MangaReaderModal } from './MangaReaderModal';
+import { AnimePlayerModal } from './AnimePlayerModal';
 
 interface DetailModalProps {
   type: string;
@@ -15,10 +16,11 @@ interface DetailModalProps {
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const sanitizeUrl = (url: string) => url.includes('animefire') ? url.replace(/animefire\.(?:lat|plus|tv|net|info|io|me|online|app|vip|club|top|xyz|site|co)/g, 'animefire.cv') : url;
 
 export function DiscoverDetailModal({ type: initialType, id: initialId, q: initialQ, onClose, themeColor: c, themeMode }: DetailModalProps) {
   // Use local state to allow recursive navigation within the modal
-  const [currentId, setCurrentId] = useState(initialId);
+  const [currentId, setCurrentId] = useState(sanitizeUrl(initialId));
   const [currentType, setCurrentType] = useState(initialType);
   const [currentQ, setCurrentQ] = useState(initialQ);
   
@@ -34,6 +36,9 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
   const [mangaChapters, setMangaChapters] = useState<any[]>([]);
   const [loadingChapters, setLoadingChapters] = useState(false);
   const [readingChapter, setReadingChapter] = useState<{id: string, chapter: string} | null>(null);
+  const [watchingUrl, setWatchingUrl] = useState<string | null>(null);
+  const [nativeEpisodes, setNativeEpisodes] = useState<any[]>([]);
+  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const relatedEndRef = useRef<HTMLDivElement>(null);
 
   // Initial fetch for main content
@@ -71,10 +76,30 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
         finally { setLoadingChapters(false); }
       };
       fetchChapters();
+    } else if (currentType === 'tv' || currentType === 'movie') {
+      const fetchNativeEpisodes = async () => {
+        if (!data?.title && !currentId) return;
+        setLoadingEpisodes(true);
+        try {
+          const token = (useAuthStore.getState() as any).accessToken;
+          const res = await fetch(`${API}/api/v1/lazer/proxy/video?target=${encodeURIComponent(data?.title || currentId)}`, {
+            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          });
+          const json = await res.json();
+          if (json.success && json.video?.episodes) {
+            setNativeEpisodes(json.video.episodes);
+          }
+        } catch (err) { console.error('Alpha Video Bridge Discovery failed:', err); }
+        finally { setLoadingEpisodes(false); }
+      };
+      // Solo disparar se tivermos dados básicos
+      if (data?.title) fetchNativeEpisodes();
+      setMangaChapters([]);
     } else {
       setMangaChapters([]);
+      setNativeEpisodes([]);
     }
-  }, [currentId, currentType, currentQ]);
+  }, [currentId, currentType, currentQ, data?.title]);
 
   // Fetch More Related (Infinite Scroll)
   const fetchMoreRelated = async () => {
@@ -271,6 +296,15 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                         <span className="relative text-[13px] uppercase tracking-[4px]">Native Article 📖</span>
                      </button>
                   )}
+                  {(currentType === 'tv' || currentType === 'movie') && (
+                     <button 
+                        onClick={() => setWatchingUrl(sanitizeUrl(data?.title || currentId))}
+                        className="px-12 py-6 rounded-[32px] font-black text-white border-none shadow-[0_25px_100px_rgba(0,0,0,0.6)] transition-all hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group"
+                        style={{ background: `linear-gradient(45deg, ${c}, #8b5cf6)` }}>
+                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                        <span className="relative text-[13px] uppercase tracking-[4px]">Assistir Nativo 🍿</span>
+                     </button>
+                  )}
                   {/* Manga Chapters Section */}
                   {currentType === 'manga' && (
                      <div className="mt-10 p-8 rounded-[40px] border-[1.5px] bg-white/5 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-6 duration-700" style={{ borderColor: borderCol }}>
@@ -317,6 +351,54 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                               <span className="text-3xl mb-4">📭</span>
                               <p className="text-[11px] font-bold uppercase tracking-widest">Nenhum capítulo nativo encontrado</p>
                               <p className="text-[9px] mt-2">Tente buscar o título exato no Hub</p>
+                           </div>
+                        )}
+                     </div>
+                  )}
+
+                  {/* Alpha Native Anime Episodes (Vertical List) */}
+                  {(currentType === 'tv' || currentType === 'movie') && (
+                     <div className="mt-10 p-8 rounded-[40px] border-[1.5px] bg-white/5 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-6 duration-700" style={{ borderColor: `${c}40` }}>
+                        <div className="flex items-center justify-between mb-8">
+                           <div className="flex flex-col">
+                              <span className="text-[10px] font-black uppercase tracking-[3px] opacity-30">Alpha Cinematic Bridge 🏮</span>
+                              <h3 className={`text-xl font-black ${textPrimary} uppercase`}>Transmissões Disponíveis</h3>
+                           </div>
+                           {nativeEpisodes.length > 0 && (
+                              <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-white/40">
+                                 {nativeEpisodes.length} EPISÓDIOS
+                              </div>
+                           )}
+                        </div>
+
+                        {loadingEpisodes ? (
+                           <div className="flex flex-col items-center justify-center py-16 gap-4">
+                              <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: `${c}40`, borderTopColor: c }} />
+                              <span className="text-[10px] font-black uppercase tracking-[4px] text-white/30 animate-pulse">Sincronizando Fontes Nativas...</span>
+                           </div>
+                        ) : nativeEpisodes.length > 0 ? (
+                           <div className="max-h-[500px] overflow-y-auto pr-2 flex flex-col gap-4 custom-scrollbar">
+                              {nativeEpisodes.map((ep: any, idx: number) => (
+                                 <div key={idx} className="flex items-center justify-between p-6 rounded-3xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group hover:border-white/20">
+                                    <div className="flex flex-col flex-1 min-w-0 pr-4">
+                                       <span className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">EPISÓDIO {idx + 1}</span>
+                                       <span className={`text-[15px] font-bold ${textPrimary} truncate`}>{ep.title}</span>
+                                    </div>
+                                    <button 
+                                      onClick={() => setWatchingUrl(sanitizeUrl(ep.url))}
+                                      className="px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group/btn"
+                                      style={{ background: `linear-gradient(45deg, ${c}, #8b5cf6)` }}>
+                                       <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
+                                       <span className="relative">ASSISTIR AGORA</span>
+                                    </button>
+                                 </div>
+                              ))}
+                           </div>
+                        ) : (
+                           <div className="py-12 text-center opacity-30 flex flex-col items-center">
+                              <span className="text-4xl mb-4">📡</span>
+                              <p className="text-[11px] font-bold uppercase tracking-widest">Nenhuma transmissão direta encontrada</p>
+                              <p className="text-[9px] mt-2 max-w-[200px]">O sistema não conseguiu resolver uma rota assistível automática.</p>
                            </div>
                         )}
                      </div>
@@ -402,6 +484,16 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
           onClose={() => setReadingChapter(null)}
           onChapterChange={(id, nr) => setReadingChapter({ id, chapter: nr })}
           chapters={mangaChapters}
+          themeColor={c}
+          themeMode={themeMode}
+        />
+      )}
+
+      {watchingUrl && (
+        <AnimePlayerModal
+          initialUrl={watchingUrl}
+          animeTitle={data?.title || 'Alpha Anime'}
+          onClose={() => setWatchingUrl(null)}
           themeColor={c}
           themeMode={themeMode}
         />
