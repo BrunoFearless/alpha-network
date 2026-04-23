@@ -10,12 +10,15 @@ import { ExploreModal } from './components/modals/ExploreModal';
 import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FriendsModal } from './components/modals/FriendsModal';
 import { CommunityModal } from './components/modals/CommunityModal';
+import { useAlphaCoreStore } from '@/store/useAlphaCoreStore';
+import { AlphaCoreAvatar } from '@/components/ui/AlphaCoreAvatar';
 
 type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community';
 
 export default function LazerPage() {
   const { user: authUser, accessToken, updateUserProfile } = useAuthStore();
   const [activeView, setActiveView] = useState<ActiveView>('feed');
+  const { openChat, status: alphaStatus } = useAlphaCoreStore();
   const [isEditing, setIsEditing] = useState(false);
   const [showSavedMessage, setShowSavedMessage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -326,18 +329,16 @@ export default function LazerPage() {
             <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
           </svg>} />
 
-        {/* Center sparkle button */}
+        {/* Center Alpha Core button */}
         <button
-          onClick={() => setActiveView('feed')}
-          className="cursor-pointer border-none w-[52px] h-[52px] rounded-full flex items-center justify-center text-black mx-1 hover:scale-[1.08] transition-transform"
+          onClick={openChat}
+          className="cursor-pointer border-none w-[52px] h-[52px] rounded-full flex items-center justify-center mx-1 hover:scale-[1.15] active:scale-95 transition-all duration-300"
           style={{
-            background: `linear-gradient(135deg, ${c}ee, ${c})`,
-            boxShadow: `0 8px 24px ${c}80`,
-            border: '2px solid rgba(255,255,255,0.2)',
+            background: `linear-gradient(135deg, ${c}, ${c}88)`,
+            boxShadow: `0 8px 32px ${c}60, inset 0 0 12px rgba(255,255,255,0.4)`,
+            border: '2px solid rgba(255,255,255,0.3)',
           }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6z"/>
-          </svg>
+          <AlphaCoreAvatar size={44} state={alphaStatus} themeColor="#fff" />
         </button>
 
         {/* Notifications — badge disappears & stops pulsing when open */}

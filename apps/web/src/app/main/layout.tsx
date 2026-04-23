@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { usePathname } from 'next/navigation';
 import { Spinner } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
+import { AlphaCoreChat } from '@/components/features/alphacore/AlphaCoreChat';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -63,6 +64,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
         <main className="flex-1 overflow-y-auto min-w-0">{children}</main>
       </div>
+      <AlphaCoreChat />
     </div>
   );
 }
