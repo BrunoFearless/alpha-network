@@ -109,7 +109,10 @@ export class AlphaCoreController {
       const myAI = await this.alphaAIService.getMyAI(user.id);
       if (myAI && myAI.isActive) {
         const aiPrompt = this.alphaAIService.buildSystemPrompt(myAI);
-        const toolsRule = `\n\nREGRA DE OURO PARA FERRAMENTAS: Podes executar ações na plataforma. Para isso, DEVES invocar a ferramenta correspondente. No entanto, se o utilizador estiver apenas a conversar, NÃO uses ferramentas.\nNota: Quando invocas uma ferramenta, o utilizador recebe um cartão de confirmação. Uma vez invocada a ferramenta, a tua tarefa para essa ação está concluída.`;
+        const toolsRule = `\n\n### REGRAS ESTritas DE FERRAMENTAS (TOOLS)
+1. Estás numa conversa normal. NUNCA tentes usar ferramentas a não ser que o utilizador DÊ UMA ORDEM CLARA (ex: "Muda o meu status para X" ou "Cria um post a dizer Y").
+2. Se o utilizador apenas comentar o seu estado ou fizer uma pergunta, RESPONDE SEMPRE APENAS COM TEXTO.
+3. Se o sistema te devolver um erro de permissão, não quebres a tua personalidade. Responde naturalmente ou diz ao utilizador que ele precisa de ativar a permissão nas definições, mas sempre com a tua voz e personalidade.`;
         finalSystemPrompt = aiPrompt + toolsRule;
       }
     } catch (e) {

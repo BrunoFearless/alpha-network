@@ -131,7 +131,7 @@ function MessageContent({ content, isStreaming }: { content: string; isStreaming
           .replace(/\n\n/g, '<div style="height:8px"/>')
           .replace(/\n/g, '<br/>');
         return (
-          <span
+          <div
             key={i}
             dangerouslySetInnerHTML={{ __html: html }}
           />

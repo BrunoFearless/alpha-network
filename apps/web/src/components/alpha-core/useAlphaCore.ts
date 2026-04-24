@@ -77,13 +77,14 @@ interface GroqMessage {
 async function callAlphaProxyStreaming(
   messages: GroqMessage[],
   systemPrompt: string,
-  token: string,
   onChunk: (chunk: string) => void,
   onAction: (action: PendingAction) => void,
   onDone: () => void,
   onError: (err: string) => void,
   tools?: any[],
+  isRetry = false
 ): Promise<void> {
+  const token = (useAuthStore.getState() as any).accessToken;
   try {
     const body: any = { messages, systemPrompt };
     if (tools && tools.length > 0) body.tools = tools;
@@ -98,6 +99,12 @@ async function callAlphaProxyStreaming(
     });
 
     if (!response.ok) {
+      if (response.status === 401 && !isRetry) {
+        const refreshed = await (useAuthStore.getState() as any).refresh();
+        if (refreshed) {
+          return callAlphaProxyStreaming(messages, systemPrompt, onChunk, onAction, onDone, onError, tools, true);
+        }
+      }
       const err = await response.text();
       onError(`Erro Alpha API: ${response.status} — ${err}`);
       return;
@@ -152,9 +159,9 @@ const PLATFORM_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        value: { type: 'string', description: 'O novo nome de exibição.' },
+        displayName: { type: 'string', description: 'O novo nome de exibição.' },
       },
-      required: ['value'],
+      required: ['displayName'],
     },
   },
   {
@@ -163,9 +170,9 @@ const PLATFORM_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        value: { type: 'string', description: 'O novo texto de bio.' },
+        bio: { type: 'string', description: 'O novo texto de bio.' },
       },
-      required: ['value'],
+      required: ['bio'],
     },
   },
   {
@@ -174,9 +181,9 @@ const PLATFORM_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        value: { type: 'string', description: 'O novo status.' },
+        status: { type: 'string', description: 'O novo status.' },
       },
-      required: ['value'],
+      required: ['status'],
     },
   },
   {
@@ -185,9 +192,9 @@ const PLATFORM_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        value: { type: 'string', description: 'Cor em formato hex, ex: #a78bfa.' },
+        color: { type: 'string', description: 'Cor em formato hex, ex: #a78bfa.' },
       },
-      required: ['value'],
+      required: ['color'],
     },
   },
   {
@@ -196,9 +203,9 @@ const PLATFORM_TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        value: { type: 'string', description: 'Cor em formato hex.' },
+        color: { type: 'string', description: 'Cor em formato hex.' },
       },
-      required: ['value'],
+      required: ['color'],
     },
   },
   {
@@ -308,7 +315,6 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
     await callAlphaProxyStreaming(
       history,
       systemPrompt,
-      accessToken,
       // onChunk
       (chunk) => {
         if (abortRef.current) return;

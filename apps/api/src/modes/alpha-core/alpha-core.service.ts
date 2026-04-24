@@ -140,12 +140,12 @@ export class AlphaCoreService {
 
     const formattedMessages = [
       { role: 'system', content: systemPrompt },
-      ...messages,
+      ...messages.slice(-8), // Keep only the last 8 messages to save tokens
     ] as any[];
 
     const params: any = {
       model: DEFAULT_MODEL,
-      max_tokens: 4096,
+      max_tokens: 1024,
       messages: formattedMessages,
     };
 
@@ -178,12 +178,12 @@ export class AlphaCoreService {
 
     const formattedMessages = [
       { role: 'system', content: systemPrompt },
-      ...messages,
+      ...messages.slice(-8), // Keep only the last 8 messages to save tokens
     ] as any[];
 
     const params: any = {
       model: DEFAULT_MODEL,
-      max_tokens: 4096,
+      max_tokens: 1024,
       messages: formattedMessages,
       stream: true,
     };
