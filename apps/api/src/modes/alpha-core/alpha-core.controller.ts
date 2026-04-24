@@ -8,9 +8,9 @@ export class AlphaCoreController {
 
   @UseGuards(JwtAuthGuard)
   @Post('chat')
-  async chat(@Body() body: { message: string, history: any[], systemPrompt: string }) {
-    const { message, history, systemPrompt } = body;
-    const reply = await this.alphaCoreService.generateReply(message, history, systemPrompt);
+  async chat(@Body() body: { message: string, history: any[], systemPrompt: string, compactPrompt?: string }) {
+    const { message, history, systemPrompt, compactPrompt } = body;
+    const reply = await this.alphaCoreService.generateReply(message, history, systemPrompt, compactPrompt || systemPrompt);
     return { reply };
   }
 }

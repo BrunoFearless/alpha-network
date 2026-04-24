@@ -35,7 +35,7 @@ O feed social principal. Aqui os utilizadores publicam, comentam, reagem e inter
   - **Explorar:** Pesquisa de utilizadores e posts, categorias, criadores em destaque.
   - **Notificações:** Pedidos de amizade, reações, comentários em posts próprios.
   - **Rede:** Sugestões de amigos, lista de amigos, pedidos pendentes, Trending Tropes, Hot Discussions, Currently Watching, Active Now.
-- **Bottom Bar de navegação:** Casa, Explorar, Botão central (Alpha Core), Notificações, Rede, Avatar (vai ao próprio perfil).
+- **Bottom Bar de navegação:** Casa, Explorar, Botão central (volta ao feed), Notificações, Rede, Avatar (vai ao próprio perfil).
 
 **Como publicar:**
 1. Escreve no compositor do feed (caixa no topo)

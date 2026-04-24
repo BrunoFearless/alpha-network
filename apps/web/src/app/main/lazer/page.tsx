@@ -11,7 +11,8 @@ import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FriendsModal } from './components/modals/FriendsModal';
 import { CommunityModal } from './components/modals/CommunityModal';
 import { useAlphaCoreStore } from '@/store/useAlphaCoreStore';
-import { AlphaCoreAvatar } from '@/components/ui/AlphaCoreAvatar';
+import { AlphaCoreAvatar } from '@/components/alpha-core/AlphaCoreAvatar';
+import AlphaCoreChat from '@/components/alpha-core/AlphaCoreChat';
 
 type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community';
 
@@ -48,6 +49,23 @@ export default function LazerPage() {
         // Navigate to profile so the SpotifyCard appears immediately
         setActiveView('profile');
       });
+    }
+  }, []);
+
+  // Handle external links (e.g. from Alpha Core)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view');
+    const userId = params.get('userId');
+    const postId = params.get('post');
+    const communityId = params.get('community');
+
+    if (view === 'profile' && userId) {
+      navigateToProfile(userId);
+    } else if (postId) {
+      navigateToPost(postId);
+    } else if (communityId) {
+      navigateToCommunity(communityId);
     }
   }, []);
 
@@ -380,6 +398,15 @@ export default function LazerPage() {
               </div>}
         </button>
       </div>
+
+      {/* Alpha Core Phase 2 Integration */}
+      <AlphaCoreChat 
+        themeColor={c}
+        themeMode={themeMode}
+        currentMode="Lazer"
+        floating={true}
+        onClose={() => useAlphaCoreStore.getState().closeChat()}
+      />
     </div>
   );
 }

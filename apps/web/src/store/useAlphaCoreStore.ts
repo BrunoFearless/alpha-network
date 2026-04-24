@@ -1,33 +1,50 @@
 import { create } from 'zustand';
-import { AlphaCoreAvatarState } from '@/components/ui/AlphaCoreAvatar';
+import { persist } from 'zustand/middleware';
 
-interface Message {
-  role: 'user' | 'assistant';
+export type MessageRole = 'user' | 'assistant';
+
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
   content: string;
+  timestamp: Date;
+  imageUrl?: string;
+  isError?: boolean;
 }
+
+export type AlphaCoreStatus = 'idle' | 'thinking' | 'speaking';
 
 interface AlphaCoreState {
   isOpen: boolean;
-  messages: Message[];
-  status: AlphaCoreAvatarState;
+  messages: ChatMessage[];
+  status: AlphaCoreStatus;
   
   openChat: () => void;
   closeChat: () => void;
   toggleChat: () => void;
-  setStatus: (status: AlphaCoreAvatarState) => void;
-  addMessage: (message: Message) => void;
+  setStatus: (status: AlphaCoreStatus) => void;
+  addMessage: (message: ChatMessage) => void;
   clearMessages: () => void;
 }
 
-export const useAlphaCoreStore = create<AlphaCoreState>((set) => ({
-  isOpen: false,
-  messages: [],
-  status: 'idle',
+export const useAlphaCoreStore = create<AlphaCoreState>()(
+  persist(
+    (set) => ({
+      isOpen: false,
+      messages: [],
+      status: 'idle',
 
-  openChat: () => set({ isOpen: true }),
-  closeChat: () => set({ isOpen: false }),
-  toggleChat: () => set((state) => ({ isOpen: !state.isOpen })),
-  setStatus: (status) => set({ status }),
-  addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
-  clearMessages: () => set({ messages: [] }),
-}));
+      openChat: () => set({ isOpen: true }),
+      closeChat: () => set({ isOpen: false }),
+      toggleChat: () => set((state) => ({ isOpen: !state.isOpen })),
+      setStatus: (status) => set({ status }),
+      addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
+      clearMessages: () => set({ messages: [] }),
+    }),
+    {
+      name: 'alpha-core-storage',
+      // Only persist messages and open state
+      partialize: (state) => ({ messages: state.messages, isOpen: state.isOpen }),
+    }
+  )
+);

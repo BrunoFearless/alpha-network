@@ -4,13 +4,13 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
-export type AlphaCoreAvatarState = 'idle' | 'thinking' | 'speaking';
+type AvatarState = 'idle' | 'thinking' | 'speaking';
 
 interface AlphaCoreAvatarProps {
   size?: number;
-  state?: AlphaCoreAvatarState;
+  state?: AvatarState;
   themeColor?: string;
   className?: string;
   style?: React.CSSProperties;
@@ -200,6 +200,20 @@ export function AlphaCoreAvatar({
       {/* Inner ring — very subtle */}
       <circle cx="50" cy="50" r="22" stroke={ringInner} strokeWidth="0.5" fill="none" opacity="0.5"/>
     </svg>
+  );
+}
+
+// ── Versão compacta para mensagens no chat ────────────────────────────────────
+export function AlphaCoreAvatarSmall({
+  state = 'idle',
+  themeColor = '#a78bfa',
+}: Pick<AlphaCoreAvatarProps, 'state' | 'themeColor'>) {
+  return (
+    <AlphaCoreAvatar
+      size={32}
+      state={state}
+      themeColor={themeColor}
+    />
   );
 }
 
