@@ -32,6 +32,7 @@ export interface ChatMessage {
   reportData?: ReportData;
   toolUsed?: string;
   isError?: boolean;
+  isFromHistory?: boolean;
   // Fase 3: ações pendentes associadas a esta mensagem
   pendingActions?: PendingAction[];
 }
@@ -52,7 +53,8 @@ export type AlphaCoreCapability =
   | 'image_generation'
   | 'code_execution'
   | 'report_generation'
-  | 'platform_actions';
+  | 'platform_actions'
+  | 'ai_self_edit';
 
 export interface UseAlphaCoreOptions {
   themeColor?: string;
@@ -252,6 +254,36 @@ const PLATFORM_TOOLS = [
       required: ['postId'],
     },
   },
+  {
+    name: 'update_ai_profile',
+    description: 'Actualiza o teu próprio perfil de IA (nome, bio, tagline, status, avatar).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'O teu novo nome.' },
+        bio: { type: 'string', description: 'A tua nova bio.' },
+        tagline: { type: 'string', description: 'A tua nova frase de destaque.' },
+        status: { type: 'string', description: 'O teu novo status (ex: Online, A pensar...).' },
+        avatarUrl: { type: 'string', description: 'URL da nova imagem de avatar.' },
+        bannerColor: { type: 'string', description: 'Cor de fundo do banner em formato HEX (ex: #ff0000).' },
+      },
+    },
+  },
+  {
+    name: 'update_ai_personality',
+    description: 'Actualiza os teus traços de personalidade ou tom de voz.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        personalityTraits: { 
+          type: 'array', 
+          items: { type: 'string' },
+          description: 'Lista de traços de personalidade (ex: Engraçada, Sarcástica).' 
+        },
+        tone: { type: 'string', description: 'O teu tom de voz (ex: Casual, Formal).' },
+      },
+    },
+  },
 ];
 
 // ── Main hook ──────────────────────────────────────────────────────────────
@@ -298,6 +330,7 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
                     content: m.content,
                     timestamp: new Date(m.createdAt),
                     codeBlocks: extractCodeBlocks(m.content),
+                    isFromHistory: true,
                   }));
                   setMessages(historyMessages);
                 }
@@ -401,6 +434,15 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
         headers: { 'Authorization': `Bearer ${accessToken}` },
       });
       const data = await res.json();
+      const executionResult = data.data;
+
+      if (executionResult?.success) {
+        // Sync AI state if she edited herself
+        if (executionResult.result?.updated === 'aiProfile' || executionResult.result?.updated === 'aiPersonality') {
+          const { previousValue, updated, ...newValues } = executionResult.result;
+          setPersonalAI((prev: any) => prev ? { ...prev, ...newValues } : null);
+        }
+      }
 
       setMessages(prev => prev.map(m => {
         if (m.id !== msgId || !m.pendingActions) return m;
@@ -408,7 +450,7 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
           ...m,
           pendingActions: m.pendingActions.map(a =>
             a.actionId === actionRecordId
-              ? { ...a, status: data.success ? 'executed' : 'failed' }
+              ? { ...a, status: executionResult?.success ? 'executed' : 'failed' }
               : a
           ),
         };

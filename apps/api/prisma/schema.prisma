@@ -671,6 +671,7 @@ model AlphaCorePermission {
   canDeletePosts    Boolean  @default(false)
   canManageFriends  Boolean  @default(false)
   canEditTheme      Boolean  @default(false)
+  canEditAI         Boolean  @default(false)
   grantedAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

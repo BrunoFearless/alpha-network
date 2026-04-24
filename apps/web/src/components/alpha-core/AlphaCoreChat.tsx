@@ -159,6 +159,7 @@ const PERM_LABELS: Record<string, { label: string; desc: string }> = {
   canCreatePosts: { label: 'Criar Posts', desc: 'Publicar no feed Lazer' },
   canDeletePosts: { label: 'Apagar Posts', desc: 'Remover publicações' },
   canManageFriends: { label: 'Gerir Amigos', desc: 'Enviar pedidos de amizade' },
+  canEditAI: { label: 'Auto-Edição da IA', desc: 'Permitir que a IA mude o próprio perfil' },
 };
 
 function PermissionsPanel({ themeColor, token, onClose }: { themeColor: string; token: string; onClose: () => void }) {
@@ -461,7 +462,7 @@ export function AlphaCoreChat({
     <>
       <style>{`
         @keyframes ac-cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        @keyframes ac-msg-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+        @keyframes ac-msg-in { from{opacity:0} to{opacity:1} }
         @keyframes ac-thinking-dot {
           0%,80%,100%{transform:scale(0.6);opacity:0.3}
           40%{transform:scale(1);opacity:1}
@@ -609,7 +610,7 @@ export function AlphaCoreChat({
               className="ac-user-select"
               style={{
                 flex: 1, overflowY: 'auto', padding: '16px 14px',
-                display: 'flex', flexDirection: 'column', gap: 12,
+                display: 'flex', flexDirection: 'column',
               }}>
  
                {/* Loading History state */}
@@ -673,62 +674,70 @@ export function AlphaCoreChat({
 
               {/* Message list */}
               {messages.map((msg) => (
-                <div key={msg.id} className="ac-msg-animate" style={{
-                  display: 'flex',
-                  flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                  gap: 8, alignItems: 'flex-end',
-                }}>
-                  {/* Avatar */}
-                  <div style={{ flexShrink: 0, marginBottom: 2 }}>
-                    {msg.role === 'assistant' ? (
-                      personalAI?.avatarUrl ? (
-                        <div style={{
-                          width: 26, height: 26, borderRadius: '50%',
-                          background: `url(${personalAI.avatarUrl}) center/cover`,
-                          border: `1px solid ${c}30`
-                        }}/>
-                      ) : (
-                        <AlphaCoreAvatar size={26} state="idle" themeColor={c}/>
-                      )
-                    ) : (
-                      <Avatar
-                        src={user?.profile?.avatarUrl}
-                        name={user?.profile?.displayName || user?.profile?.username || 'U'}
-                        style={{ width: 26, height: 26, borderRadius: '50%' }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Bubble */}
-                  <div style={{
-                    maxWidth: '82%',
-                    padding: msg.role === 'assistant' ? '10px 13px' : '9px 13px',
-                    borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    background: msg.role === 'user' ? msgUserBg : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
-                    border: msg.role === 'user'
-                      ? `1px solid ${msgUserBorder}`
-                      : `1px solid ${isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)'}`,
-                    color: msg.isError ? '#f87171' : textPrimary,
-                    wordBreak: 'break-word',
-                    overflowWrap: 'anywhere',
-                  }}>
-                    <MessageContent content={msg.content}/>
-                    {/* Pending action cards */}
-                    {msg.role === 'assistant' && msg.pendingActions?.map(act => (
-                      <ActionCard
-                        key={act.actionId}
-                        msgId={msg.id}
-                        action={act}
-                        themeColor={c}
-                        onConfirm={confirmAction}
-                        onReject={rejectAction}
-                      />
-                    ))}
-                    <div style={{
-                      fontSize: 10, color: textSecondary,
-                      marginTop: 5, textAlign: msg.role === 'user' ? 'right' : 'left',
+                <div key={msg.id} style={{ display: 'block', width: '100%', marginBottom: 18 }}>
+                  <div 
+                    className={msg.isFromHistory ? "" : "ac-msg-animate"} 
+                    style={{
+                      display: 'flex',
+                      width: '100%',
+                      flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                      gap: 10, alignItems: 'flex-end',
+                      flexShrink: 0,
+                      position: 'relative',
                     }}>
-                      {msg.timestamp.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                    {/* Avatar */}
+                    <div style={{ flexShrink: 0, marginBottom: 2 }}>
+                      {msg.role === 'assistant' ? (
+                        personalAI?.avatarUrl ? (
+                          <div style={{
+                            width: 26, height: 26, borderRadius: '50%',
+                            background: `url(${personalAI.avatarUrl}) center/cover`,
+                            border: `1px solid ${c}30`
+                          }}/>
+                        ) : (
+                          <AlphaCoreAvatar size={26} state="idle" themeColor={c}/>
+                        )
+                      ) : (
+                        <Avatar
+                          src={user?.profile?.avatarUrl}
+                          name={user?.profile?.displayName || user?.profile?.username || 'U'}
+                          style={{ width: 26, height: 26, borderRadius: '50%' }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Bubble */}
+                    <div style={{
+                      maxWidth: '82%',
+                      padding: msg.role === 'assistant' ? '10px 13px' : '9px 13px',
+                      borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                      background: msg.role === 'user' ? msgUserBg : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
+                      border: msg.role === 'user'
+                        ? `1px solid ${msgUserBorder}`
+                        : `1px solid ${isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)'}`,
+                      color: msg.isError ? '#f87171' : textPrimary,
+                      wordBreak: 'break-word',
+                      overflowWrap: 'anywhere',
+                      boxSizing: 'border-box',
+                    }}>
+                      <MessageContent content={msg.content}/>
+                      {/* Pending action cards */}
+                      {msg.role === 'assistant' && msg.pendingActions?.map(act => (
+                        <ActionCard
+                          key={act.actionId}
+                          msgId={msg.id}
+                          action={act}
+                          themeColor={c}
+                          onConfirm={confirmAction}
+                          onReject={rejectAction}
+                        />
+                      ))}
+                      <div style={{
+                        fontSize: 10, color: textSecondary,
+                        marginTop: 5, textAlign: msg.role === 'user' ? 'right' : 'left',
+                      }}>
+                        {msg.timestamp.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -736,7 +745,10 @@ export function AlphaCoreChat({
 
               {/* Streaming message */}
               {isStreaming && streamingContent && (
-                <div className="ac-msg-animate" style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <div className="ac-msg-animate" style={{ 
+                  display: 'flex', gap: 10, alignItems: 'flex-end',
+                  width: '100%', marginBottom: 16, flexShrink: 0
+                }}>
                   {personalAI?.avatarUrl ? (
                     <div style={{
                       width: 26, height: 26, borderRadius: '50%', flexShrink: 0, marginBottom: 2,

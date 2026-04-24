@@ -28,6 +28,7 @@ export interface PermissionMap {
   canDeletePosts: boolean;
   canManageFriends: boolean;
   canEditTheme: boolean;
+  canEditAI: boolean;
 }
 
 export const ALLOWED_ACTIONS: ActionDefinition[] = [
@@ -109,6 +110,22 @@ export const ALLOWED_ACTIONS: ActionDefinition[] = [
     description: 'Muda a fonte, efeito e cor do nome no perfil',
     requiredPermission: 'canEditTheme',
     riskLevel: 'low',
+    reversible: true,
+  },
+  {
+    id: 'update_ai_profile',
+    label: 'Editar Perfil da IA',
+    description: 'Actualiza os teus próprios dados (nome, bio, tagline, status)',
+    requiredPermission: 'canEditAI',
+    riskLevel: 'low',
+    reversible: true,
+  },
+  {
+    id: 'update_ai_personality',
+    label: 'Editar Personalidade da IA',
+    description: 'Actualiza os teus traços de personalidade e tom',
+    requiredPermission: 'canEditAI',
+    riskLevel: 'medium',
     reversible: true,
   },
 ];
@@ -208,10 +225,10 @@ export class AlphaCoreService {
       // Look for imperative patterns like "muda a bio", "altera o nome", "publica um post"
       // using word boundaries (\b) to avoid matching "mudaste", "alterado", etc.
       const actionPatterns = [
-        /\b(muda|altera|actualiza|define|set|update|troca)\b.+\b(bio|nome|status|cor|tema|banner|display)\b/i,
-        /\b(publica|cria|faz|escreve)\b.+\b(post|publicação|mensagem)\b/i,
-        /\b(adiciona|envia|pede|remove|desfaz|elimina)\b.+\b(amigo|amizade|pedido|post|publicação)\b/i,
-        /^\b(muda|altera|publica|cria|envia|pede|remove|apaga|delete)\b /i
+        /\b(muda|altera|actualiza|define|set|update|troca|personaliza)\b.*\b(bio|nome|status|cor|tema|banner|display|estilo)\b/i,
+        /\b(publica|cria|faz|escreve)\b.*\b(post|publicação|mensagem|recordação)\b/i,
+        /\b(adiciona|envia|pede|remove|desfaz|elimina|apaga|delete)\b.*\b(amigo|amizade|pedido|post|publicação)\b/i,
+        /^(muda|altera|publica|cria|envia|pede|remove|apaga|delete)\b/i
       ];
       
       const seemsLikeAction = !isConversational && actionPatterns.some(regex => regex.test(lastUserMsg));
@@ -294,6 +311,7 @@ export class AlphaCoreService {
   // ── Permissions ─────────────────────────────────────────────────────────
 
   async getPermissions(userId: string): Promise<PermissionMap> {
+    // @ts-ignore
     const perms = await this.prisma.alphaCorePermission.findUnique({
       where: { userId },
     });
@@ -305,15 +323,17 @@ export class AlphaCoreService {
         canDeletePosts: false,
         canManageFriends: false,
         canEditTheme: false,
+        canEditAI: false,
       };
     }
 
     return {
-      canEditProfile: perms.canEditProfile,
-      canCreatePosts: perms.canCreatePosts,
-      canDeletePosts: perms.canDeletePosts,
-      canManageFriends: perms.canManageFriends,
-      canEditTheme: perms.canEditTheme,
+      canEditProfile: (perms as any).canEditProfile,
+      canCreatePosts: (perms as any).canCreatePosts,
+      canDeletePosts: (perms as any).canDeletePosts,
+      canManageFriends: (perms as any).canManageFriends,
+      canEditTheme: (perms as any).canEditTheme,
+      canEditAI: (perms as any).canEditAI,
     };
   }
 
@@ -321,6 +341,7 @@ export class AlphaCoreService {
     userId: string,
     permissions: Partial<PermissionMap>,
   ) {
+    // @ts-ignore
     return this.prisma.alphaCorePermission.upsert({
       where: { userId },
       create: { userId, ...permissions },
@@ -338,6 +359,8 @@ export class AlphaCoreService {
         canDeletePosts: false,
         canManageFriends: false,
         canEditTheme: false,
+        // @ts-ignore
+        canEditAI: false,
       },
       update: {
         canEditProfile: false,
@@ -345,6 +368,8 @@ export class AlphaCoreService {
         canDeletePosts: false,
         canManageFriends: false,
         canEditTheme: false,
+        // @ts-ignore
+        canEditAI: false,
         updatedAt: new Date(),
       },
     });
@@ -608,6 +633,35 @@ export class AlphaCoreService {
 
         await this.prisma.friendship.delete({ where: { id: friendship.id } });
         return { deleted: 'friendship', friendId: toUserId };
+      }
+
+      case 'update_ai_profile': {
+        const updateData: any = {};
+        // Only update if value is provided and not empty
+        if (payload.name) updateData.name = payload.name;
+        if (payload.bio) updateData.bio = payload.bio;
+        if (payload.tagline) updateData.tagline = payload.tagline;
+        if (payload.status) updateData.status = payload.status;
+        if (payload.avatarUrl) updateData.avatarUrl = payload.avatarUrl;
+        if (payload.bannerColor) updateData.bannerColor = payload.bannerColor;
+
+        if (Object.keys(updateData).length === 0) throw new BadRequestException('Nenhum dado para atualizar.');
+
+        const prev = await this.prisma.alphaAI.findUnique({ where: { userId } });
+        await this.prisma.alphaAI.update({ where: { userId }, data: updateData });
+        return { updated: 'aiProfile', ...updateData, previousValue: prev };
+      }
+
+      case 'update_ai_personality': {
+        const updateData: any = {};
+        if (payload.personalityTraits) updateData.personalityTraits = payload.personalityTraits;
+        if (payload.tone) updateData.tone = payload.tone;
+
+        if (Object.keys(updateData).length === 0) throw new BadRequestException('Nenhum dado para atualizar.');
+
+        const prev = await this.prisma.alphaAI.findUnique({ where: { userId } });
+        await this.prisma.alphaAI.update({ where: { userId }, data: updateData });
+        return { updated: 'aiPersonality', ...updateData, previousValue: prev };
       }
 
       default:

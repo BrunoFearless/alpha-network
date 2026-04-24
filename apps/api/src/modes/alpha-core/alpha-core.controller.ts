@@ -59,6 +59,10 @@ class UpdatePermissionsDto {
   @IsBoolean()
   @IsOptional()
   canEditTheme?: boolean;
+ 
+  @IsBoolean()
+  @IsOptional()
+  canEditAI?: boolean;
 }
 
 // ── Controller ─────────────────────────────────────────────────────────────
