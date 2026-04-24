@@ -721,6 +721,7 @@ model AlphaAI {
   memoryEnabled      Boolean  @default(true)
   isPublic           Boolean  @default(false)
   isActive           Boolean  @default(true)
+  messages           AlphaAiMessage[]
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -728,4 +729,17 @@ model AlphaAI {
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("alpha_ais")
+}
+
+model AlphaAiMessage {
+  id        String   @id @default(uuid())
+  aiId      String
+  role      String   // "user" | "assistant"
+  content   String
+  createdAt DateTime @default(now())
+
+  ai        AlphaAI  @relation(fields: [aiId], references: [id], onDelete: Cascade)
+
+  @@index([aiId, createdAt])
+  @@map("alpha_ai_messages")
 }

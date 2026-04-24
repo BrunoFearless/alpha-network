@@ -189,6 +189,24 @@ export class AlphaAIController {
     return { success: true, data: ais };
   }
 
+  // ── Histórico de Chat (Fase 4) ──────────────────────────────────────────
+
+  /** GET /api/v1/alpha/ai/history — Obter histórico de chat */
+  @Get('history')
+  @UseGuards(JwtAuthGuard)
+  async getHistory(@CurrentUser() user: { id: string }, @Query('limit') limit?: string) {
+    const history = await this.alphaAIService.getChatHistory(user.id, limit ? parseInt(limit, 10) : 50);
+    return { success: true, data: history };
+  }
+
+  /** DELETE /api/v1/alpha/ai/history — Limpar histórico */
+  @Delete('history')
+  @UseGuards(JwtAuthGuard)
+  async clearHistory(@CurrentUser() user: { id: string }) {
+    await this.alphaAIService.clearChatHistory(user.id);
+    return { success: true, message: 'Histórico de chat limpo.' };
+  }
+
   /** GET /api/v1/alpha/ai/:botname — Perfil público de uma IA */
   @Get(':botname')
   async getPublicAI(@Param('botname') botname: string) {

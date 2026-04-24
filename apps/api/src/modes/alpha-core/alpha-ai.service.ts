@@ -341,7 +341,7 @@ ${ai.status ? `Status actual: "${ai.status}"` : ''}`);
     }
 
     // Reserved names
-    const reserved = ['alpha', 'alphacore', 'admin', 'system', 'bot', 'alphanetwork', 'support'];
+    const reserved = ['alpha', 'alphacore', 'admin', 'system', 'bot', 'alphanetwork', 'support', 'history', 'me', 'discover'];
     if (reserved.includes(clean)) {
       throw new BadRequestException(`"${botname}" é um nome reservado.`);
     }
@@ -364,6 +364,55 @@ ${ai.status ? `Status actual: "${ai.status}"` : ''}`);
       },
       take: limit,
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // ── Chat Memory (Fase 4) ──────────────────────────────────────────────────
+
+  async getChatHistory(userId: string, limit = 50) {
+    const ai = await this.prisma.alphaAI.findUnique({ where: { userId } });
+    if (!ai) return [];
+
+    // @ts-ignore - Prisma property exists at runtime but types are out of sync
+    return this.prisma.alphaAiMessage.findMany({
+      where: { aiId: ai.id },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    }).then(msgs => msgs.reverse());
+  }
+
+  async saveMessage(userId: string, role: 'user' | 'assistant', content: string) {
+    const ai = await this.prisma.alphaAI.findUnique({ where: { userId } });
+    if (!ai || !ai.memoryEnabled) return null;
+
+    // Check if the last message in DB is exactly the same to avoid duplicates
+    // @ts-ignore
+    const lastMsg = await this.prisma.alphaAiMessage.findFirst({
+      where: { aiId: ai.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (lastMsg && lastMsg.role === role && lastMsg.content === content) {
+      return lastMsg;
+    }
+
+    // @ts-ignore
+    return this.prisma.alphaAiMessage.create({
+      data: {
+        aiId: ai.id,
+        role,
+        content,
+      },
+    });
+  }
+
+  async clearChatHistory(userId: string) {
+    const ai = await this.prisma.alphaAI.findUnique({ where: { userId } });
+    if (!ai) throw new NotFoundException('IA não encontrada.');
+
+    // @ts-ignore
+    return this.prisma.alphaAiMessage.deleteMany({
+      where: { aiId: ai.id },
     });
   }
 

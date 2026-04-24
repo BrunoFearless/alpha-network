@@ -103,21 +103,31 @@ export class AlphaCoreController {
     res.flushHeaders();
 
     let finalSystemPrompt = dto.systemPrompt;
+    let isPersonalAI = false;
     
     // Check if user has a Personal AI to override Alpha Core
     try {
       const myAI = await this.alphaAIService.getMyAI(user.id);
       if (myAI && myAI.isActive) {
+        isPersonalAI = true;
         const aiPrompt = this.alphaAIService.buildSystemPrompt(myAI);
         const toolsRule = `\n\n### REGRAS ESTritas DE FERRAMENTAS (TOOLS)
 1. Estás numa conversa normal. NUNCA tentes usar ferramentas a não ser que o utilizador DÊ UMA ORDEM CLARA (ex: "Muda o meu status para X" ou "Cria um post a dizer Y").
 2. Se o utilizador apenas comentar o seu estado ou fizer uma pergunta, RESPONDE SEMPRE APENAS COM TEXTO.
 3. Se o sistema te devolver um erro de permissão, não quebres a tua personalidade. Responde naturalmente ou diz ao utilizador que ele precisa de ativar a permissão nas definições, mas sempre com a tua voz e personalidade.`;
         finalSystemPrompt = aiPrompt + toolsRule;
+
+        // Save the user's last message to history
+        const lastUserMsg = dto.messages[dto.messages.length - 1];
+        if (lastUserMsg && lastUserMsg.role === 'user') {
+          await this.alphaAIService.saveMessage(user.id, 'user', lastUserMsg.content);
+        }
       }
     } catch (e) {
-      console.error('[AlphaCoreController] Erro ao buscar IA pessoal:', e);
+      console.error('[AlphaCoreController] Erro ao buscar/salvar IA pessoal:', e);
     }
+
+    let assistantContent = '';
 
     try {
       for await (const event of this.alphaCoreService.chatStream(
@@ -127,11 +137,18 @@ export class AlphaCoreController {
         dto.tools,
       )) {
         if (event.type === 'text') {
+          assistantContent += event.text;
           res.write(`data: ${JSON.stringify({ text: event.text })}\n\n`);
         } else if (event.type === 'action') {
           res.write(`data: ${JSON.stringify({ action: event.action })}\n\n`);
         }
       }
+
+      // Save assistant's reply to history
+      if (isPersonalAI && assistantContent) {
+        await this.alphaAIService.saveMessage(user.id, 'assistant', assistantContent);
+      }
+
       res.write('data: [DONE]\n\n');
     } catch (e: any) {
       console.error('[AlphaCoreController] Stream error:', e);

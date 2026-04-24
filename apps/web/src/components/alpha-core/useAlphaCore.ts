@@ -262,6 +262,7 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [personalAI, setPersonalAI] = useState<any>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const abortRef = useRef<boolean>(false);
 
   const capabilities = options.capabilities ?? ['chat'];
@@ -274,14 +275,40 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
 
   useEffect(() => {
     if (accessToken) {
+      // 1. Fetch Personal AI Profile
+      setIsLoadingHistory(true);
       fetch(`${API_BASE}/alpha/ai/me`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       })
         .then(r => r.ok ? r.json() : null)
         .then(d => {
-          if (d?.data?.isActive) setPersonalAI(d.data);
+          if (d?.data?.isActive) {
+            setPersonalAI(d.data);
+            
+            // 2. Fetch Chat History if personal AI is active
+            fetch(`${API_BASE}/alpha/ai/history`, {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            })
+              .then(hr => hr.ok ? hr.json() : null)
+              .then(hd => {
+                if (hd?.success && Array.isArray(hd.data)) {
+                  const historyMessages: ChatMessage[] = hd.data.map((m: any) => ({
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    timestamp: new Date(m.createdAt),
+                    codeBlocks: extractCodeBlocks(m.content),
+                  }));
+                  setMessages(historyMessages);
+                }
+              })
+              .catch(err => console.error('[useAlphaCore] Erro ao carregar histórico:', err))
+              .finally(() => setIsLoadingHistory(false));
+          } else {
+            setIsLoadingHistory(false);
+          }
         })
-        .catch(() => {});
+        .catch(() => setIsLoadingHistory(false));
     }
   }, [accessToken]);
 
@@ -439,11 +466,22 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
     setIsStreaming(false);
   }, [streamingContent]);
 
-  const clearHistory = useCallback(() => {
+  const clearHistory = useCallback(async () => {
     setMessages([]);
     setStreamingContent('');
     setIsStreaming(false);
-  }, []);
+
+    if (accessToken) {
+      try {
+        await fetch(`${API_BASE}/alpha/ai/history`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+      } catch (err) {
+        console.error('[useAlphaCore] Erro ao limpar histórico remoto:', err);
+      }
+    }
+  }, [accessToken]);
 
   const sendQuickPrompt = useCallback((prompt: string) => {
     sendMessage(prompt);
@@ -454,6 +492,7 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
     isStreaming,
     streamingContent,
     personalAI,
+    isLoadingHistory,
     sendMessage,
     stopStreaming,
     clearHistory,

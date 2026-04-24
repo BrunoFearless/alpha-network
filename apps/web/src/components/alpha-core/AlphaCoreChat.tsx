@@ -377,6 +377,7 @@ export function AlphaCoreChat({
     streamingContent,
     isStreaming,
     personalAI,
+    isLoadingHistory,
     sendMessage,
     stopStreaming,
     clearHistory,
@@ -399,8 +400,8 @@ export function AlphaCoreChat({
 
   // Hide quick prompts when first message is sent
   useEffect(() => {
-    if (messages.length > 0) setShowQuickPrompts(false);
-  }, [messages.length]);
+    if (messages.length > 0 || isLoadingHistory) setShowQuickPrompts(false);
+  }, [messages.length, isLoadingHistory]);
 
   const handleSend = useCallback(() => {
     const text = input.trim();
@@ -465,6 +466,7 @@ export function AlphaCoreChat({
           0%,80%,100%{transform:scale(0.6);opacity:0.3}
           40%{transform:scale(1);opacity:1}
         }
+        @keyframes ac-spin { to { transform: rotate(360deg); } }
         .ac-msg-animate { animation: ac-msg-in 0.25s ease forwards; }
         .ac-user-select::-webkit-scrollbar { width: 4px; }
         .ac-user-select::-webkit-scrollbar-track { background: transparent; }
@@ -609,9 +611,21 @@ export function AlphaCoreChat({
                 flex: 1, overflowY: 'auto', padding: '16px 14px',
                 display: 'flex', flexDirection: 'column', gap: 12,
               }}>
+ 
+               {/* Loading History state */}
+               {isLoadingHistory && (
+                 <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
+                   <div style={{
+                     width: 20, height: 20, borderRadius: '50%',
+                     border: `2px solid ${c}30`,
+                     borderTopColor: c,
+                     animation: 'ac-spin 0.8s linear infinite',
+                   }}/>
+                 </div>
+               )}
 
               {/* Welcome state */}
-              {messages.length === 0 && !isStreaming && (
+              {messages.length === 0 && !isStreaming && !isLoadingHistory && (
                 <div style={{ textAlign: 'center', padding: '24px 16px 8px' }}>
                   {personalAI?.avatarUrl ? (
                     <div style={{
