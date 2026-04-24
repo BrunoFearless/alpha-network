@@ -313,7 +313,6 @@ R: Avatar: 8MB. Banner: 15MB. Formatos suportados: JPG, PNG, GIF, WebP, MP4, Web
 - **Em desenvolvimento activo:** A plataforma cresce constantemente com novas funcionalidades.
 `;
 
-// Versão resumida para contextos com tokens limitados
 export const ALPHA_NETWORK_KNOWLEDGE_COMPACT = `
 Alpha Network: rede social para comunidades anime/manga. Modos: Lazer (feed social, posts, comentários/Ecos, amigos), Community (servidores tipo Discord), Creator (artigos), Developer (código colaborativo), Bots.
 Stack: Next.js 14 + NestJS + Prisma + PostgreSQL. Auth: JWT + Google OAuth.

@@ -8,6 +8,7 @@ const MODES = [
   { id: 'creator',   label: 'Criador',    icon: '🎨', href: '/main/creator',   color: '#A855F7', description: 'Criação & Arte' },
   { id: 'developer', label: 'Developer',  icon: '⚙️', href: '/main/developer', color: '#0EA5E9', description: 'Dev & Código' },
   { id: 'community', label: 'Comunidade', icon: '👥', href: '/main/community', color: '#F97316', description: 'Servidores & Chat' },
+  { id: 'alpha-ai',  label: 'Minha IA',   icon: '✨', href: '/main/alpha-ai',  color: '#A78BFA', description: 'Personalizar IA' },
   { id: 'bots',      label: 'Bots',       icon: '🤖', href: '/main/bots',      color: '#EC4899', description: 'Automação IA' },
 ];
 
@@ -49,7 +50,7 @@ export function Sidebar({ activeModes = [], collapsed = false }: SidebarProps) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', padding: collapsed ? '12px 8px' : '12px 12px', overflowY: 'auto' }}>
         {MODES.map(mode => {
           const isActive = pathname.startsWith(mode.href);
-          const isEnabled = activeModes.includes(mode.id);
+          const isEnabled = mode.id === 'alpha-ai' || activeModes.includes(mode.id);
           const isDisabled = !isEnabled;
 
           return (

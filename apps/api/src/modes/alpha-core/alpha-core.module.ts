@@ -1,11 +1,19 @@
+// ════════════════════════════════════════════════════════════════════════════
+// apps/api/src/modes/alpha-core/alpha-core.module.ts
+// ════════════════════════════════════════════════════════════════════════════
+
 import { Module } from '@nestjs/common';
-import { AlphaCoreService } from './alpha-core.service';
 import { AlphaCoreController } from './alpha-core.controller';
-import { PrismaService } from '../../prisma.service';
+import { AlphaCoreService } from './alpha-core.service';
+import { AlphaAIController } from './alpha-ai.controller';
+import { AlphaAIService } from './alpha-ai.service';
+import { UsersModule } from '../../users/users.module';
+import { AuthModule } from '../../auth/auth.module';
 
 @Module({
-  controllers: [AlphaCoreController],
-  providers: [AlphaCoreService, PrismaService],
-  exports: [AlphaCoreService],
+  imports: [UsersModule, AuthModule],
+  controllers: [AlphaCoreController, AlphaAIController],
+  providers: [AlphaCoreService, AlphaAIService],
+  exports: [AlphaCoreService, AlphaAIService],
 })
 export class AlphaCoreModule {}

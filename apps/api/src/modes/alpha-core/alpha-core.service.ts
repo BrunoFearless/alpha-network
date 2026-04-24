@@ -1,349 +1,617 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../prisma.service';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Groq } from 'groq-sdk';
+// ════════════════════════════════════════════════════════════════════════════
+// apps/api/src/modes/alpha-core/alpha-core.service.ts
+// ════════════════════════════════════════════════════════════════════════════
+
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import Groq from 'groq-sdk';
+
+// ── Action definitions ─────────────────────────────────────────────────────
+
+export interface ActionDefinition {
+  id: string;
+  label: string;
+  description: string;
+  requiredPermission: keyof PermissionMap;
+  riskLevel: 'low' | 'medium' | 'high';
+  reversible: boolean;
+}
+
+export interface PermissionMap {
+  canEditProfile: boolean;
+  canCreatePosts: boolean;
+  canDeletePosts: boolean;
+  canManageFriends: boolean;
+  canEditTheme: boolean;
+}
+
+export const ALLOWED_ACTIONS: ActionDefinition[] = [
+  {
+    id: 'update_display_name',
+    label: 'Alterar nome de exibição',
+    description: 'Muda o teu displayName no perfil',
+    requiredPermission: 'canEditProfile',
+    riskLevel: 'low',
+    reversible: true,
+  },
+  {
+    id: 'update_bio',
+    label: 'Actualizar bio',
+    description: 'Actualiza a tua biografia no perfil',
+    requiredPermission: 'canEditProfile',
+    riskLevel: 'low',
+    reversible: true,
+  },
+  {
+    id: 'update_status',
+    label: 'Alterar status',
+    description: 'Muda o teu status atual',
+    requiredPermission: 'canEditProfile',
+    riskLevel: 'low',
+    reversible: true,
+  },
+  {
+    id: 'update_theme_color',
+    label: 'Alterar cor do tema',
+    description: 'Muda a cor de destaque do teu perfil no Lazer',
+    requiredPermission: 'canEditTheme',
+    riskLevel: 'low',
+    reversible: true,
+  },
+  {
+    id: 'update_banner_color',
+    label: 'Alterar cor do banner',
+    description: 'Muda a cor do banner do teu perfil',
+    requiredPermission: 'canEditTheme',
+    riskLevel: 'low',
+    reversible: true,
+  },
+  {
+    id: 'create_post',
+    label: 'Criar publicação',
+    description: 'Cria uma nova publicação no feed do Lazer',
+    requiredPermission: 'canCreatePosts',
+    riskLevel: 'medium',
+    reversible: true,
+  },
+  {
+    id: 'delete_post',
+    label: 'Apagar publicação',
+    description: 'Apaga uma das tuas publicações',
+    requiredPermission: 'canDeletePosts',
+    riskLevel: 'high',
+    reversible: false,
+  },
+  {
+    id: 'send_friend_request',
+    label: 'Enviar pedido de amizade',
+    description: 'Envia um pedido de amizade a outro utilizador',
+    requiredPermission: 'canManageFriends',
+    riskLevel: 'low',
+    reversible: true,
+  },
+  {
+    id: 'remove_friend',
+    label: 'Desfazer amizade',
+    description: 'Remove um utilizador da tua lista de amigos',
+    requiredPermission: 'canManageFriends',
+    riskLevel: 'medium',
+    reversible: false,
+  },
+  {
+    id: 'update_name_style',
+    label: 'Alterar estilo do nome',
+    description: 'Muda a fonte, efeito e cor do nome no perfil',
+    requiredPermission: 'canEditTheme',
+    riskLevel: 'low',
+    reversible: true,
+  },
+];
+
+const DEFAULT_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+
+// ── Service ────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class AlphaCoreService {
-  private genAI: GoogleGenerativeAI;
   private groq: Groq;
 
-  constructor(
-    private configService: ConfigService,
-    private prisma: PrismaService,
+  constructor(private readonly prisma: PrismaService) {
+    this.groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY, // fallback if user forgot
+    });
+  }
+
+  // ── Chat proxy (Fase 1 + 2) ─────────────────────────────────────────────
+
+  async chat(
+    messages: { role: 'user' | 'assistant'; content: string }[],
+    systemPrompt: string,
+    tools?: any[],
   ) {
-    const geminiKey = this.configService.get<string>('GOOGLE_GEMINI_API_KEY');
-    const groqKey = this.configService.get<string>('GROQ_API_KEY');
-
-    if (geminiKey) {
-      this.genAI = new GoogleGenerativeAI(geminiKey);
+    if (!Array.isArray(messages)) {
+      throw new Error('Messages must be an array');
     }
 
-    if (groqKey) {
-      this.groq = new Groq({ apiKey: groqKey });
-    }
-  }
-
-  async generateReply(message: string, history: { role: string, content: string }[], systemPrompt: string, compactPrompt: string) {
-    const groqKey = this.configService.get<string>('GROQ_API_KEY')?.trim();
-    const geminiKey = this.configService.get<string>('GOOGLE_GEMINI_API_KEY')?.trim();
-
-    console.log(`[Alpha Core] Iniciando pedido: "${message.substring(0, 50)}..."`);
-
-    // 1. Tentar Groq (Modo Turbo 70B)
-    if (this.groq && groqKey) {
-      try {
-        console.log('[Alpha Core] -> Groq Llama-3.3-70b');
-        return await this.executeGroqChat(message, history, systemPrompt, 'llama-3.3-70b-versatile', 8);
-      } catch (error) {
-        console.error('❌ Groq 70B Error:', error.message);
-        if (error.message?.includes('429') || error.message?.includes('rate_limit')) {
-          try {
-            console.log('[Alpha Core] -> Groq Fallback 8b');
-            return await this.executeGroqChat(message, history, compactPrompt, 'llama-3.1-8b-instant', 5);
-          } catch (e) {
-            console.error('❌ Groq 8B Fallback Error:', e.message);
-          }
-        }
-      }
-    }
-
-    // 2. Tentar Gemini Flash
-    if (this.genAI && geminiKey) {
-      try {
-        console.log('[Alpha Core] -> Gemini Flash');
-        return await this.executeGeminiChat(message, history, systemPrompt, 'gemini-flash-latest', 8);
-      } catch (error) {
-        console.error('❌ Gemini Error:', error.message);
-        if (error.message?.includes('503') || error.message?.includes('429')) {
-          try {
-            console.log('[Alpha Core] -> Gemini Fallback Lite');
-            return await this.executeGeminiChat(message, history, compactPrompt, 'gemini-2.0-flash-lite', 5);
-          } catch (e) {
-            console.error('❌ Gemini Fallback Error:', e.message);
-          }
-        }
-      }
-    }
-
-    throw new InternalServerErrorException('A Alpha está exausta (todos os motores falharam). Tenta novamente em segundos.');
-  }
-
-  private async executeGroqChat(message: string, history: { role: string, content: string }[], systemPrompt: string, modelName: string, historyLimit: number) {
-    const messages: any[] = [
+    const formattedMessages = [
       { role: 'system', content: systemPrompt },
-      ...history.slice(-historyLimit).map(msg => ({
-        role: msg.role === 'assistant' ? 'assistant' : 'user',
-        content: msg.content || ''
-      })),
-      { role: 'user', content: message }
-    ];
+      ...messages,
+    ] as any[];
 
-    const tools = this.getToolDefinitions('groq');
-
-    const response = await this.groq.chat.completions.create({
-      model: modelName,
-      messages,
-      tools: tools as any,
-      tool_choice: 'auto',
-      temperature: 0.1,
-    });
-
-    const responseMessage = response.choices[0].message;
-
-    if (responseMessage.tool_calls) {
-      const toolCall = responseMessage.tool_calls[0];
-      const functionName = toolCall.function.name;
-      const args = JSON.parse(toolCall.function.arguments || '{}');
-      
-      console.log(`[Alpha Core] Groq chamou ferramenta: ${functionName}`);
-      const toolResult = await this.handleToolCall(functionName, args);
-      
-      messages.push(responseMessage);
-      messages.push({
-        role: 'tool',
-        tool_call_id: toolCall.id,
-        name: functionName,
-        content: JSON.stringify(toolResult)
-      });
-
-      const secondResponse = await this.groq.chat.completions.create({
-        model: modelName,
-        messages,
-      });
-
-      const finalContent = secondResponse.choices[0].message.content;
-      console.log(`[Alpha Core] Resposta final (Groq): "${finalContent?.substring(0, 50)}..."`);
-      return finalContent;
-    }
-
-    return responseMessage.content;
-  }
-
-  private async executeGeminiChat(message: string, history: { role: string, content: string }[], systemPrompt: string, modelName: string, historyLimit: number) {
-    const tools = this.getToolDefinitions('gemini');
-
-    const model = this.genAI.getGenerativeModel({ 
-      model: modelName,
-      tools: tools as any,
-      systemInstruction: systemPrompt,
-    });
-
-    const chat = model.startChat({
-      history: (history || []).slice(-historyLimit).map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content || ' ' }],
-      })),
-    });
-
-    let result = await chat.sendMessage(message);
-    let response = await result.response;
-
-    const calls = response.functionCalls();
-    if (calls && calls.length > 0) {
-      const call = calls[0];
-      console.log(`[Alpha Core] Gemini chamou ferramenta: ${call.name}`);
-      const toolResult = await this.handleToolCall(call.name, call.args);
-      
-      result = await chat.sendMessage([{
-        functionResponse: { name: call.name, response: { result: toolResult } }
-      }]);
-      response = await result.response;
-    }
-
-    const finalReply = response.text();
-    console.log(`[Alpha Core] Resposta final (Gemini): "${finalReply.substring(0, 50)}..."`);
-    return finalReply;
-  }
-
-  // ─── GESTÃO DE FERRAMENTAS (TOOLS) ─────────────────────────────────
-
-  private getToolDefinitions(format: 'groq' | 'gemini') {
-    const defs = [
-      {
-        name: 'search_user',
-        description: 'Procura um utilizador na Alpha Network pelo seu username.',
-        parameters: {
-          type: 'object',
-          properties: { username: { type: 'string', description: 'Username (ex: @bruno)' } },
-          required: ['username']
-        }
-      },
-      {
-        name: 'get_trending_tropes',
-        description: 'Obtém os temas (tropes) mais populares do momento no Modo Lazer.',
-        parameters: { type: 'object', properties: {} }
-      },
-      {
-        name: 'get_communities',
-        description: 'Lista comunidades no Modo Lazer da Alpha Network.',
-        parameters: {
-          type: 'object',
-          properties: { search: { type: 'string', description: 'Pesquisa opcional' } }
-        }
-      },
-      {
-        name: 'get_watching_now',
-        description: 'Lista o que os utilizadores estão a ver no momento (Check-ins).',
-        parameters: { type: 'object', properties: {} }
-      },
-      {
-        name: 'get_suggested_friends',
-        description: 'Sugere utilizadores para amizade (excluindo o utilizador actual).',
-        parameters: { type: 'object', properties: {} }
-      },
-      // Fase 2 Tools
-      {
-        name: 'generate_image',
-        description: 'Gera uma imagem criativa baseada numa descrição.',
-        parameters: {
-          type: 'object',
-          properties: {
-            prompt: { type: 'string', description: 'Descrição visual detalhada' },
-            style: { type: 'string', enum: ['anime', 'realistic', 'sketch', 'pixel_art', 'watercolor'] }
-          },
-          required: ['prompt']
-        }
-      }
-    ];
-
-    if (format === 'gemini') return [{ functionDeclarations: defs }];
-    return defs.map(d => ({ type: 'function', function: d }));
-  }
-
-  private async handleToolCall(name: string, args: any) {
-    console.log(`[Alpha Core] Executando: ${name}`, args);
-    try {
-      if (name === 'search_user') return await this.searchUserTool(args.username?.replace('@', ''));
-      if (name === 'get_trending_tropes') return await this.getTrendingTropesTool();
-      if (name === 'get_communities') return await this.getCommunitiesTool(args.search);
-      if (name === 'get_watching_now') return await this.getWatchingNowTool();
-      if (name === 'get_suggested_friends') return await this.getSuggestedFriendsTool();
-      if (name === 'generate_image') return await this.generateImageTool(args.prompt, args.style);
-    } catch (e) {
-      console.error(`Erro ao executar ferramenta ${name}:`, e);
-    }
-    return { error: 'Falha ao obter dados.' };
-  }
-
-  private async generateImageTool(prompt: string, style: string = 'anime') {
-    const togetherKey = this.configService.get<string>('TOGETHER_API_KEY');
-    
-    if (!togetherKey) {
-      return { 
-        url: `https://placehold.co/1024x1024/a78bfa/ffffff?text=${encodeURIComponent(prompt)}`,
-        message: 'Modo demonstração: TOGETHER_API_KEY não configurada no servidor.'
-      };
-    }
-
-    const stylePrompts = {
-      anime: 'anime style, vibrant colors, detailed illustration, high quality',
-      realistic: 'photorealistic, 8k, professional photography, dramatic lighting',
-      sketch: 'pencil sketch, artistic, clean lines',
-      pixel_art: 'pixel art, 16-bit, retro aesthetic',
-      watercolor: 'watercolor painting, soft textures, artistic'
+    const params: any = {
+      model: DEFAULT_MODEL,
+      max_tokens: 4096,
+      messages: formattedMessages,
     };
 
-    const fullPrompt = `${prompt}, ${stylePrompts[style] || stylePrompts.anime}`;
-
-    try {
-      const response = await fetch('https://api.together.xyz/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${togetherKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'black-forest-labs/FLUX.1-schnell',
-          prompt: fullPrompt,
-          width: 1024,
-          height: 1024,
-          steps: 4,
-          n: 1,
-        }),
-      });
-
-      const data = await response.json();
-      console.log('[Alpha Core] Together AI Response:', JSON.stringify(data, null, 2));
-
-      if (response.ok && data.data?.[0]?.url) {
-        return { url: data.data[0].url, prompt: fullPrompt };
-      }
-      
-      throw new Error(data.error?.message || 'Together AI failed');
-    } catch (e) {
-      console.warn('⚠️ Together AI falhou, a usar Fallback Gratuito (Pollinations)...', e.message);
-      
-      // Fallback para Pollinations AI (Grátis, sem chave, excelente qualidade)
-      const pollinationsUrl = `https://pollinations.ai/p/${encodeURIComponent(fullPrompt)}?width=1024&height=1024&model=flux&seed=${Date.now()}`;
-      
-      return { 
-        url: pollinationsUrl, 
-        prompt: fullPrompt,
-        note: 'Gerado via Fallback Gratuito (Pollinations AI)'
-      };
+    if (tools && tools.length > 0) {
+      params.tools = tools.map(t => ({
+        type: 'function',
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: t.input_schema,
+        }
+      }));
     }
+
+    return this.groq.chat.completions.create(params);
   }
 
-  private async searchUserTool(username: string) {
-    const profile = await this.prisma.profile.findUnique({
-      where: { username },
-      include: {
-        user: {
-          include: {
-            lazerPosts: { take: 5, orderBy: { createdAt: 'desc' }, select: { content: true, createdAt: true } }
+  // ── Streaming chat proxy ─────────────────────────────────────────────────
+
+  async *chatStream(
+    userId: string,
+    messages: { role: 'user' | 'assistant'; content: string }[],
+    systemPrompt: string,
+    tools?: any[],
+  ): AsyncIterable<{ type: 'text'; text: string } | { type: 'action'; action: any }> {
+    if (!Array.isArray(messages)) {
+      console.error('[AlphaCoreService] messages is not an array:', messages);
+      throw new Error('params.messages is not an array');
+    }
+
+    const formattedMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages,
+    ] as any[];
+
+    const params: any = {
+      model: DEFAULT_MODEL,
+      max_tokens: 4096,
+      messages: formattedMessages,
+      stream: true,
+    };
+
+    if (tools && tools.length > 0) {
+      params.tools = tools.map(t => ({
+        type: 'function',
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: t.input_schema,
+        },
+      }));
+
+      // Detect if user is asking for an action to force tool usage on smaller models
+      const lastUserMsg = messages[messages.length - 1]?.content.toLowerCase() || '';
+      
+      // Ignore very short or conversational confirmations
+      const isConversational = lastUserMsg.length < 15 && 
+        /^(ok|obrigado|thanks|valeu|sim|não|boa|perfeito|fechado|tá|uai|entendi)/i.test(lastUserMsg);
+
+      // Look for imperative patterns like "muda a bio", "altera o nome", "publica um post"
+      // using word boundaries (\b) to avoid matching "mudaste", "alterado", etc.
+      const actionPatterns = [
+        /\b(muda|altera|actualiza|define|set|update|troca)\b.+\b(bio|nome|status|cor|tema|banner|display)\b/i,
+        /\b(publica|cria|faz|escreve)\b.+\b(post|publicação|mensagem)\b/i,
+        /\b(adiciona|envia|pede|remove|desfaz|elimina)\b.+\b(amigo|amizade|pedido|post|publicação)\b/i,
+        /^\b(muda|altera|publica|cria|envia|pede|remove|apaga|delete)\b /i
+      ];
+      
+      const seemsLikeAction = !isConversational && actionPatterns.some(regex => regex.test(lastUserMsg));
+
+      params.tool_choice = seemsLikeAction ? 'required' : 'auto';
+      console.log(`[AlphaCoreService] Setting tool_choice to: ${params.tool_choice} (seemsLikeAction: ${seemsLikeAction}, isConversational: ${isConversational})`);
+    }
+
+    console.log('[AlphaCoreService] Starting stream for messages:', messages.length);
+
+    try {
+      const stream = await this.groq.chat.completions.create(params) as any;
+
+      // Buffer for assembling tool_call arguments arriving in fragments
+      const toolCallBuffers: Record<number, { name: string; args: string }> = {};
+      let finishReason = '';
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+        if (chunk.choices[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
+        if (!delta) continue;
+
+        // ── Text content ──────────────────────────────────────────────────
+        if (delta.content) {
+          yield { type: 'text', text: delta.content };
+        }
+
+        // ── Tool call fragments ────────────────────────────────────────────
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index ?? 0;
+            if (!toolCallBuffers[idx]) {
+              toolCallBuffers[idx] = { name: tc.function?.name ?? '', args: '' };
+            }
+            if (tc.function?.name) toolCallBuffers[idx].name = tc.function.name;
+            if (tc.function?.arguments) toolCallBuffers[idx].args += tc.function.arguments;
           }
         }
       }
+
+      console.log(`[AlphaCoreService] Stream finished. finish_reason=${finishReason}, toolCalls=${Object.keys(toolCallBuffers).length}`);
+
+      // ── Process complete tool calls ────────────────────────────────────
+      for (const buf of Object.values(toolCallBuffers)) {
+        if (!buf.name) continue;
+        try {
+          const payload = JSON.parse(buf.args || '{}');
+          console.log(`[AlphaCoreService] Tool call: ${buf.name}`, payload);
+
+          // ── Resolve username → userId for user-related actions ──────────
+          if (buf.name === 'send_friend_request' || buf.name === 'remove_friend') {
+            const rawId = payload.toUserId ?? payload.to_user_id ?? payload.userId ?? payload.friendId ?? payload.targetId ?? payload.username;
+            if (rawId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawId)) {
+              const profile = await this.prisma.profile.findFirst({
+                where: { username: { equals: rawId, mode: 'insensitive' } },
+                select: { userId: true, username: true },
+              });
+              if (!profile) {
+                yield { type: 'text', text: `\n\nDesculpa, mas não encontrei nenhum utilizador com o nome "${rawId}" na rede. Tens a certeza que o nome está correto?` };
+                continue;
+              }
+              payload.toUserId = profile.userId;
+            }
+          }
+
+          const actionId = buf.name;
+          const result = await this.requestAction(userId, actionId, payload);
+          yield { type: 'action', action: result };
+        } catch (e: any) {
+          console.error('[AlphaCoreService] Tool call processing error:', e.message);
+          yield { type: 'text', text: `\n\nOlha, tentei processar isso, mas deu erro: ${e.message}. Queres tentar de outra forma?` };
+        }
+      }
+    } catch (e: any) {
+      console.error('[AlphaCoreService] Groq Stream Error:', e);
+      throw e;
+    }
+  }
+
+  // ── Permissions ─────────────────────────────────────────────────────────
+
+  async getPermissions(userId: string): Promise<PermissionMap> {
+    const perms = await this.prisma.alphaCorePermission.findUnique({
+      where: { userId },
     });
-    if (!profile) return { error: `Utilizador @${username} não encontrado.` };
+
+    if (!perms) {
+      return {
+        canEditProfile: false,
+        canCreatePosts: false,
+        canDeletePosts: false,
+        canManageFriends: false,
+        canEditTheme: false,
+      };
+    }
+
     return {
-      id: profile.userId,
-      username: profile.username,
-      displayName: profile.displayName,
-      bio: profile.bio,
-      status: profile.status,
-      tags: profile.tags,
-      activeModes: profile.activeModes,
-      recentPosts: profile.user.lazerPosts
+      canEditProfile: perms.canEditProfile,
+      canCreatePosts: perms.canCreatePosts,
+      canDeletePosts: perms.canDeletePosts,
+      canManageFriends: perms.canManageFriends,
+      canEditTheme: perms.canEditTheme,
     };
   }
 
-  private async getTrendingTropesTool() {
-    return await this.prisma.lazerTropeTrend.findMany({
-      take: 10,
-      orderBy: { sparklesCount: 'desc' },
-      select: { tropeId: true, sparklesCount: true, talkingCount: true }
+  async updatePermissions(
+    userId: string,
+    permissions: Partial<PermissionMap>,
+  ) {
+    return this.prisma.alphaCorePermission.upsert({
+      where: { userId },
+      create: { userId, ...permissions },
+      update: { ...permissions, updatedAt: new Date() },
     });
   }
 
-  private async getCommunitiesTool(search?: string) {
-    return await this.prisma.lazerCommunity.findMany({
-      where: search ? {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } }
-        ]
-      } : {},
-      take: 10,
-      select: { name: true, description: true, iconEmoji: true, inviteCode: true }
+  async revokeAllPermissions(userId: string) {
+    return this.prisma.alphaCorePermission.upsert({
+      where: { userId },
+      create: {
+        userId,
+        canEditProfile: false,
+        canCreatePosts: false,
+        canDeletePosts: false,
+        canManageFriends: false,
+        canEditTheme: false,
+      },
+      update: {
+        canEditProfile: false,
+        canCreatePosts: false,
+        canDeletePosts: false,
+        canManageFriends: false,
+        canEditTheme: false,
+        updatedAt: new Date(),
+      },
     });
   }
 
-  private async getWatchingNowTool() {
-    return await this.prisma.lazerCheckIn.findMany({
-      take: 10,
+  // ── Actions ──────────────────────────────────────────────────────────────
+
+  async requestAction(
+    userId: string,
+    actionId: string,
+    payload: Record<string, any>,
+  ) {
+    const actionDef = ALLOWED_ACTIONS.find(a => a.id === actionId);
+    if (!actionDef) {
+      throw new BadRequestException(`Acção desconhecida: ${actionId}`);
+    }
+
+    const perms = await this.getPermissions(userId);
+    if (!perms[actionDef.requiredPermission]) {
+      throw new ForbiddenException(
+        `Não tens permissão para: ${actionDef.label}. Activa-a nas definições da Alpha Core.`,
+      );
+    }
+
+    const action = await this.prisma.alphaCoreAction.create({
+      data: {
+        userId,
+        action: actionId,
+        payload,
+        status: 'pending',
+      },
+    });
+
+    return {
+      actionId: action.id,
+      definition: actionDef,
+      payload,
+      status: 'pending',
+      message: `Acção "${actionDef.label}" aguarda confirmação do utilizador.`,
+    };
+  }
+
+  async confirmAndExecuteAction(userId: string, actionRecordId: string) {
+    const record = await this.prisma.alphaCoreAction.findUnique({
+      where: { id: actionRecordId },
+    });
+
+    if (!record || record.userId !== userId) {
+      throw new NotFoundException('Acção não encontrada.');
+    }
+    if (record.status !== 'pending') {
+      throw new BadRequestException(`Acção já foi processada (status: ${record.status}).`);
+    }
+
+    await this.prisma.alphaCoreAction.update({
+      where: { id: actionRecordId },
+      data: { status: 'confirmed', confirmedAt: new Date() },
+    });
+
+    try {
+      console.log(`[AlphaCoreService] Executing action: ${record.action} for user: ${userId}`, record.payload);
+      const result = await this.executeAction(userId, record.action, record.payload as any);
+      console.log(`[AlphaCoreService] Action executed successfully:`, result);
+
+      // Sanitize result — remove undefined values before storing as JSON
+      const safeResult = JSON.parse(JSON.stringify(result ?? {}));
+
+      await this.prisma.alphaCoreAction.update({
+        where: { id: actionRecordId },
+        data: { status: 'executed', executedAt: new Date(), result: safeResult },
+      });
+
+      return { success: true, result: safeResult, actionId: actionRecordId };
+    } catch (e: any) {
+      console.error(`[AlphaCoreService] Action execution failed: ${record.action}`, e);
+      await this.prisma.alphaCoreAction.update({
+        where: { id: actionRecordId },
+        data: { status: 'failed', result: { error: e.message } },
+      });
+      throw e;
+    }
+  }
+
+  async rejectAction(userId: string, actionRecordId: string) {
+    const record = await this.prisma.alphaCoreAction.findUnique({
+      where: { id: actionRecordId },
+    });
+    if (!record || record.userId !== userId) throw new NotFoundException();
+
+    return this.prisma.alphaCoreAction.update({
+      where: { id: actionRecordId },
+      data: { status: 'rejected' },
+    });
+  }
+
+  async revertAction(userId: string, actionRecordId: string) {
+    const record = await this.prisma.alphaCoreAction.findUnique({
+      where: { id: actionRecordId },
+    });
+
+    if (!record || record.userId !== userId) throw new NotFoundException();
+    if (record.status !== 'executed') {
+      throw new BadRequestException('Só acções executadas podem ser revertidas.');
+    }
+
+    const actionDef = ALLOWED_ACTIONS.find(a => a.id === record.action);
+    if (!actionDef?.reversible) {
+      throw new BadRequestException(`A acção "${record.action}" não é reversível.`);
+    }
+
+    const payload = record.payload as any;
+    if (payload?.previousValue !== undefined) {
+      await this.executeAction(userId, record.action, {
+        ...payload,
+        value: payload.previousValue,
+      });
+    }
+
+    return this.prisma.alphaCoreAction.update({
+      where: { id: actionRecordId },
+      data: { status: 'reverted', revertedAt: new Date() },
+    });
+  }
+
+  async getActionHistory(userId: string, limit = 20) {
+    return this.prisma.alphaCoreAction.findMany({
+      where: { userId },
       orderBy: { createdAt: 'desc' },
-      select: { title: true, episode: true, emoji: true, createdAt: true }
+      take: limit,
     });
   }
 
-  private async getSuggestedFriendsTool() {
-    return await this.prisma.profile.findMany({
-      take: 10,
-      orderBy: { createdAt: 'desc' },
-      select: { username: true, displayName: true, bio: true }
-    });
+  private async executeAction(
+    userId: string,
+    actionId: string,
+    payload: Record<string, any>,
+  ): Promise<any> {
+    // Helper: extract a string value from multiple possible field names
+    const val = (...keys: string[]): string | undefined => {
+      for (const k of keys) {
+        if (payload[k] !== undefined && payload[k] !== null) return String(payload[k]);
+      }
+      return undefined;
+    };
+
+    console.log(`[executeAction] action=${actionId} payload=`, payload);
+
+    switch (actionId) {
+      case 'update_display_name': {
+        const value = val('value', 'displayName', 'name', 'display_name');
+        if (!value) throw new BadRequestException('Campo "value" é obrigatório para update_display_name.');
+        const prev = await this.prisma.profile.findUnique({ where: { userId }, select: { displayName: true } });
+        await this.prisma.profile.update({ where: { userId }, data: { displayName: value } });
+        return { updated: 'displayName', value, previousValue: prev?.displayName ?? null };
+      }
+
+      case 'update_bio': {
+        const value = val('value', 'bio', 'biography', 'content');
+        if (!value) throw new BadRequestException('Campo "value" é obrigatório para update_bio.');
+        const prev = await this.prisma.profile.findUnique({ where: { userId }, select: { bio: true } });
+        await this.prisma.profile.update({ where: { userId }, data: { bio: value } });
+        return { updated: 'bio', value, previousValue: prev?.bio ?? null };
+      }
+
+      case 'update_status': {
+        const value = val('value', 'status', 'text');
+        if (!value) throw new BadRequestException('Campo "value" é obrigatório para update_status.');
+        const prev = await this.prisma.profile.findUnique({ where: { userId }, select: { status: true } });
+        await this.prisma.profile.update({ where: { userId }, data: { status: value } });
+        return { updated: 'status', value, previousValue: prev?.status ?? null };
+      }
+
+      case 'update_theme_color': {
+        const value = val('value', 'color', 'themeColor', 'theme_color', 'hex');
+        if (!value) throw new BadRequestException('Campo "value" é obrigatório para update_theme_color.');
+        const prev = await this.prisma.profile.findUnique({ where: { userId }, select: { lazerData: true } });
+        const prevLazerData = (prev?.lazerData as any) ?? {};
+        await this.prisma.profile.update({
+          where: { userId },
+          data: { lazerData: { ...prevLazerData, themeColor: value } },
+        });
+        return { updated: 'themeColor', value, previousValue: prevLazerData.themeColor ?? null };
+      }
+
+      case 'update_banner_color': {
+        const value = val('value', 'color', 'bannerColor', 'banner_color', 'hex');
+        if (!value) throw new BadRequestException('Campo "value" é obrigatório para update_banner_color.');
+        const prev = await this.prisma.profile.findUnique({ where: { userId }, select: { bannerColor: true } });
+        await this.prisma.profile.update({ where: { userId }, data: { bannerColor: value } });
+        return { updated: 'bannerColor', value, previousValue: prev?.bannerColor ?? null };
+      }
+
+      case 'update_name_style': {
+        const updateData: any = {};
+        const font = val('nameFont', 'font');
+        const effect = val('nameEffect', 'effect');
+        const color = val('nameColor', 'color');
+        if (font)   updateData.nameFont   = font;
+        if (effect) updateData.nameEffect = effect;
+        if (color)  updateData.nameColor  = color;
+        if (Object.keys(updateData).length === 0) throw new BadRequestException('Nenhum campo de estilo fornecido.');
+        await this.prisma.profile.update({ where: { userId }, data: updateData });
+        return { updated: 'nameStyle', ...updateData };
+      }
+
+      case 'create_post': {
+        const content = val('content', 'text', 'body', 'post');
+        if (!content) throw new BadRequestException('Campo "content" é obrigatório para create_post.');
+        const post = await this.prisma.lazerPost.create({
+          data: {
+            authorId: userId,
+            content,
+            titleFont: payload.titleFont ?? null,
+            titleColor: payload.titleColor ?? null,
+          },
+        });
+        return { created: 'post', postId: post.id };
+      }
+
+      case 'delete_post': {
+        const postId = val('postId', 'post_id', 'id');
+        if (!postId) throw new BadRequestException('Campo "postId" é obrigatório para delete_post.');
+        const post = await this.prisma.lazerPost.findUnique({ where: { id: postId } });
+        if (!post || post.authorId !== userId) throw new ForbiddenException('Post não encontrado ou não pertence ao utilizador.');
+        await this.prisma.lazerPost.update({ where: { id: postId }, data: { deletedAt: new Date() } });
+        return { deleted: 'post', postId };
+      }
+
+      case 'send_friend_request': {
+        const toUserId = val('toUserId', 'to_user_id', 'userId', 'friendId', 'targetId');
+        if (!toUserId) throw new BadRequestException('Campo "toUserId" é obrigatório para send_friend_request.');
+        const existing = await this.prisma.friendship.findFirst({
+          where: {
+            OR: [
+              { userId: userId, friendId: toUserId },
+              { userId: toUserId, friendId: userId },
+            ],
+          },
+        });
+        if (existing) return { skipped: 'already_exists', requestId: existing.id };
+        const req = await this.prisma.friendship.create({
+          data: { userId: userId, friendId: toUserId, status: 'pending' },
+        });
+        return { created: 'friendRequest', requestId: req.id };
+      }
+
+      case 'remove_friend': {
+        const toUserId = val('toUserId', 'to_user_id', 'userId', 'friendId', 'targetId');
+        if (!toUserId) throw new BadRequestException('Campo "toUserId" é obrigatório para remove_friend.');
+        
+        const friendship = await this.prisma.friendship.findFirst({
+          where: {
+            OR: [
+              { userId, friendId: toUserId },
+              { userId: toUserId, friendId: userId },
+            ],
+          },
+        });
+
+        if (!friendship) return { skipped: 'not_friends' };
+
+        await this.prisma.friendship.delete({ where: { id: friendship.id } });
+        return { deleted: 'friendship', friendId: toUserId };
+      }
+
+      default:
+        throw new BadRequestException(`Acção não implementada: ${actionId}`);
+    }
   }
 }

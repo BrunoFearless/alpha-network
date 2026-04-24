@@ -1,117 +1,477 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
-import { useLazerStore } from '@/store/lazer.store';
-import { useAlphaCoreStore, ChatMessage } from '@/store/useAlphaCoreStore';
 import { buildAlphaCoreSystemPrompt, buildAlphaCoreSystemPromptCompact } from './alpha-core-system-prompt';
+
+// ── Types ──────────────────────────────────────────────────────────────────
+
+export type MessageRole = 'user' | 'assistant';
+
+export interface PendingAction {
+  actionId: string;       // DB record ID (uuid)
+  definition: {
+    id: string;
+    label: string;
+    description: string;
+    riskLevel: 'low' | 'medium' | 'high';
+    reversible: boolean;
+  };
+  payload: Record<string, any>;
+  status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+}
+
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
+  content: string;
+  timestamp: Date;
+  // Fase 2/3 extras
+  imageUrl?: string;
+  codeBlocks?: CodeBlock[];
+  reportData?: ReportData;
+  toolUsed?: string;
+  isError?: boolean;
+  // Fase 3: ações pendentes associadas a esta mensagem
+  pendingActions?: PendingAction[];
+}
+
+export interface CodeBlock {
+  language: string;
+  code: string;
+  filename?: string;
+}
+
+export interface ReportData {
+  title: string;
+  sections: { heading: string; body: string }[];
+}
+
+export type AlphaCoreCapability =
+  | 'chat'
+  | 'image_generation'
+  | 'code_execution'
+  | 'report_generation'
+  | 'platform_actions';
 
 export interface UseAlphaCoreOptions {
   themeColor?: string;
   currentMode?: string;
-  capabilities?: string[];
+  capabilities?: AlphaCoreCapability[];
   onError?: (err: string) => void;
 }
 
+// ── API constants ──────────────────────────────────────────────────────────
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const ALPHA_API_CHAT = `${API_BASE}/alpha/chat`;
+const ALPHA_API_ACTIONS = `${API_BASE}/alpha/actions`;
+
+// ── Stream caller ──────────────────────────────────────────────────────────
+
+interface GroqMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+async function callAlphaProxyStreaming(
+  messages: GroqMessage[],
+  systemPrompt: string,
+  token: string,
+  onChunk: (chunk: string) => void,
+  onAction: (action: PendingAction) => void,
+  onDone: () => void,
+  onError: (err: string) => void,
+  tools?: any[],
+): Promise<void> {
+  try {
+    const body: any = { messages, systemPrompt };
+    if (tools && tools.length > 0) body.tools = tools;
+
+    const response = await fetch(ALPHA_API_CHAT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      onError(`Erro Alpha API: ${response.status} — ${err}`);
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) { onError('Stream não disponível.'); return; }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.text) {
+            onChunk(parsed.text);
+          } else if (parsed.action) {
+            onAction(parsed.action as PendingAction);
+          } else if (parsed.error) {
+            onError(parsed.error);
+          }
+        } catch {
+          // ignore parse errors on malformed SSE chunks
+        }
+      }
+    }
+
+    onDone();
+  } catch (e: any) {
+    onError(e.message ?? 'Erro de rede desconhecido.');
+  }
+}
+
+// ── Phase 3: Tool definitions (Platform Actions) ──────────────────────────
+
+const PLATFORM_TOOLS = [
+  {
+    name: 'update_display_name',
+    description: 'Altera o nome de exibição do utilizador.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        value: { type: 'string', description: 'O novo nome de exibição.' },
+      },
+      required: ['value'],
+    },
+  },
+  {
+    name: 'update_bio',
+    description: 'Actualiza a biografia do utilizador.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        value: { type: 'string', description: 'O novo texto de bio.' },
+      },
+      required: ['value'],
+    },
+  },
+  {
+    name: 'update_status',
+    description: 'Muda o status do utilizador.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        value: { type: 'string', description: 'O novo status.' },
+      },
+      required: ['value'],
+    },
+  },
+  {
+    name: 'update_theme_color',
+    description: 'Altera a cor de destaque/tema do perfil.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        value: { type: 'string', description: 'Cor em formato hex, ex: #a78bfa.' },
+      },
+      required: ['value'],
+    },
+  },
+  {
+    name: 'update_banner_color',
+    description: 'Altera a cor do banner do perfil.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        value: { type: 'string', description: 'Cor em formato hex.' },
+      },
+      required: ['value'],
+    },
+  },
+  {
+    name: 'create_post',
+    description: 'Cria uma nova publicação no feed do Lazer.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Conteúdo do post.' },
+      },
+      required: ['content'],
+    },
+  },
+  {
+    name: 'send_friend_request',
+    description: 'Envia um pedido de amizade a outro utilizador.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        toUserId: { type: 'string', description: 'Username ou ID do utilizador.' },
+      },
+      required: ['toUserId'],
+    },
+  },
+  {
+    name: 'remove_friend',
+    description: 'Remove um utilizador dos teus amigos.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        toUserId: { type: 'string', description: 'Username ou ID do utilizador.' },
+      },
+      required: ['toUserId'],
+    },
+  },
+  {
+    name: 'delete_post',
+    description: 'Apaga uma das tuas publicações.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        postId: { type: 'string', description: 'ID da publicação a apagar.' },
+      },
+      required: ['postId'],
+    },
+  },
+];
+
+// ── Main hook ──────────────────────────────────────────────────────────────
+
 export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
   const { user, accessToken } = useAuthStore();
-  const { userPosts } = useLazerStore();
-  const { messages, addMessage, clearMessages, status, setStatus } = useAlphaCoreStore();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [personalAI, setPersonalAI] = useState<any>(null);
+  const abortRef = useRef<boolean>(false);
+
+  const capabilities = options.capabilities ?? ['chat'];
+  const hasPlatformActions = capabilities.includes('platform_actions');
+
+  // Use compact prompt to save tokens (the full prompt with knowledge base is too large)
+  const systemPrompt = buildAlphaCoreSystemPromptCompact(
+    user?.profile?.displayName || user?.profile?.username
+  );
+
+  useEffect(() => {
+    if (accessToken) {
+      fetch(`${API_BASE}/alpha/ai/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.data?.isActive) setPersonalAI(d.data);
+        })
+        .catch(() => {});
+    }
+  }, [accessToken]);
+
+  const toGroqMessages = (msgs: ChatMessage[]): GroqMessage[] =>
+    msgs
+      .filter(m => !m.isError)
+      .map(m => ({ role: m.role, content: m.content }));
 
   const sendMessage = useCallback(async (userText: string): Promise<void> => {
-    if (!userText.trim() || status !== 'idle') return;
+    if (!userText.trim() || isStreaming || !accessToken) return;
+
+    abortRef.current = false;
 
     const userMsg: ChatMessage = {
-      id: `u-${Date.now()}`,
+      id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       role: 'user',
       content: userText.trim(),
       timestamp: new Date(),
     };
 
-    addMessage(userMsg);
-    setStatus('thinking');
+    setMessages(prev => [...prev, userMsg]);
+    setIsStreaming(true);
     setStreamingContent('');
 
+    const assistantId = `a-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    let accumulated = '';
+    const collectedActions: PendingAction[] = [];
+
+    const history = toGroqMessages([...messages, userMsg]);
+
+    await callAlphaProxyStreaming(
+      history,
+      systemPrompt,
+      accessToken,
+      // onChunk
+      (chunk) => {
+        if (abortRef.current) return;
+        accumulated += chunk;
+        setStreamingContent(accumulated);
+      },
+      // onAction — collect pending actions as they arrive
+      (action) => {
+        if (abortRef.current) return;
+        collectedActions.push(action);
+      },
+      // onDone
+      () => {
+        if (abortRef.current) return;
+        abortRef.current = true;
+
+        const assistantMsg: ChatMessage = {
+          id: assistantId,
+          role: 'assistant',
+          content: accumulated,
+          timestamp: new Date(),
+          codeBlocks: extractCodeBlocks(accumulated),
+          pendingActions: collectedActions.length > 0 ? collectedActions : undefined,
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+        setStreamingContent('');
+        setIsStreaming(false);
+      },
+      // onError
+      (err) => {
+        if (abortRef.current) return;
+        abortRef.current = true;
+
+        const errorMsg: ChatMessage = {
+          id: assistantId,
+          role: 'assistant',
+          content: `Ocorreu um erro: ${err}`,
+          timestamp: new Date(),
+          isError: true,
+        };
+        setMessages(prev => [...prev, errorMsg]);
+        setStreamingContent('');
+        setIsStreaming(false);
+        options.onError?.(err);
+      },
+      hasPlatformActions ? PLATFORM_TOOLS : undefined,
+    );
+  }, [messages, isStreaming, systemPrompt, hasPlatformActions, accessToken, options]);
+
+  // ── Action: Confirm ────────────────────────────────────────────────────
+
+  const confirmAction = useCallback(async (msgId: string, actionRecordId: string) => {
+    if (!accessToken) return;
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      
-      const promptOptions = {
-        userName: user?.profile?.displayName || user?.profile?.username,
-        userProfile: user?.profile as any,
-        recentPosts: userPosts.map(p => ({ content: p.content, createdAt: p.createdAt })),
-        currentMode: options.currentMode || 'Lazer',
-      };
-
-      const systemPrompt = buildAlphaCoreSystemPrompt(promptOptions);
-      const compactPrompt = buildAlphaCoreSystemPrompt({ ...promptOptions, compact: true });
-
-      const response = await fetch(`${apiUrl}/api/v1/alpha-core/chat`, {
+      const res = await fetch(`${ALPHA_API_ACTIONS}/${actionRecordId}/confirm`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({
-          message: userText.trim(),
-          history: messages.map(m => ({ role: m.role, content: m.content })),
-          systemPrompt,
-          compactPrompt,
-        }),
+        headers: { 'Authorization': `Bearer ${accessToken}` },
       });
+      const data = await res.json();
 
-      if (!response.ok) {
-        throw new Error('Falha na resposta do servidor.');
-      }
-
-      const data = await response.json();
-      const reply = data.reply;
-
-      const imageMatch = reply.match(/!\[.*?\]\((https?:\/\/.*?)\)/);
-      const imageUrl = imageMatch ? imageMatch[1] : undefined;
-      
-      // If we have an image URL, we can optionally clean it from the content 
-      // if the UI renders it separately.
-      let cleanContent = reply;
-      if (imageUrl) {
-        // Only remove if it's the only thing or at the end
-        // cleanContent = reply.replace(/!\[.*?\]\(.*?\)/, '').trim();
-      }
-
-      const assistantMsg: ChatMessage = {
-        id: `a-${Date.now()}`,
-        role: 'assistant',
-        content: cleanContent,
-        timestamp: new Date(),
-        imageUrl: imageUrl,
-      };
-
-      addMessage(assistantMsg);
-    } catch (err: any) {
-      console.error('Alpha Core Error:', err);
-      const errorMsg: ChatMessage = {
-        id: `e-${Date.now()}`,
-        role: 'assistant',
-        content: 'Desculpa, tive um problema ao processar a tua mensagem. Tenta novamente.',
-        timestamp: new Date(),
-        isError: true,
-      };
-      addMessage(errorMsg);
-      options.onError?.(err.message);
-    } finally {
-      setStatus('idle');
+      setMessages(prev => prev.map(m => {
+        if (m.id !== msgId || !m.pendingActions) return m;
+        return {
+          ...m,
+          pendingActions: m.pendingActions.map(a =>
+            a.actionId === actionRecordId
+              ? { ...a, status: data.success ? 'executed' : 'failed' }
+              : a
+          ),
+        };
+      }));
+    } catch {
+      // silently update status to failed
+      setMessages(prev => prev.map(m => {
+        if (m.id !== msgId || !m.pendingActions) return m;
+        return {
+          ...m,
+          pendingActions: m.pendingActions.map(a =>
+            a.actionId === actionRecordId ? { ...a, status: 'failed' } : a
+          ),
+        };
+      }));
     }
-  }, [messages, status, user, userPosts, accessToken, addMessage, setStatus, options]);
+  }, [accessToken]);
+
+  // ── Action: Reject ─────────────────────────────────────────────────────
+
+  const rejectAction = useCallback(async (msgId: string, actionRecordId: string) => {
+    if (!accessToken) return;
+    try {
+      await fetch(`${ALPHA_API_ACTIONS}/${actionRecordId}/reject`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+      });
+    } finally {
+      setMessages(prev => prev.map(m => {
+        if (m.id !== msgId || !m.pendingActions) return m;
+        return {
+          ...m,
+          pendingActions: m.pendingActions.map(a =>
+            a.actionId === actionRecordId ? { ...a, status: 'rejected' } : a
+          ),
+        };
+      }));
+    }
+  }, [accessToken]);
+
+  // ── Misc ───────────────────────────────────────────────────────────────
+
+  const stopStreaming = useCallback(() => {
+    abortRef.current = true;
+    if (streamingContent) {
+      const assistantMsg: ChatMessage = {
+        id: `a-stop-${Date.now()}`,
+        role: 'assistant',
+        content: streamingContent + ' *(interrompido)*',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMsg]);
+    }
+    setStreamingContent('');
+    setIsStreaming(false);
+  }, [streamingContent]);
+
+  const clearHistory = useCallback(() => {
+    setMessages([]);
+    setStreamingContent('');
+    setIsStreaming(false);
+  }, []);
+
+  const sendQuickPrompt = useCallback((prompt: string) => {
+    sendMessage(prompt);
+  }, [sendMessage]);
 
   return {
     messages,
+    isStreaming,
     streamingContent,
-    isStreaming: status === 'thinking',
+    personalAI,
     sendMessage,
-    stopStreaming: () => setStatus('idle'), // Basic implementation
-    clearHistory: clearMessages,
-    sendQuickPrompt: (prompt: string) => sendMessage(prompt),
+    stopStreaming,
+    clearHistory,
+    hasPlatformActions,
+    sendQuickPrompt,
+    confirmAction,
+    rejectAction,
+    capabilities,
   };
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+
+function extractCodeBlocks(content: string): CodeBlock[] {
+  const blocks: CodeBlock[] = [];
+  const regex = /```(\w+)?\n([\s\S]*?)```/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    blocks.push({
+      language: match[1] || 'text',
+      code: match[2].trim(),
+    });
+  }
+  return blocks;
 }
 
 export function parseMarkdown(text: string): string {

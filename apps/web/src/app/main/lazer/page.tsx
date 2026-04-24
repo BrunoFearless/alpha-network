@@ -19,7 +19,7 @@ type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' |
 export default function LazerPage() {
   const { user: authUser, accessToken, updateUserProfile } = useAuthStore();
   const [activeView, setActiveView] = useState<ActiveView>('feed');
-  const { openChat, status: alphaStatus } = useAlphaCoreStore();
+  const { isOpen: isChatOpen, openChat, status: alphaStatus } = useAlphaCoreStore();
   const [isEditing, setIsEditing] = useState(false);
   const [showSavedMessage, setShowSavedMessage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -399,14 +399,16 @@ export default function LazerPage() {
         </button>
       </div>
 
-      {/* Alpha Core Phase 2 Integration */}
-      <AlphaCoreChat 
-        themeColor={c}
-        themeMode={themeMode}
-        currentMode="Lazer"
-        floating={true}
-        onClose={() => useAlphaCoreStore.getState().closeChat()}
-      />
+      {/* Alpha Core Phase 3 Integration */}
+      {isChatOpen && (
+        <AlphaCoreChat 
+          themeColor={c}
+          themeMode={themeMode}
+          currentMode="Lazer"
+          floating={true}
+          onClose={() => useAlphaCoreStore.getState().closeChat()}
+        />
+      )}
     </div>
   );
 }

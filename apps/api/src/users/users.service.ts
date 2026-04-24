@@ -106,7 +106,7 @@ export class UsersService {
 
   async saveUserUpload(
     userId: string,
-    type: 'avatar' | 'banner',
+    type: 'avatar' | 'banner' | 'ai-avatar' | 'ai-banner',
     file: Express.Multer.File,
   ): Promise<string> {
     const dir = join(process.cwd(), 'uploads', 'users', userId, type);

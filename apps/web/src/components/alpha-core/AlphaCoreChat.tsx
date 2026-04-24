@@ -3,12 +3,10 @@
 import React, {
   useState, useRef, useEffect, useCallback,
 } from 'react';
-import { useAlphaCore, parseMarkdown } from './useAlphaCore';
+import { useAlphaCore, ChatMessage, PendingAction, parseMarkdown } from './useAlphaCore';
 import { AlphaCoreAvatar } from './AlphaCoreAvatar';
 import { useAuthStore } from '@/store/auth.store';
-import { useAlphaCoreStore, ChatMessage } from '@/store/useAlphaCoreStore';
 import { Avatar } from '@/components/ui';
-import { usePathname } from 'next/navigation';
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 const IconSend = () => (
@@ -53,15 +51,25 @@ const IconChevronDown = () => (
     <path d="m6 9 6 6 6-6"/>
   </svg>
 );
+const IconSparkle = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+  </svg>
+);
+const IconShield = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  </svg>
+);
 
 // ── Quick prompts ──────────────────────────────────────────────────────────
 const QUICK_PROMPTS = [
-  { label: 'Gera uma Imagem 🎨', prompt: 'Gera uma imagem épica de um samurai cibernético no estilo anime' },
-  { label: 'Quem és tu? 🤖', prompt: 'Conta-me sobre a tua origem e o que podes fazer na Alpha Network' },
-  { label: 'Como publicar? 📝', prompt: 'Como faço uma publicação no Modo Lazer?' },
-  { label: 'Pesquisar Utilizador 🔍', prompt: 'Procura o perfil do utilizador @bruno e diz-me o que achas das publicações dele' },
-  { label: 'Temas Populares 🔥', prompt: 'Quais são os temas (tropes) mais quentes do momento?' },
-  { label: 'Novidades 🆕', prompt: 'Quais são as últimas novidades da Alpha Network?' },
+  { label: 'Como publicar?', prompt: 'Como faço uma publicação no Modo Lazer?' },
+  { label: 'Personalizar perfil', prompt: 'Como personalizo o meu perfil na Alpha Network?' },
+  { label: 'Sistema de amigos', prompt: 'Como funciona o sistema de amigos?' },
+  { label: 'Sobre ti', prompt: 'Quem és tu? Conta-me sobre a Alpha Core.' },
+  { label: 'Notificações', prompt: 'Como funcionam as notificações?' },
+  { label: 'Modos da plataforma', prompt: 'Quais são os modos disponíveis na Alpha Network?' },
 ];
 
 // ── Code Block Component ───────────────────────────────────────────────────
@@ -98,44 +106,37 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 }
 
 // ── Message Content Renderer ───────────────────────────────────────────────
-function MessageContent({ content, isStreaming, imageUrl }: { content: string; isStreaming?: boolean, imageUrl?: string }) {
+function MessageContent({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
   const parts = content.split(/(```[\w]*\n[\s\S]*?```)/g);
   return (
-    <div style={{ fontSize: 14, lineHeight: 1.7 }}>
+    <div style={{ fontSize: 14, lineHeight: 1.75 }}>
       {parts.map((part, i) => {
         const codeMatch = part.match(/^```([\w]*)\n([\s\S]*?)```$/);
         if (codeMatch) {
           return <CodeBlock key={i} language={codeMatch[1] || 'text'} code={codeMatch[2].trim()}/>;
         }
-        
-        // Render markdown with block-safe tags
+        // Render inline markdown
         const html = part
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
           .replace(/\*(.+?)\*/g, '<em>$1</em>')
-          .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 5px;border-radius:4px;font-size:12.5px;font-family:monospace">$1</code>')
-          .replace(/^### (.+)$/gm, '<div style="font-weight:600;font-size:13px;margin:12px 0 4px;opacity:0.9">$1</div>')
-          .replace(/^## (.+)$/gm, '<div style="font-weight:600;font-size:14px;margin:14px 0 6px">$1</div>')
-          .replace(/^# (.+)$/gm, '<div style="font-weight:700;font-size:16px;margin:16px 0 8px">$1</div>')
-          .replace(/^- (.+)$/gm, '<div style="padding-left:14px;margin:4px 0;display:flex;gap:6px"><span>•</span><span>$1</span></div>')
-          .replace(/^\d+\. (.+)$/gm, (match, text, offset, str) => {
-            return `<div style="padding-left:14px;margin:4px 0;display:flex;gap:6px"><span>1.</span><span>${text}</span></div>`;
+          .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:monospace">$1</code>')
+          .replace(/^### (.+)$/gm, '<div style="font-weight:600;font-size:13px;margin:10px 0 4px;opacity:0.9;letter-spacing:0.3px">$1</div>')
+          .replace(/^## (.+)$/gm, '<div style="font-weight:600;font-size:14px;margin:12px 0 5px">$1</div>')
+          .replace(/^# (.+)$/gm, '<div style="font-weight:700;font-size:15px;margin:14px 0 6px">$1</div>')
+          .replace(/^- (.+)$/gm, '<div style="padding-left:14px;margin:2px 0">· $1</div>')
+          .replace(/^\d+\. (.+)$/gm, (_, text, offset, str) => {
+            const num = str.slice(0, offset).match(/^\d+\./gm)?.length ?? 0;
+            return `<div style="padding-left:14px;margin:2px 0">${num + 1}. ${text}</div>`;
           })
-          .replace(/\n\n/g, '<div style="height:10px"></div>')
+          .replace(/\n\n/g, '<div style="height:8px"/>')
           .replace(/\n/g, '<br/>');
-          
         return (
-          <div
+          <span
             key={i}
-            style={{ marginBottom: i < parts.length - 1 ? 12 : 0 }}
             dangerouslySetInnerHTML={{ __html: html }}
           />
         );
       })}
-      {imageUrl && (
-        <div style={{ marginTop: 12, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
-          <img src={imageUrl} alt="Alpha Core Art" style={{ width: '100%', height: 'auto', display: 'block', cursor: 'zoom-in' }} onClick={() => window.open(imageUrl, '_blank')} />
-        </div>
-      )}
       {isStreaming && (
         <span
           style={{
@@ -149,6 +150,200 @@ function MessageContent({ content, isStreaming, imageUrl }: { content: string; i
   );
 }
 
+// ── Permissions Panel ─────────────────────────────────────────────────────
+
+const PERM_LABELS: Record<string, { label: string; desc: string }> = {
+  canEditProfile: { label: 'Editar Perfil', desc: 'Bio, nome, status' },
+  canEditTheme: { label: 'Editar Tema', desc: 'Cores do perfil e banner' },
+  canCreatePosts: { label: 'Criar Posts', desc: 'Publicar no feed Lazer' },
+  canDeletePosts: { label: 'Apagar Posts', desc: 'Remover publicações' },
+  canManageFriends: { label: 'Gerir Amigos', desc: 'Enviar pedidos de amizade' },
+};
+
+function PermissionsPanel({ themeColor, token, onClose }: { themeColor: string; token: string; onClose: () => void }) {
+  const c = themeColor;
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  const [perms, setPerms] = React.useState<Record<string, boolean>>({});
+  const [saving, setSaving] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    fetch(`${API_BASE}/alpha/permissions`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => d.data?.permissions && setPerms(d.data.permissions))
+      .catch(() => {});
+  }, [token]);
+
+  const toggle = async (key: string) => {
+    const newVal = !perms[key];
+    setSaving(key);
+    setPerms(p => ({ ...p, [key]: newVal }));
+    await fetch(`${API_BASE}/alpha/permissions`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ [key]: newVal }),
+    }).catch(() => setPerms(p => ({ ...p, [key]: !newVal })));
+    setSaving(null);
+  };
+
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 10,
+      background: 'rgba(8,8,18,0.97)',
+      borderRadius: 20, display: 'flex', flexDirection: 'column',
+      padding: '16px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#f0f0f6', letterSpacing: '-0.2px' }}>Permissões da Alpha Core</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>O que a Alpha pode fazer em teu nome</div>
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: 4 }}>
+          <IconClose/>
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+        {Object.entries(PERM_LABELS).map(([key, meta]) => (
+          <div key={key} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 12px', borderRadius: 12,
+            background: perms[key] ? `${c}12` : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${perms[key] ? `${c}30` : 'rgba(255,255,255,0.07)'}`,
+            transition: 'all 0.2s',
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: perms[key] ? '#f0f0f6' : 'rgba(255,255,255,0.5)' }}>{meta.label}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{meta.desc}</div>
+            </div>
+            <button
+              onClick={() => toggle(key)}
+              disabled={saving === key}
+              style={{
+                width: 40, height: 22, borderRadius: 11, border: 'none',
+                background: perms[key] ? c : 'rgba(255,255,255,0.12)',
+                cursor: 'pointer', position: 'relative', transition: 'all 0.2s',
+                opacity: saving === key ? 0.6 : 1, flexShrink: 0,
+              }}
+            >
+              <div style={{
+                width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                position: 'absolute', top: 3,
+                left: perms[key] ? 21 : 3,
+                transition: 'left 0.2s',
+              }}/>
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 12 }}>
+        As alterações são imediatas e podem ser revogadas a qualquer momento.
+      </div>
+    </div>
+  );
+}
+
+// ── Action Card Component ─────────────────────────────────────────────────
+
+function ActionCard({
+  msgId,
+  action,
+  themeColor,
+  onConfirm,
+  onReject,
+}: {
+  msgId: string;
+  action: PendingAction;
+  themeColor: string;
+  onConfirm: (msgId: string, actionId: string) => void;
+  onReject: (msgId: string, actionId: string) => void;
+}) {
+  const c = themeColor;
+  const riskColors: Record<string, string> = {
+    low: '#22c55e',
+    medium: '#f59e0b',
+    high: '#ef4444',
+  };
+  const riskColor = riskColors[action.definition?.riskLevel ?? 'low'] ?? '#22c55e';
+
+  const isDone = action.status === 'executed' || action.status === 'rejected' || action.status === 'failed';
+
+  const payloadStr = Object.entries(action.payload || {})
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(' · ');
+
+  const statusLabels: Record<string, string> = {
+    executed: '✓ Executado',
+    rejected: '✗ Recusado',
+    failed: '⚠ Falhou',
+    pending: 'Aguarda confirmação',
+  };
+
+  return (
+    <div style={{
+      marginTop: 10,
+      padding: '10px 12px',
+      borderRadius: 12,
+      border: `1px solid ${c}30`,
+      background: `${c}08`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <div style={{
+          width: 6, height: 6, borderRadius: '50%',
+          background: riskColor, flexShrink: 0,
+        }}/>
+        <span style={{ fontSize: 11, fontWeight: 700, color: c, letterSpacing: '0.4px' }}>
+          {action.definition?.label ?? action.definition?.id}
+        </span>
+        {isDone && (
+          <span style={{
+            marginLeft: 'auto',
+            fontSize: 10, fontWeight: 600,
+            color: action.status === 'executed' ? '#22c55e'
+              : action.status === 'rejected' ? 'rgba(255,255,255,0.4)'
+              : '#ef4444',
+          }}>
+            {statusLabels[action.status]}
+          </span>
+        )}
+      </div>
+      {payloadStr && (
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: isDone ? 0 : 8 }}>
+          {payloadStr}
+        </div>
+      )}
+      {!isDone && (
+        <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+          <button
+            onClick={() => onConfirm(msgId, action.actionId)}
+            style={{
+              flex: 1, padding: '5px 0', borderRadius: 8,
+              border: `1px solid ${c}50`,
+              background: `${c}18`,
+              color: c, fontSize: 11, fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}
+          >
+            ✓ Aprovar
+          </button>
+          <button
+            onClick={() => onReject(msgId, action.actionId)}
+            style={{
+              flex: 1, padding: '5px 0', borderRadius: 8,
+              border: '1px solid rgba(239,68,68,0.3)',
+              background: 'rgba(239,68,68,0.08)',
+              color: '#f87171', fontSize: 11, fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}
+          >
+            ✗ Recusar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 
 interface AlphaCoreChatProps {
@@ -156,6 +351,7 @@ interface AlphaCoreChatProps {
   themeMode?: 'light' | 'dark';
   currentMode?: string;
   onClose?: () => void;
+  /** Se `floating=true`, renderiza como painel flutuante. Se false, inline. */
   floating?: boolean;
 }
 
@@ -166,19 +362,11 @@ export function AlphaCoreChat({
   onClose,
   floating = true,
 }: AlphaCoreChatProps) {
-  const pathname = usePathname();
-  const { isOpen } = useAlphaCoreStore();
-  const { user } = useAuthStore();
-  
-  // Detect current mode from URL
-  const modeFromPath = pathname?.includes('/main/lazer') ? 'Lazer' : 
-                     pathname?.includes('/main/community') ? 'Community' : 
-                     pathname?.includes('/main/creator') ? 'Creator' : 
-                     pathname?.includes('/main/developer') ? 'Developer' : currentMode;
-
+  const { user, accessToken } = useAuthStore();
   const [input, setInput] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
   const [showQuickPrompts, setShowQuickPrompts] = useState(true);
+  const [showPermissions, setShowPermissions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -186,15 +374,21 @@ export function AlphaCoreChat({
     messages,
     streamingContent,
     isStreaming,
+    personalAI,
     sendMessage,
     stopStreaming,
     clearHistory,
     sendQuickPrompt,
+    confirmAction,
+    rejectAction,
   } = useAlphaCore({
     themeColor,
-    currentMode: modeFromPath,
-    capabilities: ['chat', 'image_generation', 'code_execution', 'report_generation'],
+    currentMode,
+    capabilities: ['chat', 'code_execution', 'report_generation', 'platform_actions'],
   });
+
+  const isLight = themeMode === 'light';
+  const c = themeColor;
 
   // Auto-scroll
   useEffect(() => {
@@ -219,11 +413,6 @@ export function AlphaCoreChat({
       handleSend();
     }
   };
-
-  if (!isOpen) return null;
-
-  const isLight = themeMode === 'light';
-  const c = themeColor;
 
   // ── Styles ────────────────────────────────────────────────────────────────
 
@@ -274,15 +463,6 @@ export function AlphaCoreChat({
           0%,80%,100%{transform:scale(0.6);opacity:0.3}
           40%{transform:scale(1);opacity:1}
         }
-        .ac-quick-prompt-btn:hover {
-          background: ${c}25 !important;
-          border-color: ${c}60 !important;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px ${c}20;
-        }
-        .ac-quick-prompt-btn:active {
-          transform: translateY(0);
-        }
         .ac-msg-animate { animation: ac-msg-in 0.25s ease forwards; }
         .ac-user-select::-webkit-scrollbar { width: 4px; }
         .ac-user-select::-webkit-scrollbar-track { background: transparent; }
@@ -293,7 +473,15 @@ export function AlphaCoreChat({
         .ac-send-btn:not(:disabled):hover { filter: brightness(1.1); transform: scale(1.05); }
       `}</style>
 
-      <div style={containerStyle}>
+      <div style={{ ...containerStyle, position: floating ? 'fixed' : 'relative' }}>
+        {/* ── Permissions Panel Overlay ──────────────────────────────── */}
+        {showPermissions && accessToken && (
+          <PermissionsPanel
+            themeColor={c}
+            token={accessToken}
+            onClose={() => setShowPermissions(false)}
+          />
+        )}
 
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div style={{
@@ -303,12 +491,21 @@ export function AlphaCoreChat({
           background: isLight ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.03)',
           flexShrink: 0,
         }}>
+          {/* Avatar + status dot */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
-            <AlphaCoreAvatar
-              size={36}
-              state={isStreaming ? 'thinking' : 'idle'}
-              themeColor={c}
-            />
+            {personalAI?.avatarUrl ? (
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: `url(${personalAI.avatarUrl}) center/cover`,
+                border: `1.5px solid ${c}50`
+              }}/>
+            ) : (
+              <AlphaCoreAvatar
+                size={36}
+                state={isStreaming ? 'thinking' : 'idle'}
+                themeColor={c}
+              />
+            )}
             <div style={{
               position: 'absolute', bottom: 0, right: 0,
               width: 9, height: 9, borderRadius: '50%',
@@ -317,20 +514,38 @@ export function AlphaCoreChat({
             }}/>
           </div>
 
+          {/* Name + status */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontFamily: "'Georgia', serif",
-              fontSize: 14, fontWeight: 600,
+              fontFamily: personalAI ? 'inherit' : "'Georgia', serif",
+              fontSize: 14, fontWeight: 700,
               color: textPrimary, letterSpacing: '-0.2px',
             }}>
-              Alpha Core
+              {personalAI ? personalAI.name : 'Alpha Core'}
             </div>
-            <div style={{ fontSize: 11, color: isStreaming ? c : '#22c55e', fontWeight: 500 }}>
-              {isStreaming ? '● a pensar...' : '● online'}
+            <div style={{ fontSize: 11, color: isStreaming ? c : '#22c55e', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {isStreaming ? '● a pensar...' : `● ${personalAI?.tagline || 'online'}`}
             </div>
           </div>
 
+          {/* Actions */}
           <div style={{ display: 'flex', gap: 4 }}>
+            {/* Permissions toggle */}
+            <button
+              onClick={() => setShowPermissions(v => !v)}
+              title="Permissões da Alpha Core"
+              style={{
+                width: 30, height: 30, borderRadius: 8,
+                border: showPermissions ? `1px solid ${c}40` : 'none',
+                cursor: 'pointer',
+                background: showPermissions ? `${c}15` : 'transparent',
+                color: showPermissions ? c : textSecondary,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}
+            >
+              <IconShield/>
+            </button>
             {messages.length > 0 && (
               <button onClick={clearHistory}
                 title="Limpar conversa"
@@ -374,8 +589,10 @@ export function AlphaCoreChat({
           </div>
         </div>
 
+        {/* ── Body (hidden when minimized) ────────────────────────────── */}
         {!isMinimized && (
           <>
+            {/* Messages */}
             <div
               className="ac-user-select"
               style={{
@@ -383,6 +600,7 @@ export function AlphaCoreChat({
                 display: 'flex', flexDirection: 'column', gap: 12,
               }}>
 
+              {/* Welcome state */}
               {messages.length === 0 && !isStreaming && (
                 <div style={{ textAlign: 'center', padding: '24px 16px 8px' }}>
                   <AlphaCoreAvatar size={56} state="idle" themeColor={c} style={{ margin: '0 auto 12px' }}/>
@@ -394,11 +612,12 @@ export function AlphaCoreChat({
                     Olá. Sou a Alpha.
                   </div>
                   <div style={{ fontSize: 13, color: textSecondary, lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
-                    Inteligência nativa da Alpha Network. Pergunta-me qualquer coisa sobre a plataforma ou pede-me para gerar imagens.
+                    Inteligência nativa da Alpha Network. Pergunta-me qualquer coisa — sobre a plataforma, código, anime, ou qualquer outra coisa.
                   </div>
                 </div>
               )}
 
+              {/* Quick prompts */}
               {showQuickPrompts && messages.length === 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', padding: '4px 0 8px' }}>
                   {QUICK_PROMPTS.map(qp => (
@@ -420,12 +639,14 @@ export function AlphaCoreChat({
                 </div>
               )}
 
+              {/* Message list */}
               {messages.map((msg) => (
                 <div key={msg.id} className="ac-msg-animate" style={{
                   display: 'flex',
                   flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                  gap: 8, alignItems: 'flex-start',
+                  gap: 8, alignItems: 'flex-end',
                 }}>
+                  {/* Avatar */}
                   <div style={{ flexShrink: 0, marginBottom: 2 }}>
                     {msg.role === 'assistant' ? (
                       <AlphaCoreAvatar size={26} state="idle" themeColor={c}/>
@@ -438,10 +659,11 @@ export function AlphaCoreChat({
                     )}
                   </div>
 
+                  {/* Bubble */}
                   <div style={{
                     maxWidth: '82%',
-                    padding: msg.role === 'assistant' ? '12px 16px' : '10px 16px',
-                    borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                    padding: msg.role === 'assistant' ? '10px 13px' : '9px 13px',
+                    borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                     background: msg.role === 'user' ? msgUserBg : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
                     border: msg.role === 'user'
                       ? `1px solid ${msgUserBorder}`
@@ -450,19 +672,49 @@ export function AlphaCoreChat({
                     wordBreak: 'break-word',
                     overflowWrap: 'anywhere',
                   }}>
-                    <MessageContent content={msg.content} imageUrl={msg.imageUrl} />
+                    <MessageContent content={msg.content}/>
+                    {/* Pending action cards */}
+                    {msg.role === 'assistant' && msg.pendingActions?.map(act => (
+                      <ActionCard
+                        key={act.actionId}
+                        msgId={msg.id}
+                        action={act}
+                        themeColor={c}
+                        onConfirm={confirmAction}
+                        onReject={rejectAction}
+                      />
+                    ))}
                     <div style={{
                       fontSize: 10, color: textSecondary,
                       marginTop: 5, textAlign: msg.role === 'user' ? 'right' : 'left',
                     }}>
-                      {new Date(msg.timestamp).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      {msg.timestamp.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 </div>
               ))}
 
-              {isStreaming && (
-                <div className="ac-msg-animate" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              {/* Streaming message */}
+              {isStreaming && streamingContent && (
+                <div className="ac-msg-animate" style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                  <AlphaCoreAvatar size={26} state="thinking" themeColor={c} style={{ flexShrink: 0, marginBottom: 2 }}/>
+                  <div style={{
+                    maxWidth: '82%', padding: '10px 13px',
+                    borderRadius: '16px 16px 16px 4px',
+                    background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)'}`,
+                    color: textPrimary,
+                    wordBreak: 'break-word',
+                    overflowWrap: 'anywhere',
+                  }}>
+                    <MessageContent content={streamingContent} isStreaming/>
+                  </div>
+                </div>
+              )}
+
+              {/* Thinking indicator (before first chunk arrives) */}
+              {isStreaming && !streamingContent && (
+                <div className="ac-msg-animate" style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                   <AlphaCoreAvatar size={26} state="thinking" themeColor={c} style={{ flexShrink: 0, marginBottom: 2 }}/>
                   <div style={{
                     padding: '12px 16px',
@@ -485,34 +737,31 @@ export function AlphaCoreChat({
               <div ref={messagesEndRef}/>
             </div>
 
+            {/* ── Input area ─────────────────────────────────────────── */}
             <div style={{
               padding: '10px 12px 12px',
               borderTop: `1px solid ${borderColor}`,
               background: isLight ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.02)',
               flexShrink: 0,
             }}>
+              {/* Phase 2 capability badges */}
               <div style={{ display: 'flex', gap: 5, marginBottom: 8 }}>
                 {[
-                  { label: 'Imagem', icon: '🎨', prompt: 'Gera uma imagem criativa da Alpha Network no espaço' },
-                  { label: 'Código', icon: '⟨/⟩', prompt: 'Mostra-me um exemplo de código TypeScript premium para um chat' },
-                  { label: 'Alpha', icon: 'α', prompt: 'O que te torna única em comparação com outras IAs?' },
+                  { label: 'Código', icon: '⟨/⟩', action: () => { setInput('Escreve um código para '); inputRef.current?.focus(); } },
+                  { label: 'Relatórios', icon: '⊞', action: () => { setInput('Gera um relatório sobre '); inputRef.current?.focus(); } },
+                  { label: 'Alpha Network', icon: 'α', action: () => sendQuickPrompt('Que acções da Alpha Network podes executar no meu perfil?') },
                 ].map(cap => (
-                  <button 
-                    key={cap.label} 
-                    onClick={() => sendQuickPrompt(cap.prompt)}
-                    className="ac-quick-prompt-btn"
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      padding: '4px 10px', borderRadius: 20,
-                      background: `${c}15`,
-                      border: `1px solid ${c}30`,
-                      fontSize: 10, fontWeight: 600,
-                      color: c, 
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      outline: 'none',
-                    }}
-                  >
+                  <button key={cap.label} onClick={cap.action} className="ac-quick-btn" style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '3px 9px', borderRadius: 20,
+                    background: `${c}10`,
+                    border: `1px solid ${c}25`,
+                    fontSize: 10, fontWeight: 600,
+                    color: c, opacity: 0.9,
+                    letterSpacing: '0.3px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}>
                     <span style={{ fontSize: 10 }}>{cap.icon}</span>
                     {cap.label}
                   </button>
@@ -554,6 +803,7 @@ export function AlphaCoreChat({
                   }}
                 />
 
+                {/* Send / Stop button */}
                 {isStreaming ? (
                   <button
                     onClick={stopStreaming}
@@ -592,7 +842,7 @@ export function AlphaCoreChat({
                 textAlign: 'center', marginTop: 7,
                 fontSize: 10, color: textSecondary, letterSpacing: '0.3px',
               }}>
-                Alpha Core · Alpha Network · Fase 2
+                Alpha Core · Alpha Network · Fase 1
               </div>
             </div>
           </>
@@ -602,7 +852,9 @@ export function AlphaCoreChat({
   );
 }
 
-export interface AlphaCoreButtonProps {
+// ── Floating trigger button ────────────────────────────────────────────────
+
+interface AlphaCoreButtonProps {
   themeColor?: string;
   themeMode?: 'light' | 'dark';
   currentMode?: string;
@@ -613,22 +865,22 @@ export function AlphaCoreButton({
   themeMode = 'dark',
   currentMode = 'Lazer',
 }: AlphaCoreButtonProps) {
-  const { isOpen, toggleChat } = useAlphaCoreStore();
+  const [open, setOpen] = useState(false);
   const c = themeColor;
 
   return (
     <>
-      {isOpen && (
+      {open && (
         <AlphaCoreChat
           themeColor={c}
           themeMode={themeMode}
           currentMode={currentMode}
-          onClose={toggleChat}
+          onClose={() => setOpen(false)}
           floating
         />
       )}
       <button
-        onClick={toggleChat}
+        onClick={() => setOpen(v => !v)}
         title="Alpha Core"
         style={{
           position: 'fixed',
@@ -638,11 +890,11 @@ export function AlphaCoreButton({
           height: 52,
           borderRadius: '50%',
           border: `1.5px solid ${c}50`,
-          background: isOpen
+          background: open
             ? `linear-gradient(135deg, ${c}ee, ${c})`
             : 'rgba(8,8,16,0.85)',
           backdropFilter: 'blur(20px)',
-          boxShadow: isOpen
+          boxShadow: open
             ? `0 8px 32px ${c}80, 0 0 0 4px ${c}18`
             : `0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px ${c}20`,
           cursor: 'pointer',
@@ -651,17 +903,17 @@ export function AlphaCoreButton({
           justifyContent: 'center',
           zIndex: 499,
           transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-          transform: isOpen ? 'rotate(15deg) scale(1.05)' : 'none',
+          transform: open ? 'rotate(15deg) scale(1.05)' : 'none',
         }}>
         <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
-          <circle cx="50" cy="50" r="38" fill={isOpen ? 'rgba(255,255,255,0.15)' : `${c}20`}/>
+          <circle cx="50" cy="50" r="38" fill={open ? 'rgba(255,255,255,0.15)' : `${c}20`}/>
           <text
             x="50" y="63"
             textAnchor="middle"
             fontSize="38"
             fontWeight="300"
             fontFamily="Georgia, serif"
-            fill={isOpen ? '#fff' : c}
+            fill={open ? '#fff' : c}
             opacity="0.95"
           >
             α

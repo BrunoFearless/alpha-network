@@ -45,6 +45,11 @@ model User {
   lazerReactions LazerReaction[]
   friendships Friendship[] @relation("FriendshipUser")
   friendOf    Friendship[] @relation("FriendshipFriend")
+  
+  // Alpha Core
+  alphaCoreActions     AlphaCoreAction[]
+  alphaCorePermission  AlphaCorePermission?
+  alphaAI              AlphaAI?
 
   // Lazer Communities
   lazerCommunitiesOwned      LazerCommunity[]       @relation("LazerCommunityOwner")
@@ -638,4 +643,89 @@ model ServerBot {
 
   @@unique([serverId, botId])
   @@map("server_bots")
+}
+
+model AlphaCoreAction {
+  id          String    @id @default(uuid())
+  userId      String
+  action      String
+  payload     Json
+  result      Json?
+  status      String    @default("pending")
+  confirmedAt DateTime?
+  executedAt  DateTime?
+  revertedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("alpha_core_actions")
+}
+
+model AlphaCorePermission {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  canEditProfile    Boolean  @default(false)
+  canCreatePosts    Boolean  @default(false)
+  canDeletePosts    Boolean  @default(false)
+  canManageFriends  Boolean  @default(false)
+  canEditTheme      Boolean  @default(false)
+  grantedAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("alpha_core_permissions")
+}
+
+model AlphaAI {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  name               String   @default("Alpha")
+  botname            String   @unique
+  tagline            String?
+  bio                String?
+  status             String?
+  avatarUrl          String?
+  bannerUrl          String?
+  bannerColor        String?
+
+  age                String?
+  birthday           String?
+  gender             String?
+  appearance         String?
+  backstory          String?
+  personalityTraits  String[]
+  tone               String?
+  likes              String[]
+  dislikes           String[]
+  goals              String[]
+
+  responseStyle      String?
+  responseLength     String    @default("adaptive")
+  customSystemPrompt String?
+  personalityPrompt  String?
+  knowledgePrompt    String?
+
+  initialMessage     String?
+  wakeupMessage      String?
+  errorMessage       String?
+  sleepMessage       String?
+
+  trainingExamples   Json?
+  knowledgeEntries   Json?
+  triggerWords       Json?
+
+  language           String   @default("pt")
+  memoryEnabled      Boolean  @default(true)
+  isPublic           Boolean  @default(false)
+  isActive           Boolean  @default(true)
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("alpha_ais")
 }
