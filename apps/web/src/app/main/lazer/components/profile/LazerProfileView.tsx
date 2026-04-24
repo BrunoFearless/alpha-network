@@ -8,7 +8,8 @@ import { ThemeBg } from './ThemeBg';
 import { LazerUserProfile, LazerChronicle } from './types';
 import { useLazerStore } from '@/store/lazer.store';
 import { SpotifyCard } from './SpotifyCard';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { AlphaAIProfileModal } from '@/components/alpha-core/AlphaAIProfileModal';
 
 interface ChronicleProps {
   item: LazerChronicle;
@@ -100,6 +101,7 @@ interface ProfileViewProps {
 
 export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId }: ProfileViewProps) {
   const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend, spotifyPlayback, fetchSpotifyPlayback } = useLazerStore();
+  const [showAiModal, setShowAiModal] = useState(false);
   
   // Real-time Spotify Polling
   useEffect(() => {
@@ -201,6 +203,29 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                   >
                     <span className="text-sm animate-pulse">🎵</span>
                     <span className="text-[13px] font-bold tracking-wide truncate" style={{ color: c }}>{user.listening}</span>
+                  </div>
+                )}
+
+                {/* AI Assistant Card */}
+                {user.aiAssistant && (
+                  <div 
+                    onClick={() => setShowAiModal(true)}
+                    className="flex items-center gap-4 px-4 py-3 rounded-2xl border-[1.5px] mb-6 cursor-pointer hover:bg-white/5 transition-colors shadow-sm text-left relative overflow-hidden"
+                    style={{ borderColor: borderCol, background: `${user.aiAssistant.themeColor}10` }}
+                  >
+                    <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: user.aiAssistant.themeColor }} />
+                    <img 
+                      src={user.aiAssistant.avatarUrl || `https://ui-avatars.com/api/?name=${user.aiAssistant.name}&background=random`} 
+                      className="w-10 h-10 rounded-full object-cover border-2" 
+                      style={{ borderColor: user.aiAssistant.themeColor }} 
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[13px] font-bold truncate ${textPrimary}`}>{user.aiAssistant.name}</span>
+                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ background: user.aiAssistant.themeColor, color: '#fff' }}>IA</span>
+                      </div>
+                      <div className={`text-[11px] font-medium opacity-80 ${textSecondary}`}>Assistente Pessoal</div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -315,6 +340,15 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
            
         </div>
       </div>
+
+      {showAiModal && user.aiAssistant && (
+        <AlphaAIProfileModal 
+          botname={user.aiAssistant.botname}
+          themeMode={user.themeMode}
+          onClose={() => setShowAiModal(false)}
+          isOwner={isOwnProfile}
+        />
+      )}
     </div>
   );
 }

@@ -23,6 +23,13 @@ interface AuthUser {
   id: string;
   email: string;
   profile?: UserProfile | null;
+  alphaAI?: {
+    isActive: boolean;
+    name: string;
+    botname: string;
+    avatarUrl: string | null;
+    bannerColor: string | null;
+  } | null;
 }
 
 interface AuthStore {

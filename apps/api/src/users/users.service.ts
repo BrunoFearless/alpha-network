@@ -30,7 +30,7 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: { profile: true },
+      include: { profile: true, alphaAI: true },
     });
     if (!user || user.deletedAt) return null;
     return user;
@@ -39,7 +39,7 @@ export class UsersService {
   async findByUsername(username: string) {
     const profile = await this.prisma.profile.findUnique({
       where: { username },
-      include: { user: true },
+      include: { user: { include: { alphaAI: true } } },
     });
     if (!profile || profile.user.deletedAt) return null;
     return profile;

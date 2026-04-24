@@ -128,6 +128,12 @@ export default function LazerPage() {
       bannerColor: p.bannerColor, chronicles: [],
       spotifyEnabled: p.spotifyEnabled || false,
       lastPlayedTrack: p.lastPlayedTrack || null,
+      aiAssistant: authUser.alphaAI?.isActive ? {
+        name: authUser.alphaAI.name,
+        botname: authUser.alphaAI.botname,
+        avatarUrl: authUser.alphaAI.avatarUrl,
+        themeColor: authUser.alphaAI.bannerColor || '#a78bfa',
+      } : undefined,
     };
   }, [authUser]);
 
@@ -161,6 +167,12 @@ export default function LazerPage() {
       bannerColor: p.bannerColor,
       spotifyEnabled: p.spotifyEnabled || false,
       lastPlayedTrack: p.lastPlayedTrack || null,
+      aiAssistant: viewingUser.user?.alphaAI?.isActive ? {
+        name: viewingUser.user.alphaAI.name,
+        botname: viewingUser.user.alphaAI.botname,
+        avatarUrl: viewingUser.user.alphaAI.avatarUrl,
+        themeColor: viewingUser.user.alphaAI.bannerColor || '#a78bfa',
+      } : undefined,
       chronicles: userPosts.map((post: any, idx: number) => ({
         id: post.id, side: idx % 2 === 0 ? 'left' : 'right',
         title: post.tag || 'Publicação', quote: post.content,

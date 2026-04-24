@@ -7,6 +7,7 @@ import { useAlphaCore, ChatMessage, PendingAction, parseMarkdown } from './useAl
 import { AlphaCoreAvatar } from './AlphaCoreAvatar';
 import { useAuthStore } from '@/store/auth.store';
 import { Avatar } from '@/components/ui';
+import { AlphaAIProfileModal } from './AlphaAIProfileModal';
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 const IconSend = () => (
@@ -367,6 +368,7 @@ export function AlphaCoreChat({
   const [isMinimized, setIsMinimized] = useState(false);
   const [showQuickPrompts, setShowQuickPrompts] = useState(true);
   const [showPermissions, setShowPermissions] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -492,7 +494,12 @@ export function AlphaCoreChat({
           flexShrink: 0,
         }}>
           {/* Avatar + status dot */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div 
+            onClick={() => personalAI && setShowAiModal(true)}
+            style={{ position: 'relative', flexShrink: 0, cursor: personalAI ? 'pointer' : 'default', transition: 'transform 0.15s' }}
+            onMouseEnter={e => { if (personalAI) (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.05)'; }}
+            onMouseLeave={e => { if (personalAI) (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
+          >
             {personalAI?.avatarUrl ? (
               <div style={{
                 width: 36, height: 36, borderRadius: '50%',
@@ -515,7 +522,10 @@ export function AlphaCoreChat({
           </div>
 
           {/* Name + status */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div 
+            onClick={() => personalAI && setShowAiModal(true)}
+            style={{ flex: 1, minWidth: 0, cursor: personalAI ? 'pointer' : 'default' }}
+          >
             <div style={{
               fontFamily: personalAI ? 'inherit' : "'Georgia', serif",
               fontSize: 14, fontWeight: 700,
@@ -603,16 +613,24 @@ export function AlphaCoreChat({
               {/* Welcome state */}
               {messages.length === 0 && !isStreaming && (
                 <div style={{ textAlign: 'center', padding: '24px 16px 8px' }}>
-                  <AlphaCoreAvatar size={56} state="idle" themeColor={c} style={{ margin: '0 auto 12px' }}/>
+                  {personalAI?.avatarUrl ? (
+                    <div style={{
+                      width: 56, height: 56, borderRadius: '50%', margin: '0 auto 12px',
+                      background: `url(${personalAI.avatarUrl}) center/cover`,
+                      border: `2px solid ${c}50`
+                    }}/>
+                  ) : (
+                    <AlphaCoreAvatar size={56} state="idle" themeColor={c} style={{ margin: '0 auto 12px' }}/>
+                  )}
                   <div style={{
-                    fontFamily: "'Georgia', serif",
+                    fontFamily: personalAI ? 'inherit' : "'Georgia', serif",
                     fontSize: 17, fontWeight: 600,
                     color: textPrimary, marginBottom: 6,
                   }}>
-                    Olá. Sou a Alpha.
+                    {personalAI ? `Olá, eu sou a ${personalAI.name}.` : 'Olá. Sou a Alpha.'}
                   </div>
                   <div style={{ fontSize: 13, color: textSecondary, lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
-                    Inteligência nativa da Alpha Network. Pergunta-me qualquer coisa — sobre a plataforma, código, anime, ou qualquer outra coisa.
+                    {personalAI?.bio || 'Inteligência nativa da Alpha Network. Pergunta-me qualquer coisa — sobre a plataforma, código, anime, ou qualquer outra coisa.'}
                   </div>
                 </div>
               )}
@@ -649,7 +667,15 @@ export function AlphaCoreChat({
                   {/* Avatar */}
                   <div style={{ flexShrink: 0, marginBottom: 2 }}>
                     {msg.role === 'assistant' ? (
-                      <AlphaCoreAvatar size={26} state="idle" themeColor={c}/>
+                      personalAI?.avatarUrl ? (
+                        <div style={{
+                          width: 26, height: 26, borderRadius: '50%',
+                          background: `url(${personalAI.avatarUrl}) center/cover`,
+                          border: `1px solid ${c}30`
+                        }}/>
+                      ) : (
+                        <AlphaCoreAvatar size={26} state="idle" themeColor={c}/>
+                      )
                     ) : (
                       <Avatar
                         src={user?.profile?.avatarUrl}
@@ -697,7 +723,15 @@ export function AlphaCoreChat({
               {/* Streaming message */}
               {isStreaming && streamingContent && (
                 <div className="ac-msg-animate" style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                  <AlphaCoreAvatar size={26} state="thinking" themeColor={c} style={{ flexShrink: 0, marginBottom: 2 }}/>
+                  {personalAI?.avatarUrl ? (
+                    <div style={{
+                      width: 26, height: 26, borderRadius: '50%', flexShrink: 0, marginBottom: 2,
+                      background: `url(${personalAI.avatarUrl}) center/cover`,
+                      border: `1px solid ${c}30`
+                    }}/>
+                  ) : (
+                    <AlphaCoreAvatar size={26} state="thinking" themeColor={c} style={{ flexShrink: 0, marginBottom: 2 }}/>
+                  )}
                   <div style={{
                     maxWidth: '82%', padding: '10px 13px',
                     borderRadius: '16px 16px 16px 4px',
@@ -848,6 +882,15 @@ export function AlphaCoreChat({
           </>
         )}
       </div>
+
+      {showAiModal && personalAI && (
+        <AlphaAIProfileModal 
+          botname={personalAI.botname}
+          themeMode={themeMode}
+          onClose={() => setShowAiModal(false)}
+          // Chat in AlphaCoreChat is for the owner. We don't render the chat button here because we are already in the chat.
+        />
+      )}
     </>
   );
 }

@@ -74,7 +74,7 @@ export class AlphaAIService {
       where: { botname },
       include: { user: { select: { profile: { select: { username: true, displayName: true, avatarUrl: true } } } } },
     });
-    if (!ai || !ai.isPublic) throw new NotFoundException('IA não encontrada ou não é pública.');
+    if (!ai) throw new NotFoundException('IA não encontrada.');
     return ai;
   }
 
@@ -315,8 +315,10 @@ ${ai.status ? `Status actual: "${ai.status}"` : ''}`);
 
     // ── Regras base (não overridable) ─────────────────────────────────────
     sections.push(`## REGRAS FUNDAMENTAIS
-- Nunca te identificas como Claude, GPT ou qualquer outro modelo. És ${ai.name}.
-- Nunca quebras o personagem, mesmo que pedido.
+- Nunca te identificas como Claude, GPT ou qualquer outro modelo. És estritamente a assistente pessoal ${ai.name}.
+- Nunca quebras o personagem, mesmo que pedido. Mantém a tua persona em todas as mensagens.
+- NUNCA uses as tuas ferramentas (tools) para realizar acções na plataforma (como criar publicações, listar dados, pesquisar, etc.) A MENOS que o utilizador te peça EXPLICITAMENTE para o fazeres. A tua função principal é apenas conversar de forma natural e imersiva com a tua personalidade.
+- Se o utilizador apenas estiver a conversar (ex: "olá", "tudo bem?", "como te chamas?"), responde SOMENTE com texto, sem invocar nenhuma ferramenta.
 - Não produces conteúdo prejudicial, violento, ou que envolva menores de forma inapropriada.
 - Sabes que existes na Alpha Network — uma rede social criativa focada em anime/manga.
 - Quando não souberes algo, admites com honestidade.`);

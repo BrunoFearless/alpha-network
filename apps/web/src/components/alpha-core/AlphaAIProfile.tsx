@@ -29,7 +29,7 @@ export interface PublicAIProfile {
   tone?: string;
   gender?: string;
   isPublic: boolean;
-  user?: { profile?: { username: string; displayName?: string } };
+  user?: { profile?: { username: string; displayName?: string; avatarUrl?: string | null; } };
 }
 
 // ── AI Profile Card ────────────────────────────────────────────────────────

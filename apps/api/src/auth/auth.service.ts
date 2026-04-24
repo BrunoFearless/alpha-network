@@ -125,7 +125,7 @@ export class AuthService {
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { profile: true },
+      include: { profile: true, alphaAI: true },
     });
     if (!user) throw new NotFoundException();
 

@@ -35,6 +35,18 @@ export interface LazerUserProfile {
   spotifyEnabled?: boolean;
   lastPlayedTrack?: any;
   chronicles: LazerChronicle[];
+  isAI?: boolean;
+  aiAssistant?: {
+    name: string;
+    botname: string;
+    avatarUrl: string | null;
+    themeColor: string;
+  };
+  creator?: {
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+  };
 }
 
 export const DEMO_USER: LazerUserProfile = {
