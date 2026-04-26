@@ -107,7 +107,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 }
 
 // ── Message Content Renderer ───────────────────────────────────────────────
-function MessageContent({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
+export function MessageContent({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
   const parts = content.split(/(```[\w]*\n[\s\S]*?```)/g);
   return (
     <div style={{ fontSize: 14, lineHeight: 1.75 }}>
@@ -736,7 +736,9 @@ export function AlphaCoreChat({
                         fontSize: 10, color: textSecondary,
                         marginTop: 5, textAlign: msg.role === 'user' ? 'right' : 'left',
                       }}>
-                        {msg.timestamp.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                        {msg.timestamp instanceof Date 
+                          ? msg.timestamp.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+                          : new Date(msg.timestamp).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>

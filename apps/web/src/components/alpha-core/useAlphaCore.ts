@@ -2,40 +2,13 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
+import { useAlphaCoreStore, ChatMessage, PendingAction } from '@/store/useAlphaCoreStore';
 import { buildAlphaCoreSystemPrompt, buildAlphaCoreSystemPromptCompact } from './alpha-core-system-prompt';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type MessageRole = 'user' | 'assistant';
-
-export interface PendingAction {
-  actionId: string;       // DB record ID (uuid)
-  definition: {
-    id: string;
-    label: string;
-    description: string;
-    riskLevel: 'low' | 'medium' | 'high';
-    reversible: boolean;
-  };
-  payload: Record<string, any>;
-  status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
-}
-
-export interface ChatMessage {
-  id: string;
-  role: MessageRole;
-  content: string;
-  timestamp: Date;
-  // Fase 2/3 extras
-  imageUrl?: string;
-  codeBlocks?: CodeBlock[];
-  reportData?: ReportData;
-  toolUsed?: string;
-  isError?: boolean;
-  isFromHistory?: boolean;
-  // Fase 3: ações pendentes associadas a esta mensagem
-  pendingActions?: PendingAction[];
-}
+// Types moved to store/useAlphaCoreStore.ts
+export type { ChatMessage, PendingAction, MessageRole } from '@/store/useAlphaCoreStore';
 
 export interface CodeBlock {
   language: string;
@@ -290,9 +263,16 @@ const PLATFORM_TOOLS = [
 
 export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
   const { user, accessToken } = useAuthStore();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingContent, setStreamingContent] = useState('');
+  
+  // Use global store for sync
+  const {
+    messages, setMessages, addMessage, updateMessage,
+    isStreaming, setIsStreaming,
+    streamingContent, setStreamingContent,
+    clearMessages, setStatus, setPersonalAI: setStorePersonalAI,
+    personalAI: storePersonalAI,
+  } = useAlphaCoreStore();
+
   const [personalAI, setPersonalAI] = useState<any>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const abortRef = useRef<boolean>(false);
@@ -316,6 +296,7 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
         .then(d => {
           if (d?.data?.isActive) {
             setPersonalAI(d.data);
+            setStorePersonalAI(d.data);
             
             // 2. Fetch Chat History if personal AI is active
             fetch(`${API_BASE}/alpha/ai/history`, {
@@ -332,7 +313,10 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
                     codeBlocks: extractCodeBlocks(m.content),
                     isFromHistory: true,
                   }));
-                  setMessages(historyMessages);
+                  // IMPORTANT: Only update if different to avoid infinite loop
+                  if (JSON.stringify(historyMessages) !== JSON.stringify(messages)) {
+                    setMessages(historyMessages);
+                  }
                 }
               })
               .catch(err => console.error('[useAlphaCore] Erro ao carregar histórico:', err))
@@ -343,7 +327,7 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
         })
         .catch(() => setIsLoadingHistory(false));
     }
-  }, [accessToken]);
+  }, [accessToken]); // Removed messages from dependencies to avoid loop
 
   const toGroqMessages = (msgs: ChatMessage[]): GroqMessage[] =>
     msgs
@@ -362,9 +346,10 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    addMessage(userMsg);
     setIsStreaming(true);
     setStreamingContent('');
+    setStatus('thinking');
 
     const assistantId = `a-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     let accumulated = '';
@@ -399,9 +384,10 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
           codeBlocks: extractCodeBlocks(accumulated),
           pendingActions: collectedActions.length > 0 ? collectedActions : undefined,
         };
-        setMessages(prev => [...prev, assistantMsg]);
+        addMessage(assistantMsg);
         setStreamingContent('');
         setIsStreaming(false);
+        setStatus('idle');
       },
       // onError
       (err) => {
@@ -415,9 +401,10 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
           timestamp: new Date(),
           isError: true,
         };
-        setMessages(prev => [...prev, errorMsg]);
+        addMessage(errorMsg);
         setStreamingContent('');
         setIsStreaming(false);
+        setStatus('idle');
         options.onError?.(err);
       },
       hasPlatformActions ? PLATFORM_TOOLS : undefined,
@@ -427,7 +414,8 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
   // ── Action: Confirm ────────────────────────────────────────────────────
 
   const confirmAction = useCallback(async (msgId: string, actionRecordId: string) => {
-    if (!accessToken) return;
+    const targetMsg = messages.find(m => m.id === msgId);
+    if (!accessToken || !targetMsg?.pendingActions) return;
     try {
       const res = await fetch(`${ALPHA_API_ACTIONS}/${actionRecordId}/confirm`, {
         method: 'POST',
@@ -444,52 +432,41 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
         }
       }
 
-      setMessages(prev => prev.map(m => {
-        if (m.id !== msgId || !m.pendingActions) return m;
-        return {
-          ...m,
-          pendingActions: m.pendingActions.map(a =>
-            a.actionId === actionRecordId
-              ? { ...a, status: executionResult?.success ? 'executed' : 'failed' }
-              : a
-          ),
-        };
-      }));
+      updateMessage(msgId, {
+        pendingActions: targetMsg.pendingActions.map((a: PendingAction) =>
+          a.actionId === actionRecordId
+            ? { ...a, status: executionResult?.success ? 'executed' : 'failed' }
+            : a
+        ),
+      });
     } catch {
       // silently update status to failed
-      setMessages(prev => prev.map(m => {
-        if (m.id !== msgId || !m.pendingActions) return m;
-        return {
-          ...m,
-          pendingActions: m.pendingActions.map(a =>
-            a.actionId === actionRecordId ? { ...a, status: 'failed' } : a
-          ),
-        };
-      }));
+      updateMessage(msgId, {
+        pendingActions: targetMsg.pendingActions.map((a: PendingAction) =>
+          a.actionId === actionRecordId ? { ...a, status: 'failed' } : a
+        ),
+      });
     }
-  }, [accessToken]);
+  }, [accessToken, messages, updateMessage]);
 
   // ── Action: Reject ─────────────────────────────────────────────────────
 
   const rejectAction = useCallback(async (msgId: string, actionRecordId: string) => {
-    if (!accessToken) return;
+    const targetMsg = messages.find(m => m.id === msgId);
+    if (!accessToken || !targetMsg?.pendingActions) return;
     try {
       await fetch(`${ALPHA_API_ACTIONS}/${actionRecordId}/reject`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}` },
       });
     } finally {
-      setMessages(prev => prev.map(m => {
-        if (m.id !== msgId || !m.pendingActions) return m;
-        return {
-          ...m,
-          pendingActions: m.pendingActions.map(a =>
-            a.actionId === actionRecordId ? { ...a, status: 'rejected' } : a
-          ),
-        };
-      }));
+      updateMessage(msgId, {
+        pendingActions: targetMsg.pendingActions.map((a: PendingAction) =>
+          a.actionId === actionRecordId ? { ...a, status: 'rejected' } : a
+        ),
+      });
     }
-  }, [accessToken]);
+  }, [accessToken, messages, updateMessage]);
 
   // ── Misc ───────────────────────────────────────────────────────────────
 
@@ -502,16 +479,18 @@ export function useAlphaCore(options: UseAlphaCoreOptions = {}) {
         content: streamingContent + ' *(interrompido)*',
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, assistantMsg]);
+      addMessage(assistantMsg);
     }
     setStreamingContent('');
     setIsStreaming(false);
+    setStatus('idle');
   }, [streamingContent]);
 
   const clearHistory = useCallback(async () => {
-    setMessages([]);
+    clearMessages();
     setStreamingContent('');
     setIsStreaming(false);
+    setStatus('idle');
 
     if (accessToken) {
       try {

@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useChatStore } from '@/store/chat.store';
 import { useAuthStore } from '@/store/auth.store';
+import { useAlphaCore } from '@/components/alpha-core/useAlphaCore';
+import { MessageContent } from '@/components/alpha-core/AlphaCoreChat';
+import { useAlphaCoreStore } from '@/store/useAlphaCoreStore';
 import { EmojiRenderer, getAnimatedUrl, ALL_ANIMATED_EMOJIS } from '@/components/ui/EmojiRenderer';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -268,6 +271,100 @@ function ChatSettings({ contact, onBack, themeColor, themeMode }: { contact: Con
   );
 }
 
+// ─── Alpha Chat View ───────────────────────────────────────────────────────────
+function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string; themeMode: 'light' | 'dark'; authUser: any }) {
+  const {
+    messages, isStreaming, streamingContent, sendMessage, 
+    personalAI, isLoadingHistory, confirmAction, rejectAction
+  } = useAlphaCore({
+    capabilities: ['chat', 'platform_actions'],
+  });
+
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isLight = themeMode === 'light';
+  const tp = isLight ? '#1e1b4b' : '#ffffff';
+  const ts = isLight ? '#94a3b8' : '#94a3b8';
+  const borderCol = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streamingContent]);
+
+  const handleSend = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (input.trim() && !isStreaming) {
+      sendMessage(input.trim());
+      setInput('');
+    }
+  };
+
+  const userColor = authUser?.profile?.bannerColor || '#6366f1';
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ padding: '0 24px', height: 68, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, borderBottom: `1px solid ${borderCol}`, background: 'transparent' }}>
+        <div style={{ position: 'relative' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: `${themeColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {personalAI?.avatarUrl 
+              ? <img src={personalAI.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <IconSparkles size={22} color={themeColor}/>
+            }
+          </div>
+          <div style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', border: '2px solid white' }}/>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 900, color: tp }}>{personalAI?.name || 'Alpha Core'}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#22c55e' }}>{personalAI?.tagline || 'Online'}</div>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {messages.map((msg) => (
+          <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '100%' }}>
+            <div style={{ 
+              padding: '10px 14px', 
+              borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px', 
+              background: msg.role === 'user' ? `linear-gradient(135deg, ${userColor}dd 0%, ${userColor} 100%)` : isLight ? 'white' : 'rgba(255,255,255,0.08)', 
+              color: msg.role === 'user' ? 'white' : tp, 
+              fontSize: 14, 
+              boxShadow: '0 2px 12px rgba(0,0,0,0.07)', 
+              border: msg.role === 'user' ? `1.5px solid ${userColor}` : `1px solid ${borderCol}`, 
+              maxWidth: '85%' 
+            }}>
+              <MessageContent content={msg.content} />
+              <div style={{ fontSize: 10, opacity: 0.6, marginTop: 5, textAlign: msg.role === 'user' ? 'right' : 'left' }}>
+                {msg.timestamp instanceof Date 
+                  ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </div>
+          </div>
+        ))}
+        {isStreaming && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '100%' }}>
+            <div style={{ padding: '10px 14px', borderRadius: '18px 18px 18px 4px', background: isLight ? 'white' : 'rgba(255,255,255,0.08)', color: tp, fontSize: 14, border: `1px solid ${borderCol}`, maxWidth: '85%' }}>
+              <MessageContent content={streamingContent} isStreaming />
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div style={{ padding: '14px 24px 20px', borderTop: `1px solid ${borderCol}` }}>
+        <form onSubmit={handleSend} style={{ display: 'flex', gap: 12 }}>
+          <div style={{ flex: 1, padding: '10px 16px', borderRadius: 24, background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)', border: `1.5px solid ${themeColor}20` }}>
+            <input type="text" placeholder="Conversar com a Alpha..." value={input} onChange={(e) => setInput(e.target.value)} style={{ flex: 1, background: 'none', border: 'none', color: tp, fontSize: 14, outline: 'none', width: '100%' }}/>
+          </div>
+          <button type="submit" disabled={!input.trim() || isStreaming} style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: input.trim() ? userColor : '#ccc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function MessagesModule() {
   const { user: authUser } = useAuthStore();
   const themeMode = (authUser?.profile as any)?.lazerData?.themeMode || 'dark';
@@ -277,7 +374,7 @@ export default function MessagesModule() {
   const glassBg = isLight ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)';
   const borderCol = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
   const accentBorder = `rgba(99,102,241,0.1)`;
-  const themeColor = '#6366f1';
+  const themeColor = authUser?.profile?.bannerColor || '#6366f1';
 
   const { 
     conversations, activeConversationId, initSocket, fetchConversations, 
@@ -285,6 +382,8 @@ export default function MessagesModule() {
     deleteMessage: deleteStoreMessage, editMessage: editStoreMessage,
     togglePin: toggleStorePin, toggleReaction: toggleStoreReaction,
   } = useChatStore();
+
+  const { messages, personalAI } = useAlphaCoreStore();
 
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
@@ -353,7 +452,22 @@ export default function MessagesModule() {
   const isAudio = (url: string) => /\.(mp3|wav|ogg)$/i.test(url);
 
   const mappedContacts = useMemo(() => {
-    return conversations.map(conv => {
+    const assistantContact: Contact = {
+      id: 'alpha-assistant',
+      name: personalAI?.name || 'Alpha Core',
+      username: personalAI?.botname || 'alpha',
+      avatar: personalAI?.avatarUrl || '',
+      status: 'online',
+      statusText: personalAI?.tagline || 'Online',
+      lastMessage: messages.length > 0 ? messages[messages.length - 1].content : 'Olá! Estou aqui para ajudar.',
+      lastTime: messages.length > 0 ? new Date(messages[messages.length - 1].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      isAI: true,
+      unread: 0,
+      themeColor: '#a78bfa',
+      icon: <IconSparkles size={16} color="#a78bfa" />,
+    };
+
+    const userConversations = conversations.map(conv => {
       const otherParticipant = conv.participants.find(p => p.id !== authUser?.id);
       const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
 
@@ -378,7 +492,9 @@ export default function MessagesModule() {
         isAI: otherParticipant?.profile?.username === 'nova',
       } as Contact;
     });
-  }, [conversations, authUser?.id, tp]);
+
+    return [assistantContact, ...userConversations];
+  }, [conversations, authUser?.id, tp, messages]);
 
   useEffect(() => {
     if (!activeConversationId && mappedContacts.length > 0) {
@@ -485,7 +601,13 @@ export default function MessagesModule() {
             <div key={c.id} className="contact-item" onClick={() => { setActiveConversation(c.id); setShowSettings(false); }} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 12px', borderRadius: 14, cursor: 'pointer', marginBottom: 2, background: activeConversationId === c.id ? (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)') : 'transparent', borderLeft: activeConversationId === c.id ? `3px solid ${themeColor}` : '3px solid transparent' }}>
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div style={{ width: 46, height: 46, borderRadius: '50%', background: isLight ? '#e5e7eb' : '#27272a', overflow: 'hidden', border: activeConversationId === c.id ? `2px solid ${themeColor}` : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {c.isAI ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${themeColor}20` }}><IconSparkles size={24} color={themeColor}/></div> : <img src={c.avatar} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>}
+                  {c.isAI 
+                    ? (c.avatar 
+                        ? <img src={c.avatar} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${themeColor}20` }}><IconSparkles size={24} color={themeColor}/></div>
+                      )
+                    : <img src={c.avatar} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                  }
                 </div>
                 <div style={{ position: 'absolute', bottom: 1, right: 1, width: 11, height: 11, borderRadius: '50%', background: STATUS_CONFIG[c.status]?.color || '#ccc', border: '2px solid white' }}/>
               </div>
@@ -509,6 +631,8 @@ export default function MessagesModule() {
             <h2 style={{ fontSize: 24, fontWeight: 800, color: tp }}>Clica numa conversa para começar</h2>
             <p style={{ color: ts }}>As tuas mensagens aparecerão aqui em tempo real.</p>
           </div>
+        ) : activeConversationId === 'alpha-assistant' ? (
+          <AlphaChatView themeColor="#a78bfa" themeMode={themeMode} authUser={authUser} />
         ) : showSettings ? (
           <ChatSettings contact={contact} onBack={() => setShowSettings(false)} themeColor={themeColor} themeMode={themeMode}/>
         ) : (
@@ -560,7 +684,7 @@ export default function MessagesModule() {
                           </div>
                         </div>
                       )}
-                      <div style={{ padding: '10px 14px', borderRadius: msg.from === 'me' ? '18px 18px 4px 18px' : '18px 18px 18px 4px', background: msg.from === 'me' ? `linear-gradient(135deg, ${themeColor}dd 0%, ${themeColor} 100%)` : isLight ? 'white' : 'rgba(255,255,255,0.08)', color: msg.from === 'me' ? 'white' : tp, fontSize: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: msg.from === 'me' ? 'none' : `1px solid ${borderCol}`, position: 'relative', maxWidth: '85%' }}>
+                      <div style={{ padding: '10px 14px', borderRadius: msg.from === 'me' ? '18px 18px 4px 18px' : '18px 18px 18px 4px', background: msg.from === 'me' ? `linear-gradient(135deg, ${themeColor}dd 0%, ${themeColor} 100%)` : isLight ? 'white' : 'rgba(255,255,255,0.08)', color: msg.from === 'me' ? 'white' : tp, fontSize: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: msg.from === 'me' ? `1.5px solid ${themeColor}` : `1px solid ${borderCol}`, position: 'relative', maxWidth: '85%' }}>
                         {msg.isPinned && <div style={{ position: 'absolute', top: -8, right: -8, background: themeColor, borderRadius: '50%', padding: 4, display: 'flex', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}><IconPin size={10} color="white"/></div>}
                         {msg.imageUrl && (
                           isImage(msg.imageUrl) ? (
@@ -650,10 +774,16 @@ export default function MessagesModule() {
         <div style={{ width: 264, flexShrink: 0, background: glassBg, backdropFilter: 'blur(24px)', borderLeft: `1px solid ${borderCol}`, overflowY: 'auto', padding: '28px 18px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
             <div style={{ width: 84, height: 84, borderRadius: '50%', border: `3px solid ${themeColor}`, overflow: 'hidden', background: isLight ? '#e5e7eb' : '#27272a', marginBottom: 14 }}>
-              {contact.isAI ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, background: `${themeColor}20` }}>✦</div> : <img src={contact.avatar} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>}
+              {contact.isAI 
+                ? (contact.avatar 
+                    ? <img src={contact.avatar} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, background: `${themeColor}20` }}>✦</div>
+                  )
+                : <img src={contact.avatar} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+              }
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, color: tp, marginBottom: 3 }}>{contact.name}</div>
-            <div style={{ fontSize: 12.5, color: ts }}>@{contact.username}</div>
+            <div style={{ fontSize: 12.5, color: ts }}>@{personalAI?.botname || contact.username}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 20, background: `${STATUS_CONFIG[contact.status]?.color}12`, border: `1px solid ${STATUS_CONFIG[contact.status]?.color}35`, marginTop: 8 }}>
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_CONFIG[contact.status]?.color }}/>
               <span style={{ fontSize: 11.5, fontWeight: 700, color: STATUS_CONFIG[contact.status]?.color }}>{contact.statusText}</span>
