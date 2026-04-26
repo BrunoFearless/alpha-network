@@ -1,6 +1,85 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useChatStore } from '@/store/chat.store';
+import { useAuthStore } from '@/store/auth.store';
+import { EmojiRenderer, getAnimatedUrl, ALL_ANIMATED_EMOJIS } from '@/components/ui/EmojiRenderer';
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const IconMessage = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+);
+const IconPlus = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+);
+const IconFile = ({ size = 24, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+);
+
+const IconDownload = ({ size = 24, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+);
+
+const IconPaperclip = ({ size = 24, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.51a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+);
+const IconSmile = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+);
+const IconUser = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+);
+const IconVolumeX = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+);
+const IconSearch = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+);
+const IconSparkles = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+);
+const IconEdit = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+);
+const IconTrash = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+);
+const IconPin = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>
+);
+const IconSmilePlus = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M16 5h6"/><path d="M19 2v6"/><circle cx="12" cy="12" r="10"/></svg>
+);
+const IconUsers = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+);
+const IconBell = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+);
+const IconPalette = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.5-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H17c2.8 0 5-2.2 5-5 0-5.5-4.5-10-10-10z"/></svg>
+);
+const IconLock = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+);
+const IconAlertTriangle = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+);
+const IconMoreHorizontal = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+);
+const IconPhone = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+);
+const IconVideo = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
+);
+const IconInfo = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+);
+const IconChevronLeft = ({ size = 20, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Contact {
@@ -17,6 +96,12 @@ interface Contact {
   isAI?: boolean;
   themeColor?: string;
   sharedMedia?: string[];
+  icon?: React.ReactNode;
+}
+
+interface Reaction {
+  userId: string;
+  emoji: string;
 }
 
 interface Message {
@@ -24,87 +109,16 @@ interface Message {
   from: 'me' | 'them';
   content: string;
   time: string;
-  reactions?: string[];
+  reactions?: Reaction[];
   imageUrl?: string;
   replyTo?: string;
+  isPinned?: boolean;
+  editedAt?: string;
   status?: 'sent' | 'delivered' | 'read';
 }
 
-// ─── Mock data ─────────────────────────────────────────────────────────────────
-const CONTACTS: Contact[] = [
-  {
-    id: '1', name: 'Kenji', username: 'kenji_plays', emoji: '🎮',
-    avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=kenji&backgroundColor=b6e3f4',
-    status: 'in-game', statusText: 'In-game',
-    lastMessage: "Don't take too long, lobby is...", lastTime: '7:33 PM',
-    themeColor: '#3b82f6',
-    sharedMedia: [
-      'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=200&q=80',
-      'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=200&q=80',
-      'https://images.unsplash.com/photo-1534423861386-85a16f5d13fd?w=200&q=80',
-    ],
-  },
-  {
-    id: '2', name: 'Aimi', username: 'aimi_chan', emoji: '💗',
-    avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=aimi&backgroundColor=ffdfbf',
-    status: 'online', statusText: 'Online',
-    lastMessage: 'Did you see the new episode of...', lastTime: '10:42 AM', unread: 1,
-    themeColor: '#ec4899',
-    sharedMedia: [
-      'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=200&q=80',
-      'https://images.unsplash.com/photo-1560169897-fc0cdbdfa4d5?w=200&q=80',
-      'https://images.unsplash.com/photo-1612178537253-bccd437b730e?w=200&q=80',
-    ],
-  },
-  {
-    id: '3', name: 'Sarah', username: 'sarah_writes', emoji: '✨',
-    avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=sarah&backgroundColor=c0aede',
-    status: 'away', statusText: 'Away',
-    lastMessage: 'Thanks for the manga recomme...', lastTime: 'Yesterday',
-    themeColor: '#8b5cf6',
-  },
-  {
-    id: '4', name: 'Yui', username: 'yui_cosplay', emoji: '🌸',
-    avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=yui&backgroundColor=ffd5dc',
-    status: 'offline', statusText: 'Last seen 3h ago',
-    lastMessage: "I'm going to the spring festival!!", lastTime: 'Tuesday',
-    themeColor: '#f43f5e',
-  },
-  {
-    id: 'ai', name: 'Nova', username: 'nova.alpha', emoji: '✦',
-    avatar: '', isAI: true,
-    status: 'online', statusText: 'Always here',
-    lastMessage: 'Olá! Como posso ajudar hoje?', lastTime: '2:00 PM',
-    themeColor: '#a78bfa',
-  },
-];
-
-const MESSAGES_BY_CONTACT: Record<string, Message[]> = {
-  '1': [
-    { id: 'm1', from: 'them', content: 'Yo, ready for the tournament tonight?🏆', time: '7:30 PM', status: 'read' },
-    { id: 'm2', from: 'me', content: 'Almost! Just tweaking my loadout. Give me 5.', time: '7:32 PM', status: 'read' },
-    { id: 'm3', from: 'them', content: "Don't take too long, lobby is filling up fast 🔥", time: '7:33 PM', status: 'delivered' },
-  ],
-  '2': [
-    { id: 'm1', from: 'them', content: 'Did you see the new episode of Demon Slayer? 👀', time: '10:40 AM' },
-    { id: 'm2', from: 'me', content: 'Not yet!! Don\'t spoil me 😭', time: '10:41 AM' },
-    { id: 'm3', from: 'them', content: 'OK OK I won\'t say anything but... just watch it ASAP 🔥', time: '10:42 AM' },
-  ],
-  '3': [
-    { id: 'm1', from: 'me', content: 'Have you read Chainsaw Man vol 2? I think you\'d love it', time: 'Yesterday' },
-    { id: 'm2', from: 'them', content: 'Thanks for the manga recommendation! Adding to my list ✨', time: 'Yesterday' },
-  ],
-  '4': [
-    { id: 'm1', from: 'them', content: "I'm going to the spring festival next week!! 🌸", time: 'Tuesday' },
-    { id: 'm2', from: 'me', content: 'That sounds amazing! Take lots of pictures!', time: 'Tuesday' },
-  ],
-  'ai': [
-    { id: 'm1', from: 'them', content: 'Olá! Sou a Nova, a tua assistente pessoal na Alpha Network ✦ Como posso ajudar?', time: '2:00 PM' },
-  ],
-};
-
 // ─── Status config ─────────────────────────────────────────────────────────────
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   'online':   { color: '#22c55e', label: 'Online' },
   'away':     { color: '#f59e0b', label: 'Away' },
   'offline':  { color: '#6b7280', label: 'Offline' },
@@ -113,348 +127,337 @@ const STATUS_CONFIG = {
   'busy':     { color: '#ef4444', label: 'Busy' },
 };
 
-// ─── Settings panel ─────────────────────────────────────────────────────────────
-function ChatSettings({ contact, onBack }: { contact: Contact; onBack: () => void }) {
-  const [muted, setMuted] = useState(false);
-  const [alertTone, setAlertTone] = useState('Default (Ping)');
-  const [bubbleColor, setBubbleColor] = useState(contact.themeColor ?? '#3b82f6');
-  const [fontSize, setFontSize] = useState('Medium');
-  const [wallpaper, setWallpaper] = useState('default');
-  const [showEmoji, setShowEmoji] = useState(true);
-  const [readReceipts, setReadReceipts] = useState(true);
-  const [previewMsg] = useState([
-    { from: 'them', text: "Hey, are we still on for the raid tonight?" },
-    { from: 'me', text: "Yeah! Let me just finish up some stuff. Give me 10 mins! 🎮" },
-  ]);
-
-  const wallpapers = [
-    { id: 'default', label: 'Default', bg: 'linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%)' },
-    { id: 'sakura', label: 'Sakura', bg: 'linear-gradient(135deg, #fce4ec 0%, #f8bbd9 100%)' },
-    { id: 'midnight', label: 'Midnight', bg: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' },
-    { id: 'aurora', label: 'Aurora', bg: 'linear-gradient(135deg, #0a2463 0%, #1b4332 50%, #6a0572 100%)' },
-    { id: 'minimal', label: 'Minimal', bg: '#f9fafb' },
-  ];
-
-  const wallpaperObj = wallpapers.find(w => w.id === wallpaper)!;
-  const isDarkWall = ['midnight', 'aurora'].includes(wallpaper);
-
-  return (
-    <div style={{ display: 'flex', height: '100%', gap: 0 }}>
-      {/* Left — contact info */}
-      <div style={{
-        width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', padding: '32px 24px',
-        borderRight: '1px solid rgba(99,102,241,0.1)',
-        background: 'rgba(255,255,255,0.5)',
-      }}>
-        <button onClick={onBack} style={{
-          alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6,
-          padding: '7px 14px', borderRadius: 20, border: '1px solid rgba(99,102,241,0.2)',
-          background: 'rgba(99,102,241,0.06)', color: '#6366f1',
-          fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 32,
-          fontFamily: 'inherit',
-        }}>
-          ← Back
-        </button>
-        <div style={{ position: 'relative', marginBottom: 16 }}>
-          <div style={{
-            width: 96, height: 96, borderRadius: '50%',
-            border: `3px solid ${contact.themeColor ?? '#6366f1'}`,
-            overflow: 'hidden', background: '#e5e7eb',
-          }}>
-            {contact.isAI
-              ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, background: `${contact.themeColor}20` }}>✦</div>
-              : <img src={contact.avatar} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
-            }
-          </div>
-          <div style={{
-            position: 'absolute', bottom: 4, right: 4,
-            width: 14, height: 14, borderRadius: '50%',
-            background: STATUS_CONFIG[contact.status].color,
-            border: '2px solid white',
-          }}/>
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#1e1b4b', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-          {contact.name} {contact.emoji}
-        </div>
-        <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>@{contact.username}</div>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '5px 12px', borderRadius: 20,
-          background: `${STATUS_CONFIG[contact.status].color}15`,
-          border: `1px solid ${STATUS_CONFIG[contact.status].color}40`,
-        }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_CONFIG[contact.status].color }}/>
-          <span style={{ fontSize: 12, fontWeight: 700, color: STATUS_CONFIG[contact.status].color }}>
-            {contact.statusText}
-          </span>
-        </div>
-      </div>
-
-      {/* Center — settings */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '32px 40px' }}>
-        <h2 style={{ fontSize: 28, fontWeight: 800, color: '#1e1b4b', marginBottom: 4, margin: '0 0 6px' }}>
-          Chat Settings
-        </h2>
-        <p style={{ color: '#94a3b8', fontSize: 14, margin: '0 0 32px' }}>
-          Customize your experience with {contact.name}.
-        </p>
-
-        {/* NOTIFICATIONS */}
-        <SectionHeader icon="🔔" label="NOTIFICATIONS"/>
-        <SettingCard title="Mute Messages" desc="Stop receiving push notifications from this chat.">
-          <Toggle checked={muted} onChange={setMuted}/>
-        </SettingCard>
-        <SettingCard title="Custom Alert Tone" desc="Choose a specific sound for new messages.">
-          <select value={alertTone} onChange={e => setAlertTone(e.target.value)}
-            style={{ padding: '8px 14px', borderRadius: 10, border: '1.5px solid rgba(99,102,241,0.2)', background: 'white', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>
-            <option>Default (Ping)</option>
-            <option>Soft Bell</option>
-            <option>Chime</option>
-            <option>Pulse</option>
-            <option>Silent</option>
-          </select>
-        </SettingCard>
-
-        {/* APPEARANCE */}
-        <SectionHeader icon="🎨" label="APPEARANCE"/>
-        <SettingCard title="Bubble Color" desc="Colour of your outgoing message bubbles.">
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {['#3b82f6','#6366f1','#ec4899','#10b981','#f59e0b','#ef4444','#a78bfa'].map(col => (
-              <button key={col} onClick={() => setBubbleColor(col)}
-                style={{ width: 26, height: 26, borderRadius: '50%', background: col, border: `3px solid ${bubbleColor === col ? '#1e1b4b' : 'transparent'}`, cursor: 'pointer', transition: 'transform 0.15s', transform: bubbleColor === col ? 'scale(1.2)' : 'scale(1)' }}/>
-            ))}
-            <input type="color" value={bubbleColor} onChange={e => setBubbleColor(e.target.value)}
-              style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer', background: 'none' }}/>
-          </div>
-        </SettingCard>
-        <SettingCard title="Font Size" desc="Adjust the size of text in the chat.">
-          <div style={{ display: 'flex', gap: 6 }}>
-            {['Small', 'Medium', 'Large'].map(s => (
-              <button key={s} onClick={() => setFontSize(s)}
-                style={{ padding: '6px 16px', borderRadius: 20, border: '1.5px solid', borderColor: fontSize === s ? '#6366f1' : 'rgba(99,102,241,0.2)', background: fontSize === s ? '#6366f1' : 'transparent', color: fontSize === s ? 'white' : '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                {s}
-              </button>
-            ))}
-          </div>
-        </SettingCard>
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 10 }}>Chat Wallpaper</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {wallpapers.map(w => (
-              <button key={w.id} onClick={() => setWallpaper(w.id)}
-                style={{
-                  width: 52, height: 52, borderRadius: 12, border: `2.5px solid ${wallpaper === w.id ? '#6366f1' : 'rgba(99,102,241,0.15)'}`,
-                  background: w.bg, cursor: 'pointer', transition: 'all 0.15s',
-                  transform: wallpaper === w.id ? 'scale(1.08)' : 'scale(1)',
-                  boxShadow: wallpaper === w.id ? '0 4px 16px rgba(99,102,241,0.3)' : 'none',
-                }}
-                title={w.label}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* PRIVACY */}
-        <SectionHeader icon="🔒" label="PRIVACY"/>
-        <SettingCard title="Read Receipts" desc="Let the other person know when you've read messages.">
-          <Toggle checked={readReceipts} onChange={setReadReceipts}/>
-        </SettingCard>
-        <SettingCard title="Show Emoji Reactions" desc="Display emoji reactions on messages.">
-          <Toggle checked={showEmoji} onChange={setShowEmoji}/>
-        </SettingCard>
-
-        {/* DANGER */}
-        <SectionHeader icon="⚠️" label="DANGER ZONE"/>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {[
-            { label: 'Clear Chat History', color: '#f59e0b' },
-            { label: 'Block User', color: '#ef4444' },
-            { label: 'Report', color: '#6b7280' },
-          ].map(btn => (
-            <button key={btn.label}
-              style={{ padding: '9px 18px', borderRadius: 12, border: `1.5px solid ${btn.color}40`, background: `${btn.color}08`, color: btn.color, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-              onMouseEnter={e => { (e.target as any).style.background = `${btn.color}18`; }}
-              onMouseLeave={e => { (e.target as any).style.background = `${btn.color}08`; }}>
-              {btn.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Right — live preview */}
-      <div style={{
-        width: 280, flexShrink: 0, padding: '28px 20px',
-        borderLeft: '1px solid rgba(99,102,241,0.1)',
-        background: 'rgba(255,255,255,0.5)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 18 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#6366f1' }}/>
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#6366f1', letterSpacing: '1.2px', textTransform: 'uppercase' }}>Live Preview</span>
-        </div>
-        <div style={{
-          borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(99,102,241,0.1)',
-          boxShadow: '0 8px 32px rgba(99,102,241,0.08)',
-        }}>
-          {/* Mini header */}
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 9, background: 'white' }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e5e7eb', overflow: 'hidden', flexShrink: 0 }}>
-              {contact.isAI
-                ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, background: `${contact.themeColor}20` }}>✦</div>
-                : <img src={contact.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
-              }
-            </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1e1b4b' }}>{contact.name}</div>
-              <div style={{ fontSize: 11, color: STATUS_CONFIG[contact.status].color, fontWeight: 600 }}>
-                ● {contact.statusText}
-              </div>
-            </div>
-          </div>
-          {/* Mini messages */}
-          <div style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 130, background: wallpaperObj.bg }}>
-            {previewMsg.map((m, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: m.from === 'me' ? 'flex-end' : 'flex-start' }}>
-                <div style={{
-                  maxWidth: '80%', padding: '8px 12px', borderRadius: m.from === 'me' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                  background: m.from === 'me' ? `linear-gradient(135deg, ${bubbleColor}dd, ${bubbleColor})` : (isDarkWall ? 'rgba(255,255,255,0.12)' : 'white'),
-                  color: m.from === 'me' ? 'white' : (isDarkWall ? 'white' : '#1e1b4b'),
-                  fontSize: 11, lineHeight: 1.5, fontWeight: 500,
-                  boxShadow: m.from === 'me' ? `0 4px 16px ${bubbleColor}40` : '0 2px 8px rgba(0,0,0,0.06)',
-                }}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* Mini input */}
-          <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(0,0,0,0.06)', background: 'white', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ flex: 1, padding: '6px 10px', borderRadius: 20, background: '#f1f5f9', fontSize: 11, color: '#94a3b8' }}>
-              Type a message...
-            </div>
-            <div style={{ fontSize: 14 }}>😊</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Helper components ──────────────────────────────────────────────────────────
-function SectionHeader({ icon, label }: { icon: string; label: string }) {
+function SectionHeader({ icon, label, ts }: { icon: React.ReactNode; label: string; ts: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 28, marginBottom: 12 }}>
-      <span style={{ fontSize: 14 }}>{icon}</span>
-      <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', letterSpacing: '1.5px' }}>{label}</span>
-      <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right, rgba(99,102,241,0.15), transparent)', marginLeft: 4 }}/>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 28, marginBottom: 12 }}>
+      <div style={{ color: ts }}>{icon}</div>
+      <span style={{ fontSize: 11, fontWeight: 800, color: ts, letterSpacing: '1.5px' }}>{label}</span>
+      <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, ${ts}20, transparent)`, marginLeft: 4 }}/>
     </div>
   );
 }
 
-function SettingCard({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
+function SettingCard({ title, desc, children, isLight, tp, ts, borderCol }: { title: string; desc: string; children: React.ReactNode; isLight: boolean; tp: string; ts: string; borderCol: string }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '14px 18px', borderRadius: 14, marginBottom: 8,
-      border: '1.5px solid rgba(99,102,241,0.08)',
-      background: 'rgba(255,255,255,0.8)', gap: 16,
+      border: `1.5px solid ${borderCol}`,
+      background: isLight ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.03)', gap: 16,
     }}>
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', marginBottom: 2 }}>{title}</div>
-        <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.4 }}>{desc}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: tp, marginBottom: 2 }}>{title}</div>
+        <div style={{ fontSize: 12, color: ts, lineHeight: 1.4 }}>{desc}</div>
       </div>
       {children}
     </div>
   );
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ checked, onChange, themeColor }: { checked: boolean; onChange: (v: boolean) => void; themeColor: string }) {
   return (
-    <div onClick={() => onChange(!checked)} style={{ cursor: 'pointer', flexShrink: 0 }}>
+    <div onClick={() => onChange(!checked)} style={{
+      width: 44, height: 24, borderRadius: 12,
+      background: checked ? themeColor : 'rgba(0,0,0,0.1)',
+      position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
+      flexShrink: 0
+    }}>
       <div style={{
-        width: 44, height: 24, borderRadius: 12,
-        background: checked ? 'linear-gradient(135deg, #6366f1, #818cf8)' : '#e5e7eb',
-        position: 'relative', transition: 'background 0.2s',
-        boxShadow: checked ? '0 4px 12px rgba(99,102,241,0.35)' : 'none',
-      }}>
-        <div style={{
-          position: 'absolute', top: 3, left: checked ? 23 : 3,
-          width: 18, height: 18, borderRadius: '50%',
-          background: 'white', transition: 'left 0.2s',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-        }}/>
+        position: 'absolute', top: 3, left: checked ? 23 : 3,
+        width: 18, height: 18, borderRadius: '50%',
+        background: 'white', transition: 'left 0.2s',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+      }}/>
+    </div>
+  );
+}
+
+function ChatSettings({ contact, onBack, themeColor, themeMode }: { contact: Contact; onBack: () => void; themeColor: string; themeMode: 'light' | 'dark' }) {
+  const isLight = themeMode === 'light';
+  const tp = isLight ? '#1e1b4b' : '#ffffff';
+  const ts = isLight ? '#94a3b8' : '#94a3b8';
+  const glassBg = isLight ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)';
+  const borderCol = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
+  const accentBorder = `${themeColor}30`;
+
+  const [muted, setMuted] = useState(false);
+  const [alertTone, setAlertTone] = useState('Padrão (Ping)');
+  const [bubbleColor, setBubbleColor] = useState(themeColor);
+  const [fontSize, setFontSize] = useState('Médio');
+  const [readReceipts, setReadReceipts] = useState(true);
+
+  return (
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+      <div style={{ width: 300, flexShrink: 0, padding: '32px 24px', borderRight: `1px solid ${borderCol}`, display: 'flex', flexDirection: 'column', alignItems: 'center', background: glassBg, backdropFilter: 'blur(32px)' }}>
+        <button onClick={onBack} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: ts, marginBottom: 32 }}><IconChevronLeft size={24}/></button>
+        <div style={{ position: 'relative', marginBottom: 20 }}>
+          <div style={{ width: 100, height: 100, borderRadius: '50%', border: `4px solid ${themeColor}`, padding: 3, background: isLight ? 'white' : '#27272a' }}>
+            <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: isLight ? '#f1f5f9' : '#18181b' }}>
+              {contact.isAI
+                ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${themeColor}20` }}><IconSparkles size={40} color={themeColor}/></div>
+                : <img src={contact.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+              }
+            </div>
+          </div>
+          <div style={{ position: 'absolute', bottom: 5, right: 5, width: 16, height: 16, borderRadius: '50%', background: STATUS_CONFIG[contact.status]?.color || '#ccc', border: `3px solid ${isLight ? 'white' : '#18181b'}` }}/>
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, color: tp, margin: '0 0 4px', textAlign: 'center' }}>{contact.name}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 24 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: STATUS_CONFIG[contact.status]?.color || ts }}>
+            {contact.statusText || 'Offline'}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '32px 40px' }}>
+        <h2 style={{ fontSize: 28, fontWeight: 800, color: tp, margin: '0 0 6px' }}>Configurações do Chat</h2>
+        <p style={{ color: ts, fontSize: 14, margin: '0 0 32px' }}>Personaliza a tua experiência com {contact.name}.</p>
+
+        <SectionHeader icon={<IconBell size={18}/>} label="NOTIFICAÇÕES" ts={ts}/>
+        <SettingCard title="Silenciar Mensagens" desc="Para de receber notificações push deste chat." isLight={isLight} tp={tp} ts={ts} borderCol={borderCol}>
+          <Toggle checked={muted} onChange={setMuted} themeColor={themeColor}/>
+        </SettingCard>
+        <SettingCard title="Som de Alerta" desc="Escolhe um som específico para novas mensagens." isLight={isLight} tp={tp} ts={ts} borderCol={borderCol}>
+          <select value={alertTone} onChange={e => setAlertTone(e.target.value)}
+            style={{ padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${accentBorder}`, background: isLight ? 'white' : '#27272a', fontSize: 13, fontWeight: 600, color: tp, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <option>Padrão (Ping)</option>
+            <option>Sino Suave</option>
+            <option>Carrilhão</option>
+            <option>Pulso</option>
+            <option>Silencioso</option>
+          </select>
+        </SettingCard>
+
+        <SectionHeader icon={<IconPalette size={18}/>} label="APARÊNCIA" ts={ts}/>
+        <SettingCard title="Cor do Balão" desc="Cor das tuas mensagens enviadas." isLight={isLight} tp={tp} ts={ts} borderCol={borderCol}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {['#3b82f6','#6366f1','#ec4899','#10b981','#f59e0b','#ef4444','#a78bfa'].map(col => (
+              <button key={col} onClick={() => setBubbleColor(col)}
+                style={{ width: 26, height: 26, borderRadius: '50%', background: col, border: `3px solid ${bubbleColor === col ? tp : 'transparent'}`, cursor: 'pointer', transition: 'transform 0.15s', transform: bubbleColor === col ? 'scale(1.2)' : 'scale(1)' }}/>
+            ))}
+          </div>
+        </SettingCard>
+        <SettingCard title="Tamanho da Fonte" desc="Ajusta o tamanho do texto no chat." isLight={isLight} tp={tp} ts={ts} borderCol={borderCol}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['Pequeno', 'Médio', 'Grande'].map(s => (
+              <button key={s} onClick={() => setFontSize(s)}
+                style={{ padding: '6px 16px', borderRadius: 20, border: '1.5px solid', borderColor: fontSize === s ? themeColor : accentBorder, background: fontSize === s ? themeColor : 'transparent', color: fontSize === s ? 'white' : ts, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </SettingCard>
+
+        <SectionHeader icon={<IconLock size={18}/>} label="PRIVACIDADE" ts={ts}/>
+        <SettingCard title="Recibos de Leitura" desc="Deixa a outra pessoa saber quando leste as mensagens." isLight={isLight} tp={tp} ts={ts} borderCol={borderCol}>
+          <Toggle checked={readReceipts} onChange={setReadReceipts} themeColor={themeColor}/>
+        </SettingCard>
+
+        <SectionHeader icon={<IconAlertTriangle size={18}/>} label="ZONA DE PERIGO" ts={ts}/>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {['Limpar Histórico', 'Bloquear Utilizador', 'Denunciar'].map(label => (
+            <button key={label}
+              style={{ padding: '9px 18px', borderRadius: 12, border: '1.5px solid #ef444440', background: '#ef444410', color: '#ef4444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Main Chat Module ───────────────────────────────────────────────────────────
 export default function MessagesModule() {
-  const [selectedId, setSelectedId] = useState('1');
-  const [messages, setMessages] = useState<Record<string, Message[]>>(MESSAGES_BY_CONTACT);
-  const [inputText, setInputText] = useState('');
+  const { user: authUser } = useAuthStore();
+  const themeMode = (authUser?.profile as any)?.lazerData?.themeMode || 'dark';
+  const isLight = themeMode === 'light';
+  const tp = isLight ? '#1e1b4b' : '#ffffff';
+  const ts = isLight ? '#94a3b8' : '#94a3b8';
+  const glassBg = isLight ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)';
+  const borderCol = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
+  const accentBorder = `rgba(99,102,241,0.1)`;
+  const themeColor = '#6366f1';
+
+  const { 
+    conversations, activeConversationId, initSocket, fetchConversations, 
+    setActiveConversation, sendMessage: sendStoreMessage, isLoading,
+    deleteMessage: deleteStoreMessage, editMessage: editStoreMessage,
+    togglePin: toggleStorePin, toggleReaction: toggleStoreReaction,
+  } = useChatStore();
+
+  const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [hoveredMsg, setHoveredMsg] = useState<string | null>(null);
+  const [showEmojiPickerFor, setShowEmojiPickerFor] = useState<string | null>(null);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [pendingFile, setPendingFile] = useState<{ file: File; preview: string } | null>(null);
+  const [isSendingFile, setIsSendingFile] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showFullGallery, setShowFullGallery] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const contact = CONTACTS.find(c => c.id === selectedId)!;
-  const chatMessages = messages[selectedId] ?? [];
-  const filteredContacts = CONTACTS.filter(c =>
+  const handleFileClick = () => fileInputRef.current?.click();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPendingFile({ file, preview: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPendingFile({ file, preview: '' });
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const uploadAndSend = async (file: File, text: string) => {
+    setIsSendingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/v1/chat/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${useAuthStore.getState().accessToken}` },
+        body: formData,
+      });
+      if (res.ok) {
+        const { url } = await res.json();
+        sendStoreMessage(activeConversationId!, text, url);
+        setPendingFile(null);
+        setMessage('');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+    } finally {
+      setIsSendingFile(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConversations();
+    initSocket();
+  }, [fetchConversations, initSocket]);
+
+  const isImage = (url: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url);
+  const isVideo = (url: string) => /\.(mp4|webm|ogg)$/i.test(url);
+  const isAudio = (url: string) => /\.(mp3|wav|ogg)$/i.test(url);
+
+  const mappedContacts = useMemo(() => {
+    return conversations.map(conv => {
+      const otherParticipant = conv.participants.find(p => p.id !== authUser?.id);
+      const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+
+      return {
+        id: conv.id,
+        name: conv.isGroup ? (conv.name || 'Chat de Grupo') : (otherParticipant?.profile?.displayName || 'Desconhecido'),
+        username: otherParticipant?.profile?.username || 'desconhecido',
+        avatar: otherParticipant?.profile?.avatarUrl || '',
+        status: (otherParticipant?.profile?.status as any) || 'offline',
+        statusText: otherParticipant?.profile?.status || 'Offline',
+        icon: conv.isGroup ? <IconUsers size={20} color={tp}/> : undefined,
+        lastMessage: lastMsg?.content 
+          ? lastMsg.content 
+          : lastMsg?.imageUrl 
+            ? isImage(lastMsg.imageUrl)
+              ? `${lastMsg.senderId === authUser?.id ? 'Tu enviaste' : (otherParticipant?.profile?.displayName || 'Alguém') + ' enviou'} uma imagem`
+              : `${lastMsg.senderId === authUser?.id ? 'Tu enviaste' : (otherParticipant?.profile?.displayName || 'Alguém') + ' enviou'} um ficheiro`
+            : 'Ainda sem mensagens',
+        lastTime: lastMsg ? new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+        unread: 0,
+        themeColor: '#6366f1',
+        isAI: otherParticipant?.profile?.username === 'nova',
+      } as Contact;
+    });
+  }, [conversations, authUser?.id, tp]);
+
+  useEffect(() => {
+    if (!activeConversationId && mappedContacts.length > 0) {
+      setActiveConversation(mappedContacts[0].id);
+    }
+  }, [mappedContacts, activeConversationId, setActiveConversation]);
+
+  const contact = mappedContacts.find(c => c.id === activeConversationId);
+  const activeConv = conversations.find(c => c.id === activeConversationId);
+  
+  const chatMessages = useMemo(() => {
+    if (!activeConv?.messages) return [];
+    return activeConv.messages.map(m => ({
+      id: m.id,
+      from: m.senderId === authUser?.id ? 'me' : 'them',
+      content: m.content,
+      imageUrl: m.imageUrl,
+      isPinned: m.isPinned,
+      editedAt: m.editedAt,
+      reactions: m.reactions,
+      time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'read',
+    } as Message));
+  }, [activeConv?.messages, authUser?.id]);
+
+  const filteredContacts = mappedContacts.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.username.toLowerCase().includes(search.toLowerCase())
   );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, selectedId]);
+  }, [chatMessages]);
 
-  const sendMessage = useCallback(() => {
-    const txt = inputText.trim();
-    if (!txt) return;
-    const newMsg: Message = {
-      id: `m${Date.now()}`, from: 'me', content: txt,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'sent', replyTo: replyTo ?? undefined,
-    };
-    setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] ?? []), newMsg] }));
-    setInputText('');
-    setReplyTo(null);
-  }, [inputText, selectedId, replyTo]);
-
-  const addReaction = (msgId: string, emoji: string) => {
-    setMessages(prev => ({
-      ...prev,
-      [selectedId]: prev[selectedId].map(m =>
-        m.id === msgId
-          ? { ...m, reactions: m.reactions?.includes(emoji) ? m.reactions.filter(r => r !== emoji) : [...(m.reactions ?? []), emoji] }
-          : m
-      ),
-    }));
+  const getImageUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const prefix = url.startsWith('/') ? '' : '/uploads/chat/';
+    return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${prefix}${url}`;
   };
 
-  const QUICK_REACTIONS = ['❤️','😂','😮','😢','👍','🔥'];
+  const handleSendMessage = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (editingMessageId) {
+      if (editContent.trim()) {
+        editStoreMessage(editingMessageId, editContent.trim());
+      }
+      setEditingMessageId(null);
+      setEditContent('');
+      return;
+    }
 
-  const bubbleColor = contact?.themeColor ?? '#6366f1';
+    if (pendingFile) {
+      uploadAndSend(pendingFile.file, message.trim());
+      return;
+    }
 
-  // Group messages by date
+    if (message.trim() && activeConversationId) {
+      sendStoreMessage(activeConversationId, message.trim());
+      setMessage('');
+    }
+  };
+
   const groupedMessages: { date: string; messages: Message[] }[] = [];
   chatMessages.forEach(m => {
-    const date = m.time.includes('PM') || m.time.includes('AM') ? 'TODAY' : m.time.toUpperCase();
+    const date = 'HOJE';
     const last = groupedMessages[groupedMessages.length - 1];
     if (last?.date === date) last.messages.push(m);
     else groupedMessages.push({ date, messages: [m] });
   });
 
+  const handleProfileClick = () => {
+    if (contact?.username) {
+      window.location.href = `/main/lazer/profile/${contact.username}`;
+    }
+  };
+
   return (
-    <div style={{
-      display: 'flex', height: '100vh', overflow: 'hidden',
-      fontFamily: "'Nunito', sans-serif",
-      background: 'linear-gradient(135deg, #f0f4ff 0%, #faf5ff 60%, #fff0f8 100%)',
-    }}>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', fontFamily: "'Nunito', sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
@@ -462,421 +465,218 @@ export default function MessagesModule() {
         ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         @keyframes msgIn { from { opacity:0; transform:translateY(8px) scale(0.98); } to { opacity:1; transform:none; } }
-        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
-        @keyframes slideIn { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:none; } }
         .msg-bubble { animation: msgIn 0.2s ease forwards; }
         .contact-item { transition: all 0.15s; }
         .contact-item:hover { background: rgba(99,102,241,0.06) !important; }
         .send-btn:hover { transform: scale(1.06) !important; filter: brightness(1.08); }
         .send-btn:active { transform: scale(0.95) !important; }
-        .reaction-quick button:hover { transform: scale(1.25) !important; }
-        input:focus { outline: none; }
-        textarea:focus { outline: none; }
       `}</style>
 
-      {/* ──────────────────────────────────────────────────────────────────── */}
       {/* LEFT — Contact list */}
-      {/* ──────────────────────────────────────────────────────────────────── */}
-      <div style={{
-        width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(99,102,241,0.1)',
-        boxShadow: '4px 0 24px rgba(99,102,241,0.06)',
-      }}>
-        {/* Header */}
-        <div style={{ padding: '28px 20px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#1e1b4b', letterSpacing: '-0.5px' }}>
-              Messages
-            </h1>
-            <button style={{
-              width: 36, height: 36, borderRadius: 12,
-              border: '1.5px solid rgba(99,102,241,0.2)',
-              background: 'rgba(99,102,241,0.06)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', fontSize: 16, color: '#6366f1',
-            }}>✏️</button>
-          </div>
-          {/* Search */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 9,
-            padding: '10px 14px', borderRadius: 14,
-            background: 'rgba(99,102,241,0.06)',
-            border: '1.5px solid rgba(99,102,241,0.1)',
-          }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search messages..."
-              style={{ flex: 1, background: 'none', border: 'none', fontSize: 13, color: '#374151', fontFamily: 'inherit' }}/>
+      <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', background: glassBg, backdropFilter: 'blur(32px)', borderRight: `1px solid ${borderCol}` }}>
+        <div style={{ padding: '24px 20px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 14, background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)', border: `1.5px solid ${accentBorder}` }}>
+            <IconSearch size={15} color={isLight ? "#94a3b8" : "#666"}/>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Procurar conversas..." style={{ flex: 1, background: 'none', border: 'none', fontSize: 13, color: tp, fontFamily: 'inherit' }}/>
           </div>
         </div>
-
-        {/* Contact list */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px 16px' }}>
           {filteredContacts.map(c => (
-            <div key={c.id} className="contact-item"
-              onClick={() => { setSelectedId(c.id); setShowSettings(false); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 11,
-                padding: '11px 12px', borderRadius: 14, cursor: 'pointer', marginBottom: 2,
-                background: selectedId === c.id ? 'rgba(99,102,241,0.08)' : 'transparent',
-                borderLeft: selectedId === c.id ? `3px solid ${c.themeColor ?? '#6366f1'}` : '3px solid transparent',
-              }}>
-              {/* Avatar */}
+            <div key={c.id} className="contact-item" onClick={() => { setActiveConversation(c.id); setShowSettings(false); }} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 12px', borderRadius: 14, cursor: 'pointer', marginBottom: 2, background: activeConversationId === c.id ? (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)') : 'transparent', borderLeft: activeConversationId === c.id ? `3px solid ${themeColor}` : '3px solid transparent' }}>
               <div style={{ position: 'relative', flexShrink: 0 }}>
-                <div style={{
-                  width: 46, height: 46, borderRadius: '50%',
-                  background: '#e5e7eb', overflow: 'hidden',
-                  border: selectedId === c.id ? `2px solid ${c.themeColor ?? '#6366f1'}` : '2px solid transparent',
-                }}>
-                  {c.isAI
-                    ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, background: `${c.themeColor}20` }}>✦</div>
-                    : <img src={c.avatar} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
-                  }
+                <div style={{ width: 46, height: 46, borderRadius: '50%', background: isLight ? '#e5e7eb' : '#27272a', overflow: 'hidden', border: activeConversationId === c.id ? `2px solid ${themeColor}` : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {c.isAI ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${themeColor}20` }}><IconSparkles size={24} color={themeColor}/></div> : <img src={c.avatar} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>}
                 </div>
-                <div style={{
-                  position: 'absolute', bottom: 1, right: 1,
-                  width: 11, height: 11, borderRadius: '50%',
-                  background: STATUS_CONFIG[c.status].color,
-                  border: '2px solid white',
-                }}/>
+                <div style={{ position: 'absolute', bottom: 1, right: 1, width: 11, height: 11, borderRadius: '50%', background: STATUS_CONFIG[c.status]?.color || '#ccc', border: '2px solid white' }}/>
               </div>
-              {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {c.name} {c.emoji}
-                    {c.isAI && <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 8, background: `${c.themeColor}20`, color: c.themeColor, border: `1px solid ${c.themeColor}40` }}>AI</span>}
-                  </span>
-                  <span style={{ fontSize: 11, color: '#94a3b8', whiteSpace: 'nowrap' }}>{c.lastTime}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: tp, display: 'flex', alignItems: 'center', gap: 4 }}>{c.name} {c.icon}</span>
+                  <span style={{ fontSize: 11, color: ts }}>{c.lastTime}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 12.5, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>
-                    {c.lastMessage}
-                  </span>
-                  {c.unread && (
-                    <div style={{
-                      minWidth: 20, height: 20, borderRadius: 10,
-                      background: c.themeColor ?? '#6366f1',
-                      color: 'white', fontSize: 11, fontWeight: 800,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      padding: '0 6px', flexShrink: 0,
-                    }}>
-                      {c.unread}
-                    </div>
-                  )}
-                </div>
+                <span style={{ fontSize: 12.5, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{c.lastMessage}</span>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────────────── */}
-      {/* CENTER — Chat area or Settings */}
-      {/* ──────────────────────────────────────────────────────────────────── */}
-      <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0,
-        background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(20px)',
-        overflow: 'hidden',
-      }}>
-        {showSettings ? (
-          <ChatSettings contact={contact} onBack={() => setShowSettings(false)}/>
+      {/* CENTER — Chat area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        {!contact ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ marginBottom: 20, color: themeColor, opacity: 0.8 }}><IconMessage size={64}/></div>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: tp }}>Clica numa conversa para começar</h2>
+            <p style={{ color: ts }}>As tuas mensagens aparecerão aqui em tempo real.</p>
+          </div>
+        ) : showSettings ? (
+          <ChatSettings contact={contact} onBack={() => setShowSettings(false)} themeColor={themeColor} themeMode={themeMode}/>
         ) : (
           <>
-            {/* Chat header */}
-            <div style={{
-              padding: '0 24px', height: 68, flexShrink: 0,
-              display: 'flex', alignItems: 'center', gap: 14,
-              borderBottom: '1px solid rgba(99,102,241,0.08)',
-              background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(20px)',
-            }}>
+            <div style={{ padding: '0 24px', height: 68, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, borderBottom: `1px solid ${borderCol}`, background: glassBg, backdropFilter: 'blur(20px)' }}>
               <div style={{ position: 'relative' }}>
-                <div style={{ width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', background: '#e5e7eb' }}>
-                  {contact.isAI
-                    ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, background: `${contact.themeColor}20` }}>✦</div>
-                    : <img src={contact.avatar} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
-                  }
+                <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: isLight ? '#f1f5f9' : '#27272a' }}>
+                  {contact.isAI ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${themeColor}20` }}><IconSparkles size={22} color={themeColor}/></div> : <img src={contact.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>}
                 </div>
-                <div style={{
-                  position: 'absolute', bottom: 1, right: 1, width: 11, height: 11,
-                  borderRadius: '50%', background: STATUS_CONFIG[contact.status].color, border: '2px solid white',
-                }}/>
+                <div style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: '50%', background: STATUS_CONFIG[contact.status]?.color || '#ccc', border: '2px solid white' }}/>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {contact.name} {contact.emoji}
-                  {contact.isAI && <span style={{ fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 8, background: `${contact.themeColor}20`, color: contact.themeColor, border: `1px solid ${contact.themeColor}40` }}>AI</span>}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: STATUS_CONFIG[contact.status].color, fontWeight: 600 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_CONFIG[contact.status].color, animation: contact.status === 'online' ? 'pulse 2s infinite' : 'none' }}/>
-                  {contact.statusText}
-                </div>
+                <div style={{ fontSize: 15, fontWeight: 900, color: tp }}>{contact.name}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: STATUS_CONFIG[contact.status]?.color || ts }}>{contact.statusText}</div>
               </div>
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: 6 }}>
-                {[
-                  { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.69h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>, label: 'Call' },
-                  { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>, label: 'Video' },
-                  { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>, label: 'More', onClick: () => setShowSettings(true) },
-                ].map(btn => (
-                  <button key={btn.label} onClick={btn.onClick}
-                    style={{
-                      width: 38, height: 38, borderRadius: 12,
-                      border: '1.5px solid rgba(99,102,241,0.1)',
-                      background: 'rgba(99,102,241,0.04)',
-                      color: '#6b7280', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(99,102,241,0.1)'; (e.currentTarget as any).style.color = '#6366f1'; }}
-                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(99,102,241,0.04)'; (e.currentTarget as any).style.color = '#6b7280'; }}>
-                    {btn.icon}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button style={{ width: 38, height: 38, borderRadius: 12, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ts }}><IconPhone size={20}/></button>
+                <button style={{ width: 38, height: 38, borderRadius: 12, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ts }}><IconVideo size={20}/></button>
+                <button onClick={() => setShowSettings(true)} style={{ width: 38, height: 38, borderRadius: 12, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ts }}><IconInfo size={20}/></button>
               </div>
             </div>
 
-            {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-              {groupedMessages.map(group => (
-                <div key={group.date}>
-                  {/* Date separator */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 0 18px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 10px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {groupedMessages.map((group, gIdx) => (
+                <div key={gIdx} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '10px 0' }}>
                     <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.15))' }}/>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.8px', padding: '4px 12px', borderRadius: 20, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.1)' }}>
-                      {group.date}
-                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: ts, letterSpacing: '1px' }}>{group.date}</span>
                     <div style={{ flex: 1, height: 1, background: 'linear-gradient(to left, transparent, rgba(99,102,241,0.15))' }}/>
                   </div>
-                  {group.messages.map((msg, idx) => {
-                    const isMe = msg.from === 'me';
-                    const showAvatar = !isMe && (idx === 0 || group.messages[idx - 1]?.from === 'me');
-                    return (
-                      <div key={msg.id} className="msg-bubble"
-                        style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8, marginBottom: 6 }}
-                        onMouseEnter={() => setHoveredMsg(msg.id)}
-                        onMouseLeave={() => setHoveredMsg(null)}>
-                        {/* Avatar (them) */}
-                        {!isMe && (
-                          <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: '#e5e7eb', opacity: showAvatar ? 1 : 0 }}>
-                            {contact.isAI
-                              ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, background: `${contact.themeColor}20` }}>✦</div>
-                              : <img src={contact.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
-                            }
-                          </div>
-                        )}
-                        <div style={{ maxWidth: '62%', position: 'relative' }}>
-                          {/* Reply indicator */}
-                          {msg.replyTo && (
-                            <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4, paddingLeft: 8, borderLeft: `2px solid ${bubbleColor}`, opacity: 0.7 }}>
-                              ↩ {chatMessages.find(m => m.id === msg.replyTo)?.content?.slice(0, 40)}...
-                            </div>
-                          )}
-                          {/* Bubble */}
-                          <div style={{
-                            padding: '10px 14px',
-                            borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                            background: isMe
-                              ? `linear-gradient(135deg, ${bubbleColor}dd 0%, ${bubbleColor} 100%)`
-                              : 'white',
-                            color: isMe ? 'white' : '#1e1b4b',
-                            fontSize: 14, lineHeight: 1.55, fontWeight: 500,
-                            boxShadow: isMe
-                              ? `0 4px 20px ${bubbleColor}35`
-                              : '0 2px 12px rgba(0,0,0,0.07)',
-                            border: isMe ? 'none' : '1px solid rgba(99,102,241,0.08)',
-                          }}>
-                            {msg.content}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 5 }}>
-                              <span style={{ fontSize: 10, opacity: 0.6, color: isMe ? 'white' : '#94a3b8' }}>{msg.time}</span>
-                              {isMe && msg.status && (
-                                <span style={{ fontSize: 10, opacity: 0.7, color: 'white' }}>
-                                  {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          {/* Reactions */}
-                          {msg.reactions && msg.reactions.length > 0 && (
-                            <div style={{
-                              position: 'absolute', bottom: -12, right: isMe ? 6 : undefined, left: isMe ? undefined : 6,
-                              display: 'flex', gap: 2, padding: '2px 6px', borderRadius: 20,
-                              background: 'white', border: '1px solid rgba(99,102,241,0.12)',
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 1,
-                            }}>
-                              {msg.reactions.map((r, i) => <span key={i} style={{ fontSize: 13 }}>{r}</span>)}
-                            </div>
-                          )}
-                          {/* Quick reactions on hover */}
-                          {hoveredMsg === msg.id && (
-                            <div className="reaction-quick" style={{
-                              position: 'absolute', top: -36, right: isMe ? 0 : undefined, left: isMe ? undefined : 0,
-                              display: 'flex', gap: 3, padding: '5px 8px', borderRadius: 20,
-                              background: 'white', border: '1px solid rgba(99,102,241,0.12)',
-                              boxShadow: '0 4px 20px rgba(0,0,0,0.1)', zIndex: 10,
-                              animation: 'slideIn 0.15s ease',
-                            }}>
-                              {QUICK_REACTIONS.map(r => (
-                                <button key={r} onClick={() => addReaction(msg.id, r)}
-                                  style={{ fontSize: 15, background: 'none', border: 'none', cursor: 'pointer', padding: '1px 3px', borderRadius: 6, transition: 'transform 0.15s' }}>
-                                  {r}
-                                </button>
-                              ))}
-                              <button onClick={() => setReplyTo(msg.id)}
-                                style={{ fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', padding: '1px 4px', borderRadius: 6, fontWeight: 700 }}>
-                                ↩
+                  {group.messages.map((msg) => (
+                    <div key={msg.id} onMouseEnter={() => setHoveredMessageId(msg.id)} onMouseLeave={() => { setHoveredMessageId(null); setShowEmojiPickerFor(null); }} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.from === 'me' ? 'flex-end' : 'flex-start', position: 'relative', marginBottom: 6 }}>
+                      {hoveredMessageId === msg.id && (
+                        <div style={{ position: 'absolute', bottom: '100%', [msg.from === 'me' ? 'right' : 'left']: 0, paddingBottom: 8, display: 'flex', gap: 4, zIndex: 10 }}>
+                          <div style={{ display: 'flex', gap: 10, background: isLight ? 'white' : '#1a1a1a', padding: '6px 12px', borderRadius: 24, boxShadow: '0 4px 15px rgba(0,0,0,0.15)', border: `1px solid ${borderCol}`, alignItems: 'center' }}>
+                            {['❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
+                              <button key={emoji} onClick={() => toggleStoreReaction(msg.id, emoji)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: 16, transition: 'transform 0.1s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.3)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                                <EmojiRenderer content={emoji} emojiSize={18} />
                               </button>
+                            ))}
+                            <div style={{ width: 1, height: 16, background: borderCol, margin: '0 4px' }} />
+                            <button onClick={() => toggleStorePin(msg.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }} title="Fixar"><IconPin size={16} color={msg.isPinned ? themeColor : ts}/></button>
+                            {msg.from === 'me' && (
+                              <>
+                                <button onClick={() => { setEditingMessageId(msg.id); setEditContent(msg.content); setMessage(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }} title="Editar"><IconEdit size={16} color={ts}/></button>
+                                <button onClick={() => setDeleteConfirmId(msg.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }} title="Apagar"><IconTrash size={16} color="#ef4444"/></button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ padding: '10px 14px', borderRadius: msg.from === 'me' ? '18px 18px 4px 18px' : '18px 18px 18px 4px', background: msg.from === 'me' ? `linear-gradient(135deg, ${themeColor}dd 0%, ${themeColor} 100%)` : isLight ? 'white' : 'rgba(255,255,255,0.08)', color: msg.from === 'me' ? 'white' : tp, fontSize: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: msg.from === 'me' ? 'none' : `1px solid ${borderCol}`, position: 'relative', maxWidth: '85%' }}>
+                        {msg.isPinned && <div style={{ position: 'absolute', top: -8, right: -8, background: themeColor, borderRadius: '50%', padding: 4, display: 'flex', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}><IconPin size={10} color="white"/></div>}
+                        {msg.imageUrl && (
+                          isImage(msg.imageUrl) ? (
+                            <img src={getImageUrl(msg.imageUrl)} alt="Shared" style={{ maxWidth: 320, width: '100%', borderRadius: 10, marginBottom: msg.content ? 8 : 0, display: 'block', objectFit: 'contain', cursor: 'pointer' }} onClick={() => setSelectedImage(msg.imageUrl!)} />
+                          ) : isVideo(msg.imageUrl) ? (
+                            <video src={getImageUrl(msg.imageUrl)} controls style={{ maxWidth: 320, width: '100%', borderRadius: 10, marginBottom: msg.content ? 8 : 0, display: 'block' }} />
+                          ) : isAudio(msg.imageUrl) ? (
+                            <audio src={getImageUrl(msg.imageUrl)} controls style={{ width: '100%', maxWidth: 300, marginBottom: msg.content ? 8 : 0, display: 'block' }} />
+                          ) : (
+                            <div style={{ padding: '12px 16px', borderRadius: 12, background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12, marginBottom: msg.content ? 8 : 0, minWidth: 200 }}>
+                              <div style={{ width: 40, height: 40, borderRadius: 10, background: themeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                <IconFile size={20} />
+                              </div>
+                              <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: tp, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg.imageUrl.split('/').pop()}</div>
+                                <div style={{ fontSize: 11, color: ts }}>Ficheiro</div>
+                              </div>
+                              <a href={getImageUrl(msg.imageUrl)} target="_blank" rel="noopener noreferrer" style={{ color: themeColor }}><IconDownload size={18}/></a>
                             </div>
-                          )}
+                          )
+                        )}
+                        {msg.content && <EmojiRenderer content={msg.content} style={{ color: 'inherit' }} />}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 5 }}>
+                          {msg.editedAt && <span style={{ fontSize: 9, opacity: 0.5 }}>Editado</span>}
+                          <span style={{ fontSize: 10, opacity: 0.6 }}>{msg.time}</span>
                         </div>
                       </div>
-                    );
-                  })}
+                      {msg.reactions && msg.reactions.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                          {Object.entries(msg.reactions.reduce((acc, r) => { acc[r.emoji] = (acc[r.emoji] || 0) + 1; return acc; }, {} as Record<string, number>)).map(([emoji, count]) => (
+                            <button key={emoji} onClick={() => toggleStoreReaction(msg.id, emoji)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: isLight ? 'white' : '#222', padding: '2px 6px', borderRadius: 8, border: `1px solid ${borderCol}`, cursor: 'pointer' }}>
+                              <EmojiRenderer content={emoji} emojiSize={14} /><span style={{ fontSize: 10, fontWeight: 700, color: tp }}>{count}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ))}
               <div ref={messagesEndRef}/>
             </div>
 
-            {/* Reply banner */}
-            {replyTo && (
-              <div style={{
-                margin: '0 24px', padding: '8px 14px', borderRadius: 10,
-                background: `${bubbleColor}10`, border: `1px solid ${bubbleColor}30`,
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <div style={{ flex: 1, fontSize: 12, color: '#374151' }}>
-                  <span style={{ fontWeight: 700, color: bubbleColor }}>Replying to:</span>{' '}
-                  {chatMessages.find(m => m.id === replyTo)?.content?.slice(0, 60)}...
-                </div>
-                <button onClick={() => setReplyTo(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 16 }}>×</button>
-              </div>
-            )}
-
-            {/* Input area */}
-            <div style={{
-              padding: '14px 20px 18px', flexShrink: 0,
-              borderTop: '1px solid rgba(99,102,241,0.08)',
-              background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(20px)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button style={{
-                  width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-                  border: '1.5px solid rgba(99,102,241,0.15)',
-                  background: 'rgba(99,102,241,0.05)', color: '#6366f1',
-                  fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>+</button>
-                <div style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 16px', borderRadius: 24,
-                  background: 'rgba(99,102,241,0.05)',
-                  border: '1.5px solid rgba(99,102,241,0.12)',
-                  transition: 'border-color 0.15s',
-                }}
-                  onFocusCapture={e => (e.currentTarget.style.borderColor = `${bubbleColor}50`)}
-                  onBlurCapture={e => (e.currentTarget.style.borderColor = 'rgba(99,102,241,0.12)')}>
-                  <input ref={inputRef} value={inputText}
-                    onChange={e => setInputText(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                    placeholder="Type a message..."
-                    style={{ flex: 1, background: 'none', border: 'none', fontSize: 14, color: '#1e1b4b', fontFamily: 'inherit' }}/>
-                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                    <button onClick={() => setShowEmojiPicker(v => !v)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, opacity: 0.5 }}>😊</button>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, opacity: 0.5 }}>🖼️</button>
+            <div style={{ padding: '14px 24px 20px', borderTop: `1px solid ${borderCol}`, background: glassBg, backdropFilter: 'blur(20px)' }}>
+              {pendingFile && (
+                <div style={{ padding: 12, marginBottom: 12, borderRadius: 16, background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${borderCol}` }}>
+                  <div style={{ width: 60, height: 60, borderRadius: 10, overflow: 'hidden', position: 'relative', background: isLight ? '#eee' : '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {pendingFile.preview ? (
+                      <img src={pendingFile.preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <IconFile size={24} color={ts} />
+                    )}
+                    <button onClick={() => setPendingFile(null)} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                  </div>
+                  <div style={{ flex: 1, fontSize: 13, color: ts }}>
+                    A enviar: <strong>{pendingFile.file.name}</strong>
+                    <div style={{ fontSize: 11, opacity: 0.7 }}>{pendingFile.file.type || 'Ficheiro'}</div>
                   </div>
                 </div>
-                <button onClick={sendMessage} className="send-btn" disabled={!inputText.trim()}
-                  style={{
-                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                    border: 'none', cursor: inputText.trim() ? 'pointer' : 'default',
-                    background: inputText.trim()
-                      ? `linear-gradient(135deg, ${bubbleColor}dd, ${bubbleColor})`
-                      : 'rgba(99,102,241,0.15)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: inputText.trim() ? `0 6px 20px ${bubbleColor}45` : 'none',
-                    transition: 'all 0.2s',
-                  }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={inputText.trim() ? 'white' : '#94a3b8'} strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                  </svg>
+              )}
+              <form onSubmit={handleSendMessage} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 12 }}>
+                {editingMessageId && (
+                  <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, background: themeColor, color: 'white', padding: '4px 12px', borderRadius: '8px 8px 0 0', fontSize: 11, fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Editando mensagem...</span>
+                    <button type="button" onClick={() => { setEditingMessageId(null); setEditContent(''); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>×</button>
+                  </div>
+                )}
+                <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 24, background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)', border: `1.5px solid ${accentBorder}` }}>
+                  <input type="text" placeholder={editingMessageId ? "Editar mensagem..." : "Escreva uma mensagem..."} value={editingMessageId ? editContent : message} onChange={(e) => editingMessageId ? setEditContent(e.target.value) : setMessage(e.target.value)} style={{ flex: 1, background: 'none', border: 'none', color: tp, fontSize: 14, outline: 'none' }}/>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', color: ts }}>
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
+                    <button type="button" onClick={handleFileClick} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }}><IconPaperclip size={18}/></button>
+                    <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }}><IconSmile size={20}/></button>
+                  </div>
+                </div>
+                <button type="submit" disabled={!(editingMessageId ? editContent.trim() : (message.trim() || pendingFile))} style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: (editingMessageId ? editContent.trim() : (message.trim() || pendingFile)) ? themeColor : '#ccc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
-              </div>
+              </form>
             </div>
           </>
         )}
       </div>
 
-      {/* ──────────────────────────────────────────────────────────────────── */}
-      {/* RIGHT — Contact info panel */}
-      {/* ──────────────────────────────────────────────────────────────────── */}
-      {!showSettings && (
-        <div style={{
-          width: 264, flexShrink: 0, display: 'flex', flexDirection: 'column',
-          background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(24px)',
-          borderLeft: '1px solid rgba(99,102,241,0.08)',
-          overflowY: 'auto', padding: '28px 18px',
-        }}>
-          {/* Avatar */}
+      {/* RIGHT — Contact info */}
+      {!showSettings && contact && (
+        <div style={{ width: 264, flexShrink: 0, background: glassBg, backdropFilter: 'blur(24px)', borderLeft: `1px solid ${borderCol}`, overflowY: 'auto', padding: '28px 18px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
-            <div style={{ position: 'relative', marginBottom: 14 }}>
-              <div style={{
-                width: 84, height: 84, borderRadius: '50%',
-                border: `3px solid ${contact.themeColor ?? '#6366f1'}`,
-                overflow: 'hidden', background: '#e5e7eb',
-                boxShadow: `0 8px 32px ${contact.themeColor ?? '#6366f1'}30`,
-              }}>
-                {contact.isAI
-                  ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, background: `${contact.themeColor}20` }}>✦</div>
-                  : <img src={contact.avatar} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
-                }
-              </div>
-              <div style={{
-                position: 'absolute', bottom: 3, right: 3,
-                width: 14, height: 14, borderRadius: '50%',
-                background: STATUS_CONFIG[contact.status].color,
-                border: '2.5px solid white',
-              }}/>
+            <div style={{ width: 84, height: 84, borderRadius: '50%', border: `3px solid ${themeColor}`, overflow: 'hidden', background: isLight ? '#e5e7eb' : '#27272a', marginBottom: 14 }}>
+              {contact.isAI ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, background: `${themeColor}20` }}>✦</div> : <img src={contact.avatar} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>}
             </div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-              {contact.name} {contact.emoji}
-            </div>
-            <div style={{ fontSize: 12.5, color: '#94a3b8', marginBottom: 8 }}>@{contact.username}</div>
-            {/* Status badge */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 20,
-              background: `${STATUS_CONFIG[contact.status].color}12`,
-              border: `1px solid ${STATUS_CONFIG[contact.status].color}35`,
-            }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_CONFIG[contact.status].color }}/>
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: STATUS_CONFIG[contact.status].color }}>
-                {contact.statusText}
-              </span>
+            <div style={{ fontSize: 17, fontWeight: 800, color: tp, marginBottom: 3 }}>{contact.name}</div>
+            <div style={{ fontSize: 12.5, color: ts }}>@{contact.username}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 20, background: `${STATUS_CONFIG[contact.status]?.color}12`, border: `1px solid ${STATUS_CONFIG[contact.status]?.color}35`, marginTop: 8 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_CONFIG[contact.status]?.color }}/>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: STATUS_CONFIG[contact.status]?.color }}>{contact.statusText}</span>
             </div>
           </div>
 
           {/* Quick actions */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 24 }}>
             {[
-              { label: 'Profile', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-              { label: 'Mute', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> },
-              { label: 'Search', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>, onClick: () => setShowSettings(true) },
+              { label: 'Perfil', icon: <IconUser size={18}/>, onClick: handleProfileClick },
+              { label: 'Mudo', icon: <IconVolumeX size={18}/>, onClick: () => console.log('Mute toggle') },
+              { label: 'Search', icon: <IconSearch size={18}/>, onClick: () => setShowSettings(true) },
             ].map(a => (
               <button key={a.label} onClick={a.onClick}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                   padding: '10px 6px', borderRadius: 14,
-                  border: '1.5px solid rgba(99,102,241,0.1)',
-                  background: 'rgba(99,102,241,0.04)',
-                  color: '#6b7280', cursor: 'pointer',
+                  border: `1.5px solid ${borderCol}`,
+                  background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                  color: ts, cursor: 'pointer',
                   fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
                   transition: 'all 0.15s',
-                }}
-                onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(99,102,241,0.1)'; (e.currentTarget as any).style.color = '#6366f1'; }}
-                onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(99,102,241,0.04)'; (e.currentTarget as any).style.color = '#6b7280'; }}>
+                }}>
                 {a.icon}
                 {a.label}
               </button>
@@ -884,44 +684,66 @@ export default function MessagesModule() {
           </div>
 
           {/* Shared Media */}
-          {contact.sharedMedia && contact.sharedMedia.length > 0 && (
+          {(activeConv as any)?.sharedMedia && (activeConv as any).sharedMedia.length > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: '#1e1b4b', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                  Shared Media
-                </span>
-                <button style={{ fontSize: 12, fontWeight: 700, color: bubbleColor, background: 'none', border: 'none', cursor: 'pointer' }}>
-                  See All
-                </button>
+                <span style={{ fontSize: 11, fontWeight: 800, color: tp, letterSpacing: '0.8px', textTransform: 'uppercase' }}>Mídias Partilhadas</span>
+                <button onClick={() => setShowFullGallery(true)} style={{ fontSize: 12, fontWeight: 700, color: themeColor, background: 'none', border: 'none', cursor: 'pointer' }}>Ver Todos</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, marginBottom: 20 }}>
-                {contact.sharedMedia.map((url, i) => (
-                  <div key={i} style={{
-                    aspectRatio: '1', borderRadius: 10, overflow: 'hidden',
-                    background: '#e5e7eb', cursor: 'pointer',
-                  }}>
-                    <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.2s' }}
-                      onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
-                      onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}/>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 20 }}>
+                {(activeConv as any).sharedMedia.slice(0, 6).map((url: string, i: number) => (
+                  <div key={i} onClick={() => setSelectedImage(url)} style={{ aspectRatio: '1', borderRadius: 10, overflow: 'hidden', background: isLight ? '#f3f4f6' : '#27272a', border: `1px solid ${borderCol}`, cursor: 'pointer' }}>
+                    <img src={getImageUrl(url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
                   </div>
                 ))}
               </div>
             </>
           )}
 
-          {/* Chat colour strip */}
-          <div style={{ padding: '12px 14px', borderRadius: 14, border: '1.5px solid rgba(99,102,241,0.08)', background: 'rgba(99,102,241,0.03)' }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 10 }}>Chat Theme</div>
-            <div style={{
-              height: 6, borderRadius: 6,
-              background: `linear-gradient(to right, ${bubbleColor}60, ${bubbleColor})`,
-              marginBottom: 10,
-            }}/>
-            <button onClick={() => setShowSettings(true)}
-              style={{ width: '100%', padding: '8px', borderRadius: 10, border: '1.5px solid rgba(99,102,241,0.15)', background: 'transparent', fontSize: 12, fontWeight: 700, color: '#6366f1', cursor: 'pointer', fontFamily: 'inherit' }}>
-              Customise Chat
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button style={{ padding: '12px', borderRadius: 12, border: `1px solid ${borderCol}`, background: isLight ? 'white' : 'rgba(255,255,255,0.05)', color: tp, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Limpar Chat</button>
+            <button style={{ padding: '12px', borderRadius: 12, border: '1.5px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: '#ef4444', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Bloquear</button>
           </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
+          <div style={{ width: 320, background: isLight ? 'white' : '#1a1a1a', padding: 24, borderRadius: 24, boxShadow: '0 20px 50px rgba(0,0,0,0.3)', border: `1px solid ${borderCol}`, textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#ef444415', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><IconTrash size={28}/></div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: tp, marginBottom: 8 }}>Apagar mensagem?</h3>
+            <p style={{ fontSize: 14, color: ts, lineHeight: 1.5, marginBottom: 24 }}>Esta ação não pode ser desfeita. A mensagem será removida para todos os participantes.</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setDeleteConfirmId(null)} style={{ flex: 1, padding: '12px', borderRadius: 12, border: `1.5px solid ${borderCol}`, background: 'none', color: tp, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={() => { deleteStoreMessage(deleteConfirmId); setDeleteConfirmId(null); }} style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#ef4444', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Apagar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Gallery Overlay */}
+      {showFullGallery && (
+        <div style={{ position: 'fixed', inset: 0, background: isLight ? 'white' : '#0f172a', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '20px 40px', borderBottom: `1px solid ${borderCol}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: tp }}>Mídias Partilhadas</h2>
+            <button onClick={() => setShowFullGallery(false)} style={{ width: 40, height: 40, borderRadius: '50%', background: isLight ? '#f1f5f9' : '#1e293b', border: 'none', color: tp, fontSize: 20, cursor: 'pointer' }}>×</button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 20 }}>
+            {(activeConv as any)?.sharedMedia?.map((url: string, i: number) => (
+              <div key={i} onClick={() => setSelectedImage(url)} style={{ aspectRatio: '1', borderRadius: 20, overflow: 'hidden', background: isLight ? '#f3f4f6' : '#1e293b', border: `1px solid ${borderCol}`, cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                <img src={getImageUrl(url)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Single Image Full View */}
+      {selectedImage && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }} onClick={() => setSelectedImage(null)}>
+          <img src={getImageUrl(selectedImage)} style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 12, boxShadow: '0 30px 60px rgba(0,0,0,0.5)' }} />
+          <button style={{ position: 'absolute', top: 30, right: 30, width: 50, height: 50, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', fontSize: 24, cursor: 'pointer' }}>×</button>
         </div>
       )}
     </div>

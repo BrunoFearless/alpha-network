@@ -115,7 +115,7 @@ function Textarea({ value, onChange, placeholder, rows = 3, maxLength }: {
 }) {
   return (
     <textarea
-      value={value}
+      value={value ?? ''}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
@@ -134,7 +134,7 @@ function Textarea({ value, onChange, placeholder, rows = 3, maxLength }: {
   );
 }
 
-function TagInput({ tags, onChange, placeholder, max = 20 }: {
+function TagInput({ tags = [], onChange, placeholder, max = 20 }: {
   tags: string[]; onChange: (t: string[]) => void; placeholder?: string; max?: number;
 }) {
   const [input, setInput] = useState('');
@@ -159,7 +159,7 @@ function TagInput({ tags, onChange, placeholder, max = 20 }: {
           +
         </button>
       </div>
-      {tags.length > 0 && (
+      {tags && tags.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
           {tags.map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px 3px 10px', borderRadius: 20, background: 'var(--accent-faint)', border: '1px solid var(--accent-light)', fontSize: 12, color: 'var(--accent)' }}>
@@ -279,10 +279,20 @@ export function AlphaAIEditor({
       try {
         const res = await fetch(`${API}/api/v1/alpha/ai/me`, { headers: getHeaders() });
         if (res.ok) {
-          const data = await res.json();
+            const data = await res.json();
           if (data.data) {
             setIsExisting(true);
-            setConfig({ ...DEFAULT_CONFIG, ...data.data });
+            setConfig({ 
+              ...DEFAULT_CONFIG, 
+              ...data.data,
+              trainingExamples: data.data.trainingExamples ?? [],
+              knowledgeEntries: data.data.knowledgeEntries ?? [],
+              triggerWords: data.data.triggerWords ?? [],
+              personalityTraits: data.data.personalityTraits ?? [],
+              likes: data.data.likes ?? [],
+              dislikes: data.data.dislikes ?? [],
+              goals: data.data.goals ?? [],
+            });
           }
         }
       } catch (e) { console.error(e); }
@@ -716,7 +726,7 @@ export function AlphaAIEditor({
                 </Field>
                 <Btn onClick={handleAddTraining} disabled={!isExisting || !newTraining.user || !newTraining.ai} small>Adicionar exemplo</Btn>
               </div>
-              {config.trainingExamples.map((ex, i) => (
+              {config.trainingExamples?.map((ex, i) => (
                 <div key={i} style={{ padding: 14, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card-bg)', position: 'relative' }}>
                   <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 6 }}>Exemplo #{i + 1}</div>
                   <div style={{ fontSize: 12, marginBottom: 6 }}>
@@ -751,7 +761,7 @@ export function AlphaAIEditor({
                 </Field>
                 <Btn onClick={handleAddKnowledge} disabled={!isExisting || !newKnowledge.title || !newKnowledge.content} small>Adicionar</Btn>
               </div>
-              {config.knowledgeEntries.map((k, i) => (
+              {config.knowledgeEntries?.map((k, i) => (
                 <div key={i} style={{ padding: 14, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card-bg)', position: 'relative' }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: c, marginBottom: 6 }}>{k.title}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{k.content}</div>

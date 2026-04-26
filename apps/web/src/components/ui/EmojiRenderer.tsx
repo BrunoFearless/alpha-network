@@ -30,23 +30,23 @@ export const UNICODE_TO_ANIMATED: Record<string, string> = {
 // Custom Discord-style Shortcodes
 export const SHORTCODE_TO_ANIMATED: Record<string, { url: string; label: string }> = {
   ':cat_jam:': { 
-    url: 'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHYyeDN6Z2N6ZnZ6Z2N6ZnZ6Z2N6ZnZ6Z2N6ZnZ6Z2N6ZnV6Z2N6ZnYmZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PWc/13f0m9V9H8J0S/giphy.gif', 
+    url: 'https://cdn.discordapp.com/emojis/763113199607382016.gif?v=1', 
     label: 'Cat Jam' 
   },
   ':party_blob:': { 
-    url: 'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHYyeDN6Z2N6ZnZ6Z2N6ZnZ6Z2N6ZnZ6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV/3o7TKVUn7iM8FMEU24/giphy.gif', 
+    url: 'https://cdn.discordapp.com/emojis/704153096053424158.gif?v=1', 
     label: 'Party Blob' 
   },
   ':parrot:': { 
-    url: 'https://raw.githubusercontent.com/jmhobbs/cult-of-the-party-parrot/master/parrots/parrot.gif',
+    url: 'https://cdn.discordapp.com/emojis/373981881646284800.gif?v=1',
     label: 'Dancing Parrot' 
   },
   ':pika_dance:': { 
-    url: 'https://media.tenor.com/4a742ea37812832a8264566f1e29c669/tenor.gif',
+    url: 'https://cdn.discordapp.com/emojis/441295325810065408.gif?v=1',
     label: 'Pika Dance' 
   },
   ':pepe_hype:': { 
-    url: 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHYyeDN6Z2N6ZnZ6Z2N6ZnZ6Z2N6ZnZ6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV6Z2N6ZnV/l41lI4bYyS5N7HnMY/giphy.gif', 
+    url: 'https://cdn.discordapp.com/emojis/718506660162535496.gif?v=1', 
     label: 'Pepe Hype' 
   }
 };

@@ -1,7 +1,3 @@
-// ════════════════════════════════════════════════════════════════════
-// ALPHA NETWORK — Schema Prisma
-// ════════════════════════════════════════════════════════════════════
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,89 +7,71 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── AUTH (Adolfo) ───────────────────────────────────────────────────
-
 model Friendship {
   id        String   @id @default(uuid())
   userId    String
   friendId  String
-  status    String   @default("pending") // "pending" | "accepted"
+  status    String   @default("pending")
   createdAt DateTime @default(now())
-
-  user   User @relation("FriendshipUser",   fields: [userId],   references: [id], onDelete: Cascade)
-  friend User @relation("FriendshipFriend", fields: [friendId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendshipFriend", fields: [friendId], references: [id], onDelete: Cascade)
+  user      User     @relation("FriendshipUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, friendId])
   @@map("friendships")
 }
 
-
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  passwordHash  String?
-  provider      String    @default("email")
-  emailVerified Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
-
-  profile       Profile?
-  sessions      Session[]
-  lazerPosts    LazerPost[]
-  lazerComments LazerComment[]
-  lazerReactions LazerReaction[]
-  friendships Friendship[] @relation("FriendshipUser")
-  friendOf    Friendship[] @relation("FriendshipFriend")
-  
-  // Alpha Core
-  alphaCoreActions     AlphaCoreAction[]
-  alphaCorePermission  AlphaCorePermission?
-  alphaAI              AlphaAI?
-
-  // Lazer Communities
-  lazerCommunitiesOwned      LazerCommunity[]       @relation("LazerCommunityOwner")
-  lazerCommunityMemberships  LazerCommunityMember[]
-  lazerCheckIns              LazerCheckIn[]
+  id                        String                 @id @default(uuid())
+  email                     String                 @unique
+  passwordHash              String?
+  provider                  String                 @default("email")
+  emailVerified             Boolean                @default(false)
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+  deletedAt                 DateTime?
+  alphaAI                   AlphaAI?
+  alphaCoreActions          AlphaCoreAction[]
+  alphaCorePermission       AlphaCorePermission?
+  chatMessages              ChatMessage[]
+  friendOf                  Friendship[]           @relation("FriendshipFriend")
+  friendships               Friendship[]           @relation("FriendshipUser")
+  lazerCheckIns             LazerCheckIn[]
+  lazerComments             LazerComment[]
+  lazerCommunitiesOwned     LazerCommunity[]       @relation("LazerCommunityOwner")
+  lazerCommunityMemberships LazerCommunityMember[]
+  lazerPosts                LazerPost[]
+  lazerReactions            LazerReaction[]
+  profile                   Profile?
+  sessions                  Session[]
+  chatConversations         ChatConversation[]     @relation("UserConversations")
 
   @@map("users")
 }
 
 model Profile {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  username    String   @unique
-  displayName String?
-  avatarUrl   String?
-  bannerUrl   String?
-  bannerColor String?
-  bio         String?
-  status      String?
-  tags        String?
-  lazerData   Json?
-  youtubeChannelId String?
-  
-  // Spotify Integration
-  spotifyRefreshToken String?
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  username            String   @unique
+  displayName         String?
+  avatarUrl           String?
+  bannerUrl           String?
+  bannerColor         String?
+  bio                 String?
+  status              String?
+  tags                String?
+  lazerData           Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  activeModes         String[] @default([])
+  auroraTheme         String?
+  nameColor           String?
+  nameEffect          String?
+  nameFont            String?
+  lastPlayedTrack     Json?
   spotifyEnabled      Boolean  @default(false)
-  lastPlayedTrack     Json?    // Stores { title, artist, albumArt, url, timestamp }
-
-
-  // Name styling
-  nameFont    String?
-  nameEffect  String?
-  nameColor   String?
-
-  // Aurora theme
-  auroraTheme String?
-
-  // Active modes
-  activeModes String[] @default([])
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spotifyRefreshToken String?
+  youtubeChannelId    String?
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("profiles")
 }
@@ -104,35 +82,29 @@ model Session {
   refreshToken String   @unique
   expiresAt    DateTime
   createdAt    DateTime @default(now())
-
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
-// ─── MODO LAZER (Obed) ───────────────────────────────────────────────
-
 model LazerPost {
-  id        String    @id @default(uuid())
-  authorId  String
-  content   String
-  imageUrl  String?
-  titleFont String?
-  titleColor String?
-  isSparkle Boolean   @default(false)
-  isPinned  Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  reactions LazerReaction[]
-  comments  LazerComment[]
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  tropes    LazerTrope[]
-
-  // Link to community if applicable
+  id          String          @id @default(uuid())
+  authorId    String
+  content     String
+  imageUrl    String?
+  titleFont   String?
+  titleColor  String?
+  isSparkle   Boolean         @default(false)
+  isPinned    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
   communityId String?
+  comments    LazerComment[]
+  author      User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
   community   LazerCommunity? @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  reactions   LazerReaction[]
+  tropes      LazerTrope[]    @relation("LazerPostToLazerTrope")
 
   @@map("lazer_posts")
 }
@@ -143,7 +115,6 @@ model LazerReaction {
   userId    String
   type      String    @default("like")
   createdAt DateTime  @default(now())
-
   post      LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -155,26 +126,24 @@ model LazerComment {
   id        String    @id @default(uuid())
   postId    String
   authorId  String
-  parentId  String?
   content   String
   createdAt DateTime  @default(now())
   deletedAt DateTime?
-
-  post      LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentId  String?
   author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      LazerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@map("lazer_comments")
 }
 
 model LazerTrope {
-  id          String   @id @default(uuid())
-  name        String   @unique // e.g. "EnemiesToLovers"
+  id          String      @id @default(uuid())
+  name        String      @unique
   description String?
-  iconEmoji   String   @default("✨")
-  category    String   @default("General")
-  createdAt   DateTime @default(now())
-
-  posts       LazerPost[]
+  iconEmoji   String      @default("✨")
+  category    String      @default("General")
+  createdAt   DateTime    @default(now())
+  posts       LazerPost[] @relation("LazerPostToLazerTrope")
 
   @@map("lazer_tropes")
 }
@@ -182,13 +151,10 @@ model LazerTrope {
 model LazerTropeTrend {
   id            String   @id @default(uuid())
   tropeId       String
-  date          DateTime // Represents the day of the trend
-  sparklesCount Int      @default(0) // Total reactions
-  talkingCount  Int      @default(0) // Total comments
+  date          DateTime
+  sparklesCount Int      @default(0)
+  talkingCount  Int      @default(0)
   rank          Int?
-
-  // We could establish a relation, but it's often easier to just query by tropeId
-  // trope LazerTrope @relation(fields: [tropeId], references: [id], onDelete: Cascade)
 
   @@unique([tropeId, date])
   @@map("lazer_trope_trends")
@@ -197,52 +163,47 @@ model LazerTropeTrend {
 model LazerCheckIn {
   id        String   @id @default(uuid())
   userId    String
-  title     String   // e.g. "Solo Leveling"
-  episode   String   // e.g. "EP 12"
-  emoji     String   // e.g. "⚔️"
-  genre     String?  // e.g. "Ação"
+  title     String
+  episode   String
+  emoji     String
+  genre     String?
   createdAt DateTime @default(now())
-
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([title, createdAt])
   @@map("lazer_checkins")
 }
 
-// ─── LAZER COMMUNITIES (Bruno) ───────────────────────────────────────
-
 model LazerCommunity {
-  id          String   @id @default(uuid())
-  ownerId     String
-  name        String
-  description String?
-  bannerUrl   String?
-  iconUrl     String?
-  iconEmoji   String   @default("🌐")
+  id               String                 @id @default(uuid())
+  ownerId          String
+  name             String
+  description      String?
+  bannerUrl        String?
+  iconUrl          String?
+  iconEmoji        String                 @default("🌐")
   youtubeChannelId String?
-  accentColor String?  @default("#fbbf24")
-  themeColor  String?  @default("#fbbf24")
-  isPublic    Boolean  @default(true)
-  inviteCode  String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
-
-  owner       User                   @relation("LazerCommunityOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members     LazerCommunityMember[]
-  rules       LazerCommunityRule[]
-  posts       LazerPost[]
+  accentColor      String?                @default("#fbbf24")
+  themeColor       String?                @default("#fbbf24")
+  isPublic         Boolean                @default(true)
+  inviteCode       String                 @unique
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  deletedAt        DateTime?
+  owner            User                   @relation("LazerCommunityOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members          LazerCommunityMember[]
+  rules            LazerCommunityRule[]
+  posts            LazerPost[]
 
   @@map("lazer_communities")
 }
 
 model LazerCommunityMember {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   communityId String
   userId      String
-  role        String   @default("member") // "admin" | "member"
-  joinedAt    DateTime @default(now())
-
+  role        String         @default("member")
+  joinedAt    DateTime       @default(now())
   community   LazerCommunity @relation(fields: [communityId], references: [id], onDelete: Cascade)
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -251,17 +212,14 @@ model LazerCommunityMember {
 }
 
 model LazerCommunityRule {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   communityId String
   text        String
-  createdAt   DateTime @default(now())
-
+  createdAt   DateTime       @default(now())
   community   LazerCommunity @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
   @@map("lazer_community_rules")
 }
-
-// ─── MODO CRIADOR (Pedro) ────────────────────────────────────────────
 
 model CreatorArticle {
   id          String    @id @default(uuid())
@@ -292,33 +250,29 @@ model CreatorPortfolioItem {
   @@map("creator_portfolio_items")
 }
 
-// ─── MODO DESENVOLVEDOR (Alexandre) ─────────────────────────────────
-
 model DevProject {
-  id          String    @id @default(uuid())
+  id          String       @id @default(uuid())
   ownerId     String
   name        String
   description String?
-  isPublic    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isPublic    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   deletedAt   DateTime?
-
-  members  DevMember[]
-  files    DevFile[]
-  tasks    DevTask[]
-  messages DevMessage[]
+  files       DevFile[]
+  members     DevMember[]
+  messages    DevMessage[]
+  tasks       DevTask[]
 
   @@map("dev_projects")
 }
 
 model DevMember {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   projectId String
   userId    String
-  role      String   @default("member")
-  joinedAt  DateTime @default(now())
-
+  role      String     @default("member")
+  joinedAt  DateTime   @default(now())
   project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
@@ -326,14 +280,13 @@ model DevMember {
 }
 
 model DevFile {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   projectId String
   name      String
   path      String
-  content   String   @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  content   String     @default("")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, path])
@@ -341,66 +294,60 @@ model DevFile {
 }
 
 model DevTask {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   projectId   String
   createdById String
   title       String
-  completed   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
+  completed   Boolean    @default(false)
+  createdAt   DateTime   @default(now())
   project     DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("dev_tasks")
 }
 
 model DevMessage {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   projectId String
   authorId  String
   content   String
-  createdAt DateTime @default(now())
-
+  createdAt DateTime   @default(now())
   project   DevProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("dev_messages")
 }
 
-// ─── MODO COMUNIDADE (Bruno) ─────────────────────────────────────────
-
 model Server {
-  id          String    @id @default(uuid())
-  ownerId     String
-  name        String
-  description String?
-  imageUrl    String?
-  bannerUrl   String?
-  bannerColor String?
-  inviteCode  String    @unique @default(uuid())
-  createdAt   DateTime  @default(now())
-  deletedAt   DateTime?
-
-  channels          Channel[]
-  channelCategories ChannelCategory[]
-  members           ServerMember[]
-  bots              ServerBot[]
-  roles             CommunityRole[]
-  bans              CommunityBan[]
+  id                String              @id @default(uuid())
+  ownerId           String
+  name              String
+  description       String?
+  imageUrl          String?
+  bannerUrl         String?
+  bannerColor       String?
+  inviteCode        String              @unique @default(uuid())
+  createdAt         DateTime            @default(now())
+  deletedAt         DateTime?
   auditLogs         CommunityAuditLog[]
+  bans              CommunityBan[]
+  channelCategories ChannelCategory[]
+  channels          Channel[]
   events            CommunityEvent[]
+  members           ServerMember[]
+  roles             CommunityRole[]
+  bots              ServerBot[]
 
   @@map("community_servers")
 }
 
 model ChannelCategory {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   serverId  String
   name      String
-  icon      String   @default("📁")
-  position  Int      @default(0)
-  createdAt DateTime @default(now())
-
-  server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  channels Channel[]
+  icon      String    @default("📁")
+  position  Int       @default(0)
+  createdAt DateTime  @default(now())
+  server    Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channels  Channel[]
 
   @@map("community_channel_categories")
 }
@@ -413,26 +360,24 @@ model CommunityAuditLog {
   targetId  String?
   metadata  Json?
   createdAt DateTime @default(now())
-
-  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@index([serverId, createdAt(sort: Desc)])
   @@map("community_audit_logs")
 }
 
 model CommunityRole {
-  id                String   @id @default(uuid())
+  id                String         @id @default(uuid())
   serverId          String
   name              String
   color             String?
-  position          Int      @default(0)
-  canModerate       Boolean  @default(false)
-  canManageServer   Boolean  @default(false)
-  canManageChannels Boolean  @default(false)
-  createdAt         DateTime @default(now())
-
-  server  Server         @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  members ServerMember[]
+  position          Int            @default(0)
+  canModerate       Boolean        @default(false)
+  canManageServer   Boolean        @default(false)
+  canManageChannels Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  members           ServerMember[]
+  server            Server         @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@unique([serverId, name])
   @@map("community_roles")
@@ -443,60 +388,57 @@ model CommunityBan {
   serverId  String
   userId    String
   createdAt DateTime @default(now())
-
-  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@unique([serverId, userId])
   @@map("community_bans")
 }
 
 model Channel {
-  id              String   @id @default(uuid())
+  id              String           @id @default(uuid())
   serverId        String
   categoryId      String?
   parentId        String?
   parentMessageId String?
   name            String
   topic           String?
-  type            String   @default("text")
-  icon            String   @default("#")
-  position        Int      @default(0)
-  isPrivate       Boolean  @default(false)
+  type            String           @default("text")
+  icon            String           @default("#")
+  position        Int              @default(0)
+  isPrivate       Boolean          @default(false)
   allowedRoles    Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  server    Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  category  ChannelCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  parent    Channel?         @relation("ThreadParent", fields: [parentId], references: [id], onDelete: Cascade)
-  threads   Channel[]        @relation("ThreadParent")
-  messages  Message[]
-  pins      PinnedMessage[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  category        ChannelCategory? @relation(fields: [categoryId], references: [id])
+  parent          Channel?         @relation("ThreadParent", fields: [parentId], references: [id], onDelete: Cascade)
+  threads         Channel[]        @relation("ThreadParent")
+  server          Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages        Message[]
+  pins            PinnedMessage[]
 
   @@map("community_channels")
 }
 
 model Message {
-  id             String    @id @default(uuid())
+  id             String            @id @default(uuid())
   channelId      String
   authorId       String
-  authorType     String    @default("user")
+  authorType     String            @default("user")
   content        String
-  messageType    String    @default("text")
+  messageType    String            @default("text")
   imageUrl       String?
   embedJson      Json?
   replyToId      String?
   editedAt       DateTime?
   attachmentUrls Json?
   mentions       Json?
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime          @default(now())
   deletedAt      DateTime?
-
-  channel   Channel            @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  replyTo   Message?           @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies   Message[]          @relation("MessageReply")
-  reactions MessageReaction[]
-  pin       PinnedMessage?
+  reactions      MessageReaction[]
+  channel        Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  replyTo        Message?          @relation("MessageReply", fields: [replyToId], references: [id])
+  replies        Message[]         @relation("MessageReply")
+  pin            PinnedMessage?
 
   @@map("community_messages")
 }
@@ -507,8 +449,7 @@ model MessageReaction {
   userId    String
   emoji     String
   createdAt DateTime @default(now())
-
-  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@unique([messageId, userId, emoji])
   @@map("community_message_reactions")
@@ -520,82 +461,75 @@ model PinnedMessage {
   messageId String   @unique
   pinnedBy  String
   pinnedAt  DateTime @default(now())
-
-  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@unique([channelId, messageId])
   @@map("community_pinned_messages")
 }
 
 model ServerMember {
-  id              String    @id @default(uuid())
+  id              String         @id @default(uuid())
   serverId        String
   userId          String
-  role            String    @default("member")
+  role            String         @default("member")
   communityRoleId String?
   mutedUntil      DateTime?
-  joinedAt        DateTime  @default(now())
-
-  server        Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  communityRole CommunityRole?  @relation(fields: [communityRoleId], references: [id], onDelete: SetNull)
+  joinedAt        DateTime       @default(now())
+  communityRole   CommunityRole? @relation(fields: [communityRoleId], references: [id])
+  server          Server         @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@unique([serverId, userId])
   @@map("community_members")
 }
 
 model CommunityEvent {
-  id            String    @id @default(uuid())
-  serverId      String
-  creatorId     String
-  title         String
-  description   String?
-  location      String?
-  locationType  String    @default("external")
-  imageUrl      String?
-  startDate     DateTime
-  endDate       DateTime?
-  frequency     String    @default("none")
-  coverColor    String?
-  createdAt     DateTime  @default(now())
-
-  server        Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  interests     CommunityEventInterest[]
+  id           String                   @id @default(uuid())
+  serverId     String
+  creatorId    String
+  title        String
+  description  String?
+  location     String?
+  locationType String                   @default("external")
+  imageUrl     String?
+  startDate    DateTime
+  endDate      DateTime?
+  frequency    String                   @default("none")
+  coverColor   String?
+  createdAt    DateTime                 @default(now())
+  interests    CommunityEventInterest[]
+  server       Server                   @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@map("community_events")
 }
 
 model CommunityEventInterest {
-  id        String   @id @default(uuid())
+  id        String         @id @default(uuid())
   eventId   String
   userId    String
-  createdAt DateTime @default(now())
-
+  createdAt DateTime       @default(now())
   event     CommunityEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
   @@map("community_event_interests")
 }
 
-// ─── MODO BOT (Bruno) ────────────────────────────────────────────────
-
 model Bot {
-  id           String   @id @default(uuid())
-  ownerId      String
-  name         String
-  description  String?
-  avatarUrl    String?
-  customColor  String   @default("#C9A84C")
-  token        String   @unique @default(uuid())
-  prefix       String   @default("!")
-  builderFlow  Json?
-  isPublic     Boolean  @default(false)
-  version      Int      @default(1)
-  createdAt    DateTime @default(now())
-
-  commands BotCommand[]
-  servers  ServerBot[]
+  id            String            @id @default(uuid())
+  ownerId       String
+  name          String
+  description   String?
+  avatarUrl     String?
+  customColor   String            @default("#C9A84C")
+  token         String            @unique @default(uuid())
+  prefix        String            @default("!")
+  builderFlow   Json?
+  isPublic      Boolean           @default(false)
+  version       Int               @default(1)
+  createdAt     DateTime          @default(now())
+  commands      BotCommand[]
   executionLogs BotExecutionLog[]
+  servers       ServerBot[]
 
   @@map("bots")
 }
@@ -609,23 +543,21 @@ model BotExecutionLog {
   ok        Boolean
   detail    Json?
   createdAt DateTime @default(now())
-
-  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+  bot       Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@index([botId, createdAt])
   @@map("bot_execution_logs")
 }
 
 model BotCommand {
-  id           String @id @default(uuid())
+  id           String  @id @default(uuid())
   botId        String
   trigger      String
   response     String
-  responseType String @default("text")
+  responseType String  @default("text")
   imageUrl     String?
   embedJson    Json?
-
-  bot      Bot @relation(fields: [botId], references: [id], onDelete: Cascade)
+  bot          Bot     @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@unique([botId, trigger])
   @@map("bot_commands")
@@ -637,9 +569,8 @@ model ServerBot {
   botId      String
   isAdminBot Boolean  @default(false)
   addedAt    DateTime @default(now())
-
-  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  bot    Bot    @relation(fields: [botId], references: [id], onDelete: Cascade)
+  bot        Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@unique([serverId, botId])
   @@map("server_bots")
@@ -656,7 +587,6 @@ model AlphaCoreAction {
   executedAt  DateTime?
   revertedAt  DateTime?
   createdAt   DateTime  @default(now())
-
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt(sort: Desc)])
@@ -664,34 +594,32 @@ model AlphaCoreAction {
 }
 
 model AlphaCorePermission {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  canEditProfile    Boolean  @default(false)
-  canCreatePosts    Boolean  @default(false)
-  canDeletePosts    Boolean  @default(false)
-  canManageFriends  Boolean  @default(false)
-  canEditTheme      Boolean  @default(false)
-  canEditAI         Boolean  @default(false)
-  grantedAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  canEditProfile   Boolean  @default(false)
+  canCreatePosts   Boolean  @default(false)
+  canDeletePosts   Boolean  @default(false)
+  canManageFriends Boolean  @default(false)
+  canEditTheme     Boolean  @default(false)
+  canEditAI        Boolean  @default(false)
+  grantedAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("alpha_core_permissions")
 }
 
 model AlphaAI {
-  id                 String   @id @default(uuid())
-  userId             String   @unique
-  name               String   @default("Alpha")
-  botname            String   @unique
+  id                 String           @id @default(uuid())
+  userId             String           @unique
+  name               String           @default("Alpha")
+  botname            String           @unique
   tagline            String?
   bio                String?
   status             String?
   avatarUrl          String?
   bannerUrl          String?
   bannerColor        String?
-
   age                String?
   birthday           String?
   gender             String?
@@ -702,32 +630,26 @@ model AlphaAI {
   likes              String[]
   dislikes           String[]
   goals              String[]
-
   responseStyle      String?
-  responseLength     String    @default("adaptive")
+  responseLength     String           @default("adaptive")
   customSystemPrompt String?
   personalityPrompt  String?
   knowledgePrompt    String?
-
   initialMessage     String?
   wakeupMessage      String?
   errorMessage       String?
   sleepMessage       String?
-
   trainingExamples   Json?
   knowledgeEntries   Json?
   triggerWords       Json?
-
-  language           String   @default("pt")
-  memoryEnabled      Boolean  @default(true)
-  isPublic           Boolean  @default(false)
-  isActive           Boolean  @default(true)
+  language           String           @default("pt")
+  memoryEnabled      Boolean          @default(true)
+  isPublic           Boolean          @default(false)
+  isActive           Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
   messages           AlphaAiMessage[]
-
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("alpha_ais")
 }
@@ -735,12 +657,53 @@ model AlphaAI {
 model AlphaAiMessage {
   id        String   @id @default(uuid())
   aiId      String
-  role      String   // "user" | "assistant"
+  role      String
   content   String
   createdAt DateTime @default(now())
-
   ai        AlphaAI  @relation(fields: [aiId], references: [id], onDelete: Cascade)
 
   @@index([aiId, createdAt])
   @@map("alpha_ai_messages")
+}
+
+model ChatConversation {
+  id            String        @id @default(uuid())
+  name          String?
+  isGroup       Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  lastMessageAt DateTime      @default(now())
+  messages      ChatMessage[]
+  participants  User[]        @relation("UserConversations")
+
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String                @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String
+  imageUrl       String?
+  isPinned       Boolean               @default(false)
+  editedAt       DateTime?
+  createdAt      DateTime              @default(now())
+  readAt         DateTime?
+  conversation   ChatConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User                  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reactions      ChatMessageReaction[]
+
+  @@map("chat_messages")
+}
+
+model ChatMessageReaction {
+  id        String      @id @default(uuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime    @default(now())
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("chat_message_reactions")
 }

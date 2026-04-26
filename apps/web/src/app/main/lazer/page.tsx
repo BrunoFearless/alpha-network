@@ -10,11 +10,12 @@ import { ExploreModal } from './components/modals/ExploreModal';
 import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FriendsModal } from './components/modals/FriendsModal';
 import { CommunityModal } from './components/modals/CommunityModal';
+import { MessagesModal } from './components/modals/MessagesModal';
 import { useAlphaCoreStore } from '@/store/useAlphaCoreStore';
 import { AlphaCoreAvatar } from '@/components/alpha-core/AlphaCoreAvatar';
 import AlphaCoreChat from '@/components/alpha-core/AlphaCoreChat';
 
-type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community';
+type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community' | 'messages';
 
 export default function LazerPage() {
   const { user: authUser, accessToken, updateUserProfile } = useAuthStore();
@@ -326,6 +327,10 @@ export default function LazerPage() {
           initialCommunityId={communityId}
           onProfileClick={navigateToProfile} />
       )}
+      {activeView === 'messages' && (
+        <MessagesModal onClose={() => setActiveView('feed')}
+          themeColor={c} themeMode={themeMode} />
+      )}
 
       {isEditing && (
         <LazerProfileEditor user={myProfileData} onClose={() => setIsEditing(false)} onSave={handleSaveProfile} />
@@ -357,6 +362,12 @@ export default function LazerPage() {
         <NavBtn view="explore" icon={
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+          </svg>} />
+
+        {/* Messages */}
+        <NavBtn view="messages" icon={
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>} />
 
         {/* Center Alpha Core button */}
