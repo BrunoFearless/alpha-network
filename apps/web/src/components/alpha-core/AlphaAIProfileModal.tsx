@@ -41,7 +41,7 @@ export function AlphaAIProfileModal({
   if (loading) {
     return (
       <div className="fixed inset-0 z-[999] flex items-center justify-center backdrop-blur-md bg-black/40">
-        <div className="text-white">A carregar perfil da IA...</div>
+        <div className="text-white">A carregar perfil...</div>
       </div>
     );
   }
@@ -50,7 +50,7 @@ export function AlphaAIProfileModal({
     return (
       <div className="fixed inset-0 z-[999] flex items-center justify-center backdrop-blur-md bg-black/60" onClick={onClose}>
         <div className="bg-[#1e1e2e] p-6 rounded-2xl border border-white/10 text-white shadow-2xl max-w-sm text-center">
-          <h3>IA não encontrada.</h3>
+          <h3>Perfil não encontrado.</h3>
           <button onClick={onClose} className="mt-4 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20">Fechar</button>
         </div>
       </div>
@@ -100,7 +100,7 @@ export function AlphaAIProfileModal({
              </div>
              {/* IA Badge */}
              <div className="absolute -bottom-2 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border-2 border-alpha-bg" style={{ background: c, color: '#fff' }}>
-               IA
+               ALPHA
              </div>
           </div>
 

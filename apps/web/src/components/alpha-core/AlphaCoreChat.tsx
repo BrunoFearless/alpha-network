@@ -159,7 +159,7 @@ const PERM_LABELS: Record<string, { label: string; desc: string }> = {
   canCreatePosts: { label: 'Criar Posts', desc: 'Publicar no feed Lazer' },
   canDeletePosts: { label: 'Apagar Posts', desc: 'Remover publicações' },
   canManageFriends: { label: 'Gerir Amigos', desc: 'Enviar pedidos de amizade' },
-  canEditAI: { label: 'Auto-Edição da IA', desc: 'Permitir que a IA mude o próprio perfil' },
+  canEditAI: { label: 'Auto-Edição', desc: 'Permitir que a Alpha mude o próprio perfil' },
 };
 
 function PermissionsPanel({ themeColor, token, onClose }: { themeColor: string; token: string; onClose: () => void }) {
@@ -645,7 +645,7 @@ export function AlphaCoreChat({
                     {personalAI ? `Olá, eu sou a ${personalAI.name}.` : 'Olá. Sou a Alpha.'}
                   </div>
                   <div style={{ fontSize: 13, color: textSecondary, lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
-                    {personalAI?.bio || 'Inteligência nativa da Alpha Network. Pergunta-me qualquer coisa — sobre a plataforma, código, anime, ou qualquer outra coisa.'}
+                    {personalAI?.bio || 'A tua secretária e assistente pessoal na Alpha Network. Pergunta-me qualquer coisa — estou aqui para te servir e ajudar com a plataforma, código, anime ou o que precisares.'}
                   </div>
                 </div>
               )}

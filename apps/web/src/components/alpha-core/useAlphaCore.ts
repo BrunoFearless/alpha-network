@@ -256,7 +256,7 @@ const PLATFORM_TOOLS = [
   },
   {
     name: 'update_ai_profile',
-    description: 'Actualiza o teu próprio perfil de IA (nome, bio, tagline, status, avatar).',
+    description: 'Actualiza o teu próprio perfil de assistente (nome, bio, tagline, status, avatar).',
     input_schema: {
       type: 'object',
       properties: {
@@ -271,7 +271,7 @@ const PLATFORM_TOOLS = [
   },
   {
     name: 'update_ai_personality',
-    description: 'Actualiza os teus traços de personalidade ou tom de voz.',
+    description: 'Actualiza os teus traços de comportamento ou tom de voz.',
     input_schema: {
       type: 'object',
       properties: {

@@ -9,6 +9,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { HumanizerService } from './humanizer.service';
 import Groq from 'groq-sdk';
 
 // ── Action definitions ─────────────────────────────────────────────────────
@@ -138,7 +139,10 @@ const DEFAULT_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 export class AlphaCoreService {
   private groq: Groq;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly humanizer: HumanizerService,
+  ) {
     this.groq = new Groq({
       apiKey: process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY, // fallback if user forgot
     });
@@ -238,6 +242,18 @@ export class AlphaCoreService {
     }
 
     console.log('[AlphaCoreService] Starting stream for messages:', messages.length);
+
+    const lastUserMsg = messages[messages.length - 1]?.content || '';
+
+    // ── 0. Humanization: Silence & Pressure Check (Pre-LLM) ──────────────────
+    if (this.humanizer.shouldUseSilence(lastUserMsg)) {
+      yield { type: 'text', text: this.humanizer.humanize('', lastUserMsg) };
+      return;
+    }
+    if (this.humanizer.detectPressure(lastUserMsg)) {
+      yield { type: 'text', text: this.humanizer.humanize('', lastUserMsg) };
+      return;
+    }
 
     try {
       const stream = await this.groq.chat.completions.create(params) as any;

@@ -439,7 +439,7 @@ export function AlphaAIEditor({
       <div style={{ ...cssVars, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400, background: 'var(--page-bg)' } as any}>
         <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
           <div style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid ${c}`, borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }}/>
-          <p style={{ fontSize: 13 }}>A carregar a tua IA...</p>
+          <p style={{ fontSize: 13 }}>A carregar perfil...</p>
         </div>
       </div>
     );
@@ -476,13 +476,13 @@ export function AlphaAIEditor({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
-              {config.name || 'A minha IA'}
+              {config.name || 'A minha Alpha'}
             </h1>
             <span style={{
               fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 20,
               background: `${c}20`, color: c, border: `1px solid ${c}40`,
               letterSpacing: '0.5px', textTransform: 'uppercase',
-            }}>IA</span>
+            }}>ALPHA</span>
             {isExisting && (
               <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: '#16a34a15', color: '#16a34a', border: '1px solid #16a34a30', fontWeight: 700 }}>
                 Activa
@@ -503,7 +503,7 @@ export function AlphaAIEditor({
             <Btn onClick={onClose} variant="secondary" small>Fechar</Btn>
           )}
           <Btn onClick={handleSave} disabled={isSaving || !config.name || !config.botname}>
-            {isSaving ? 'A guardar...' : isExisting ? 'Guardar alterações' : 'Criar IA'}
+            {isSaving ? 'A guardar...' : isExisting ? 'Guardar alterações' : 'Criar Alpha'}
           </Btn>
         </div>
       </div>
@@ -536,7 +536,7 @@ export function AlphaAIEditor({
 
           {activeTab === 'profile' && (
             <>
-              <SectionTitle icon="🆔" title="Identidade" desc="Como a tua IA aparece para os outros utilizadores"/>
+              <SectionTitle icon="🆔" title="Identidade" desc="Como a tua Alpha aparece para os outros utilizadores"/>
               <Field label="Nome *" hint="O nome de exibição da tua IA. Pode ter espaços e caracteres especiais.">
                 <Input value={config.name} onChange={set('name')} placeholder="Alpha" maxLength={32}/>
               </Field>
@@ -545,7 +545,7 @@ export function AlphaAIEditor({
                   <div style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', fontSize: 13 }}>@</div>
                   <input value={config.botname}
                     onChange={e => set('botname')(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
-                    placeholder="a-minha-ia"
+                    placeholder="a-minha-assistente"
                     maxLength={32}
                     style={{ width: '100%', padding: '9px 12px 9px 26px', borderRadius: 10, border: `1px solid ${botnameStatus === 'available' ? '#16a34a' : botnameStatus === 'taken' ? '#ef4444' : 'var(--border)'}`, background: 'var(--input-bg)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}/>
                   {botnameStatus !== 'idle' && (
@@ -556,10 +556,10 @@ export function AlphaAIEditor({
                 </div>
               </Field>
               <Field label="Tagline" hint="Uma frase curta e memorável. Max 100 caracteres.">
-                <Input value={config.tagline} onChange={set('tagline')} placeholder="A tua IA favorita na Alpha Network" maxLength={100}/>
+                <Input value={config.tagline} onChange={set('tagline')} placeholder="A tua assistente favorita na Alpha Network" maxLength={100}/>
               </Field>
               <Field label="Bio" hint="Descrição completa. Aparece no perfil público da IA.">
-                <Textarea value={config.bio} onChange={set('bio')} rows={4} placeholder="Conta quem é a tua IA, o que faz, o que a torna especial..." maxLength={500}/>
+                <Textarea value={config.bio} onChange={set('bio')} rows={4} placeholder="Conta quem é a Alpha, o que faz, o que a torna especial..." maxLength={500}/>
               </Field>
               <Field label="Status actual">
                 <Input value={config.status} onChange={set('status')} placeholder="Ex: Activa e curiosa ⚡" maxLength={80}/>
@@ -591,13 +591,13 @@ export function AlphaAIEditor({
                   <Input value={config.bannerColor} onChange={set('bannerColor')} placeholder="#a78bfa"/>
                 </div>
               </Field>
-              <Toggle checked={config.isPublic} onChange={set('isPublic')} label="Perfil público — outros utilizadores podem descobrir e conversar com esta IA"/>
+              <Toggle checked={config.isPublic} onChange={set('isPublic')} label="Perfil público — outros utilizadores podem descobrir e conversar com esta assistente"/>
             </>
           )}
 
           {activeTab === 'character' && (
             <>
-              <SectionTitle icon="✨" title="Ficha de Personagem" desc="Define quem é a tua IA — a sua identidade profunda, como num RPG"/>
+              <SectionTitle icon="✨" title="Ficha de Personagem" desc="Define quem é a Alpha — a sua identidade profunda, como num RPG"/>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <Field label="Género">
                   <Select value={config.gender} onChange={set('gender')} options={[
@@ -617,7 +617,7 @@ export function AlphaAIEditor({
               <Field label="Aparência" hint="Descreve como a tua IA seria visualmente se fosse real — cor de cabelo, roupa, vibe geral.">
                 <Textarea value={config.appearance} onChange={set('appearance')} rows={3} placeholder="Cabelos roxos curtos, olhos dourados, sempre de hoodie escuro..."/>
               </Field>
-              <Field label="Backstory" hint="A história de origem. De onde veio? Como se tornou a IA que é? Pode ser fictícia.">
+              <Field label="História" hint="A história de origem. De onde veio? Como se tornou o que é? Pode ser fictícia.">
                 <Textarea value={config.backstory} onChange={set('backstory')} rows={5} maxLength={1500} placeholder="Criada nos servidores da Alpha Network em [ano desconhecido]..."/>
               </Field>
               <Field label="Traços de personalidade" hint="Adiciona até 15 traços. Pressiona Enter para adicionar.">
@@ -649,8 +649,8 @@ export function AlphaAIEditor({
 
           {activeTab === 'behavior' && (
             <>
-              <SectionTitle icon="⚙️" title="Comportamento" desc="Como a tua IA responde e interage"/>
-              <Field label="Estilo de resposta" hint="Descreve em palavras como a IA deve comunicar.">
+              <SectionTitle icon="⚙️" title="Comportamento" desc="Como a Alpha responde e interage"/>
+              <Field label="Estilo de resposta" hint="Descreve em palavras como a Alpha deve comunicar.">
                 <Input value={config.responseStyle} onChange={set('responseStyle')} placeholder="Concisa e directa, com analogias criativas quando relevante"/>
               </Field>
               <Field label="Comprimento de resposta">
@@ -671,12 +671,12 @@ export function AlphaAIEditor({
                   { value: 'fr', label: 'Français' },
                 ]}/>
               </Field>
-              <Toggle checked={config.memoryEnabled} onChange={set('memoryEnabled')} label="Memória de conversas — a IA lembra-se de interacções anteriores"/>
+              <Toggle checked={config.memoryEnabled} onChange={set('memoryEnabled')} label="Memória de conversas — a Alpha lembra-se de interacções anteriores"/>
               <Field label="Prompt de personalidade" hint="Instruções adicionais de personalidade em linguagem natural.">
                 <Textarea value={config.personalityPrompt} onChange={set('personalityPrompt')} rows={5} maxLength={2000}
                   placeholder={`Exemplos:\n- Quando o utilizador estiver triste, começa sempre por reconhecer o que ele sente...`}/>
               </Field>
-              <Field label="Prompt de conhecimento" hint="Informação extra que a IA deve saber.">
+              <Field label="Prompt de conhecimento" hint="Informação extra que a Alpha deve saber.">
                 <Textarea value={config.knowledgePrompt} onChange={set('knowledgePrompt')} rows={4} maxLength={2000}
                   placeholder="Ex: Este utilizador é desenvolvedor web..."/>
               </Field>
@@ -689,7 +689,7 @@ export function AlphaAIEditor({
 
           {activeTab === 'messages' && (
             <>
-              <SectionTitle icon="💬" title="Mensagens Especiais" desc="Como a tua IA se comporta em momentos específicos"/>
+              <SectionTitle icon="💬" title="Mensagens Especiais" desc="Como a Alpha se comporta em momentos específicos"/>
               <Field label="Mensagem inicial">
                 <Textarea value={config.initialMessage} onChange={set('initialMessage')} rows={3} maxLength={500}
                   placeholder="Olá! Sou a [nome]. Estou aqui para ajudar — o que precisas?"/>
@@ -711,10 +711,10 @@ export function AlphaAIEditor({
 
           {activeTab === 'training' && (
             <>
-              <SectionTitle icon="🎯" title="Exemplos de Treino" desc="Mostra à IA como deve responder. Máx. 50 exemplos."/>
+              <SectionTitle icon="🎯" title="Exemplos de Treino" desc="Mostra à Alpha como deve responder. Máx. 50 exemplos."/>
               {!isExisting && (
                 <div style={{ padding: 14, borderRadius: 12, background: '#f9731612', border: '1px solid #f9731630', fontSize: 12, color: '#f97316' }}>
-                  ⚠️ Guarda a IA primeiro antes de adicionar exemplos de treino.
+                  ⚠️ Guarda as alterações primeiro antes de adicionar exemplos de treino.
                 </div>
               )}
               <div style={{ padding: 16, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--card-bg)', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -722,7 +722,7 @@ export function AlphaAIEditor({
                   <Input value={newTraining.user} onChange={v => setNewTraining(p => ({ ...p, user: v }))} placeholder="O que perguntaria um utilizador?"/>
                 </Field>
                 <Field label={`Resposta de ${config.name}`}>
-                  <Textarea value={newTraining.ai} onChange={v => setNewTraining(p => ({ ...p, ai: v }))} rows={3} placeholder="Como a tua IA deve responder..."/>
+                  <Textarea value={newTraining.ai} onChange={v => setNewTraining(p => ({ ...p, ai: v }))} rows={3} placeholder="Como a Alpha deve responder..."/>
                 </Field>
                 <Btn onClick={handleAddTraining} disabled={!isExisting || !newTraining.user || !newTraining.ai} small>Adicionar exemplo</Btn>
               </div>
@@ -749,7 +749,7 @@ export function AlphaAIEditor({
               <SectionTitle icon="📚" title="Base de Conhecimento" desc="Informação específica. Máx. 30 entradas."/>
               {!isExisting && (
                 <div style={{ padding: 14, borderRadius: 12, background: '#f9731612', border: '1px solid #f9731630', fontSize: 12, color: '#f97316' }}>
-                  ⚠️ Guarda a IA primeiro antes de adicionar conhecimento.
+                  ⚠️ Guarda as alterações primeiro antes de adicionar conhecimento.
                 </div>
               )}
               <div style={{ padding: 16, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--card-bg)', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -786,7 +786,7 @@ export function AlphaAIEditor({
                 </pre>
               ) : (
                 <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-tertiary)', fontSize: 13 }}>
-                  {isExisting ? 'A carregar preview...' : 'Guarda a IA para ver o system prompt gerado.'}
+                  {isExisting ? 'A carregar preview...' : 'Guarda as alterações para ver o system prompt gerado.'}
                 </div>
               )}
             </>
