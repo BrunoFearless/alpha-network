@@ -1,7 +1,7 @@
 import {
   Controller, Get, Patch, Delete, Post,
   Body, Param, UseGuards, HttpCode, HttpStatus,
-  UploadedFile, UseInterceptors, BadRequestException,
+  UploadedFile, UseInterceptors, BadRequestException, Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -13,6 +13,12 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
+
+  @Get('search')
+  async search(@Query('q') q: string) {
+    const profiles = await this.usersService.searchProfiles(q || '');
+    return { success: true, data: profiles };
+  }
 
   @Get('id/:id')
   async getProfileById(@Param('id') id: string) {

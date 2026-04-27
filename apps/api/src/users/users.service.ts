@@ -138,6 +138,30 @@ export class UsersService {
     });
   }
 
+  async searchProfiles(query: string, limit = 20) {
+    const q = query.trim();
+    if (!q) return [];
+
+    return this.prisma.profile.findMany({
+      where: {
+        OR: [
+          { username: { contains: q, mode: 'insensitive' } },
+          { displayName: { contains: q, mode: 'insensitive' } },
+        ],
+        user: { deletedAt: null },
+      },
+      take: limit,
+      include: {
+        user: {
+          select: {
+            id: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+  }
+
   private mimeToExt(mime: string): string {
     const map: Record<string, string> = {
       'image/jpeg': '.jpg',

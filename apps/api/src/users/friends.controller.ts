@@ -52,4 +52,9 @@ export class FriendsController {
   async remove(@CurrentUser() u: { id: string }, @Param('friendId') friendId: string) {
     return { success: true, data: await this.friends.remove(u.id, friendId) };
   }
+ 
+  @Get('me/suggestions')
+  async getSuggestions(@CurrentUser() u: { id: string }) {
+    return { success: true, data: await this.friends.getSuggestions(u.id) };
+  }
 }

@@ -32,13 +32,13 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
     feedPosts, friends, friendRequests,
     isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest,
     acceptFriendRequest, rejectFriendRequest, removeFriend, fetchFriends,
+    suggestions: globalSuggestions, fetchSuggestions,
   } = useLazerStore();
 
   const [activeTab, setActiveTab] = useState<FriendTab>('Amigos');
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
 
   const isLight = themeMode === 'light';
   const textPrimary = isLight ? 'text-black' : 'text-white';
@@ -48,25 +48,20 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
 
   useEffect(() => {
     fetchFriends();
+    fetchSuggestions();
   }, []);
 
-  // Compute suggestions from feed posts
-  useEffect(() => {
-    const map = new Map<string, any>();
-    feedPosts.forEach(p => {
-      if (p.authorId !== authUser?.id && !map.has(p.authorId)) {
-        map.set(p.authorId, {
-          id: p.authorId,
-          name: p.author?.profile?.displayName || p.author?.profile?.username || 'User',
-          handle: `@${p.author?.profile?.username || 'user'}`,
-          avatar: p.author?.profile?.avatarUrl || '',
-          profile: p.author?.profile,
-          bio: p.author?.profile?.bio || '',
-        });
-      }
-    });
-    setSuggestions(Array.from(map.values()));
-  }, [feedPosts, authUser]);
+  // Format global suggestions for the UI
+  const suggestions = useMemo(() => {
+    return globalSuggestions.map((p: any) => ({
+      id: p.userId || p.id,
+      name: p.displayName || p.username || 'User',
+      handle: `@${p.username || 'user'}`,
+      avatar: p.avatarUrl || '',
+      profile: p,
+      bio: p.bio || '',
+    }));
+  }, [globalSuggestions]);
 
   // Instant Local Search
   useEffect(() => {

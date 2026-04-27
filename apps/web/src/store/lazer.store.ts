@@ -88,8 +88,8 @@ interface LazerStoreState {
   comments: Record<string, LazerComment[]>;
   friends: string[]; friendRequests: FriendRequest[]; sentRequests: string[];
   myCommunities: LazerCommunity[]; exploreCommunities: LazerCommunity[];
-  trendingTropes: TrendingTrope[];
   watchingNow: WatchingSimulcast[];
+  suggestions: any[];
   isLoading: boolean;
   spotifyPlayback: any | null;
   fetchFeed: () => Promise<void>;
@@ -116,6 +116,7 @@ interface LazerStoreState {
   hasReceivedRequest: (userId: string) => FriendRequest | undefined;
   fetchTrendingTropes: () => Promise<void>;
   fetchWatchingNow: () => Promise<void>;
+  fetchSuggestions: () => Promise<void>;
   submitCheckIn: (title: string, episode: string, emoji: string, genre: string) => Promise<boolean>;
   fetchSpotifyPlayback: (userId: string) => Promise<void>;
   connectSpotify: () => Promise<void>;
@@ -134,6 +135,8 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
   friends: [], friendRequests: [], sentRequests: [],
   myCommunities: [], exploreCommunities: [],
   trendingTropes: [],
+  watchingNow: [],
+  suggestions: [],
   isLoading: false,
   spotifyPlayback: null,
 
@@ -147,8 +150,6 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
     } catch (e) { console.error('fetchTrendingTropes error', e); }
   },
 
-  watchingNow: [],
-
   fetchWatchingNow: async () => {
     try {
       const res = await fetch(`${API}/api/v1/lazer/watching`, { headers: authHeaders() });
@@ -157,6 +158,16 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
         set({ watchingNow: data.data || [] });
       }
     } catch (e) { console.error('fetchWatchingNow error', e); }
+  },
+
+  fetchSuggestions: async () => {
+    try {
+      const res = await fetch(`${API}/api/v1/users/me/suggestions`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        set({ suggestions: data.data || [] });
+      }
+    } catch (e) { console.error('fetchSuggestions error', e); }
   },
 
   submitCheckIn: async (title, episode, emoji, genre) => {

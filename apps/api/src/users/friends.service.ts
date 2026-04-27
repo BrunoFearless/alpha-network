@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class FriendsService {
   constructor(private readonly prisma: PrismaService) {}
- 
+
   async getFriends(userId: string) {
     const friendships = await this.prisma.friendship.findMany({
       where: {
@@ -19,7 +19,7 @@ export class FriendsService {
         friend: { include: { profile: true } },
       },
     });
- 
+
     return friendships.map(f => {
       const other = f.userId === userId ? f.friend : f.user;
       return {
@@ -29,7 +29,7 @@ export class FriendsService {
       };
     });
   }
- 
+
   async getRequests(userId: string) {
     const requests = await this.prisma.friendship.findMany({
       where: {
@@ -43,7 +43,7 @@ export class FriendsService {
         friend: { include: { profile: true } },
       },
     });
- 
+
     return requests.map(r => ({
       id: r.id,
       fromUserId: r.userId,
@@ -54,10 +54,10 @@ export class FriendsService {
       createdAt: r.createdAt,
     }));
   }
- 
+
   async send(fromId: string, toId: string) {
     if (fromId === toId) throw new BadRequestException('Não podes adicionar-te a ti mesmo.');
- 
+
     const existing = await this.prisma.friendship.findFirst({
       where: {
         OR: [
@@ -67,12 +67,12 @@ export class FriendsService {
       },
     });
     if (existing) throw new ConflictException('Relação já existe.');
- 
+
     return this.prisma.friendship.create({
       data: { userId: fromId, friendId: toId, status: 'pending' },
     });
   }
- 
+
   async cancel(userId: string, toUserId: string) {
     const req = await this.prisma.friendship.findFirst({
       where: { userId, friendId: toUserId, status: 'pending' },
@@ -81,7 +81,7 @@ export class FriendsService {
     await this.prisma.friendship.delete({ where: { id: req.id } });
     return { ok: true };
   }
- 
+
   async accept(userId: string, requestId: string) {
     const req = await this.prisma.friendship.findUnique({ where: { id: requestId } });
     if (!req || req.friendId !== userId) throw new NotFoundException('Pedido não encontrado.');
@@ -90,14 +90,14 @@ export class FriendsService {
       data: { status: 'accepted' },
     });
   }
- 
+
   async reject(userId: string, requestId: string) {
     const req = await this.prisma.friendship.findUnique({ where: { id: requestId } });
     if (!req || req.friendId !== userId) throw new NotFoundException('Pedido não encontrado.');
     await this.prisma.friendship.delete({ where: { id: requestId } });
     return { ok: true };
   }
- 
+
   async remove(userId: string, friendId: string) {
     const friendship = await this.prisma.friendship.findFirst({
       where: {
@@ -111,4 +111,30 @@ export class FriendsService {
     await this.prisma.friendship.delete({ where: { id: friendship.id } });
     return { ok: true };
   }
-}
+
+  async getSuggestions(userId: string, limit = 20) {
+    const relationships = await this.prisma.friendship.findMany({
+      where: {
+        OR: [{ userId }, { friendId: userId }],
+      },
+      select: { userId: true, friendId: true },
+    });
+
+    const connectedUserIds = new Set<string>();
+    connectedUserIds.add(userId);
+    relationships.forEach(r => {
+      connectedUserIds.add(r.userId);
+      connectedUserIds.add(r.friendId);
+    });
+
+    return this.prisma.profile.findMany({
+      where: {
+        userId: { notIn: Array.from(connectedUserIds) },
+        user: { deletedAt: null },
+      },
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { id: true } } },
+    });
+  }
+}
