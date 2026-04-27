@@ -497,8 +497,15 @@ export default function MessagesModule() {
   }, [conversations, authUser?.id, tp, messages]);
 
   useEffect(() => {
-    if (!activeConversationId && mappedContacts.length > 0) {
-      setActiveConversation(mappedContacts[0].id);
+    // Auto-select the first REAL conversation (not the AI assistant entry)
+    if (!activeConversationId) {
+      const firstReal = mappedContacts.find(c => c.id !== 'alpha-assistant');
+      if (firstReal) {
+        setActiveConversation(firstReal.id);
+      } else {
+        // Only the AI contact exists — select it without triggering fetchMessages
+        setActiveConversation('alpha-assistant');
+      }
     }
   }, [mappedContacts, activeConversationId, setActiveConversation]);
 

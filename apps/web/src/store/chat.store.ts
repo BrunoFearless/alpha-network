@@ -190,7 +190,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setActiveConversation: (id) => {
     set({ activeConversationId: id });
-    if (id) {
+    // 'alpha-assistant' is a UI-only sentinel for the AI chat — no DB record exists
+    if (id && id !== 'alpha-assistant') {
       get().fetchMessages(id);
       // Join socket room
       get().socket?.emit('conversation.join', { conversationId: id });

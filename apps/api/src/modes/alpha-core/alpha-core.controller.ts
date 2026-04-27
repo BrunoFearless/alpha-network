@@ -10,6 +10,7 @@ import {
 import { Response } from 'express';
 import { AlphaCoreService, ALLOWED_ACTIONS } from './alpha-core.service';
 import { AlphaAIService } from './alpha-ai.service';
+import { SocialContextService } from './social-context.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -73,6 +74,7 @@ export class AlphaCoreController {
   constructor(
     private readonly alphaCoreService: AlphaCoreService,
     private readonly alphaAIService: AlphaAIService,
+    private readonly socialContextService: SocialContextService,
   ) {}
 
   // ── Chat proxy (protege a API key no servidor) ─────────────────────────
@@ -119,7 +121,16 @@ export class AlphaCoreController {
 1. Estás numa conversa normal. NUNCA tentes usar ferramentas a não ser que o utilizador DÊ UMA ORDEM CLARA (ex: "Muda o meu status para X" ou "Cria um post a dizer Y").
 2. Se o utilizador apenas comentar o seu estado ou fizer uma pergunta, RESPONDE SEMPRE APENAS COM TEXTO.
 3. Se o sistema te devolver um erro de permissão, não quebres a tua personalidade. Responde naturalmente ou diz ao utilizador que ele precisa de ativar a permissão nas definições, mas sempre com a tua voz e personalidade.`;
-        finalSystemPrompt = aiPrompt + toolsRule;
+
+        // Inject live social context so the AI knows the user's network state
+        let socialContext = '';
+        try {
+          socialContext = await this.socialContextService.getSocialContext(user.id);
+        } catch (e) {
+          console.error('[AlphaCoreController] Erro ao obter contexto social:', e);
+        }
+
+        finalSystemPrompt = aiPrompt + toolsRule + (socialContext ? `\n\n---\n\n${socialContext}` : '');
 
         // Save the user's last message to history
         const lastUserMsg = dto.messages[dto.messages.length - 1];

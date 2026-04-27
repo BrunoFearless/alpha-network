@@ -21,6 +21,8 @@ export interface ActionDefinition {
   requiredPermission: keyof PermissionMap;
   riskLevel: 'low' | 'medium' | 'high';
   reversible: boolean;
+  /** Se true, executa imediatamente sem pedir confirmação ao utilizador. Usado para acções de leitura. */
+  executeImmediately?: boolean;
 }
 
 export interface PermissionMap {
@@ -128,6 +130,40 @@ export const ALLOWED_ACTIONS: ActionDefinition[] = [
     requiredPermission: 'canEditAI',
     riskLevel: 'medium',
     reversible: true,
+  },
+  {
+    id: 'accept_friend_request',
+    label: 'Aceitar pedido de amizade',
+    description: 'Aceita um pedido de amizade pendente recebido',
+    requiredPermission: 'canManageFriends',
+    riskLevel: 'low',
+    reversible: false,
+  },
+  {
+    id: 'reject_friend_request',
+    label: 'Rejeitar pedido de amizade',
+    description: 'Rejeita/remove um pedido de amizade pendente recebido',
+    requiredPermission: 'canManageFriends',
+    riskLevel: 'low',
+    reversible: false,
+  },
+  {
+    id: 'read_my_posts',
+    label: 'Ver as minhas publicações',
+    description: 'Lista as tuas publicações recentes com reações e comentários',
+    requiredPermission: 'canCreatePosts',
+    riskLevel: 'low',
+    reversible: true,
+    executeImmediately: true,
+  },
+  {
+    id: 'read_conversations',
+    label: 'Ver conversas privadas',
+    description: 'Lista as tuas conversas DM activas com o histórico recente',
+    requiredPermission: 'canManageFriends',
+    riskLevel: 'low',
+    reversible: true,
+    executeImmediately: true,
   },
 ];
 
@@ -294,6 +330,49 @@ export class AlphaCoreService {
           const payload = JSON.parse(buf.args || '{}');
           console.log(`[AlphaCoreService] Tool call: ${buf.name}`, payload);
 
+          const actionDef = ALLOWED_ACTIONS.find(a => a.id === buf.name);
+
+          // ── Acções de leitura: executam imediatamente, sem confirmação ──
+          if (actionDef?.executeImmediately) {
+            const perms = await this.getPermissions(userId);
+            if (!perms[actionDef.requiredPermission]) {
+              yield { type: 'text', text: `\n\nPara isso precisas de activar a permissão "${actionDef.label}" nas definições da Alpha Core.` };
+              continue;
+            }
+
+            const data = await this.executeAction(userId, buf.name, payload);
+            console.log(`[AlphaCoreService] Immediate action result for ${buf.name}:`, data);
+
+            // Feed result back to LLM so it can answer naturally in text
+            const followUpMessages = [
+              ...formattedMessages,
+              {
+                role: 'assistant',
+                content: null,
+                tool_calls: [{
+                  id: `call_${buf.name}`,
+                  type: 'function',
+                  function: { name: buf.name, arguments: buf.args },
+                }],
+              },
+              {
+                role: 'tool',
+                tool_call_id: `call_${buf.name}`,
+                content: JSON.stringify(data),
+              },
+            ];
+
+            const followUp = await this.groq.chat.completions.create({
+              model: DEFAULT_MODEL,
+              max_tokens: 512,
+              messages: followUpMessages as any,
+            }) as any;
+
+            const followUpText = followUp.choices[0]?.message?.content || '';
+            if (followUpText) yield { type: 'text', text: followUpText };
+            continue;
+          }
+
           // ── Resolve username → userId for user-related actions ──────────
           if (buf.name === 'send_friend_request' || buf.name === 'remove_friend') {
             const rawId = payload.toUserId ?? payload.to_user_id ?? payload.userId ?? payload.friendId ?? payload.targetId ?? payload.username;
@@ -310,6 +389,7 @@ export class AlphaCoreService {
             }
           }
 
+          // ── Acções normais: passam por pending → confirm → execute ──────
           const actionId = buf.name;
           const result = await this.requestAction(userId, actionId, payload);
           yield { type: 'action', action: result };
@@ -678,6 +758,130 @@ export class AlphaCoreService {
         const prev = await this.prisma.alphaAI.findUnique({ where: { userId } });
         await this.prisma.alphaAI.update({ where: { userId }, data: updateData });
         return { updated: 'aiPersonality', ...updateData, previousValue: prev };
+      }
+
+      case 'accept_friend_request': {
+        // Accept by friendshipId (preferred) or by username/userId of requester
+        const friendshipId = val('friendshipId', 'requestId', 'id');
+        const fromUserId = val('fromUserId', 'userId', 'requesterId');
+
+        let friendship: any = null;
+
+        if (friendshipId) {
+          friendship = await this.prisma.friendship.findUnique({ where: { id: friendshipId } });
+          if (!friendship || friendship.friendId !== userId) {
+            throw new BadRequestException('Pedido de amizade não encontrado ou não é para ti.');
+          }
+        } else if (fromUserId) {
+          // Try to resolve username → userId
+          let resolvedId = fromUserId;
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(fromUserId)) {
+            const profile = await this.prisma.profile.findFirst({
+              where: { username: { equals: fromUserId, mode: 'insensitive' } },
+              select: { userId: true },
+            });
+            if (!profile) throw new BadRequestException(`Utilizador "${fromUserId}" não encontrado.`);
+            resolvedId = profile.userId;
+          }
+          friendship = await this.prisma.friendship.findFirst({
+            where: { userId: resolvedId, friendId: userId, status: 'pending' },
+          });
+          if (!friendship) throw new BadRequestException('Pedido de amizade não encontrado.');
+        } else {
+          throw new BadRequestException('Fornece o friendshipId ou o fromUserId para aceitar o pedido.');
+        }
+
+        await this.prisma.friendship.update({
+          where: { id: friendship.id },
+          data: { status: 'accepted' },
+        });
+        return { accepted: 'friendRequest', friendshipId: friendship.id, fromUserId: friendship.userId };
+      }
+
+      case 'reject_friend_request': {
+        const friendshipId = val('friendshipId', 'requestId', 'id');
+        const fromUserId = val('fromUserId', 'userId', 'requesterId');
+
+        let friendship: any = null;
+
+        if (friendshipId) {
+          friendship = await this.prisma.friendship.findUnique({ where: { id: friendshipId } });
+          if (!friendship || friendship.friendId !== userId) {
+            throw new BadRequestException('Pedido de amizade não encontrado ou não é para ti.');
+          }
+        } else if (fromUserId) {
+          let resolvedId = fromUserId;
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(fromUserId)) {
+            const profile = await this.prisma.profile.findFirst({
+              where: { username: { equals: fromUserId, mode: 'insensitive' } },
+              select: { userId: true },
+            });
+            if (!profile) throw new BadRequestException(`Utilizador "${fromUserId}" não encontrado.`);
+            resolvedId = profile.userId;
+          }
+          friendship = await this.prisma.friendship.findFirst({
+            where: { userId: resolvedId, friendId: userId, status: 'pending' },
+          });
+          if (!friendship) throw new BadRequestException('Pedido de amizade não encontrado.');
+        } else {
+          throw new BadRequestException('Fornece o friendshipId ou o fromUserId para rejeitar o pedido.');
+        }
+
+        await this.prisma.friendship.delete({ where: { id: friendship.id } });
+        return { rejected: 'friendRequest', friendshipId: friendship.id };
+      }
+
+      case 'read_my_posts': {
+        const limit = payload.limit ? Math.min(Number(payload.limit), 20) : 10;
+        const posts = await this.prisma.lazerPost.findMany({
+          where: { authorId: userId, deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          include: {
+            reactions: true,
+            comments: { where: { deletedAt: null } },
+          },
+        });
+        const formatted = posts.map(p => ({
+          id: p.id,
+          content: p.content.substring(0, 200),
+          reactionCount: p.reactions.length,
+          commentCount: p.comments.length,
+          createdAt: p.createdAt,
+        }));
+        return { posts: formatted };
+      }
+
+      case 'read_conversations': {
+        const limit = payload.limit ? Math.min(Number(payload.limit), 10) : 5;
+        const convos = await this.prisma.chatConversation.findMany({
+          where: { participants: { some: { id: userId } } },
+          orderBy: { lastMessageAt: 'desc' },
+          take: limit,
+          include: {
+            participants: {
+              where: { id: { not: userId } },
+              select: { id: true, profile: { select: { username: true, displayName: true } } },
+            },
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: 3,
+              include: {
+                sender: { select: { id: true, profile: { select: { username: true } } } },
+              },
+            },
+          },
+        });
+        const formatted = convos.map(c => ({
+          id: c.id,
+          with: c.participants.map(p => p.profile?.displayName || p.profile?.username || '?'),
+          lastMessageAt: c.lastMessageAt,
+          recentMessages: c.messages.map(m => ({
+            from: m.sender.id === userId ? 'Tu' : (m.sender.profile?.username || '?'),
+            content: m.content.substring(0, 100),
+          })).reverse(),
+        }));
+        return { conversations: formatted };
       }
 
       default:
