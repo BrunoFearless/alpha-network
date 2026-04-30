@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export type MessageRole = 'user' | 'assistant';
 
@@ -37,7 +36,7 @@ interface AlphaCoreState {
   isStreaming: boolean;
   streamingContent: string;
   personalAI: any;
-  
+
   openChat: () => void;
   closeChat: () => void;
   toggleChat: () => void;
@@ -51,41 +50,34 @@ interface AlphaCoreState {
   updateMessage: (id: string, update: Partial<ChatMessage>) => void;
 }
 
-export const useAlphaCoreStore = create<AlphaCoreState>()(
-  persist(
-    (set) => ({
-      isOpen: false,
-      messages: [],
-      status: 'idle',
-      isStreaming: false,
-      streamingContent: '',
-      personalAI: null,
+// NOTE: Sem persist intencional — o histórico é carregado do servidor
+// (tabela AlphaAiMessage) a cada sessão. Usar localStorage causaria
+// vazamento de dados entre contas no mesmo browser.
+export const useAlphaCoreStore = create<AlphaCoreState>()((set) => ({
+  isOpen: false,
+  messages: [],
+  status: 'idle',
+  isStreaming: false,
+  streamingContent: '',
+  personalAI: null,
 
-      openChat: () => set({ isOpen: true }),
-      closeChat: () => set({ isOpen: false }),
-      toggleChat: () => set((state) => ({ isOpen: !state.isOpen })),
-      setStatus: (status) => set({ status }),
-      setIsStreaming: (v) => set({ isStreaming: v }),
-      setStreamingContent: (v) => set({ streamingContent: v }),
-      setPersonalAI: (personalAI) => set({ personalAI }),
-      setMessages: (messages) => set({ messages }),
-      addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
-      clearMessages: () => set({ messages: [] }),
-      updateMessage: (id, update) => set((state) => ({
-        messages: state.messages.map(m => m.id === id ? { ...m, ...update } : m)
-      })),
-    }),
-    {
-      name: 'alpha-core-storage',
-      partialize: (state) => ({ messages: state.messages, isOpen: state.isOpen, personalAI: state.personalAI }),
-      onRehydrateStorage: () => (state) => {
-        if (state && state.messages) {
-          state.messages = state.messages.map(m => ({
-            ...m,
-            timestamp: new Date(m.timestamp)
-          }));
-        }
-      }
-    }
-  )
-);
+  openChat: () => set({ isOpen: true }),
+  closeChat: () => set({ isOpen: false }),
+  toggleChat: () => set((state) => ({ isOpen: !state.isOpen })),
+  setStatus: (status) => set({ status }),
+  setIsStreaming: (v) => set({ isStreaming: v }),
+  setStreamingContent: (v) => set({ streamingContent: v }),
+  setPersonalAI: (personalAI) => set({ personalAI }),
+  setMessages: (messages) => set({ messages }),
+  addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
+  clearMessages: () => set({ messages: [] }),
+  updateMessage: (id, update) => set((state) => ({
+    messages: state.messages.map(m => m.id === id ? { ...m, ...update } : m)
+  })),
+}));
+
+// Limpar o localStorage legado ao importar este módulo (uma única vez)
+if (typeof window !== 'undefined') {
+  localStorage.removeItem('alpha-core-storage');
+}
+

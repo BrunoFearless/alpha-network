@@ -20,14 +20,19 @@ export class FriendsService {
       },
     });
 
-    return friendships.map(f => {
-      const other = f.userId === userId ? f.friend : f.user;
-      return {
-        id: other.id,
-        userId: other.id,
-        profile: other.profile,
-      };
-    });
+    return friendships
+      .map(f => {
+        const other = f.userId === userId ? f.friend : f.user;
+        return {
+          id: other.id,
+          userId: other.id,
+          profile: other.profile,
+          _deletedAt: other.deletedAt,
+        };
+      })
+      // Excluir utilizadores com soft-delete
+      .filter(f => !f._deletedAt)
+      .map(({ _deletedAt, ...rest }) => rest);
   }
 
   async getRequests(userId: string) {
@@ -44,15 +49,18 @@ export class FriendsService {
       },
     });
 
-    return requests.map(r => ({
-      id: r.id,
-      fromUserId: r.userId,
-      toUserId: r.friendId,
-      status: r.status,
-      fromUser: { id: r.user.id, profile: r.user.profile },
-      toUser: { id: r.friend.id, profile: r.friend.profile },
-      createdAt: r.createdAt,
-    }));
+    return requests
+      // Excluir pedidos onde qualquer um dos utilizadores foi soft-deleted
+      .filter(r => !r.user.deletedAt && !r.friend.deletedAt)
+      .map(r => ({
+        id: r.id,
+        fromUserId: r.userId,
+        toUserId: r.friendId,
+        status: r.status,
+        fromUser: { id: r.user.id, profile: r.user.profile },
+        toUser: { id: r.friend.id, profile: r.friend.profile },
+        createdAt: r.createdAt,
+      }));
   }
 
   async send(fromId: string, toId: string) {

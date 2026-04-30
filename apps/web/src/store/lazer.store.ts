@@ -88,6 +88,7 @@ interface LazerStoreState {
   comments: Record<string, LazerComment[]>;
   friends: string[]; friendRequests: FriendRequest[]; sentRequests: string[];
   myCommunities: LazerCommunity[]; exploreCommunities: LazerCommunity[];
+  trendingTropes: TrendingTrope[];
   watchingNow: WatchingSimulcast[];
   suggestions: any[];
   isLoading: boolean;

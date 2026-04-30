@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { useAlphaCoreStore } from './useAlphaCoreStore';
+import { useChatStore } from './chat.store';
 
 interface UserProfile {
   username: string;
@@ -140,6 +142,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         headers:     accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       });
     } catch { /* ignora erros de rede no logout */ }
+
+    // Limpar todos os stores com dados do utilizador para evitar
+    // vazamento entre contas na mesma sessão do browser
+    useAlphaCoreStore.getState().clearMessages();
+    useAlphaCoreStore.getState().setPersonalAI(null);
+    useChatStore.setState({ conversations: [], activeConversationId: null });
+
     set({ user: null, accessToken: null, isAuthenticated: false });
   },
 

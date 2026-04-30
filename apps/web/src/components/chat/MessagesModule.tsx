@@ -365,16 +365,16 @@ function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string
   );
 }
 
-export default function MessagesModule() {
+export default function MessagesModule({ themeColor: propThemeColor, themeMode }: { themeColor?: string; themeMode?: 'light' | 'dark' } = {}) {
   const { user: authUser } = useAuthStore();
-  const themeMode = (authUser?.profile as any)?.lazerData?.themeMode || 'dark';
-  const isLight = themeMode === 'light';
+  const computedThemeMode = themeMode || (authUser?.profile as any)?.lazerData?.themeMode || 'dark';
+  const isLight = computedThemeMode === 'light';
   const tp = isLight ? '#1e1b4b' : '#ffffff';
   const ts = isLight ? '#94a3b8' : '#94a3b8';
   const glassBg = isLight ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)';
   const borderCol = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
   const accentBorder = `rgba(99,102,241,0.1)`;
-  const themeColor = authUser?.profile?.bannerColor || '#6366f1';
+  const themeColor = propThemeColor || authUser?.profile?.bannerColor || '#6366f1';
 
   const { 
     conversations, activeConversationId, initSocket, fetchConversations, 
@@ -639,9 +639,9 @@ export default function MessagesModule() {
             <p style={{ color: ts }}>As tuas mensagens aparecerão aqui em tempo real.</p>
           </div>
         ) : activeConversationId === 'alpha-assistant' ? (
-          <AlphaChatView themeColor="#a78bfa" themeMode={themeMode} authUser={authUser} />
+          <AlphaChatView themeColor="#a78bfa" themeMode={computedThemeMode} authUser={authUser} />
         ) : showSettings ? (
-          <ChatSettings contact={contact} onBack={() => setShowSettings(false)} themeColor={themeColor} themeMode={themeMode}/>
+          <ChatSettings contact={contact} onBack={() => setShowSettings(false)} themeColor={themeColor} themeMode={computedThemeMode}/>
         ) : (
           <>
             <div style={{ padding: '0 24px', height: 68, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, borderBottom: `1px solid ${borderCol}`, background: glassBg, backdropFilter: 'blur(20px)' }}>
