@@ -137,7 +137,7 @@ export class FriendsService {
 
     return this.prisma.profile.findMany({
       where: {
-        userId: { notIn: Array.from(connectedUserIds) },
+        userId: { notIn: Array.from(connectedUserIds), not: 'alpha-assistant' },
         user: { deletedAt: null },
       },
       take: limit,

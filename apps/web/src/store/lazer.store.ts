@@ -61,8 +61,8 @@ export interface LazerComment {
 
 export interface FriendRequest {
   id: string; fromUserId: string; toUserId: string; status: 'pending' | 'accepted' | 'rejected';
-  fromUser?: { id: string; profile: { username: string; displayName: string | null; avatarUrl?: string | null } };
-  toUser?: { id: string; profile: { username: string; displayName: string | null; avatarUrl?: string | null } };
+  fromUser?: { id: string; profile: { username: string; displayName: string | null; avatarUrl?: string | null; bio?: string | null } };
+  toUser?: { id: string; profile: { username: string; displayName: string | null; avatarUrl?: string | null; bio?: string | null } };
   createdAt: string;
 }
 
@@ -86,7 +86,7 @@ export interface LazerCommunity {
 interface LazerStoreState {
   feedPosts: LazerPost[]; userPosts: LazerPost[];
   comments: Record<string, LazerComment[]>;
-  friends: string[]; friendRequests: FriendRequest[]; sentRequests: string[];
+  friends: string[]; friendProfiles: any[]; friendRequests: FriendRequest[]; sentRequests: string[];
   myCommunities: LazerCommunity[]; exploreCommunities: LazerCommunity[];
   trendingTropes: TrendingTrope[];
   watchingNow: WatchingSimulcast[];
@@ -133,7 +133,7 @@ const authHeaders = (): Record<string, string> => {
 
 export const useLazerStore = create<LazerStoreState>((set, get) => ({
   feedPosts: [], userPosts: [], comments: {},
-  friends: [], friendRequests: [], sentRequests: [],
+  friends: [], friendProfiles: [], friendRequests: [], sentRequests: [],
   myCommunities: [], exploreCommunities: [],
   trendingTropes: [],
   watchingNow: [],
@@ -410,7 +410,17 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
       if (fRes.status === 'fulfilled' && fRes.value.ok) {
         const data = await fRes.value.json();
         const list = data.data || data || [];
-        set({ friends: list.map((f: any) => f.id || f.userId || f).filter(Boolean) });
+        set({
+          friends: list.map((f: any) => f.id || f.userId || f).filter(Boolean),
+          friendProfiles: list.map((f: any) => ({
+            id: f.id || f.userId,
+            name: f.profile?.displayName || f.profile?.username || 'User',
+            handle: `@${f.profile?.username || 'user'}`,
+            avatar: f.profile?.avatarUrl || '',
+            profile: f.profile,
+            bio: f.profile?.bio || '',
+          }))
+        });
       }
       if (rRes.status === 'fulfilled' && rRes.value.ok) {
         const data = await rRes.value.json();
@@ -447,10 +457,23 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
     try {
       const res = await fetch(`${API}/api/v1/users/friend-requests/${requestId}/accept`, { method: 'POST', headers: authHeaders() });
       if (res.ok) {
-        set(state => ({
-          friends: [...state.friends, fromUserId],
-          friendRequests: state.friendRequests.map(r => r.id === requestId ? { ...r, status: 'accepted' as const } : r),
-        }));
+        set(state => {
+          const req = state.friendRequests.find(r => r.id === requestId);
+          const newProfile = req?.fromUser ? {
+            id: req.fromUser.id,
+            name: req.fromUser.profile.displayName || req.fromUser.profile.username || 'User',
+            handle: `@${req.fromUser.profile.username || 'user'}`,
+            avatar: req.fromUser.profile.avatarUrl || '',
+            profile: req.fromUser.profile,
+            bio: req.fromUser.profile.bio || '',
+          } : null;
+
+          return {
+            friends: [...state.friends, fromUserId],
+            friendProfiles: newProfile ? [...state.friendProfiles, newProfile] : state.friendProfiles,
+            friendRequests: state.friendRequests.map(r => r.id === requestId ? { ...r, status: 'accepted' as const } : r),
+          };
+        });
         return true;
       }
       return false;
@@ -464,7 +487,10 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
     } catch { return false; }
   },
   removeFriend: async (userId: string) => {
-    set(state => ({ friends: state.friends.filter(id => id !== userId) }));
+    set(state => ({
+      friends: state.friends.filter(id => id !== userId),
+      friendProfiles: state.friendProfiles.filter(p => p.id !== userId),
+    }));
     try {
       const res = await fetch(`${API}/api/v1/users/friends/${userId}`, { method: 'DELETE', headers: authHeaders() });
       return res.ok;

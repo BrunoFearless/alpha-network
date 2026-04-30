@@ -29,7 +29,7 @@ interface FriendsModalProps {
 export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode }: FriendsModalProps) {
   const { user: authUser } = useAuthStore();
   const {
-    feedPosts, friends, friendRequests,
+    feedPosts, friends, friendProfiles, friendRequests,
     isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest,
     acceptFriendRequest, rejectFriendRequest, removeFriend, fetchFriends,
     suggestions: globalSuggestions, fetchSuggestions,
@@ -63,14 +63,31 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
     }));
   }, [globalSuggestions]);
 
-  // Instant Local Search
+  // Instant Local Search (Search in suggestions, friends, and requests)
   useEffect(() => {
     if (!search.trim()) { setSearchResults([]); setIsSearching(false); return; }
     setIsSearching(true);
     
     setTimeout(() => {
       const q = search.toLowerCase();
-      const res = suggestions.filter((u: any) => {
+      
+      const allUsers = [
+        ...suggestions,
+        ...friendProfiles,
+        ...friendRequests.filter(r => r.fromUser).map(r => ({
+          id: r.fromUserId,
+          name: r.fromUser?.profile?.displayName || r.fromUser?.profile?.username || 'User',
+          handle: `@${r.fromUser?.profile?.username || 'user'}`,
+          avatar: r.fromUser?.profile?.avatarUrl || '',
+          profile: r.fromUser?.profile,
+          bio: r.fromUser?.profile?.bio || '',
+        }))
+      ];
+      
+      // Deduplicate by ID
+      const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
+
+      const res = uniqueUsers.filter((u: any) => {
          const name = (u.name || '').toLowerCase();
          const handle = (u.profile?.username || '').toLowerCase();
          const bio = (u.bio || '').toLowerCase();
@@ -81,13 +98,13 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
       setSearchResults(res);
       setIsSearching(false);
     }, 150);
-  }, [search, suggestions]);
+  }, [search, suggestions, friendProfiles, friendRequests]);
 
   const myId = authUser?.id;
   const pendingReceived = useMemo(() => friendRequests.filter(r => r.toUserId === myId && r.status === 'pending'), [friendRequests, myId]);
   const currentlySent = friendRequests.filter(r => r.fromUserId === myId && r.status === 'pending');
-  const friendList = suggestions.filter(u => isFriend(u.id));
-  const nonFriends = suggestions.filter(u => !isFriend(u.id) && !pendingReceived.some(r => r.fromUserId === u.id));
+  const friendList = friendProfiles; // Agora usamos os perfis reais descarregados!
+  const nonFriends = suggestions.filter(u => !isFriend(u.id) && !hasSentRequest(u.id) && !pendingReceived.some(r => r.fromUserId === u.id));
 
   // Determine Main Feed List
   const renderList = search.trim() ? searchResults : (activeTab === 'Amigos' ? friendList : activeTab === 'Sugestões' ? nonFriends : pendingReceived);
