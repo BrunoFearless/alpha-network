@@ -40,6 +40,14 @@ export interface AmbientSettings {
   panelBorders?: 'default' | 'neon' | 'none';
   showMusicPlayer?: boolean;
   showCalendarGrid?: boolean;
+  showWeather?: boolean;
+  showNotes?: boolean;
+  showLinks?: boolean;
+  showTimer?: boolean;
+  showPet?: boolean;
+  showClock?: boolean;
+  showStats?: boolean;
+  showUserCard?: boolean;
   customTexts: CustomText[];
   widgetPositions: {
     clock:    { x: number; y: number };
@@ -50,6 +58,11 @@ export interface AmbientSettings {
     foreground?: { x: number; y: number };
     musicPlayer?: { x: number; y: number };
     calendarGrid?: { x: number; y: number };
+    weather?: { x: number; y: number };
+    notes?: { x: number; y: number };
+    links?: { x: number; y: number };
+    timer?: { x: number; y: number };
+    pet?: { x: number; y: number };
   };
 }
 
@@ -72,6 +85,14 @@ export const DEFAULT_SETTINGS: AmbientSettings = {
   panelBorders: 'default',
   showMusicPlayer: true,
   showCalendarGrid: true,
+  showWeather: true,
+  showNotes: true,
+  showLinks: true,
+  showTimer: true,
+  showPet: true,
+  showClock: true,
+  showStats: true,
+  showUserCard: true,
   customTexts: [],
   widgetPositions: {
     clock:    { x: 1.5, y: 2.5  },
@@ -81,6 +102,11 @@ export const DEFAULT_SETTINGS: AmbientSettings = {
     dock:     { x: 30,  y: 85   },
     musicPlayer:  { x: 84, y: 70 },
     calendarGrid: { x: 1.5, y: 20 },
+    weather:  { x: 45, y: 5 },
+    notes:    { x: 65, y: 20 },
+    links:    { x: 45, y: 20 },
+    timer:    { x: 65, y: 5 },
+    pet:      { x: 84, y: 50 },
   },
 };
 
@@ -344,31 +370,7 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
             ))}
           </div>
 
-          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: 4 }}>WIDGETS PREMIUM</div>
-            <button onClick={() => update({ showMusicPlayer: !(settings.showMusicPlayer ?? true) })}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', transition: 'all 0.2s' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 16 }}>🎵</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: (settings.showMusicPlayer ?? true) ? '#fff' : 'rgba(255,255,255,0.4)' }}>Music Player</span>
-              </div>
-              <div style={{ width: 34, height: 20, borderRadius: 10, background: (settings.showMusicPlayer ?? true) ? settings.accent : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'all 0.2s' }}>
-                <div style={{ position: 'absolute', top: 2, left: (settings.showMusicPlayer ?? true) ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'all 0.2s' }} />
-              </div>
-            </button>
-            <button onClick={() => update({ showCalendarGrid: !(settings.showCalendarGrid ?? true) })}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', transition: 'all 0.2s' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 16 }}>📅</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: (settings.showCalendarGrid ?? true) ? '#fff' : 'rgba(255,255,255,0.4)' }}>Calendário Visual</span>
-              </div>
-              <div style={{ width: 34, height: 20, borderRadius: 10, background: (settings.showCalendarGrid ?? true) ? settings.accent : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'all 0.2s' }}>
-                <div style={{ position: 'absolute', top: 2, left: (settings.showCalendarGrid ?? true) ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'all 0.2s' }} />
-              </div>
-            </button>
-          </div>
+
 
           {divider}
 

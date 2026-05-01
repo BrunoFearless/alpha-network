@@ -9,6 +9,7 @@ import { useChatStore } from '@/store/chat.store';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { api } from '@/lib/api';
 import AmbientCustomizer, { AmbientSettings, CustomText, DEFAULT_SETTINGS } from './AmbientCustomizer';
+import { WidgetHub } from './WidgetHub';
 
 const ALPHA_MODULES = [
   { id: 'lazer',     label: 'Lazer',     emoji: '🎮', color: '#22c55e', path: '/main/lazer',     desc: 'Feed social · Reações · Comunidades' },
@@ -192,6 +193,128 @@ function CalendarGridWidget({ glass, accent }: { glass: React.CSSProperties, acc
           }}>{d ?? ''}</div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── Weather ──────────────────────────────────────────────────────────────────
+function WeatherWidget({ glass, accent }: { glass: React.CSSProperties, accent: string }) {
+  return (
+    <div style={{ ...glass, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16, minWidth: 180 }}>
+      <div style={{ fontSize: 32 }}>🌤️</div>
+      <div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1 }}>24°C</div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Lisboa, Portugal</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Quick Notes ──────────────────────────────────────────────────────────────
+function NotesWidget({ glass, accent, settings, update }: { glass: React.CSSProperties, accent: string, settings: any, update: any }) {
+  return (
+    <div style={{ ...glass, padding: '16px', width: 220, minHeight: 140, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>
+        <span style={{ fontSize: 14 }}>📝</span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>NOTAS RÁPIDAS</span>
+      </div>
+      <textarea 
+        placeholder="Escreve algo..."
+        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'rgba(255,255,255,0.8)', fontSize: 12, resize: 'none', fontFamily: 'inherit', lineHeight: 1.5 }}
+      />
+    </div>
+  );
+}
+
+// ─── Quick Links ──────────────────────────────────────────────────────────────
+function LinksWidget({ glass, accent }: { glass: React.CSSProperties, accent: string }) {
+  const links = [
+    { icon: '🎬', label: 'YouTube' },
+    { icon: '🐱', label: 'GitHub' },
+    { icon: '🎨', label: 'Behance' },
+    { icon: '💬', label: 'Discord' }
+  ];
+  return (
+    <div style={{ ...glass, padding: '12px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+      {links.map(l => (
+        <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}>
+          <span style={{ fontSize: 14 }}>{l.icon}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#fff' }}>{l.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Focus Timer (Pomodoro) ───────────────────────────────────────────────────
+function TimerWidget({ glass, accent }: { glass: React.CSSProperties, accent: string }) {
+  const [isActive, setIsActive] = useState(false);
+  const [seconds, setSeconds] = useState(25 * 60);
+
+  useEffect(() => {
+    let interval: any = null;
+    if (isActive && seconds > 0) {
+      interval = setInterval(() => setSeconds(s => s - 1), 1000);
+    } else if (seconds === 0) {
+      setIsActive(false);
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isActive, seconds]);
+
+  const format = (s: number) => {
+    const m = Math.floor(s / 60);
+    const rs = s % 60;
+    return `${String(m).padStart(2, '0')}:${String(rs).padStart(2, '0')}`;
+  };
+
+  return (
+    <div style={{ ...glass, padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: 160 }}>
+      <div style={{ position: 'relative', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+          <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
+          <circle cx="40" cy="40" r="36" fill="none" stroke={accent} strokeWidth="4" strokeDasharray={226} strokeDashoffset={226 - (226 * (seconds / (25 * 60)))} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s linear' }} />
+        </svg>
+        <div style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{format(seconds)}</div>
+      </div>
+      <button 
+        onClick={() => setIsActive(!isActive)}
+        style={{ width: '100%', padding: '6px', borderRadius: 8, background: isActive ? 'rgba(255,255,255,0.1)' : accent, border: 'none', color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+      >
+        {isActive ? 'PAUSAR' : 'FOCAR'}
+      </button>
+    </div>
+  );
+}
+
+// ─── Alpha Pet (Virtual Companion) ────────────────────────────────────────────
+function PetWidget({ glass, accent }: { glass: React.CSSProperties, accent: string }) {
+  const [blink, setBlink] = useState(false);
+  useEffect(() => {
+    const t = setInterval(() => {
+      setBlink(true);
+      setTimeout(() => setBlink(false), 200);
+    }, 4000);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div style={{ ...glass, padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: 100 }}>
+      <div style={{ width: 60, height: 60, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* Simple Vector Pet Body */}
+        <div style={{ width: 40, height: 40, borderRadius: '45% 45% 40% 40%', background: accent, position: 'relative', boxShadow: `0 0 20px ${accent}44` }}>
+          {/* Eyes */}
+          <div style={{ position: 'absolute', top: 12, left: 8, width: 6, height: blink ? 1 : 6, background: '#fff', borderRadius: 3, transition: 'height 0.1s' }} />
+          <div style={{ position: 'absolute', top: 12, right: 8, width: 6, height: blink ? 1 : 6, background: '#fff', borderRadius: 3, transition: 'height 0.1s' }} />
+          {/* Blush */}
+          <div style={{ position: 'absolute', top: 22, left: 4, width: 6, height: 3, background: 'rgba(255,255,255,0.3)', borderRadius: 2 }} />
+          <div style={{ position: 'absolute', top: 22, right: 4, width: 6, height: 3, background: 'rgba(255,255,255,0.3)', borderRadius: 2 }} />
+        </div>
+        {/* Floating Ears/Horns */}
+        <div style={{ position: 'absolute', top: 0, left: 15, width: 10, height: 15, background: accent, borderRadius: '50% 50% 0 0', transform: 'rotate(-20deg)', opacity: 0.8 }} />
+        <div style={{ position: 'absolute', top: 0, right: 15, width: 10, height: 15, background: accent, borderRadius: '50% 50% 0 0', transform: 'rotate(20deg)', opacity: 0.8 }} />
+      </div>
+      <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Alpha Pet</div>
     </div>
   );
 }
@@ -409,6 +532,7 @@ export default function AmbientePage() {
   const [toggling, setToggling] = useState<string|null>(null);
   const [mounted, setMounted] = useState(false);
   const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [widgetHubOpen, setWidgetHubOpen] = useState(false);
   const [settings, setSettings] = useState<AmbientSettings>(DEFAULT_SETTINGS);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -518,7 +642,7 @@ export default function AmbientePage() {
       )}
 
       {/* Clock + Calendário — arrastável */}
-      {mounted && (
+      {mounted && settings.showClock !== false && (
         <DraggableWidget
           defaultPos={settings.widgetPositions?.clock || { x: 1.5, y: 2.5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), clock: pos } }))}
@@ -528,12 +652,14 @@ export default function AmbientePage() {
       )}
 
       {/* User Card — arrastável */}
-      <DraggableWidget
-        defaultPos={settings.widgetPositions?.userCard || { x: 84, y: 2.5 }}
-        onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), userCard: pos } }))}
-      >
-        <UserCard user={user} accent={accent} glass={glass} onLogout={logout}/>
-      </DraggableWidget>
+      {mounted && settings.showUserCard !== false && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.userCard || { x: 84, y: 2.5 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), userCard: pos } }))}
+        >
+          <UserCard user={user} accent={accent} glass={glass} onLogout={logout}/>
+        </DraggableWidget>
+      )}
 
       {/* Music Player — arrastável */}
       {mounted && settings.showMusicPlayer !== false && (
@@ -583,28 +709,93 @@ export default function AmbientePage() {
         🎨
       </button>
 
-      {/* Centro: saudação + nome + stats — arrastável */}
-      <DraggableWidget
-        defaultPos={settings.widgetPositions?.greeting || { x: 30, y: 36 }}
-        onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), greeting: pos } }))}
+      {/* Widget Hub button (below customizer) */}
+      <button
+        onClick={()=>setWidgetHubOpen(true)}
+        style={{position:'absolute',bottom:36,right:20,zIndex:20,width:44,height:44,borderRadius:14,background:'rgba(255,255,255,0.03)',backdropFilter:'blur(32px)',WebkitBackdropFilter:'blur(32px)',border:'1px solid rgba(255,255,255,0.15)',color:'rgba(255,255,255,0.7)',fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.2s',boxShadow:'0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'}}
+        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=`${accent}25`;(e.currentTarget as HTMLElement).style.borderColor=`${accent}80`;(e.currentTarget as HTMLElement).style.color='#fff';(e.currentTarget as HTMLElement).style.boxShadow=`0 4px 24px ${accent}44, inset 0 1px 0 rgba(255,255,255,0.15)`;}}
+        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.03)';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,0.15)';(e.currentTarget as HTMLElement).style.color='rgba(255,255,255,0.7)';(e.currentTarget as HTMLElement).style.boxShadow='0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)';}}
+        title="Widget Hub"
       >
-        <div style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:12, animation:`fadeIn ${currentSpeed === '0.8s' ? '1.2s' : '0.7s'} ease 0.15s both` }}>
-          <div style={{fontSize:12,color:'rgba(255,255,255,0.35)',letterSpacing:5,textTransform:'uppercase',fontWeight:600}}>{getGreeting()}</div>
-          <h1 style={{fontFamily:`'${settings.titleFont || settings.font}',sans-serif`,fontSize:'clamp(34px,5vw,60px)',fontWeight:900,color:'#fff',lineHeight:1.1,margin:0,animation:(settings.dynamicGlow ?? true) ? 'glow 4s ease-in-out infinite' : 'none'}}>{name}</h1>
-          <div style={{fontSize:13,color:'rgba(255,255,255,0.3)',fontWeight:500}}>{activeModes.length} módulo{activeModes.length!==1?'s':''} ativo{activeModes.length!==1?'s':''} · Alpha Network</div>
-          <div style={{animation:'fadeIn 0.6s ease 0.3s both'}}>
-            <StatsBar glass={glass} postCount={myPostCount} friendCount={friends.length} communityCount={myCommunities.length} notifCount={unreadNotifs+pendingReqs}/>
+        🧩
+      </button>
+
+      {/* Centro: saudação + nome + stats — arrastável */}
+      {mounted && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.greeting || { x: 30, y: 36 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), greeting: pos } }))}
+        >
+          <div style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:12, animation:`fadeIn ${currentSpeed === '0.8s' ? '1.2s' : '0.7s'} ease 0.15s both` }}>
+            <div style={{fontSize:12,color:'rgba(255,255,255,0.35)',letterSpacing:5,textTransform:'uppercase',fontWeight:600}}>{getGreeting()}</div>
+            <h1 style={{fontFamily:`'${settings.titleFont || settings.font}',sans-serif`,fontSize:'clamp(34px,5vw,60px)',fontWeight:900,color:'#fff',lineHeight:1.1,margin:0,animation:(settings.dynamicGlow ?? true) ? 'glow 4s ease-in-out infinite' : 'none'}}>{name}</h1>
+            <div style={{fontSize:13,color:'rgba(255,255,255,0.3)',fontWeight:500}}>{activeModes.length} módulo{activeModes.length!==1?'s':''} ativo{activeModes.length!==1?'s':''} · Alpha Network</div>
+            {settings.showStats !== false && (
+              <div style={{animation:'fadeIn 0.6s ease 0.3s both'}}>
+                <StatsBar glass={glass} postCount={myPostCount} friendCount={friends.length} communityCount={myCommunities.length} notifCount={unreadNotifs+pendingReqs}/>
+              </div>
+            )}
+            {lastModule && (
+              <button onClick={()=>router.push(lastModule.path)}
+                style={{marginTop:8,padding:'10px 28px',borderRadius:50,border:`1.5px solid ${accent}50`,background:`${accent}15`,backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',transition:'all 0.2s',display:'flex',alignItems:'center',gap:8,boxShadow:`inset 0 1px 0 ${accent}30`}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=`${accent}30`;(e.currentTarget as HTMLElement).style.transform='scale(1.05)';(e.currentTarget as HTMLElement).style.boxShadow=`0 8px 24px ${accent}44, inset 0 1px 0 ${accent}50`;}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=`${accent}15`;(e.currentTarget as HTMLElement).style.transform='scale(1)';(e.currentTarget as HTMLElement).style.boxShadow=`inset 0 1px 0 ${accent}30`;}}>
+                <span>{lastModule.emoji}</span> Continuar em {lastModule.label}
+              </button>
+            )}
           </div>
-          {lastModule && (
-            <button onClick={()=>router.push(lastModule.path)}
-              style={{marginTop:8,padding:'10px 28px',borderRadius:50,border:`1.5px solid ${accent}50`,background:`${accent}15`,backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',transition:'all 0.2s',display:'flex',alignItems:'center',gap:8,boxShadow:`inset 0 1px 0 ${accent}30`}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=`${accent}30`;(e.currentTarget as HTMLElement).style.transform='scale(1.05)';(e.currentTarget as HTMLElement).style.boxShadow=`0 8px 24px ${accent}44, inset 0 1px 0 ${accent}50`;}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=`${accent}15`;(e.currentTarget as HTMLElement).style.transform='scale(1)';(e.currentTarget as HTMLElement).style.boxShadow=`inset 0 1px 0 ${accent}30`;}}>
-              <span>{lastModule.emoji}</span> Continuar em {lastModule.label}
-            </button>
-          )}
-        </div>
-      </DraggableWidget>
+        </DraggableWidget>
+      )}
+
+      {/* Weather Widget */}
+      {mounted && settings.showWeather !== false && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.weather || { x: 45, y: 5 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), weather: pos } }))}
+        >
+          <WeatherWidget glass={glass} accent={accent} />
+        </DraggableWidget>
+      )}
+
+      {/* Focus Timer */}
+      {mounted && settings.showTimer !== false && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.timer || { x: 65, y: 5 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), timer: pos } }))}
+        >
+          <TimerWidget glass={glass} accent={accent} />
+        </DraggableWidget>
+      )}
+
+      {/* Quick Notes */}
+      {mounted && settings.showNotes !== false && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.notes || { x: 65, y: 20 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), notes: pos } }))}
+        >
+          <NotesWidget glass={glass} accent={accent} settings={settings} update={(p: any) => setSettings(s => ({ ...s, ...p }))} />
+        </DraggableWidget>
+      )}
+
+      {/* Quick Links */}
+      {mounted && settings.showLinks !== false && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.links || { x: 45, y: 20 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), links: pos } }))}
+        >
+          <LinksWidget glass={glass} accent={accent} />
+        </DraggableWidget>
+      )}
+
+      {/* Alpha Pet */}
+      {mounted && settings.showPet !== false && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.pet || { x: 84, y: 50 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), pet: pos } }))}
+        >
+          <PetWidget glass={glass} accent={accent} />
+        </DraggableWidget>
+      )}
 
       {/* Dock — sempre arrastável em qualquer layout */}
       <DraggableWidget
@@ -623,6 +814,14 @@ export default function AmbientePage() {
           hasBanner={!!profile?.bannerUrl}
         />
       )}
+
+      {/* Widget Hub Drawer */}
+      <WidgetHub
+        open={widgetHubOpen}
+        onClose={() => setWidgetHubOpen(false)}
+        settings={settings}
+        update={(p) => setSettings(s => ({ ...s, ...p }))}
+      />
     </div>
   );
 }
