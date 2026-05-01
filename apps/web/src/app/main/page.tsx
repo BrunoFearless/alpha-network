@@ -218,7 +218,7 @@ function ModuleLayout({ modules, activeModes, accent, glassBorder, badges, onNav
           onClick={()=>isActive?onNavigate(mod.path):onToggle(mod.id)}
           onMouseEnter={()=>setHovered(mod.id)} onMouseLeave={()=>setHovered(null)}
           disabled={toggling===mod.id}
-          style={{ width:isHov?58:50, height:isHov?58:50, borderRadius:isHov?18:15, background:isActive?`linear-gradient(135deg,${mod.color}cc,${mod.color}77)`:'rgba(255,255,255,0.07)', border:`1.5px solid ${isActive?mod.color+'80':glassBorder}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:isHov?26:22, transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)', transform:isHov?'translateY(-10px)':'translateY(0)', boxShadow:isActive&&isHov?`0 14px 36px ${mod.color}66`:isActive?`0 4px 18px ${mod.color}44`:'none', opacity:toggling===mod.id?0.5:1, position:'relative' }}>
+          style={{ width:isHov?58:50, height:isHov?58:50, borderRadius:isHov?18:15, background:isActive?`linear-gradient(135deg,${mod.color}cc,${mod.color}77)`:'rgba(255,255,255,0.07)', border:`1.5px solid ${isActive?mod.color+'80':glassBorder}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:isHov?26:22, transition:`all var(--anim-speed, 0.3s) cubic-bezier(0.34,1.56,0.64,1)`, transform:isHov?'translateY(-10px)':'translateY(0)', boxShadow:isActive&&isHov?`0 14px 36px ${mod.color}66`:isActive?`0 4px 18px ${mod.color}44`:'none', opacity:toggling===mod.id?0.5:1, position:'relative' }}>
           {toggling===mod.id ? <div style={{width:16,height:16,border:'2px solid rgba(255,255,255,0.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/> : <span>{mod.emoji}</span>}
           {!isActive && <div style={{position:'absolute',inset:0,borderRadius:'inherit',background:'rgba(0,0,0,0.35)',display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{fontSize:10,color:'rgba(255,255,255,0.7)',fontWeight:800}}>+</span></div>}
           {badge>0 && <div style={{position:'absolute',top:-4,right:-4,minWidth:16,height:16,borderRadius:8,background:'#ef4444',border:'2px solid rgba(10,10,20,0.9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,fontWeight:800,color:'#fff',padding:'0 3px'}}>{badge>99?'99+':badge}</div>}
@@ -246,37 +246,58 @@ function ModuleLayout({ modules, activeModes, accent, glassBorder, badges, onNav
 // ─── Background Renderer ──────────────────────────────────────────────────────
 // blur em px extra para esconder borda do blur
 const blurPad = 10;
-function AmbientBackground({ settings, bannerUrl }: { settings: AmbientSettings; bannerUrl?: string|null }) {
+function AmbientBackground({ settings, bannerUrl, parallax }: { settings: AmbientSettings; bannerUrl?: string|null; parallax: {x:number, y:number} }) {
   const blur = settings.blurIntensity ?? 0;
+  const isParallax = settings.parallaxEffect ?? false;
+  // Expande mais a imagem se parallax estiver ativo para não mostrar as bordas
+  const pPad = isParallax ? 20 : 0;
   const mediaStyle: React.CSSProperties = {
-    position:'absolute', inset:`-${blurPad}px`,
-    width:`calc(100% + ${blurPad*2}px)`, height:`calc(100% + ${blurPad*2}px)`,
+    position:'absolute', inset:`-${blurPad + pPad}px`,
+    width:`calc(100% + ${(blurPad + pPad)*2}px)`, height:`calc(100% + ${(blurPad + pPad)*2}px)`,
     objectFit:'cover',
-    filter:`blur(${blur}px) brightness(0.55) saturate(1.4)`,
+    filter:`blur(${blur}px) brightness(${settings.wallpaperFilter === 'lighten' ? 0.9 : 0.6}) saturate(1.4)`,
+    transform: isParallax ? `translate(${parallax.x}px, ${parallax.y}px)` : 'none',
+    transition: 'transform 0.1s ease-out', // Suaviza o movimento do mouse
   };
-  if (settings.wallpaperType==='banner' && bannerUrl) {
-    return (
-      <div style={{position:'absolute',inset:0,zIndex:0,overflow:'hidden'}}>
-        <img src={bannerUrl} alt="" style={mediaStyle}/>
-        <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(5,5,10,0.1),rgba(5,5,10,0.65))'}}/>
-      </div>
-    );
-  }
-  if ((settings.wallpaperType==='image'||settings.wallpaperType==='video') && settings.wallpaperUrl) {
-    return (
-      <div style={{position:'absolute',inset:0,zIndex:0,overflow:'hidden'}}>
-        {settings.wallpaperType==='video'
-          ? <video src={settings.wallpaperUrl} autoPlay muted loop playsInline style={mediaStyle}/>
-          : <img src={settings.wallpaperUrl} alt="" style={mediaStyle}/>
-        }
-        <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(5,5,10,0.1),rgba(5,5,10,0.6))'}}/>
-      </div>
-    );
-  }
-  if (settings.wallpaperType==='gradient' && settings.wallpaperGradient) {
-    return <div style={{position:'absolute',inset:0,zIndex:0,background:settings.wallpaperGradient}}/>;
-  }
-  return <div style={{position:'absolute',inset:0,zIndex:0,background:`radial-gradient(ellipse at 20% 20%,${settings.accent}33 0%,transparent 55%),radial-gradient(ellipse at 80% 80%,${settings.accent}22 0%,transparent 55%),linear-gradient(160deg,#09090b 0%,#0f0f1a 100%)`}}/>;
+
+  const getOverlay = () => {
+    switch (settings.wallpaperFilter) {
+      case 'none': return null;
+      case 'lighten': return <div style={{position:'absolute',inset:0,background:'rgba(255,255,255,0.15)',mixBlendMode:'overlay'}}/>;
+      case 'tint': return <div style={{position:'absolute',inset:0,background:settings.accent,opacity:0.25,mixBlendMode:'color'}}/>;
+      case 'darken':
+      default: return <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(5,5,10,0.2),rgba(5,5,10,0.75))'}}/>;
+    }
+  };
+
+  const renderMedia = () => {
+    if (settings.wallpaperType === 'banner' && bannerUrl) {
+      return <img src={bannerUrl} alt="" style={mediaStyle}/>;
+    }
+    if ((settings.wallpaperType === 'image' || settings.wallpaperType === 'video') && settings.wallpaperUrl) {
+      return settings.wallpaperType === 'video'
+        ? <video src={settings.wallpaperUrl} autoPlay muted loop playsInline style={mediaStyle}/>
+        : <img src={settings.wallpaperUrl} alt="" style={mediaStyle}/>;
+    }
+    if (settings.wallpaperType === 'gradient' && settings.wallpaperGradient) {
+      return <div style={{position:'absolute',inset:0,background:settings.wallpaperGradient}}/>;
+    }
+    if (settings.wallpaperType === 'mesh') {
+      return <div style={{position:'absolute',inset:`-${blurPad + pPad}px`,width:`calc(100% + ${(blurPad + pPad)*2}px)`,height:`calc(100% + ${(blurPad + pPad)*2}px)`,background:`radial-gradient(circle at 15% 50%, ${settings.accent}4d, transparent 50%), radial-gradient(circle at 85% 30%, ${settings.accent}80, transparent 50%), radial-gradient(circle at 50% 80%, ${settings.accent}4d, transparent 50%), linear-gradient(135deg, #0f1016, #000)`,filter:`blur(${blur}px)`,animation:'mesh 15s ease-in-out infinite alternate',backgroundSize:'200% 200%'}}/>;
+    }
+    // Fallback default
+    return <div style={{position:'absolute',inset:0,background:`radial-gradient(ellipse at 20% 20%,${settings.accent}33 0%,transparent 55%),radial-gradient(ellipse at 80% 80%,${settings.accent}22 0%,transparent 55%),linear-gradient(160deg,#09090b 0%,#0f0f1a 100%)`}}/>;
+  };
+
+  return (
+    <div style={{position:'absolute',inset:0,zIndex:0,overflow:'hidden'}}>
+      {renderMedia()}
+      {getOverlay()}
+      {settings.wallpaperNoise && (
+        <div style={{position:'absolute',inset:0,pointerEvents:'none',opacity:0.04,mixBlendMode:'overlay',backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}/>
+      )}
+    </div>
+  );
 }
 
 // ─── Glass style ───────────────────────────────────────────────────────────────
@@ -314,6 +335,7 @@ export default function AmbientePage() {
   const [mounted, setMounted] = useState(false);
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [settings, setSettings] = useState<AmbientSettings>(DEFAULT_SETTINGS);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const profile = user?.profile;
   const activeModes = profile?.activeModes ?? [];
@@ -376,18 +398,36 @@ export default function AmbientePage() {
 
   const lastModule = activeModes.length>0?ALPHA_MODULES.find(m=>m.id===activeModes[0]):null;
 
+  const animSpeedMap = { fast: '0.15s', normal: '0.3s', smooth: '0.5s', cinematic: '0.8s' };
+  const currentSpeed = animSpeedMap[settings.animationSpeed || 'normal'];
+
   return (
-    <div style={{position:'relative',width:'100%',height:'100vh',overflow:'hidden',fontFamily:`'${settings.font}','system-ui',sans-serif`}}>
+    <div 
+      onMouseMove={e => {
+        if (settings.parallaxEffect) {
+          setMousePos({ x: (e.clientX / window.innerWidth - 0.5) * -30, y: (e.clientY / window.innerHeight - 0.5) * -30 });
+        }
+      }}
+      style={{
+        position:'relative', width:'100%', height:'100vh', overflow:'hidden',
+        fontFamily:`'${settings.font}','system-ui',sans-serif`,
+        letterSpacing: `${settings.letterSpacing ?? 0}px`,
+        lineHeight: settings.lineHeight ?? 1.2,
+        '--anim-speed': currentSpeed,
+      } as React.CSSProperties}
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=${settings.font.replace(/ /g,'+')}:wght@300;400;600;700;800;900&display=swap');
+        ${settings.titleFont && settings.titleFont !== settings.font ? `@import url('https://fonts.googleapis.com/css2?family=${settings.titleFont.replace(/ /g,'+')}:wght@300;400;600;700;800;900&display=swap');` : ''}
         @keyframes spin { to{transform:rotate(360deg)} }
         @keyframes fadeIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
         @keyframes dockIn { from{opacity:0;transform:translateY(30px) scale(0.7)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes glow { 0%,100%{text-shadow:0 0 40px ${accent}66} 50%{text-shadow:0 0 80px ${accent}cc,0 0 120px ${accent}44} }
+        @keyframes mesh { 0%{background-position:0% 0%} 50%{background-position:100% 100%} 100%{background-position:0% 0%} }
       `}</style>
 
       {/* Background */}
-      <AmbientBackground settings={settings} bannerUrl={profile?.bannerUrl} />
+      <AmbientBackground settings={settings} bannerUrl={profile?.bannerUrl} parallax={mousePos} />
 
       {/* Clock + Calendário — arrastável */}
       {mounted && (
@@ -440,9 +480,9 @@ export default function AmbientePage() {
         defaultPos={settings.widgetPositions?.greeting || { x: 30, y: 36 }}
         onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), greeting: pos } }))}
       >
-        <div style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:12, animation:'fadeIn 0.7s ease 0.15s both' }}>
+        <div style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:12, animation:`fadeIn ${currentSpeed === '0.8s' ? '1.2s' : '0.7s'} ease 0.15s both` }}>
           <div style={{fontSize:12,color:'rgba(255,255,255,0.35)',letterSpacing:5,textTransform:'uppercase',fontWeight:600}}>{getGreeting()}</div>
-          <h1 style={{fontSize:'clamp(34px,5vw,60px)',fontWeight:900,color:'#fff',lineHeight:1.1,margin:0,animation:'glow 4s ease-in-out infinite'}}>{name}</h1>
+          <h1 style={{fontFamily:`'${settings.titleFont || settings.font}',sans-serif`,fontSize:'clamp(34px,5vw,60px)',fontWeight:900,color:'#fff',lineHeight:1.1,margin:0,animation:(settings.dynamicGlow ?? true) ? 'glow 4s ease-in-out infinite' : 'none'}}>{name}</h1>
           <div style={{fontSize:13,color:'rgba(255,255,255,0.3)',fontWeight:500}}>{activeModes.length} módulo{activeModes.length!==1?'s':''} ativo{activeModes.length!==1?'s':''} · Alpha Network</div>
           <div style={{animation:'fadeIn 0.6s ease 0.3s both'}}>
             <StatsBar glass={glass} postCount={myPostCount} friendCount={friends.length} communityCount={myCommunities.length} notifCount={unreadNotifs+pendingReqs}/>

@@ -21,9 +21,17 @@ export interface CustomText {
 export interface AmbientSettings {
   accent: string;
   material: 'glass' | 'flat' | 'neuro';
-  font: string;
+  font: string; // Fonte do Corpo (Body)
+  titleFont?: string; // Fonte dos Títulos
+  letterSpacing?: number; // Espaçamento global entre letras (px)
+  lineHeight?: number; // Multiplicador de altura de linha global
+  animationSpeed?: 'fast' | 'normal' | 'smooth' | 'cinematic';
+  dynamicGlow?: boolean;
+  parallaxEffect?: boolean;
   mode: 'dark' | 'light' | 'auto';
-  wallpaperType: 'banner' | 'gradient' | 'image' | 'video';
+  wallpaperType: 'banner' | 'gradient' | 'image' | 'video' | 'mesh';
+  wallpaperFilter?: 'none' | 'darken' | 'lighten' | 'tint';
+  wallpaperNoise?: boolean;
   wallpaperGradient?: string;
   wallpaperUrl?: string;
   blurIntensity: number;
@@ -42,8 +50,16 @@ export const DEFAULT_SETTINGS: AmbientSettings = {
   accent: '#6366f1',
   material: 'glass',
   font: 'Outfit',
+  titleFont: 'Outfit',
+  letterSpacing: 0,
+  lineHeight: 1.2,
+  animationSpeed: 'normal',
+  dynamicGlow: true,
+  parallaxEffect: false,
   mode: 'dark',
   wallpaperType: 'banner',
+  wallpaperFilter: 'darken',
+  wallpaperNoise: true,
   blurIntensity: 40,
   moduleLayout: 'dock',
   customTexts: [],
@@ -84,6 +100,13 @@ const FONT_OPTIONS = [
   { label: 'DM Sans',       value: 'DM Sans'       },
   { label: 'Rajdhani',      value: 'Rajdhani'      },
   { label: 'Exo 2',         value: 'Exo 2'         },
+  { label: 'Montserrat',    value: 'Montserrat'    },
+  { label: 'Poppins',       value: 'Poppins'       },
+  { label: 'Playfair Display', value: 'Playfair Display' },
+  { label: 'Fira Code',     value: 'Fira Code'     },
+  { label: 'Raleway',       value: 'Raleway'       },
+  { label: 'Oswald',        value: 'Oswald'        },
+  { label: 'Lato',          value: 'Lato'          },
 ];
 
 // ─── Text Manager State ───────────────────────────────────────────────────────
@@ -310,6 +333,7 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
               { key: 'gradient', label: '🌈 Gradiente' },
               { key: 'image',    label: '🖼️ Imagem' },
               { key: 'video',    label: '🎬 Vídeo' },
+              { key: 'mesh',     label: '🕸️ Mesh/Aurora' },
             ] as const).map(opt => (
               <button key={opt.key} onClick={() => update({ wallpaperType: opt.key })}
                 disabled={opt.key === 'banner' && !hasBanner}
@@ -375,6 +399,43 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
             </div>
           )}
 
+          {/* Efeitos Extra no Fundo */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+            {/* Overlay Filter */}
+            <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 8, fontWeight: 600 }}>OVERLAY (FILTRO DE COR)</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+                {([
+                  { key: 'none', label: 'Nenhum' },
+                  { key: 'darken', label: 'Escurecer' },
+                  { key: 'lighten', label: 'Clarear' },
+                  { key: 'tint', label: 'Destaque' }
+                ] as const).map(f => (
+                  <button key={f.key} onClick={() => update({ wallpaperFilter: f.key })}
+                    style={{ padding: '6px 4px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                      border: `1px solid ${(settings.wallpaperFilter || 'darken') === f.key ? settings.accent : 'transparent'}`,
+                      background: (settings.wallpaperFilter || 'darken') === f.key ? `${settings.accent}20` : 'rgba(255,255,255,0.02)', transition: 'all 0.15s' }}>
+                    <div style={{ fontSize: 10, color: (settings.wallpaperFilter || 'darken') === f.key ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{f.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Film Grain */}
+            <button onClick={() => update({ wallpaperNoise: !(settings.wallpaperNoise ?? true) })}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                border: `1.5px solid ${(settings.wallpaperNoise ?? true) ? settings.accent : 'rgba(255,255,255,0.07)'}`,
+                background: (settings.wallpaperNoise ?? true) ? `${settings.accent}15` : 'rgba(255,255,255,0.02)', transition: 'all 0.2s' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: (settings.wallpaperNoise ?? true) ? '#fff' : 'rgba(255,255,255,0.6)' }}>Textura (Film Grain)</div>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Adiciona um efeito granulado cinematográfico</div>
+              </div>
+              <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${(settings.wallpaperNoise ?? true) ? settings.accent : 'rgba(255,255,255,0.2)'}`, background: (settings.wallpaperNoise ?? true) ? settings.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {(settings.wallpaperNoise ?? true) && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+              </div>
+            </button>
+          </div>
+
           {divider}
 
           {/* ── ACCENT COLOR ── */}
@@ -424,16 +485,113 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
 
           {/* ── FONT ── */}
           <SectionHeader icon="✍️" label="Tipografia" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {FONT_OPTIONS.map(f => (
-              <button key={f.value} onClick={() => update({ font: f.value })}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', borderRadius: 12, cursor: 'pointer',
-                  border: `1.5px solid ${settings.font === f.value ? settings.accent : 'rgba(255,255,255,0.07)'}`,
-                  background: settings.font === f.value ? `${settings.accent}15` : 'rgba(255,255,255,0.02)', transition: 'all 0.15s' }}>
-                <span style={{ fontSize: 12, color: settings.font === f.value ? '#fff' : 'rgba(255,255,255,0.55)', fontWeight: settings.font === f.value ? 700 : 400 }}>{f.label}</span>
-                <span style={{ fontFamily: `'${f.value}', sans-serif`, fontSize: 18, color: settings.font === f.value ? settings.accent : 'rgba(255,255,255,0.25)', fontWeight: 700 }}>Aa</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Fonte dos Títulos */}
+            <div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 6, fontWeight: 600 }}>FONTE DOS TÍTULOS E DESTAQUES</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6 }}>
+                {FONT_OPTIONS.map(f => (
+                  <button key={`title-${f.value}`} onClick={() => update({ titleFont: f.value })}
+                    style={{ padding: '8px 10px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                      border: `1.5px solid ${(settings.titleFont || settings.font) === f.value ? settings.accent : 'rgba(255,255,255,0.07)'}`,
+                      background: (settings.titleFont || settings.font) === f.value ? `${settings.accent}15` : 'rgba(255,255,255,0.02)', transition: 'all 0.15s' }}>
+                    <div style={{ fontFamily: `'${f.value}', sans-serif`, fontSize: 14, color: (settings.titleFont || settings.font) === f.value ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 700 }}>{f.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Fonte do Corpo */}
+            <div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 6, fontWeight: 600 }}>FONTE DO CORPO (TEXTOS)</div>
+              <select value={settings.font} onChange={(e) => update({ font: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', outline: 'none', fontFamily: `'${settings.font}', sans-serif`, cursor: 'pointer' }}>
+                {FONT_OPTIONS.map(f => <option key={f.value} value={f.value} style={{ background: '#111', color: '#fff' }}>{f.label}</option>)}
+              </select>
+            </div>
+
+            {/* Letter Spacing e Line Height */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>ESPAÇAMENTO (LETTER-SPACING)</span>
+                  <span style={{ fontSize: 10, color: '#fff', fontWeight: 700 }}>{settings.letterSpacing ?? 0}px</span>
+                </div>
+                <input type="range" min={-2} max={10} step={0.5} value={settings.letterSpacing ?? 0}
+                  onChange={e => update({ letterSpacing: Number(e.target.value) })}
+                  style={{ width: '100%', accentColor: settings.accent }} />
+              </div>
+
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }} />
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>ALTURA DA LINHA (LINE-HEIGHT)</span>
+                  <span style={{ fontSize: 10, color: '#fff', fontWeight: 700 }}>{settings.lineHeight ?? 1.2}x</span>
+                </div>
+                <input type="range" min={0.8} max={2.5} step={0.1} value={settings.lineHeight ?? 1.2}
+                  onChange={e => update({ lineHeight: Number(e.target.value) })}
+                  style={{ width: '100%', accentColor: settings.accent }} />
+              </div>
+            </div>
+          </div>
+
+          {divider}
+
+          {/* ── ANIMAÇÕES E TRANSIÇÕES ── */}
+          <SectionHeader icon="✨" label="Animações & Efeitos" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Animation Speed */}
+            <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 10, fontWeight: 600 }}>VELOCIDADE DAS TRANSIÇÕES</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+                {([
+                  { key: 'fast', label: 'Rápido', desc: '0.15s' },
+                  { key: 'normal', label: 'Normal', desc: '0.3s' },
+                  { key: 'smooth', label: 'Suave', desc: '0.5s' },
+                  { key: 'cinematic', label: 'Cinema', desc: '0.8s' }
+                ] as const).map(s => (
+                  <button key={s.key} onClick={() => update({ animationSpeed: s.key })}
+                    style={{ padding: '6px 4px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                      border: `1px solid ${(settings.animationSpeed || 'normal') === s.key ? settings.accent : 'transparent'}`,
+                      background: (settings.animationSpeed || 'normal') === s.key ? `${settings.accent}20` : 'rgba(255,255,255,0.02)', transition: 'all 0.15s' }}>
+                    <div style={{ fontSize: 10, color: (settings.animationSpeed || 'normal') === s.key ? '#fff' : 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{s.label}</div>
+                    <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{s.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Efeitos Toggles */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {/* Dynamic Glow */}
+              <button onClick={() => update({ dynamicGlow: !(settings.dynamicGlow ?? true) })}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                  border: `1.5px solid ${(settings.dynamicGlow ?? true) ? settings.accent : 'rgba(255,255,255,0.07)'}`,
+                  background: (settings.dynamicGlow ?? true) ? `${settings.accent}15` : 'rgba(255,255,255,0.02)', transition: 'all 0.2s' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: (settings.dynamicGlow ?? true) ? '#fff' : 'rgba(255,255,255,0.6)' }}>Glow Dinâmico</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Brilho pulsante nos widgets</div>
+                </div>
+                <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${(settings.dynamicGlow ?? true) ? settings.accent : 'rgba(255,255,255,0.2)'}`, background: (settings.dynamicGlow ?? true) ? settings.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {(settings.dynamicGlow ?? true) && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+                </div>
               </button>
-            ))}
+
+              {/* Parallax */}
+              <button onClick={() => update({ parallaxEffect: !(settings.parallaxEffect ?? false) })}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                  border: `1.5px solid ${(settings.parallaxEffect ?? false) ? settings.accent : 'rgba(255,255,255,0.07)'}`,
+                  background: (settings.parallaxEffect ?? false) ? `${settings.accent}15` : 'rgba(255,255,255,0.02)', transition: 'all 0.2s' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: (settings.parallaxEffect ?? false) ? '#fff' : 'rgba(255,255,255,0.6)' }}>Parallax</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Fundo reage ao rato</div>
+                </div>
+                <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${(settings.parallaxEffect ?? false) ? settings.accent : 'rgba(255,255,255,0.2)'}`, background: (settings.parallaxEffect ?? false) ? settings.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {(settings.parallaxEffect ?? false) && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+                </div>
+              </button>
+            </div>
           </div>
 
           {divider}
