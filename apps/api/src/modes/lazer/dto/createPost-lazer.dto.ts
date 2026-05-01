@@ -3,9 +3,8 @@ import { IsOptional, IsString, IsBoolean } from "class-validator";
 export class CreatePostLazerDto {
   @IsString()
   content: string;
-  @IsString()
   @IsOptional()
-  imageUrl?: string;
+  imageUrl?: string | string[];
   @IsString({ each: true })
   @IsOptional()
   tropeNames?: string[];

@@ -67,7 +67,7 @@ export class LazerService {
     const post = await this.prisma.lazerPost.create({
       data: {
         content: dto.content,
-        imageUrl: dto.imageUrl,
+        imageUrl: Array.isArray(dto.imageUrl) ? JSON.stringify(dto.imageUrl) : dto.imageUrl,
         isSparkle: dto.isSparkle ?? false,
         titleFont: dto.titleFont,
         titleColor: dto.titleColor,
@@ -136,7 +136,7 @@ export class LazerService {
       where: { id },
       data: {
         content: dto.content,
-        imageUrl: dto.imageUrl,
+        imageUrl: Array.isArray(dto.imageUrl) ? JSON.stringify(dto.imageUrl) : dto.imageUrl,
         titleFont: dto.titleFont,
         titleColor: dto.titleColor,
         tropes: tropeConnections ? { set: tropeConnections } : undefined,

@@ -95,9 +95,9 @@ interface LazerStoreState {
   spotifyPlayback: any | null;
   fetchFeed: () => Promise<void>;
   fetchUserPosts: (userId: string) => Promise<void>;
-  createPost: (content: string, imageUrl?: string, tropeNames?: string[], isSparkle?: boolean, titleFont?: string, titleColor?: string, communityId?: string) => Promise<boolean>;
+  createPost: (content: string, imageUrl?: string | string[], tropeNames?: string[], isSparkle?: boolean, titleFont?: string, titleColor?: string, communityId?: string) => Promise<boolean>;
   deletePost: (id: string) => Promise<boolean>;
-  editPost: (id: string, content: string, imageUrl?: string, tropeNames?: string[], titleFont?: string, titleColor?: string) => Promise<boolean>;
+  editPost: (id: string, content: string, imageUrl?: string | string[], tropeNames?: string[], titleFont?: string, titleColor?: string) => Promise<boolean>;
   pinPost: (id: string) => Promise<boolean>;
   fetchComments: (postId: string) => Promise<void>;
   addComment: (postId: string, content: string, parentId?: string) => Promise<boolean>;
