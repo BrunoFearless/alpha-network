@@ -39,8 +39,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const isCommunityServer = pathname?.startsWith('/main/community/') && pathname.split('/').length >= 4;
   const isLazerMode = pathname?.startsWith('/main/lazer');
-  const hideNavbar = isCommunityServer || isLazerMode;
+  const isAmbiente = pathname === '/main';
+  const hideNavbar = isCommunityServer || isLazerMode || isAmbiente;
   const activeModes = user?.profile?.activeModes ?? [];
+
+  // Ambiente fullscreen: sem navbar, sem sidebar
+  if (isAmbiente) {
+    return <div className="min-h-screen bg-alpha-bg">{children}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-alpha-bg flex flex-col">
