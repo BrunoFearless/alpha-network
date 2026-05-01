@@ -932,6 +932,17 @@ function PostDetailModal({
     }
   }, [raw?.imageUrl]);
 
+  useEffect(() => {
+    if (selectedPostId) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedPostId]);
+
   if (!selectedPostId || !raw) return null;
 
   const authorInfo = getAuthorInfo(raw, authUser, myProfile);
