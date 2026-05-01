@@ -37,6 +37,8 @@ export interface AmbientSettings {
   foregroundUrl?: string;
   blurIntensity: number;
   moduleLayout: 'dock' | 'grid' | 'sidebar';
+  clockStyle: 'default' | 'stack' | 'minimal';
+  clockGlass?: boolean;
   panelBorders?: 'default' | 'neon' | 'none';
   showMusicPlayer?: boolean;
   showCalendarGrid?: boolean;
@@ -82,6 +84,8 @@ export const DEFAULT_SETTINGS: AmbientSettings = {
   wallpaperNoise: true,
   blurIntensity: 40,
   moduleLayout: 'dock',
+  clockStyle: 'default',
+  clockGlass: true,
   panelBorders: 'default',
   showMusicPlayer: true,
   showCalendarGrid: true,

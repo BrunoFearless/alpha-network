@@ -105,32 +105,43 @@ function DraggableWidget({ defaultPos, onPosChange, children, style, zIndex }: {
 }
 
 // ─── Clock ────────────────────────────────────────────────────────────────────
-function Clock({ accent, glass }: { accent: string; glass: React.CSSProperties }) {
+function Clock({ accent, glass, style = 'default', showGlass = true }: { accent: string; glass: React.CSSProperties, style?: 'default' | 'stack' | 'minimal', showGlass?: boolean }) {
   const [time, setTime] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
   const hh = String(time.getHours()).padStart(2,'0'), mm = String(time.getMinutes()).padStart(2,'0'), ss = String(time.getSeconds()).padStart(2,'0');
   const day = time.toLocaleDateString('pt-PT', { weekday:'long', day:'2-digit', month:'long' });
-  const year = time.getFullYear(), month = time.getMonth(), dayNum = time.getDate();
-  const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month+1, 0).getDate();
-  const calDays: (number|null)[] = [...Array(firstDay).fill(null), ...Array.from({length:daysInMonth},(_,i)=>i+1)];
-  const monthName = time.toLocaleDateString('pt-PT',{month:'long'});
+
+  const finalStyle = showGlass ? glass : { padding: '16px' };
+
+  if (style === 'minimal') {
+    return (
+      <div style={{ padding: '4px 8px', textAlign: 'center' }}>
+        <div style={{ fontSize: 42, fontWeight: 300, color: '#fff', letterSpacing: -2, lineHeight: 1 }}>
+          {hh}<span style={{ opacity: 0.3, fontWeight: 200 }}>:</span>{mm}
+        </div>
+        <div style={{ fontSize: 9, color: accent, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginTop: 4, opacity: 0.8 }}>{day}</div>
+      </div>
+    );
+  }
+
+  if (style === 'stack') {
+    return (
+      <div style={{ ...finalStyle, padding: '16px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ fontSize: 56, fontWeight: 900, color: '#fff', lineHeight: 0.8, letterSpacing: -4 }}>{hh}</div>
+        <div style={{ fontSize: 56, fontWeight: 900, color: accent, lineHeight: 0.8, letterSpacing: -4, marginTop: 10 }}>{mm}</div>
+        <div style={{ width: 30, height: 2, background: 'rgba(255,255,255,0.1)', margin: '14px 0' }} />
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>{day}</div>
+      </div>
+    );
+  }
+
+  // Default
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:8}}>
-      <div style={{...glass,padding:'14px 18px'}}>
-        <div style={{fontFamily:"'Courier New',monospace",fontSize:44,fontWeight:800,color:'#fff',lineHeight:1,letterSpacing:2}}>
-          {hh}<span style={{opacity:0.4}}>:</span>{mm}<span style={{fontSize:20,opacity:0.35,marginLeft:4}}>{ss}</span>
-        </div>
-        <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginTop:4,textTransform:'capitalize'}}>{day}</div>
+    <div style={{ ...finalStyle, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ fontSize: 48, fontWeight: 800, color: '#fff', lineHeight: 1, letterSpacing: -1 }}>
+        {hh}<span style={{ color: accent }}>:</span>{mm}<span style={{ fontSize: 18, opacity: 0.3, marginLeft: 6, fontWeight: 400 }}>{ss}</span>
       </div>
-      <div style={{...glass,padding:'10px 12px',minWidth:172}}>
-        <div style={{fontSize:11,fontWeight:700,color:'#fff',textAlign:'center',marginBottom:6,textTransform:'capitalize'}}>{monthName} {year}</div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,textAlign:'center'}}>
-          {['D','S','T','Q','Q','S','S'].map((d,i)=><div key={i} style={{fontSize:8,color:'#fff',opacity:0.3,paddingBottom:2}}>{d}</div>)}
-          {calDays.map((d,i)=>(
-            <div key={i} style={{fontSize:9,color:'#fff',opacity:d==null?0:d===dayNum?1:0.5,fontWeight:d===dayNum?800:400,background:d===dayNum?accent:'transparent',borderRadius:4,padding:'1px 0'}}>{d??''}</div>
-          ))}
-        </div>
-      </div>
+      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'capitalize' }}>{day}</div>
     </div>
   );
 }
@@ -647,7 +658,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.clock || { x: 1.5, y: 2.5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), clock: pos } }))}
         >
-          <Clock accent={accent} glass={glass}/>
+          <Clock accent={accent} glass={glass} style={settings.clockStyle} showGlass={settings.clockGlass}/>
         </DraggableWidget>
       )}
 

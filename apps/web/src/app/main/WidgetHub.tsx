@@ -63,21 +63,44 @@ export function WidgetHub({ open, onClose, settings, update }: WidgetHubProps) {
           {WIDGETS.map(w => {
             const isActive = settings[w.key as keyof AmbientSettings] !== false;
             return (
-              <button key={w.key} onClick={() => update({ [w.key]: !isActive })}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
-                  background: isActive ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.01)', border: `1px solid ${isActive ? settings.accent : 'rgba(255,255,255,0.05)'}`, transition: 'all 0.2s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 20 }}>{w.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#fff' : 'rgba(255,255,255,0.5)' }}>{w.label}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{w.desc}</div>
+              <div key={w.key}>
+                <button onClick={() => update({ [w.key]: !isActive })}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+                    background: isActive ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.01)', border: `1px solid ${isActive ? settings.accent : 'rgba(255,255,255,0.05)'}`, transition: 'all 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 20 }}>{w.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#fff' : 'rgba(255,255,255,0.5)' }}>{w.label}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{w.desc}</div>
+                    </div>
                   </div>
-                </div>
-                {/* Toggle Switch */}
-                <div style={{ width: 34, height: 20, borderRadius: 10, background: isActive ? settings.accent : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'all 0.2s' }}>
-                  <div style={{ position: 'absolute', top: 2, left: isActive ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'all 0.2s' }} />
-                </div>
-              </button>
+                  <div style={{ width: 34, height: 20, borderRadius: 10, background: isActive ? settings.accent : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'all 0.2s' }}>
+                    <div style={{ position: 'absolute', top: 2, left: isActive ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'all 0.2s' }} />
+                  </div>
+                </button>
+
+                {/* Sub-config for Clock */}
+                {w.key === 'showClock' && isActive && (
+                  <div style={{ marginTop: 8, padding: '10px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                    {(['default', 'stack', 'minimal'] as const).map(s => (
+                      <button key={s} onClick={() => update({ clockStyle: s })}
+                        style={{ padding: '6px', borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                          background: settings.clockStyle === s ? settings.accent : 'transparent',
+                          color: settings.clockStyle === s ? '#fff' : 'rgba(255,255,255,0.4)',
+                          border: `1px solid ${settings.clockStyle === s ? settings.accent : 'rgba(255,255,255,0.1)'}`,
+                          textTransform: 'uppercase' }}>
+                        {s === 'default' ? 'Padrão' : s === 'stack' ? 'Stack' : 'Min'}
+                      </button>
+                    ))}
+                    <button onClick={() => update({ clockGlass: !settings.clockGlass })}
+                      style={{ gridColumn: 'span 3', marginTop: 4, padding: '8px', borderRadius: 10, fontSize: 10, fontWeight: 800, cursor: 'pointer',
+                        background: settings.clockGlass ? 'rgba(255,255,255,0.05)' : settings.accent,
+                        color: '#fff', border: 'none', transition: 'all 0.2s' }}>
+                      {settings.clockGlass ? '🫥 Remover Fundo' : '💎 Aplicar Vidro'}
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
