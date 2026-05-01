@@ -27,11 +27,12 @@ function getGreeting() {
 }
 
 // ─── DraggableWidget ───────────────────────────────────────────────────────────────
-function DraggableWidget({ defaultPos, onPosChange, children, style }: {
+function DraggableWidget({ defaultPos, onPosChange, children, style, zIndex }: {
   defaultPos: { x: number; y: number };
   onPosChange: (pos: { x: number; y: number }) => void;
   children: React.ReactNode;
   style?: React.CSSProperties;
+  zIndex?: number;
 }) {
   // Usar ref para posição live — evita stale closure no onPointerUp
   const livePos = useRef(defaultPos);
@@ -74,7 +75,7 @@ function DraggableWidget({ defaultPos, onPosChange, children, style }: {
         position: 'absolute',
         left: `${renderPos.x}%`,
         top: `${renderPos.y}%`,
-        zIndex: isDragging ? 50 : 10,
+        zIndex: isDragging ? 50 : (zIndex ?? 10),
         userSelect: 'none',
         touchAction: 'none',
         cursor: isDragging ? 'grabbing' : hov ? 'grab' : 'default',
@@ -128,6 +129,68 @@ function Clock({ accent, glass }: { accent: string; glass: React.CSSProperties }
             <div key={i} style={{fontSize:9,color:'#fff',opacity:d==null?0:d===dayNum?1:0.5,fontWeight:d===dayNum?800:400,background:d===dayNum?accent:'transparent',borderRadius:4,padding:'1px 0'}}>{d??''}</div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Music Player ─────────────────────────────────────────────────────────────
+function MusicPlayerWidget({ glass, accent }: { glass: React.CSSProperties, accent: string }) {
+  const [progress, setProgress] = useState(30);
+  // Fake progress loop
+  useEffect(() => { const t = setInterval(() => setProgress(p => p >= 100 ? 0 : p + 0.5), 1000); return () => clearInterval(t); }, []);
+  return (
+    <div style={{ ...glass, padding: '12px', display: 'flex', alignItems: 'center', gap: 14, width: 280 }}>
+      {/* Cover */}
+      <div style={{ width: 56, height: 56, borderRadius: 12, background: `url(https://i.pinimg.com/736x/87/4a/af/874aaf2260ffc3f91572c6c3df22d0c2.jpg) center/cover`, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', flexShrink: 0 }} />
+      {/* Info & Controls */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>Dusk till Dawn</div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>Alpha Records</div>
+        </div>
+        {/* Progress */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ width: `${progress}%`, height: '100%', background: accent, borderRadius: 2 }} />
+          </div>
+        </div>
+        {/* Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', opacity: 0.8 }}>
+          <div style={{ fontSize: 12, cursor: 'pointer' }}>⏮</div>
+          <div style={{ fontSize: 16, cursor: 'pointer' }}>⏸</div>
+          <div style={{ fontSize: 12, cursor: 'pointer' }}>⏭</div>
+          <div style={{ fontSize: 12, cursor: 'pointer' }}>♡</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Calendar Grid ────────────────────────────────────────────────────────────
+function CalendarGridWidget({ glass, accent }: { glass: React.CSSProperties, accent: string }) {
+  const time = new Date();
+  const year = time.getFullYear(), month = time.getMonth(), dayNum = time.getDate();
+  const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month+1, 0).getDate();
+  const calDays: (number|null)[] = [...Array(firstDay).fill(null), ...Array.from({length:daysInMonth},(_,i)=>i+1)];
+  const monthName = time.toLocaleDateString('pt-PT',{month:'long'});
+  return (
+    <div style={{ ...glass, padding: '16px 20px', minWidth: 240 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', textTransform: 'capitalize' }}>{monthName} {year}</div>
+        <div style={{ fontSize: 10, color: accent, fontWeight: 700, padding: '4px 8px', background: `${accent}22`, borderRadius: 6 }}>Hoje</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6, textAlign: 'center' }}>
+        {['D','S','T','Q','Q','S','S'].map((d,i)=><div key={i} style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 700, paddingBottom: 4 }}>{d}</div>)}
+        {calDays.map((d,i)=>(
+          <div key={i} style={{
+            fontSize: 11, color: d === dayNum ? '#fff' : 'rgba(255,255,255,0.8)', opacity: d == null ? 0 : 1,
+            fontWeight: d === dayNum ? 800 : 500,
+            background: d === dayNum ? accent : 'rgba(255,255,255,0.03)',
+            borderRadius: 8, padding: '6px 0',
+            border: d === dayNum ? `1px solid ${accent}` : '1px solid rgba(255,255,255,0.05)'
+          }}>{d ?? ''}</div>
+        ))}
       </div>
     </div>
   );
@@ -301,25 +364,37 @@ function AmbientBackground({ settings, bannerUrl, parallax }: { settings: Ambien
 }
 
 // ─── Glass style ───────────────────────────────────────────────────────────────
-function buildGlass(material: AmbientSettings['material']): React.CSSProperties {
+function buildGlass(settings: AmbientSettings): React.CSSProperties {
+  const { material, panelBorders, accent } = settings;
+  const isNeon = panelBorders === 'neon';
+  const isNone = panelBorders === 'none';
+  
+  let borderStyle = '1px solid rgba(255,255,255,0.18)';
+  if (isNone) borderStyle = 'none';
+  else if (isNeon) borderStyle = `1px solid ${accent}66`;
+
   const base: React.CSSProperties = {
     backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)',
     borderRadius: 18,
-    // Gradiente no fundo cria o look "liquid glass"
     background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 100%)',
-    border: '1px solid rgba(255,255,255,0.18)',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.4)',
+    border: borderStyle,
+    boxShadow: isNeon 
+      ? `inset 0 0 12px ${accent}22, 0 8px 32px rgba(0,0,0,0.4), 0 0 8px ${accent}44`
+      : 'inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.4)',
   };
+
   if (material === 'flat') return {
     ...base,
     background: 'linear-gradient(135deg, rgba(16,16,28,0.75) 0%, rgba(10,10,20,0.6) 100%)',
-    border: '1px solid rgba(255,255,255,0.14)',
+    border: isNone ? 'none' : (isNeon ? `1px solid ${accent}66` : '1px solid rgba(255,255,255,0.14)'),
   };
   if (material === 'neuro') return {
     ...base,
     background: 'linear-gradient(135deg, rgba(20,20,35,0.6) 0%, rgba(12,12,22,0.45) 100%)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 6px 6px 14px rgba(0,0,0,0.5), -3px -3px 8px rgba(255,255,255,0.04)',
+    border: isNone ? 'none' : (isNeon ? `1px solid ${accent}66` : '1px solid rgba(255,255,255,0.10)'),
+    boxShadow: isNeon
+      ? `inset 0 1px 0 rgba(255,255,255,0.12), 6px 6px 14px rgba(0,0,0,0.5), inset 0 0 12px ${accent}33`
+      : 'inset 0 1px 0 rgba(255,255,255,0.12), 6px 6px 14px rgba(0,0,0,0.5), -3px -3px 8px rgba(255,255,255,0.04)',
   };
   return base; // glass
 }
@@ -377,7 +452,7 @@ export default function AmbientePage() {
     try { localStorage.setItem('alpha_ambient', JSON.stringify(settings)); } catch {}
   }, [settings, mounted]);
 
-  const glass = useMemo(() => buildGlass(settings.material), [settings.material]);
+  const glass = useMemo(() => buildGlass(settings), [settings.material, settings.panelBorders, settings.accent]);
   const accent = settings.accent;
   const glassBorder = 'rgba(255,255,255,0.1)';
 
@@ -429,6 +504,19 @@ export default function AmbientePage() {
       {/* Background */}
       <AmbientBackground settings={settings} bannerUrl={profile?.bannerUrl} parallax={mousePos} />
 
+      {/* Foreground Layer (Personagem/Objeto) */}
+      {mounted && settings.foregroundUrl && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.foreground || { x: 50, y: 50 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), foreground: pos } }))}
+          zIndex={1} // Fica por trás dos vidros (zIndex: 10), mas à frente do background (zIndex: 0)
+        >
+          <div style={{ ...glass, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <img src={settings.foregroundUrl} alt="Foreground" style={{ maxHeight: '85vh', maxWidth: '85vw', objectFit: 'contain', filter: 'drop-shadow(0 12px 36px rgba(0,0,0,0.4))', userSelect: 'none', pointerEvents: 'none', margin: '10px' }} />
+          </div>
+        </DraggableWidget>
+      )}
+
       {/* Clock + Calendário — arrastável */}
       {mounted && (
         <DraggableWidget
@@ -446,6 +534,26 @@ export default function AmbientePage() {
       >
         <UserCard user={user} accent={accent} glass={glass} onLogout={logout}/>
       </DraggableWidget>
+
+      {/* Music Player — arrastável */}
+      {mounted && settings.showMusicPlayer !== false && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.musicPlayer || { x: 84, y: 70 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), musicPlayer: pos } }))}
+        >
+          <MusicPlayerWidget accent={accent} glass={glass} />
+        </DraggableWidget>
+      )}
+
+      {/* Calendar Grid — arrastável */}
+      {mounted && settings.showCalendarGrid !== false && (
+        <DraggableWidget
+          defaultPos={settings.widgetPositions?.calendarGrid || { x: 1.5, y: 20 }}
+          onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), calendarGrid: pos } }))}
+        >
+          <CalendarGridWidget accent={accent} glass={glass} />
+        </DraggableWidget>
+      )}
 
       {/* Textos personalizados — arrastáveis */}
       {(settings.customTexts || []).map((t: CustomText) => (

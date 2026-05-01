@@ -34,8 +34,12 @@ export interface AmbientSettings {
   wallpaperNoise?: boolean;
   wallpaperGradient?: string;
   wallpaperUrl?: string;
+  foregroundUrl?: string;
   blurIntensity: number;
   moduleLayout: 'dock' | 'grid' | 'sidebar';
+  panelBorders?: 'default' | 'neon' | 'none';
+  showMusicPlayer?: boolean;
+  showCalendarGrid?: boolean;
   customTexts: CustomText[];
   widgetPositions: {
     clock:    { x: number; y: number };
@@ -43,6 +47,9 @@ export interface AmbientSettings {
     userCard: { x: number; y: number };
     stats:    { x: number; y: number };
     dock:     { x: number; y: number };
+    foreground?: { x: number; y: number };
+    musicPlayer?: { x: number; y: number };
+    calendarGrid?: { x: number; y: number };
   };
 }
 
@@ -62,13 +69,18 @@ export const DEFAULT_SETTINGS: AmbientSettings = {
   wallpaperNoise: true,
   blurIntensity: 40,
   moduleLayout: 'dock',
+  panelBorders: 'default',
+  showMusicPlayer: true,
+  showCalendarGrid: true,
   customTexts: [],
   widgetPositions: {
     clock:    { x: 1.5, y: 2.5  },
     greeting: { x: 30,  y: 36   },
     userCard: { x: 84,  y: 2.5  },
-    stats:    { x: 50,  y: 54   },
-    dock:     { x: 20,  y: 87   },
+    stats:    { x: 30,  y: 50   },
+    dock:     { x: 30,  y: 85   },
+    musicPlayer:  { x: 84, y: 70 },
+    calendarGrid: { x: 1.5, y: 20 },
   },
 };
 
@@ -142,6 +154,7 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
   const [customAccent, setCustomAccent] = useState(settings.accent);
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const foregroundRef = useRef<HTMLInputElement>(null);
 
   const addText = () => setTextEditor({ id: null, content: 'Texto livre', fontSize: 28, color: '#ffffff', fontWeight: 700, opacity: 1 });
   const editText = (t: CustomText) => setTextEditor({ id: t.id, content: t.content, fontSize: t.fontSize, color: t.color, fontWeight: t.fontWeight, opacity: t.opacity });
@@ -188,6 +201,14 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
     const isVideo = file.type.startsWith('video/');
     update({ wallpaperType: isVideo ? 'video' : 'image', wallpaperUrl: url });
     // Reset input so same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleForegroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    update({ foregroundUrl: url });
     e.target.value = '';
   };
 
@@ -323,6 +344,32 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
             ))}
           </div>
 
+          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: 4 }}>WIDGETS PREMIUM</div>
+            <button onClick={() => update({ showMusicPlayer: !(settings.showMusicPlayer ?? true) })}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', transition: 'all 0.2s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>🎵</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: (settings.showMusicPlayer ?? true) ? '#fff' : 'rgba(255,255,255,0.4)' }}>Music Player</span>
+              </div>
+              <div style={{ width: 34, height: 20, borderRadius: 10, background: (settings.showMusicPlayer ?? true) ? settings.accent : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'all 0.2s' }}>
+                <div style={{ position: 'absolute', top: 2, left: (settings.showMusicPlayer ?? true) ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'all 0.2s' }} />
+              </div>
+            </button>
+            <button onClick={() => update({ showCalendarGrid: !(settings.showCalendarGrid ?? true) })}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', transition: 'all 0.2s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>📅</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: (settings.showCalendarGrid ?? true) ? '#fff' : 'rgba(255,255,255,0.4)' }}>Calendário Visual</span>
+              </div>
+              <div style={{ width: 34, height: 20, borderRadius: 10, background: (settings.showCalendarGrid ?? true) ? settings.accent : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'all 0.2s' }}>
+                <div style={{ position: 'absolute', top: 2, left: (settings.showCalendarGrid ?? true) ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'all 0.2s' }} />
+              </div>
+            </button>
+          </div>
+
           {divider}
 
           {/* ── WALLPAPER ── */}
@@ -438,6 +485,30 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
 
           {divider}
 
+          {/* ── CAMADA FRONTAL (FOREGROUND) ── */}
+          <SectionHeader icon="🎭" label="Personagem / Objeto (Foreground)" />
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>Faz upload de um PNG transparente. O objeto ficará atrás dos vidros mas à frente do fundo.</div>
+            <input ref={foregroundRef} type="file" accept="image/png,image/webp,image/gif" style={{ display: 'none' }} onChange={handleForegroundUpload} />
+            <button onClick={() => foregroundRef.current?.click()}
+              style={{ width: '100%', padding: '14px', borderRadius: 14, border: '2px dashed rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.03)', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: 12,
+                fontWeight: 600, transition: 'all 0.2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = settings.accent; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)'; }}>
+              {settings.foregroundUrl ? '✅ Camada Ativa — clica para mudar' : '+ Adicionar PNG Transparente'}
+            </button>
+            {settings.foregroundUrl && (
+              <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', height: 90, position: 'relative', background: 'url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgGwEg9AMDKC0YDBwMHDHwAAX44AIBBGEA1hBAgT9AwGk0YjSYMQwAAe2sPAoE231gAAAAASUVORK5CYII=)' }}>
+                <img src={settings.foregroundUrl} alt="Foreground" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <button onClick={() => update({ foregroundUrl: undefined })}
+                  style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: 10, cursor: 'pointer' }}>✕</button>
+              </div>
+            )}
+          </div>
+
+          {divider}
+
           {/* ── ACCENT COLOR ── */}
           <SectionHeader icon="🎨" label="Cor de Destaque" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 8, marginBottom: 12 }}>
@@ -479,6 +550,25 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
                 {settings.material === m.key && <div style={{ marginLeft: 'auto', fontSize: 14, color: settings.accent }}>✓</div>}
               </button>
             ))}
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: 8 }}>ESTILO DAS BORDAS (MOLDURA)</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+              {([
+                { key: 'default', label: 'Padrão', desc: 'Borda branca fina' },
+                { key: 'neon',    label: 'Neon',   desc: 'Brilho da Cor de Destaque' },
+                { key: 'none',    label: 'Oculto', desc: 'Sem bordas (Minimal)' }
+              ] as const).map(b => (
+                <button key={b.key} onClick={() => update({ panelBorders: b.key })}
+                  style={{ padding: '10px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                    border: `1.5px solid ${(settings.panelBorders || 'default') === b.key ? settings.accent : 'rgba(255,255,255,0.08)'}`,
+                    background: (settings.panelBorders || 'default') === b.key ? `${settings.accent}15` : 'rgba(255,255,255,0.02)', transition: 'all 0.2s' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: (settings.panelBorders || 'default') === b.key ? '#fff' : 'rgba(255,255,255,0.6)' }}>{b.label}</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{b.desc}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {divider}
