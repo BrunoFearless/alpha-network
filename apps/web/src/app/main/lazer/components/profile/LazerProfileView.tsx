@@ -23,6 +23,54 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
   const cardBg = isLight ? "bg-white/40" : "bg-black/25";
   const borderCol = isLight ? `${color}40` : `${color}15`;
   const isLeft = item.side === "left";
+
+  const renderMedia = () => {
+    if (!item.img) return (
+      <div className="absolute inset-0 flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}>
+        <span className="text-4xl opacity-40 mix-blend-overlay" style={{ color }}>✦</span>
+      </div>
+    );
+
+    let media: string[] = [];
+    try {
+      media = (typeof item.img === 'string' && item.img.startsWith('['))
+        ? JSON.parse(item.img)
+        : (Array.isArray(item.img) ? item.img : [item.img]);
+    } catch (e) {
+      media = [item.img];
+    }
+
+    const first = media[0];
+    const isVid = first?.match(/\.(mp4|webm|mov|ogg)(\?|$)/i) || first?.startsWith('data:video');
+    const hasMore = media.length > 1;
+
+    return (
+      <>
+        {isVid ? (
+          <div className="w-full h-[160px] sm:h-[180px] bg-black flex items-center justify-center relative overflow-hidden">
+            <video src={first} className="w-full h-full object-cover opacity-60" muted />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-lg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <img src={first} alt={item.title} className="w-full h-[160px] sm:h-[180px] object-cover transition-transform duration-700 group-hover:scale-110" />
+        )}
+
+        {hasMore && (
+          <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-xl bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-2xl">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </div>
+        )}
+
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center pointer-events-none">
+           <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0 text-white font-bold text-[10px] uppercase tracking-[0.2em] bg-black/60 px-5 py-2 rounded-full backdrop-blur-md border border-white/10 shadow-2xl">Explorar</div>
+        </div>
+      </>
+    );
+  };
   
   return (
     <div className="flex items-center relative w-full lg:min-h-[180px]">
@@ -35,16 +83,7 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
               style={{ borderColor: borderCol }}
             >
               <div className="relative overflow-hidden bg-gradient-to-br from-black/20 to-black/5 min-h-[160px]">
-                {item.img ? (
-                  <img src={item.img} alt={item.title} className="w-full h-[160px] sm:h-[180px] object-cover transition-transform group-hover:scale-110" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}>
-                     <span className="text-4xl opacity-40 mix-blend-overlay" style={{ color }}>✦</span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                   <div className="opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0 text-white font-bold text-xs uppercase tracking-widest bg-black/40 px-4 py-2 rounded-full backdrop-blur-md">Ver Post</div>
-                </div>
+                {renderMedia()}
               </div>
               <div className="px-5 py-4">
                 <p className={`m-0 font-bold text-sm ${textColor}`}><EmojiRenderer content={item.title} emojiSize={14} /></p>
@@ -69,16 +108,7 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
                 style={{ borderColor: borderCol }}
               >
               <div className="relative overflow-hidden bg-gradient-to-br from-black/20 to-black/5 min-h-[160px]">
-                {item.img ? (
-                  <img src={item.img} alt={item.title} className="w-full h-[160px] sm:h-[180px] object-cover transition-transform group-hover:scale-110" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${color}30, ${color}10)` }}>
-                     <span className="text-4xl opacity-40 mix-blend-overlay" style={{ color }}>✦</span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                   <div className="opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0 text-white font-bold text-xs uppercase tracking-widest bg-black/40 px-4 py-2 rounded-full backdrop-blur-md">Ver Post</div>
-                </div>
+                {renderMedia()}
               </div>
               <div className="px-5 py-4">
                 <p className={`m-0 font-bold text-sm ${textColor}`}><EmojiRenderer content={item.title} emojiSize={14} /></p>

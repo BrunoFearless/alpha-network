@@ -87,7 +87,7 @@ function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = tr
       ([entry]) => {
         setIsIntersecting(entry.isIntersecting);
       },
-      { threshold: 0.5 }
+      { threshold: 0.2, rootMargin: '100px' }
     );
 
     if (containerRef.current) observer.observe(containerRef.current);
@@ -96,12 +96,21 @@ function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = tr
 
   useEffect(() => {
     if (!videoRef.current) return;
-    if (isIntersecting && playing) {
-      videoRef.current.play().catch(() => {});
+    if (isIntersecting) {
+      // Re-assign src if it was cleared by optimization
+      if (!videoRef.current.src || videoRef.current.src === window.location.href) {
+        videoRef.current.src = src;
+        videoRef.current.load();
+      }
+      if (playing) videoRef.current.play().catch(() => {});
     } else {
       videoRef.current.pause();
+      // Optimization: Force browser to stop buffering when not visible
+      // This is crucial for long feeds with many heavy videos
+      videoRef.current.removeAttribute('src'); 
+      videoRef.current.load();
     }
-  }, [isIntersecting, playing]);
+  }, [isIntersecting, playing, src]);
 
   const handleMouseMove = () => {
     if (!showControlsEnabled) return;
@@ -165,8 +174,16 @@ function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = tr
       }}
       onMouseMove={handleMouseMove} 
       onMouseLeave={() => setShowControls(false)}>
-      <video ref={videoRef} src={src} loop={loop} muted={isMuted} playsInline 
-        onTimeUpdate={handleProgress} className="w-full h-full object-contain" />
+      <video 
+        ref={videoRef} 
+        src={isIntersecting ? src : undefined} 
+        loop={loop} 
+        muted={isMuted} 
+        playsInline 
+        preload="metadata"
+        onTimeUpdate={handleProgress} 
+        className="w-full h-full object-contain" 
+      />
       
       {/* Central Controls Overlay */}
       {showControlsEnabled && (
@@ -506,7 +523,8 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
   const tropesList = rawPost?.tropes || post.tropes || [];
 
   return (
-    <div className={`rounded-3xl border-[1.5px] backdrop-blur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_8px_32px_rgba(0,0,0,0.12)] overflow-hidden ${cardBg}`} style={{ borderColor: isPinned ? c : borderCol }}>
+    <div className={`glass-card rounded-3xl border-[1.5px] backdrop-blur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-500 hover:shadow-[0_8px_48px_rgba(0,0,0,0.2)] overflow-hidden ${cardBg}`} style={{ borderColor: isPinned ? c : borderCol }}>
+      <div className="glass-shine-effect" />
       {isPinned && (
         <div className="flex items-center gap-1.5 px-5 pt-3 pb-0 text-[11px] font-bold tracking-wide" style={{ color: c }}>
           <IconPin /> Publicação fixada
@@ -520,7 +538,7 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 cursor-pointer flex-wrap" onClick={() => onProfileClick?.(post.authorId)}>
-              <DisplayName profile={authorInfo.profile} fallbackName={authorInfo.name} className="font-bold text-sm" />
+              <DisplayName profile={authorInfo.profile} fallbackName={authorInfo.name} className="font-bold text-sm animate-glow-pulse" />
               {post.verified && <IconVerified />}
             </div>
             <div className={`text-xs ${textSecondary}`}>{authorInfo.handle} · {new Date(post.createdAt).toLocaleDateString('pt-PT')}</div>
@@ -675,8 +693,8 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
         {/* Actions */}
         <div className="flex items-center justify-between xl:justify-start xl:gap-8 pt-2.5 border-t-[1.5px]" style={{ borderColor: borderCol }}>
           <button onClick={() => toggleReaction(post.id)}
-            className="flex items-center gap-1.5 bg-transparent border-none cursor-pointer text-[13px] transition-all hover:opacity-80"
-            style={{ color: isLiked ? c : (isLight ? '#9e9e9e' : '#888'), fontWeight: isLiked ? 600 : 400 }}>
+            className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer text-[13px] transition-all hover:scale-110 ${isLiked ? 'animate-heart-burst' : ''}`}
+            style={{ color: isLiked ? c : (isLight ? '#9e9e9e' : '#888'), fontWeight: isLiked ? 700 : 400 }}>
             <span className="transition-transform active:scale-125"><IconHeart filled={isLiked} /></span>
             {rawPost?._count?.reactions || 0}
           </button>
@@ -1127,11 +1145,22 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex flex-col lg:flex-row bg-black animate-in fade-in duration-500 overflow-y-auto lg:overflow-hidden h-screen w-screen border-none custom-scrollbar">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-3xl -z-10" />
+    <div className="fixed inset-0 z-[1000] flex flex-col lg:flex-row bg-[#020204] animate-in fade-in duration-500 overflow-y-auto lg:overflow-hidden h-screen w-screen border-none custom-scrollbar">
+      {/* Dynamic Ambient Glow (Aura) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 opacity-30">
+        <div className="absolute inset-[-10%] blur-[100px] saturate-[2.5] brightness-125 animate-pulse duration-[10s]">
+          {isVideo(allMedia[currentMediaIndex]) ? (
+            <video src={resolveLazerMediaUrl(allMedia[currentMediaIndex])} muted loop autoPlay className="w-full h-full object-cover" />
+          ) : (
+            <img src={resolveLazerMediaUrl(allMedia[currentMediaIndex])} className="w-full h-full object-cover" />
+          )}
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#020204] via-transparent to-[#020204] opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#020204] via-transparent to-[#020204] opacity-80" />
+      </div>
 
       {/* Main Immersive Area (Full Screen on Mobile, Left on Desktop) */}
-      <div className="w-full lg:flex-1 h-screen lg:h-full relative flex flex-col items-center justify-center bg-[#020204] overflow-hidden shrink-0 border-b lg:border-b-0 lg:border-r border-white/5">
+      <div className="w-full lg:flex-1 h-screen lg:h-full relative flex flex-col items-center justify-center bg-transparent overflow-hidden shrink-0 border-b lg:border-b-0 lg:border-r border-white/5">
         <div className="w-full h-full flex items-center justify-center p-0">
           {allMedia.length > 0 ? (
             <div className="w-full h-full flex items-center justify-center animate-in zoom-in-95 duration-500">
@@ -1187,88 +1216,91 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
         </button>
       </div>
 
-      {/* Cinematic Interaction Panel (Bottom on Mobile, Right on Desktop) */}
-      <div className="w-full lg:w-[420px] flex-1 lg:flex-none h-auto lg:h-full flex flex-col relative z-[100] shadow-[0_-10px_30px_rgba(0,0,0,0.5)] lg:shadow-[0_0_100px_rgba(0,0,0,0.5)]"
-        style={{ background: panelBg }}>
-        <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-black/5 shrink-0">
-          <div className="flex items-center gap-3">
-            <button onClick={() => onProfileClick?.(raw.authorId)} className="cursor-pointer bg-transparent border-none p-0 transition-transform hover:scale-105">
-              <Avatar src={authorInfo.avatar} name={authorInfo.name} className="w-10 h-10 rounded-full border-2" style={{ borderColor: c }} />
+      {/* Cinematic Interaction Panel (Floating Glass Sidebar) */}
+      <div className="w-full lg:w-[450px] xl:w-[500px] h-auto lg:h-[calc(100vh-40px)] lg:m-5 flex flex-col glass-card rounded-[32px] border border-white/10 shadow-2xl relative z-[100] transition-all duration-700 animate-in slide-in-from-right-20 mb-20 lg:mb-5">
+        
+        {/* Author Spotlight Header */}
+        <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <button onClick={() => onProfileClick?.(raw.authorId)} className="cursor-pointer bg-transparent border-none p-0 transition-transform hover:rotate-6 hover:scale-110">
+              <Avatar src={authorInfo.avatar} name={authorInfo.name} className="w-12 h-12 rounded-2xl border-2" style={{ borderColor: c }} />
             </button>
             <div>
               <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onProfileClick?.(raw.authorId)}>
-                <DisplayName profile={authorInfo.profile} fallbackName={authorInfo.name} className="font-black text-[14px]" />
+                <DisplayName profile={authorInfo.profile} fallbackName={authorInfo.name} className="font-black text-base animate-glow-pulse tracking-tight" />
                 <IconVerified />
               </div>
-              <div className={`text-[10px] font-bold opacity-30 uppercase tracking-widest ${textSecondary}`}>@{authorInfo.profile?.username || 'user'}</div>
+              <div className={`text-[10px] font-bold opacity-30 uppercase tracking-[0.2em] ${textSecondary}`}>@{authorInfo.profile?.username || 'user'}</div>
             </div>
           </div>
-          <button className="bg-transparent border-none cursor-pointer opacity-30 hover:opacity-100 transition-all hover:scale-110" style={{ color: textPrimary }}><IconDots size={18} /></button>
+          <button className="bg-white/5 w-10 h-10 rounded-xl border-none cursor-pointer flex items-center justify-center opacity-30 hover:opacity-100 transition-all hover:scale-110 text-white"><IconDots size={20} /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col pb-32">
-          <div className="px-6 py-6 border-b border-white/5">
-            <div className={`text-[15px] leading-relaxed mb-6 font-medium tracking-tight ${textPrimary}`}>{formatContent(raw.content, raw.titleFont, raw.titleColor, isLight)}</div>
+        <div className="flex-1 lg:overflow-y-auto custom-scrollbar flex flex-col">
+          <div className="px-8 py-8 border-b border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent">
+            <div className={`text-xl lg:text-2xl leading-relaxed mb-8 font-medium tracking-tight animate-glow-pulse drop-shadow-2xl ${textPrimary}`}>
+              {formatContent(raw.content, raw.titleFont, raw.titleColor, isLight)}
+            </div>
 
-            <div className="flex items-center gap-6">
-              <button onClick={() => toggleReaction(raw.id)} className="flex items-center gap-2.5 bg-transparent border-none cursor-pointer text-[12px] font-black transition-all hover:scale-110" style={{ color: c }}>
-                <IconHeart filled={raw.isLiked} size={20} /> {raw._count?.reactions || 0}
+            <div className="flex items-center gap-8">
+              <button onClick={() => toggleReaction(raw.id)} className={`flex items-center gap-3 bg-white/5 hover:bg-white/10 px-5 py-2.5 rounded-2xl border border-white/5 cursor-pointer text-xs font-black transition-all hover:scale-110 ${raw.isLiked ? 'animate-heart-burst' : ''}`} style={{ color: c }}>
+                <IconHeart filled={raw.isLiked} size={22} /> 
+                <span className="text-sm">{raw._count?.reactions || 0}</span>
               </button>
-              <button onClick={() => modalInputRef.current?.focus()} className="flex items-center gap-2.5 bg-transparent border-none cursor-pointer text-[12px] font-black opacity-40 hover:opacity-100 transition-all hover:scale-110" style={{ color: textPrimary }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                {postComments.length}
-              </button>
+              <div className="flex items-center gap-3 opacity-30 text-[10px] font-black tracking-[0.2em] uppercase">
+                <div className="scale-110"><IconComment /></div> {postComments.length} ECOAR
+              </div>
             </div>
           </div>
 
-          <div className="flex-1 bg-black/5">
+          <div className="flex-1 px-6 py-4 space-y-4">
             {postComments.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center opacity-10 py-20">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mb-4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">Silêncio Profundo</p>
+              <div className="h-full flex flex-col items-center justify-center opacity-10 py-20 text-center">
+                <div className="scale-[2.5] mb-8"><IconComment /></div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em]">O silêncio é absoluto.<br/>Sê o primeiro a ecoar.</p>
               </div>
             ) : (
-              <div className="py-2">
-                {postComments.filter(cm => !cm.parentId).map((cm: any) => (
-                  <CommentItem key={cm.id} cm={cm} allComments={postComments} postId={selectedPostId}
+              postComments.filter(cm => !cm.parentId).map((cm: any) => (
+                <div key={cm.id} className="glass-card p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all group/comment">
+                  <CommentItem cm={cm} allComments={postComments} postId={selectedPostId}
                     postAuthorId={raw.authorId} authUser={authUser} myProfile={myProfile}
                     isLight={isLight} c={c} textPrimary={textPrimary} textSecondary={textSecondary}
-                    borderCol={borderCol} cardBg={cardBg} hiddenComments={hiddenComments}
+                    borderCol={borderCol} cardBg="bg-transparent" hiddenComments={hiddenComments}
                     setHiddenComments={setHiddenComments}
                     onReply={(cm) => { setReplyingTo(cm); modalInputRef.current?.focus(); }} />
-                ))}
-              </div>
+                </div>
+              ))
             )}
           </div>
         </div>
 
-        {/* Fixed Static Comment Bar */}
-        <div className="absolute bottom-0 left-0 right-0 p-5 bg-black/10 backdrop-blur-2xl border-t border-white/5 flex flex-col gap-3 z-[110]">
+        {/* Futuristic Floating Input Bar */}
+        <div className="absolute bottom-6 left-6 right-6 p-4 glass-card rounded-[24px] border border-white/10 shadow-2xl flex flex-col gap-3 z-[110] animate-in slide-in-from-bottom-5">
           {replyingTo && (
-            <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white/5 border border-dashed border-white/10">
-              <span className={`text-[10px] ${textSecondary}`}>A responder a <span className="font-bold" style={{ color: c }}>@{replyingTo.author?.profile?.username}</span></span>
-              <button onClick={() => setReplyingTo(null)} className="bg-transparent border-none cursor-pointer opacity-40 hover:opacity-100"><IconClose size={10} /></button>
+            <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-dashed border-white/10">
+              <span className={`text-[10px] font-bold tracking-tight ${textSecondary}`}>Ecoando para <span style={{ color: c }}>@{replyingTo.author?.profile?.username}</span></span>
+              <button onClick={() => setReplyingTo(null)} className="bg-transparent border-none cursor-pointer opacity-40 hover:opacity-100 text-white"><IconClose size={14} /></button>
             </div>
           )}
-          <div className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-1.5 border border-white/5 transition-all focus-within:border-white/10 focus-within:bg-white/10">
-            <Avatar src={myProfile?.avatarUrl} name={myProfile?.username} size="sm" className="w-8 h-8 rounded-full border border-white/10" />
+          <div className="flex items-center gap-4 px-2">
+            <Avatar src={myProfile?.avatarUrl} name={myProfile?.username} size="sm" className="w-10 h-10 rounded-xl border border-white/10" />
             <input
               ref={modalInputRef}
               type="text"
-              placeholder="Ecoar resposta..."
-              className={`flex-1 bg-transparent border-none outline-none text-[13px] py-2 ${textPrimary} placeholder:opacity-30`}
+              placeholder="Escreve o teu eco..."
+              className={`flex-1 bg-transparent border-none outline-none text-sm py-2 ${textPrimary} placeholder:opacity-20`}
               value={modalCommentText}
               onChange={e => setModalCommentText(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleModalComment()}
             />
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="bg-transparent border-none cursor-pointer opacity-30 hover:opacity-100 text-lg grayscale hover:grayscale-0 transition-all">😊</button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="bg-transparent border-none cursor-pointer text-xl hover:scale-110 transition-transform">😊</button>
               <button
                 onClick={handleModalComment}
                 disabled={!modalCommentText.trim() || submitting}
-                className="w-8 h-8 rounded-full flex items-center justify-center border-none cursor-pointer disabled:opacity-30 transition-all hover:scale-110 active:scale-90 shadow-lg"
-                style={{ background: c }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
+                className="w-10 h-10 rounded-xl flex items-center justify-center border-none cursor-pointer disabled:opacity-20 transition-all hover:scale-110 active:scale-95 shadow-xl shadow-black/40"
+                style={{ background: c, color: '#000' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>
             </div>
           </div>
@@ -1413,6 +1445,48 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
 
   return (
     <>
+      <style>{`
+        @keyframes heart-burst {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.4); filter: brightness(1.5) drop-shadow(0 0 10px currentColor); }
+          100% { transform: scale(1); }
+        }
+        @keyframes glow-pulse {
+          0%, 100% { text-shadow: 0 0 5px rgba(255,255,255,0.1); }
+          50% { text-shadow: 0 0 15px rgba(255,255,255,0.4); }
+        }
+        @keyframes glass-shine {
+          from { transform: translateX(-100%) skewX(-15deg); }
+          to { transform: translateX(200%) skewX(-15deg); }
+        }
+        .animate-heart-burst { animation: heart-burst 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .animate-glow-pulse { animation: glow-pulse 3s infinite ease-in-out; }
+        .glass-card { 
+          backdrop-filter: blur(10px);
+          background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+          transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+          background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+          border-color: rgba(255,255,255,0.2) !important;
+          transform: translateY(-4px) scale(1.01);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .glass-shine-effect {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
+          z-index: 10;
+        }
+        .glass-shine-effect::after {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; width: 30%; height: 100%;
+          background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+          animation: glass-shine 6s infinite ease-in-out;
+        }
+      `}</style>
       <PostDetailModal
         selectedPostId={selectedPostId} setSelectedPostId={setSelectedPostId}
         feedPosts={feedPosts} comments={comments} authUser={authUser} myProfile={myProfile}
