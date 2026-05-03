@@ -66,7 +66,7 @@ html { color-scheme: dark; }
   position: relative;
   background: rgba(255, 255, 255, 0.02) !important;
   backdrop-filter: blur(10px) saturate(200%) brightness(0.95) !important;
-  -webkit-backdrop-filter: blur(25px) saturate(200%) brightness(0.95) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(200%) brightness(0.95) !important;
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
   /* Fio de luz nítido (70%) */
   box-shadow: 
