@@ -59,6 +59,22 @@ export function WidgetHub({ open, onClose, settings, update }: WidgetHubProps) {
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        {/* Global Settings for Widgets */}
+        <div style={{ marginBottom: 20, padding: '12px', borderRadius: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 1 }}>Estilo Global dos Widgets</div>
+          <button onClick={() => update({ widgetsGlass: !settings.widgetsGlass })}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+              background: settings.widgetsGlass ? `${settings.accent}15` : 'rgba(255,255,255,0.05)', border: `1px solid ${settings.widgetsGlass ? settings.accent : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.2s' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16 }}>{settings.widgetsGlass ? '💎' : '🫥'}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Efeito Glassmorphism</span>
+            </div>
+            <div style={{ width: 34, height: 20, borderRadius: 10, background: settings.widgetsGlass ? settings.accent : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'all 0.2s' }}>
+              <div style={{ position: 'absolute', top: 2, left: settings.widgetsGlass ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'all 0.2s' }} />
+            </div>
+          </button>
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {WIDGETS.map(w => {
             const isActive = settings[w.key as keyof AmbientSettings] !== false;

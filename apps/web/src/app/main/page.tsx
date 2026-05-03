@@ -56,10 +56,15 @@ function DraggableWidget({ defaultPos, onPosChange, children, style, zIndex }: {
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragState.current.active) return;
-    const nx = Math.max(0, Math.min(93, dragState.current.px + ((e.clientX - dragState.current.sx) / window.innerWidth) * 100));
-    const ny = Math.max(0, Math.min(88, dragState.current.py + ((e.clientY - dragState.current.sy) / window.innerHeight) * 100));
-    livePos.current = { x: nx, y: ny };
-    setRenderPos({ x: nx, y: ny });
+    
+    // Usar requestAnimationFrame para suavizar o movimento e poupar CPU
+    requestAnimationFrame(() => {
+      if (!dragState.current.active) return;
+      const nx = Math.max(0, Math.min(96, dragState.current.px + ((e.clientX - dragState.current.sx) / window.innerWidth) * 100));
+      const ny = Math.max(0, Math.min(96, dragState.current.py + ((e.clientY - dragState.current.sy) / window.innerHeight) * 100));
+      livePos.current = { x: nx, y: ny };
+      setRenderPos({ x: nx, y: ny });
+    });
   };
 
   const onPointerUp = () => {
@@ -76,6 +81,8 @@ function DraggableWidget({ defaultPos, onPosChange, children, style, zIndex }: {
         position: 'absolute',
         left: `${renderPos.x}%`,
         top: `${renderPos.y}%`,
+        transform: 'translate3d(0,0,0)', // Força aceleração GPU
+        willChange: 'left, top',        // Prepara o browser para mudanças de posição
         zIndex: isDragging ? 50 : (zIndex ?? 10),
         userSelect: 'none',
         touchAction: 'none',
@@ -508,9 +515,10 @@ function buildGlass(settings: AmbientSettings): React.CSSProperties {
   else if (isNeon) borderStyle = `1px solid ${accent}66`;
 
   const base: React.CSSProperties = {
-    backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)',
+    backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
     borderRadius: 18,
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 100%)',
+    transform: 'translateZ(0)', // GPU acceleration
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
     border: borderStyle,
     boxShadow: isNeon 
       ? `inset 0 0 12px ${accent}22, 0 8px 32px rgba(0,0,0,0.4), 0 0 8px ${accent}44`
@@ -588,6 +596,10 @@ export default function AmbientePage() {
   }, [settings, mounted]);
 
   const glass = useMemo(() => buildGlass(settings), [settings.material, settings.panelBorders, settings.accent]);
+  const widgetGlass = useMemo(() => {
+    if (settings.widgetsGlass === false) return { padding: '16px' };
+    return glass;
+  }, [glass, settings.widgetsGlass]);
   const accent = settings.accent;
   const glassBorder = 'rgba(255,255,255,0.1)';
 
@@ -614,9 +626,10 @@ export default function AmbientePage() {
   return (
     <div 
       onMouseMove={e => {
-        if (settings.parallaxEffect) {
-          setMousePos({ x: (e.clientX / window.innerWidth - 0.5) * -30, y: (e.clientY / window.innerHeight - 0.5) * -30 });
-        }
+        if (!settings.parallaxEffect) return;
+        // Throttle manual simples
+        if (Date.now() % 2 !== 0) return;
+        setMousePos({ x: (e.clientX / window.innerWidth - 0.5) * 20, y: (e.clientY / window.innerHeight - 0.5) * 20 });
       }}
       style={{
         position:'relative', width:'100%', height:'100vh', overflow:'hidden',
@@ -646,8 +659,28 @@ export default function AmbientePage() {
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), foreground: pos } }))}
           zIndex={1} // Fica por trás dos vidros (zIndex: 10), mas à frente do background (zIndex: 0)
         >
-          <div style={{ ...glass, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <img src={settings.foregroundUrl} alt="Foreground" style={{ maxHeight: '85vh', maxWidth: '85vw', objectFit: 'contain', filter: 'drop-shadow(0 12px 36px rgba(0,0,0,0.4))', userSelect: 'none', pointerEvents: 'none', margin: '10px' }} />
+          <div style={{ 
+            ...glass, 
+            padding: settings.foregroundPadding ?? 20, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            overflow: 'hidden',
+            width: 'fit-content',
+            height: 'fit-content',
+            transition: 'padding 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <img src={settings.foregroundUrl} alt="Foreground" 
+              style={{ 
+                maxHeight: '85vh', 
+                maxWidth: '85vw', 
+                objectFit: 'contain', 
+                filter: 'drop-shadow(0 12px 36px rgba(0,0,0,0.4))', 
+                userSelect: 'none', 
+                pointerEvents: 'none', 
+                display: 'block'
+              }} 
+            />
           </div>
         </DraggableWidget>
       )}
@@ -658,7 +691,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.clock || { x: 1.5, y: 2.5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), clock: pos } }))}
         >
-          <Clock accent={accent} glass={glass} style={settings.clockStyle} showGlass={settings.clockGlass}/>
+          <Clock accent={accent} glass={widgetGlass} style={settings.clockStyle} showGlass={settings.clockGlass}/>
         </DraggableWidget>
       )}
 
@@ -668,7 +701,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.userCard || { x: 84, y: 2.5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), userCard: pos } }))}
         >
-          <UserCard user={user} accent={accent} glass={glass} onLogout={logout}/>
+          <UserCard user={user} accent={accent} glass={widgetGlass} onLogout={logout}/>
         </DraggableWidget>
       )}
 
@@ -678,7 +711,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.musicPlayer || { x: 84, y: 70 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), musicPlayer: pos } }))}
         >
-          <MusicPlayerWidget accent={accent} glass={glass} />
+          <MusicPlayerWidget accent={accent} glass={widgetGlass} />
         </DraggableWidget>
       )}
 
@@ -688,7 +721,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.calendarGrid || { x: 1.5, y: 20 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), calendarGrid: pos } }))}
         >
-          <CalendarGridWidget accent={accent} glass={glass} />
+          <CalendarGridWidget accent={accent} glass={widgetGlass} />
         </DraggableWidget>
       )}
 
@@ -743,7 +776,7 @@ export default function AmbientePage() {
             <div style={{fontSize:13,color:'rgba(255,255,255,0.3)',fontWeight:500}}>{activeModes.length} módulo{activeModes.length!==1?'s':''} ativo{activeModes.length!==1?'s':''} · Alpha Network</div>
             {settings.showStats !== false && (
               <div style={{animation:'fadeIn 0.6s ease 0.3s both'}}>
-                <StatsBar glass={glass} postCount={myPostCount} friendCount={friends.length} communityCount={myCommunities.length} notifCount={unreadNotifs+pendingReqs}/>
+                <StatsBar glass={widgetGlass} postCount={myPostCount} friendCount={friends.length} communityCount={myCommunities.length} notifCount={unreadNotifs+pendingReqs}/>
               </div>
             )}
             {lastModule && (
@@ -764,7 +797,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.weather || { x: 45, y: 5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), weather: pos } }))}
         >
-          <WeatherWidget glass={glass} accent={accent} />
+          <WeatherWidget glass={widgetGlass} accent={accent} />
         </DraggableWidget>
       )}
 
@@ -774,7 +807,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.timer || { x: 65, y: 5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), timer: pos } }))}
         >
-          <TimerWidget glass={glass} accent={accent} />
+          <TimerWidget glass={widgetGlass} accent={accent} />
         </DraggableWidget>
       )}
 
@@ -784,7 +817,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.notes || { x: 65, y: 20 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), notes: pos } }))}
         >
-          <NotesWidget glass={glass} accent={accent} settings={settings} update={(p: any) => setSettings(s => ({ ...s, ...p }))} />
+          <NotesWidget glass={widgetGlass} accent={accent} settings={settings} update={(p: any) => setSettings(s => ({ ...s, ...p }))} />
         </DraggableWidget>
       )}
 
@@ -794,7 +827,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.links || { x: 45, y: 20 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), links: pos } }))}
         >
-          <LinksWidget glass={glass} accent={accent} />
+          <LinksWidget glass={widgetGlass} accent={accent} />
         </DraggableWidget>
       )}
 
@@ -804,7 +837,7 @@ export default function AmbientePage() {
           defaultPos={settings.widgetPositions?.pet || { x: 84, y: 50 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), pet: pos } }))}
         >
-          <PetWidget glass={glass} accent={accent} />
+          <PetWidget glass={widgetGlass} accent={accent} />
         </DraggableWidget>
       )}
 

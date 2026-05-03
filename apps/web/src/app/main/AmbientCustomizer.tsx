@@ -39,6 +39,8 @@ export interface AmbientSettings {
   moduleLayout: 'dock' | 'grid' | 'sidebar';
   clockStyle: 'default' | 'stack' | 'minimal';
   clockGlass?: boolean;
+  widgetsGlass?: boolean;
+  foregroundPadding?: number;
   panelBorders?: 'default' | 'neon' | 'none';
   showMusicPlayer?: boolean;
   showCalendarGrid?: boolean;
@@ -86,6 +88,8 @@ export const DEFAULT_SETTINGS: AmbientSettings = {
   moduleLayout: 'dock',
   clockStyle: 'default',
   clockGlass: true,
+  widgetsGlass: true,
+  foregroundPadding: 20,
   panelBorders: 'default',
   showMusicPlayer: true,
   showCalendarGrid: true,
@@ -505,11 +509,27 @@ export default function AmbientCustomizer({ settings, onSettingsChange, onClose,
               {settings.foregroundUrl ? '✅ Camada Ativa — clica para mudar' : '+ Adicionar PNG Transparente'}
             </button>
             {settings.foregroundUrl && (
-              <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', height: 90, position: 'relative', background: 'url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgGwEg9AMDKC0YDBwMHDHwAAX44AIBBGEA1hBAgT9AwGk0YjSYMQwAAe2sPAoE231gAAAAASUVORK5CYII=)' }}>
-                <img src={settings.foregroundUrl} alt="Foreground" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                <button onClick={() => update({ foregroundUrl: undefined })}
-                  style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: 10, cursor: 'pointer' }}>✕</button>
-              </div>
+              <>
+                <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', height: 90, position: 'relative', background: 'url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgGwEg9AMDKC0YDBwMHDHwAAX44AIBBGEA1hBAgT9AwGk0YjSYMQwAAe2sPAoE231gAAAAASUVORK5CYII=)' }}>
+                  <img src={settings.foregroundUrl} alt="Foreground" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <button onClick={() => update({ foregroundUrl: undefined })}
+                    style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', fontSize: 10, cursor: 'pointer' }}>✕</button>
+                </div>
+                {/* Padding Slider */}
+                <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>🪟 Espaçamento do Vidro</span>
+                    <span style={{ fontSize: 11, color: '#fff', fontWeight: 700 }}>{settings.foregroundPadding ?? 20}px</span>
+                  </div>
+                  <input type="range" min={0} max={300} step={5} value={settings.foregroundPadding ?? 20}
+                    onChange={e => update({ foregroundPadding: Number(e.target.value) })}
+                    style={{ width: '100%', accentColor: settings.accent }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>Justo</span>
+                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>Amplo</span>
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
