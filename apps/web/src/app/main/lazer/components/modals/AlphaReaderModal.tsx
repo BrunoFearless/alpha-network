@@ -89,7 +89,7 @@ export function AlphaReaderModal({ article: initialArticle, originalUrl: initial
       {!isManga && <div className="absolute inset-0 z-0 opacity-10 pointer-events-none" style={{ background: `radial-gradient(circle at top, ${c}, transparent 70%)` }} />}
 
       {/* Header Panel */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-black/10 backdrop-blur-3xl shrink-0 z-20 relative shadow-md">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-black/10 backblur-3xl shrink-0 z-20 relative ">
          <div className="flex items-center gap-4 mr-6">
             <div className="flex items-center gap-2 hidden md:flex">
                <div onClick={onClose} className="w-3.5 h-3.5 rounded-full bg-[#ff3b30] hover:bg-[#ff6b60] cursor-pointer transition-colors shadow-[0_0_10px_rgba(255,59,48,0.4)]"/>
@@ -98,7 +98,7 @@ export function AlphaReaderModal({ article: initialArticle, originalUrl: initial
             </div>
 
             <button onClick={onClose}
-              className={`flex items-center gap-2 text-[11px] font-black uppercase tracking-widest bg-white/5 border border-white/10 px-4 py-2 rounded-xl cursor-pointer hover:bg-white/10 transition-all ${textPrimary} shadow-sm`}>
+              className={`flex items-center gap-2 text-[11px] font-black uppercase tracking-widest bg-white/5 border border-white/10 px-4 py-2 rounded-xl cursor-pointer hover:bg-white/10 transition-all ${textPrimary} `}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
               Sair
             </button>
@@ -128,7 +128,7 @@ export function AlphaReaderModal({ article: initialArticle, originalUrl: initial
             )}
             <button 
                onClick={() => window.open(currentUrl, '_blank', 'noopener,noreferrer')}
-               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-bold tracking-widest text-[10px] uppercase shadow-sm"
+               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-bold tracking-widest text-[10px] uppercase "
                style={{ color: c }}
             >
                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -140,7 +140,7 @@ export function AlphaReaderModal({ article: initialArticle, originalUrl: initial
       {/* Article Content */}
       <div ref={contentAreaRef} className="flex-1 overflow-y-auto relative z-10 scrollbar-hide scroll-smooth">
          {loading && (
-            <div className="absolute inset-0 z-[50] flex flex-col items-center justify-center bg-black/5 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="absolute inset-0 z-[50] flex flex-col items-center justify-center bg-black/5 backblur-md animate-in fade-in duration-300">
                <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mb-4" style={{ borderColor: `${c}40`, borderTopColor: c }} />
                <span className="text-[10px] font-black uppercase tracking-[5px] text-white/30 animate-pulse">Reconfigurando Alpha Native...</span>
             </div>
@@ -155,7 +155,7 @@ export function AlphaReaderModal({ article: initialArticle, originalUrl: initial
                         {article.siteName}
                      </div>
                   )}
-                  <h1 className={`text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter ${textPrimary} leading-[1.1] mb-6 drop-shadow-sm`}
+                  <h1 className={`text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter ${textPrimary} leading-[1.1] mb-6 `}
                      style={{ fontFamily: "'Playfair Display', serif" }}>
                      {article.title}
                   </h1>
@@ -183,7 +183,7 @@ export function AlphaReaderModal({ article: initialArticle, originalUrl: initial
                            prose-headings:font-black prose-headings:tracking-tight 
                            prose-p:leading-relaxed prose-p:font-medium
                            prose-a:text-[#00f2ff] prose-a:no-underline hover:prose-a:underline cursor-default
-                           prose-img:rounded-3xl prose-img:shadow-2xl prose-img:border prose-img:border-white/5
+                           prose-img:rounded-3xl prose-img: prose-img:border prose-img:border-white/5
                            prose-hr:border-white/10
                            animate-in fade-in slide-in-from-bottom-8 duration-1000`}
                style={{ 

@@ -176,7 +176,7 @@ export function AnimePlayerModal({ initialUrl, animeTitle, onClose, themeColor: 
 
         {/* ── Episode Selector ── */}
         {showEpisodeList && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 p-8 backdrop-blur-xl overflow-y-auto">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 p-8 backblur-xl overflow-y-auto">
             <div className="w-full max-w-3xl">
               <div className="flex flex-col items-center mb-12 text-center">
                 <span className="text-5xl mb-4">📺</span>

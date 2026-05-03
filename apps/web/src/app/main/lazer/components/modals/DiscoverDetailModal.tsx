@@ -149,7 +149,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 backblur-sm">
         <div className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: c }} />
       </div>
     );
@@ -167,10 +167,12 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/95 backblur-2xl" onClick={onClose} />
       
-      <div className={`relative w-full max-w-6xl max-h-[95vh] overflow-y-auto rounded-[56px] shadow-[0_40px_100px_rgba(0,0,0,0.8)] border-[1.5px] ${bg} animate-in zoom-in-95 duration-500 custom-scrollbar overflow-x-hidden`}
-        style={{ borderColor: `${c}30` }}>
+      <div 
+        className={`relative w-full max-w-6xl max-h-[95vh] overflow-y-auto rounded-[56px] border-[1.5px] animate-in zoom-in-95 duration-500 custom-scrollbar overflow-x-hidden ${bg}`}
+        style={{ borderColor: c + "30" }}
+      >
         
         {/* Immersive Hybrid Background Layer */}
         <div className="absolute inset-0 pointer-events-none opacity-40 overflow-hidden">
@@ -185,7 +187,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
 
         {/* Close Button */}
         <button onClick={onClose} 
-          className="absolute top-10 right-10 z-[100] w-14 h-14 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white border border-white/10 cursor-pointer backdrop-blur-2xl transition-all hover:scale-110 active:scale-95 shadow-2xl">
+          className="absolute top-10 right-10 z-[100] w-14 h-14 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white border border-white/10 cursor-pointer backblur-2xl transition-all hover:scale-110 active:scale-95 ">
           <span className="text-xl">✕</span>
         </button>
 
@@ -197,7 +199,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
             
             {/* Media/Image Column */}
             <div className="w-full lg:w-[540px] shrink-0">
-               <div className="rounded-[48px] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.9)] border border-white/10 group relative bg-black/40" style={{ borderColor: `${c}20` }}>
+               <div className="rounded-[48px] overflow-hidden border border-white/10 group relative bg-black/40" style={{ borderColor: `${c}20` }}>
                   {videoId ? (
                     <div className="aspect-video">
                         <YoutubeEmbed videoId={videoId} accentColor={c} compact={false} />
@@ -214,7 +216,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                   )}
                   {isImage && (
                     <div className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
-                       <a href={data?.imageUrl || currentId} target="_blank" download className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-3xl flex items-center justify-center text-white shadow-2xl border border-white/20 hover:bg-white/20 transition-all hover:scale-110">
+                       <a href={data?.imageUrl || currentId} target="_blank" download className="w-14 h-14 rounded-full bg-white/10 backblur-3xl flex items-center justify-center text-white  border border-white/20 hover:bg-white/20 transition-all hover:scale-110">
                           <span className="text-xl">⬇</span>
                        </a>
                     </div>
@@ -225,22 +227,22 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
             {/* Information Column */}
             <div className="flex-1 space-y-10 pt-4">
                <div className="flex flex-wrap gap-3">
-                  <div className="px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[3px] shadow-xl border border-white/20 backdrop-blur-2xl bg-white/5" style={{ color: c }}>
+                  <div className="px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[3px]  border border-white/20 backblur-2xl bg-white/5" style={{ color: c }}>
                      {isImage ? '🏮 IA Vision Master' : currentType === 'tv' ? '📺 Premium Series' : currentType === 'movie' ? '🎬 Feature Film' : currentType}
                   </div>
                   {data?.source && (
-                    <div className="px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[3px] bg-white/5 border border-white/10 text-white/40 backdrop-blur-xl">
+                    <div className="px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[3px] bg-white/5 border border-white/10 text-white/40 backblur-xl">
                        {data.source}
                     </div>
                   )}
                   {(data?.released || data?.year) && (
-                     <div className="px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[3px] bg-white/5 border border-white/10 backdrop-blur-xl">
+                     <div className="px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[3px] bg-white/5 border border-white/10 backblur-xl">
                         {data.released || data.year}
                      </div>
                   )}
                </div>
 
-               <h2 className={`text-5xl md:text-7xl font-black tracking-tighter leading-[0.85] ${textPrimary} drop-shadow-[0_10px_30px_rgba(0,0,0,0.3)]`}>
+               <h2 className={`text-5xl md:text-7xl font-black tracking-tighter leading-[0.85] ${textPrimary}`}>
                   {isImage ? (currentQ || 'Alpha Aesthetic Vision') : (data?.title || 'Detalhes do Conteúdo')}
                </h2>
                
@@ -261,13 +263,13 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                {/* Metadata Grid (Alpha Refined Pills) */}
                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                   {data?.genres?.slice(0, 3).map((g: string) => (
-                     <div key={g} className="p-6 rounded-[32px] bg-white/5 border border-white/10 flex flex-col justify-center text-center backdrop-blur-md">
+                     <div key={g} className="p-6 rounded-[32px] bg-white/5 border border-white/10 flex flex-col justify-center text-center backblur-md">
                         <span className="text-[10px] font-black uppercase tracking-[3px] opacity-30 mb-2">Category</span>
                         <span className={`text-[13px] font-black ${textPrimary} uppercase tracking-tighter`}>{g}</span>
                      </div>
                   ))}
                   {data?.runtime && (
-                     <div className="p-6 rounded-[32px] bg-white/5 border border-white/10 flex flex-col justify-center text-center backdrop-blur-md">
+                     <div className="p-6 rounded-[32px] bg-white/5 border border-white/10 flex flex-col justify-center text-center backblur-md">
                         <span className="text-[10px] font-black uppercase tracking-[3px] opacity-30 mb-2">Duration</span>
                         <span className={`text-[13px] font-black ${textPrimary} uppercase tracking-tighter`}>{data.runtime} min</span>
                      </div>
@@ -278,7 +280,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                <div className="flex flex-wrap gap-6 pt-10">
                   {data?.website && (
                      <a href={data.website} target="_blank" rel="noopener noreferrer" 
-                        className="px-12 py-6 rounded-[32px] font-black text-white no-underline shadow-[0_25px_50px_rgba(0,0,0,0.4)] hover:shadow-[0_25px_50px_rgba(var(--accent-rgb),0.4)] hover:scale-105 active:scale-95 transition-all text-[13px] uppercase tracking-[4px] relative overflow-hidden group"
+                        className="px-12 py-6 rounded-[32px] font-black text-white no-underline hover:shadow-[0_25px_50px_rgba(var(--accent-rgb),0.4)] hover:scale-105 active:scale-95 transition-all text-[13px] uppercase tracking-[4px] relative overflow-hidden group"
                         style={{ backgroundColor: c }}>
                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
                         <span className="relative">Official Site ↗</span>
@@ -290,7 +292,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                            window.dispatchEvent(new CustomEvent('alpha-open-wiki', { detail: currentId }));
                            onClose();
                          }}
-                        className="px-12 py-6 rounded-[32px] font-black text-white border-none shadow-[0_25px_50px_rgba(0,0,0,0.4)] transition-all hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group"
+                        className="px-12 py-6 rounded-[32px] font-black text-white border-none transition-all hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group"
                         style={{ background: c }}>
                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
                         <span className="relative text-[13px] uppercase tracking-[4px]">Native Article 📖</span>
@@ -299,7 +301,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                   {(currentType === 'tv' || currentType === 'movie') && (
                      <button 
                         onClick={() => setWatchingUrl(sanitizeUrl(data?.title || currentId))}
-                        className="px-12 py-6 rounded-[32px] font-black text-white border-none shadow-[0_25px_100px_rgba(0,0,0,0.6)] transition-all hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group"
+                        className="px-12 py-6 rounded-[32px] font-black text-white border-none transition-all hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group"
                         style={{ background: `linear-gradient(45deg, ${c}, #8b5cf6)` }}>
                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
                         <span className="relative text-[13px] uppercase tracking-[4px]">Assistir Nativo 🍿</span>
@@ -307,7 +309,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                   )}
                   {/* Manga Chapters Section */}
                   {currentType === 'manga' && (
-                     <div className="mt-10 p-8 rounded-[40px] border-[1.5px] bg-white/5 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-6 duration-700" style={{ borderColor: borderCol }}>
+                     <div className="mt-10 p-8 rounded-[40px] border-[1.5px] bg-white/5 backblur-2xl animate-in fade-in slide-in-from-bottom-6 duration-700" style={{ borderColor: borderCol }}>
                         <div className="flex items-center justify-between mb-6">
                            <div className="flex flex-col">
                               <span className="text-[10px] font-black uppercase tracking-[3px] opacity-30">Biblioteca Nativa Alpha 🏮</span>
@@ -338,7 +340,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                                     </div>
                                     <button 
                                       onClick={() => setReadingChapter({ id: ch.id, chapter: ch.chapter })}
-                                      className="px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white shadow-lg transition-all hover:scale-110 active:scale-95 cursor-pointer relative overflow-hidden group/btn"
+                                      className="px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white  transition-all hover:scale-110 active:scale-95 cursor-pointer relative overflow-hidden group/btn"
                                       style={{ background: c }}>
                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
                                        <span className="relative">LER AGORA</span>
@@ -358,7 +360,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
 
                   {/* Alpha Native Anime Episodes (Vertical List) */}
                   {(currentType === 'tv' || currentType === 'movie') && (
-                     <div className="mt-10 p-8 rounded-[40px] border-[1.5px] bg-white/5 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-6 duration-700" style={{ borderColor: `${c}40` }}>
+                     <div className="mt-10 p-8 rounded-[40px] border-[1.5px] bg-white/5 backblur-2xl animate-in fade-in slide-in-from-bottom-6 duration-700" style={{ borderColor: `${c}40` }}>
                         <div className="flex items-center justify-between mb-8">
                            <div className="flex flex-col">
                               <span className="text-[10px] font-black uppercase tracking-[3px] opacity-30">Alpha Cinematic Bridge 🏮</span>
@@ -386,7 +388,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                                     </div>
                                     <button 
                                       onClick={() => setWatchingUrl(sanitizeUrl(ep.url))}
-                                      className="px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group/btn"
+                                      className="px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white  transition-all hover:scale-105 active:scale-95 cursor-pointer relative overflow-hidden group/btn"
                                       style={{ background: `linear-gradient(45deg, ${c}, #8b5cf6)` }}>
                                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
                                        <span className="relative">ASSISTIR AGORA</span>
@@ -412,7 +414,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
             <div className="mt-20 pt-20 border-t border-white/10 animate-in fade-in slide-in-from-bottom-12 duration-1000">
                <div className="flex items-center justify-between mb-16 px-6">
                   <div className="flex items-center gap-6">
-                     <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl backdrop-blur-xl">
+                     <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10  backblur-xl">
                         <span className="text-3xl animate-bounce">🌟</span>
                      </div>
                      <div>
@@ -451,7 +453,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
                              />
                              
                              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-8">
-                                <p className="text-[10px] font-black text-white/60 uppercase tracking-[2px] line-clamp-3 leading-relaxed drop-shadow-lg">
+                                <p className="text-[10px] font-black text-white/60 uppercase tracking-[2px] line-clamp-3 leading-relaxed ">
                                    {img.prompt}
                                 </p>
                              </div>
@@ -478,8 +480,8 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
       {readingChapter && (
         <MangaReaderModal
           mangaId={currentId}
-          chapterId={readingChapter.id}
-          chapterNumber={readingChapter.chapter}
+          chapterId={readingChapter?.id || ''}
+          chapterNumber={readingChapter?.chapter || ''}
           mangaTitle={data?.title || 'Mangá Alpha'}
           onClose={() => setReadingChapter(null)}
           onChapterChange={(id, nr) => setReadingChapter({ id, chapter: nr })}
@@ -491,7 +493,7 @@ export function DiscoverDetailModal({ type: initialType, id: initialId, q: initi
 
       {watchingUrl && (
         <AnimePlayerModal
-          initialUrl={watchingUrl}
+          initialUrl={watchingUrl || ''}
           animeTitle={data?.title || 'Alpha Anime'}
           onClose={() => setWatchingUrl(null)}
           themeColor={c}

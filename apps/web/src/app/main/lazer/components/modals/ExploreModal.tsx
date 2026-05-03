@@ -432,7 +432,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
       <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode}/></div>
 
       {/* Explore Header */}
-      <div className={`flex items-center justify-between px-5 sm:px-8 py-4 shrink-0 border-b backdrop-blur-2xl ${cardBg}`}
+      <div className={`flex items-center justify-between px-5 sm:px-8 py-4 shrink-0 border-b backblur-2xl ${cardBg}`}
         style={{ borderColor: borderCol }}>
         <button onClick={onClose}
           className={`flex items-center gap-2 text-sm font-bold bg-transparent border-none cursor-pointer hover:opacity-60 transition-opacity ${textPrimary}`}>
@@ -449,7 +449,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
           {/* ─────────────────── LEFT SIDEBAR ─────────────────── */}
           <aside className="hidden lg:flex flex-col gap-6 sticky top-6">
             {authUser?.profile && (
-              <div className={`rounded-[32px] overflow-hidden border-[1.5px] backdrop-blur-xl shadow-lg ${cardBg}`} style={{ borderColor: borderCol }}>
+              <div className={`rounded-[32px] overflow-hidden border-[1.5px] backblur-xl  ${cardBg}`} style={{ borderColor: borderCol }}>
                 <div className="h-24 relative" style={{ background: `linear-gradient(135deg, ${c}80, ${c}20)` }}>
                   {authUser.profile.bannerUrl && (
                     isVideo(authUser.profile.bannerUrl) ? (
@@ -461,7 +461,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                   <div className="absolute inset-0 bg-black/10" />
                 </div>
                 <div className="flex flex-col items-center px-5 pb-6">
-                  <div className="-mt-12 mb-3 w-[84px] h-[84px] rounded-full border-[3px] overflow-hidden shadow-2xl relative z-10 bg-black" style={{ borderColor: isLight ? '#fff' : '#000' }}>
+                  <div className="-mt-12 mb-3 w-[84px] h-[84px] rounded-full border-[3px] overflow-hidden  relative z-10 bg-black" style={{ borderColor: isLight ? '#fff' : '#000' }}>
                     <Avatar src={authUser.profile.avatarUrl} name={authUser.profile.username} className="w-full h-full object-cover"/>
                   </div>
                   <DisplayName profile={authUser.profile} fallbackName={authUser.profile.displayName || authUser.profile?.username || 'User'} className="font-black text-[16px] text-center" />
@@ -470,7 +470,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
               </div>
             )}
 
-            <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
+            <div className={`rounded-[32px] border-[1.5px] backblur-xl p-6  ${cardBg}`} style={{ borderColor: borderCol }}>
                <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] mb-5 ${textSecondary}`}>Minhas Comunidades</h3>
                 <div className="flex flex-col gap-2.5">
                   {myCommunities.length === 0 ? (
@@ -478,7 +478,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                   ) : myCommunities.slice(0, 5).map((com, idx) => (
                     <button key={`${com.id}-${idx}`} onClick={() => onCommunityClick?.(com.id)}
                       className="flex items-center gap-3 w-full bg-transparent border-none cursor-pointer text-left rounded-2xl p-2 transition-all hover:bg-black/5 dark:hover:bg-white/5">
-                      <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden" 
+                      <div className="w-11 h-11 rounded-[14px] flex items-center justify-center text-xl shrink-0  overflow-hidden" 
                         style={{ background: com.iconUrl ? 'transparent' : `${com.accentColor || '#666'}20`, border: `1px solid ${com.accentColor || '#666'}40` }}>
                         {isVideo(com.iconUrl) ? <video src={com.iconUrl!} autoPlay loop muted playsInline className="w-full h-full object-cover"/>
                           : com.iconUrl ? <img src={com.iconUrl} alt="" className="w-full h-full object-cover"/>
@@ -493,12 +493,12 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                 </div>
             </div>
 
-            <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
+            <div className={`rounded-[32px] border-[1.5px] backblur-xl p-6  ${cardBg}`} style={{ borderColor: borderCol }}>
                <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] mb-5 ${textSecondary}`}>A Ver Agora</h3>
                <div className="flex flex-col gap-2">
                  {WATCHING_NOW.map((w, i) => (
                    <div key={i} className="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 transition-all cursor-pointer hover:bg-black/5 dark:hover:bg-white/5">
-                     <span className="text-2xl shrink-0 drop-shadow-sm">{w.emoji}</span>
+                     <span className="text-2xl shrink-0 ">{w.emoji}</span>
                      <div className="flex-1 min-w-0">
                        <p className={`text-[13px] font-extrabold truncate ${textPrimary}`}>{w.title}</p>
                        <p className={`text-[11px] font-bold mt-0.5 ${textSecondary}`}>{w.ep} · {w.genre}</p>
@@ -521,12 +521,12 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                 onFocus={() => { if (search.trim().length >= 2 && tagSuggestions.length > 0) setShowTagSuggestions(true); }}
                 onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
                 placeholder="Google, Animes, Jogos, Educação..."
-                className={`w-full py-5 pl-14 pr-6 ${showTagSuggestions && isGalleryMode ? 'rounded-t-[24px] rounded-b-none' : 'rounded-[24px]'} border-[2px] font-extrabold text-[15px] outline-none transition-all shadow-lg focus:shadow-[0_8px_30px_rgba(0,0,0,0.2)] ${!showTagSuggestions && 'focus:-translate-y-1'} ${textPrimary} ${cardBg}`}
+                className={`w-full py-5 pl-14 pr-6 ${showTagSuggestions && isGalleryMode ? 'rounded-t-[24px] rounded-b-none' : 'rounded-[24px]'} border-[2px] font-extrabold text-[15px] outline-none transition-all  focus:shadow-[0_8px_30px_rgba(0,0,0,0.2)] ${!showTagSuggestions && 'focus:-translate-y-1'} ${textPrimary} ${cardBg}`}
                 style={{ borderColor: search.trim() ? c : borderCol, backdropFilter: 'blur(30px)', backgroundColor: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.5)' }}/>
 
               {/* Alpha Neural Dropdown (Main Bar) */}
               {showTagSuggestions && !isGalleryMode && (tagSuggestions.length > 0 || tagLoading) && (
-                 <div className="absolute top-full left-0 right-0 bg-black/50 backdrop-blur-[50px] border-[2px] border-t-0 rounded-b-[32px] shadow-[0_50px_100px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col z-[100] transition-all animate-in fade-in slide-in-from-top-2"
+                 <div className="absolute top-full left-0 right-0 bg-black/50 backblur-[50px] border-[2px] border-t-0 rounded-b-[32px] overflow-hidden flex flex-col z-[100] transition-all animate-in fade-in slide-in-from-top-2"
                       style={{ borderColor: c }}>
                     {tagLoading ? (
                        <div className="p-8 text-center text-[10px] font-black uppercase text-white/50 tracking-[4px] animate-pulse">A Sincronizar Lexicon...</div>
@@ -539,10 +539,10 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                            className="flex items-center justify-between p-4 px-6 relative overflow-hidden group border-b border-white/5 transition-all duration-300 cursor-pointer text-left focus:outline-none hover:pl-8">
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500" style={{ background: `linear-gradient(90deg, ${catColor}, transparent)` }} />
                             <div className="flex items-center gap-4 relative z-10">
-                               <div className="w-2 h-2 rounded-full shadow-[0_0_12px_currentColor] group-hover:scale-150 transition-transform duration-300" style={{ backgroundColor: catColor, color: catColor }} />
-                               <span className="font-extrabold text-white text-[15px] drop-shadow-md">{tag.name}</span>
+                               <div className="w-2 h-2 rounded-full group-hover:scale-150 transition-transform duration-300" style={{ backgroundColor: catColor, color: catColor }} />
+                               <span className="font-extrabold text-white text-[15px] ">{tag.name}</span>
                             </div>
-                            <span className="text-[9px] uppercase tracking-[2px] font-black text-white/70 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 group-hover:border-white/30 transition-colors relative z-10 shadow-sm">
+                            <span className="text-[9px] uppercase tracking-[2px] font-black text-white/70 bg-black/40 backblur-md px-3 py-1.5 rounded-xl border border-white/10 group-hover:border-white/30 transition-colors relative z-10 ">
                                {tag.category} • {(tag.count / 1000).toFixed(1)}K P.
                             </span>
                          </button>
@@ -589,7 +589,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                  {!isSearching && wikiResult && (
                     <section className="animate-in fade-in slide-in-from-top-6 duration-700">
                        <h3 className={`text-[12px] font-black uppercase tracking-widest mb-4 opacity-60 ${textPrimary}`}>Wiki Hub / Resumo</h3>
-                       <div className={`p-6 md:p-8 rounded-[40px] border-[2px] shadow-2xl relative overflow-hidden ${cardBg} transition-all duration-500`}
+                       <div className={`p-6 md:p-8 rounded-[40px] border-[2px]  relative overflow-hidden ${cardBg} transition-all duration-500`}
                          style={{ 
                             borderColor: `${c}80`,
                             boxShadow: `0 0 30px ${c}30, inset 0 0 20px ${c}10` 
@@ -604,7 +604,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                           
                           <div className="flex flex-col md:flex-row gap-6 items-start relative z-10">
                              {wikiResult.imageUrl && (
-                                <div className="w-full md:w-32 h-44 rounded-[24px] overflow-hidden shrink-0 shadow-2xl border-4 border-white/10 group">
+                                <div className="w-full md:w-32 h-44 rounded-[24px] overflow-hidden shrink-0  border-4 border-white/10 group">
                                    <img src={wikiResult.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                 </div>
                              )}
@@ -619,12 +619,12 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                         addToHistory(search);
                                         setActiveWiki(wikiResult.canonicalTitle || wikiResult.title);
                                      }}
-                                     className="px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest text-white border-none transition-all hover:scale-110 active:scale-95 shadow-[0_10px_30px_rgba(0,0,0,0.4)] cursor-pointer group relative overflow-hidden"
+                                     className="px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest text-white border-none transition-all hover:scale-110 active:scale-95 cursor-pointer group relative overflow-hidden"
                                      style={{ background: c }}>
                                       <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                                       <span className="relative">Ler Artigo Nativo 📖</span>
                                    </button>
-                                   <span className={`px-5 py-3 rounded-full text-[10px] font-black border-[1.5px] uppercase tracking-tighter ${textSecondary} backdrop-blur-md`} style={{ borderColor: borderCol }}>
+                                   <span className={`px-5 py-3 rounded-full text-[10px] font-black border-[1.5px] uppercase tracking-tighter ${textSecondary} backblur-md`} style={{ borderColor: borderCol }}>
                                       Fonte: Wikipedia (PT)
                                    </span>
                                 </div>
@@ -637,13 +637,13 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                  {!isSearching && universalResults.length > 0 && (
                       <section>
                          <h3 className={`text-[12px] font-black uppercase tracking-widest mb-6 opacity-60 ${textPrimary} flex items-center gap-2`}>
-                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_#06b6d4]"/>
+                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"/>
                             Web Discover / Global
                          </h3>
                          <div className="flex flex-col gap-4">
                             {universalResults.map((u: any, index: number) => (
                               <div key={`${u.type}-${u.id}-${index}`} 
-                                className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer shadow-xl transition-all hover:scale-[1.01] flex items-center p-3 gap-5 animate-in fade-in slide-in-from-right-8 duration-700"
+                                className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer  transition-all hover:scale-[1.01] flex items-center p-3 gap-5 animate-in fade-in slide-in-from-right-8 duration-700"
                                 style={{ 
                                    background: cardBg, 
                                    borderColor: `${getNeonColor('Animes')}40`,
@@ -681,11 +681,11 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                    u.type === 'video' ? setActiveVideo({ id: u.id, title: u.title, channel: u.source }) : setActiveDetail({ type: u.type, id: u.id });
                                 }}>
                                  
-                                 <div className="w-16 h-16 md:w-24 md:h-24 rounded-[22px] overflow-hidden shrink-0 border border-white/10 shadow-lg relative bg-white/5 flex items-center justify-center">
+                                 <div className="w-16 h-16 md:w-24 md:h-24 rounded-[22px] overflow-hidden shrink-0 border border-white/10  relative bg-white/5 flex items-center justify-center">
                                     {u.imageUrl ? (
                                        <img src={u.imageUrl} alt="" className="w-full h-full object-cover" />
                                     ) : u.favicon ? (
-                                       <img src={u.favicon} alt="" className="w-10 h-10 object-contain drop-shadow-md rounded-[8px]" />
+                                       <img src={u.favicon} alt="" className="w-10 h-10 object-contain  rounded-[8px]" />
                                     ) : (
                                        <div className="w-full h-full flex items-center justify-center relative overflow-hidden">
                                           <div className="absolute inset-0 opacity-20" style={{ background: `linear-gradient(45deg, ${c}, transparent)` }} />
@@ -700,7 +700,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                  <div className="flex-1 min-w-0 pr-4">
                                     <div className="flex items-center gap-2 mb-1">
                                        {u.isNative ? (
-                                          <span className="px-3 py-1 rounded-full bg-white/10 text-[9px] font-black uppercase tracking-[2px] text-white border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.3)] anim-glow">
+                                          <span className="px-3 py-1 rounded-full bg-white/10 text-[9px] font-black uppercase tracking-[2px] text-white border border-white/20 anim-glow">
                                              🍿 Alpha Native Assistir
                                           </span>
                                        ) : (
@@ -728,7 +728,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                             const uid = u.userId || u.id;
                             const fStatus = isFriend(uid) ? 'friend' : hasSentRequest(uid) ? 'sent' : 'none';
                             return (
-                              <div key={`${uid}-${index}`} className="flex items-center gap-4 p-4 rounded-[28px] border-[1.5px] cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+                              <div key={`${uid}-${index}`} className="flex items-center gap-4 p-4 rounded-[28px] border-[1.5px] cursor-pointer transition-all hover:scale-[1.02] "
                                 style={{ background: cardBg, borderColor: borderCol, backdropFilter: 'blur(20px)' }}
                                 onClick={() => onProfileClick?.(uid)}>
                                 <Avatar src={u.avatarUrl} name={u.displayName || u.username} className="w-14 h-14 rounded-[20px] shrink-0 border-2" style={{ borderColor: c }}/>
@@ -738,7 +738,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                 </div>
                                 <button
                                   onClick={e => { e.stopPropagation(); fStatus === 'sent' ? cancelFriendRequest(uid) : fStatus === 'none' ? sendFriendRequest(uid) : null; }}
-                                  className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[16px] font-bold border-[2px] transition-all hover:scale-110 shadow-md"
+                                  className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[16px] font-bold border-[2px] transition-all hover:scale-110 "
                                   style={{
                                     background: fStatus === 'friend' ? `${c}20` : fStatus === 'sent' ? 'rgba(249,115,22,0.12)' : c,
                                     borderColor: fStatus === 'friend' ? c : fStatus === 'sent' ? '#f97316' : c,
@@ -760,11 +760,11 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
               <section className="animate-in fade-in slide-in-from-top-6 duration-1000">
                  <div className="flex flex-col md:flex-row md:items-center gap-6 mb-12 px-4 group">
                     <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 rounded-[28px] bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl backdrop-blur-3xl transition-all group-hover:scale-110 group-hover:rotate-3">
+                      <div className="w-16 h-16 rounded-[28px] bg-white/5 flex items-center justify-center border border-white/10  backblur-3xl transition-all group-hover:scale-110 group-hover:rotate-3">
                          <span className="text-4xl text-shadow-glow">🏮</span>
                       </div>
                       <div>
-                         <h3 className={`text-[20px] font-black uppercase tracking-[5px] ${textPrimary} mb-1 drop-shadow-2xl`}>Mural Estético Alpha</h3>
+                         <h3 className={`text-[20px] font-black uppercase tracking-[5px] ${textPrimary} mb-1 `}>Mural Estético Alpha</h3>
                          <p className="text-[11px] font-bold opacity-30 uppercase tracking-[4px]">Curadoria Inteligente & Visão Sintética</p>
                       </div>
                     </div>
@@ -780,7 +780,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                             onFocus={() => { setGalSearchFocus(true); if (galSearch.trim().length >= 2) setShowTagSuggestions(true); }}
                             onBlur={() => setTimeout(() => { setGalSearchFocus(false); setShowTagSuggestions(false); }, 200)}
                             placeholder="Pesquisar personagens, lugares, estética..."
-                            className={`w-full py-4 pl-14 pr-6 ${showTagSuggestions ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl'} border-[2px] font-extrabold text-[13px] outline-none transition-all shadow-2xl ${textPrimary}`}
+                            className={`w-full py-4 pl-14 pr-6 ${showTagSuggestions ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl'} border-[2px] font-extrabold text-[13px] outline-none transition-all  ${textPrimary}`}
                             style={{ 
                                borderColor: galSearchFocus ? c : 'rgba(255,255,255,0.05)',
                                background: 'rgba(255,255,255,0.03)',
@@ -791,7 +791,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
 
                        {/* Alpha Neural Dropdown (Gallery Inner Bar) */}
                        {showTagSuggestions && (tagSuggestions.length > 0 || tagLoading) && (
-                          <div className="absolute top-full left-0 right-0 bg-black/50 backdrop-blur-[50px] border border-white/10 border-t-0 rounded-b-[32px] shadow-[0_50px_100px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col z-[100] transition-all animate-in fade-in slide-in-from-top-2"
+                          <div className="absolute top-full left-0 right-0 bg-black/50 backblur-[50px] border border-white/10 border-t-0 rounded-b-[32px] overflow-hidden flex flex-col z-[100] transition-all animate-in fade-in slide-in-from-top-2"
                                style={{ borderColor: c }}>
                              {tagLoading ? (
                                 <div className="p-8 text-center text-[10px] font-black uppercase text-white/50 tracking-[4px] animate-pulse">A Sincronizar Lexicon...</div>
@@ -804,10 +804,10 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                     className="flex items-center justify-between p-4 px-6 relative overflow-hidden group border-b border-white/5 transition-all duration-300 cursor-pointer text-left focus:outline-none hover:pl-8">
                                      <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500" style={{ background: `linear-gradient(90deg, ${catColor}, transparent)` }} />
                                      <div className="flex items-center gap-4 relative z-10">
-                                        <div className="w-2 h-2 rounded-full shadow-[0_0_12px_currentColor] group-hover:scale-150 transition-transform duration-300" style={{ backgroundColor: catColor, color: catColor }} />
-                                        <span className="font-extrabold text-white text-[14px] drop-shadow-md">{tag.name}</span>
+                                        <div className="w-2 h-2 rounded-full group-hover:scale-150 transition-transform duration-300" style={{ backgroundColor: catColor, color: catColor }} />
+                                        <span className="font-extrabold text-white text-[14px] ">{tag.name}</span>
                                      </div>
-                                     <span className="text-[9px] uppercase tracking-[2px] font-black text-white/70 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 group-hover:border-white/30 transition-colors relative z-10 shadow-sm">
+                                     <span className="text-[9px] uppercase tracking-[2px] font-black text-white/70 bg-black/40 backblur-md px-3 py-1.5 rounded-xl border border-white/10 group-hover:border-white/30 transition-colors relative z-10 ">
                                         {tag.category} • {(tag.count / 1000).toFixed(1)}K P.
                                      </span>
                                   </button>
@@ -829,15 +829,15 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                           <div key={colIdx} className="flex-1 flex flex-col gap-6">
                              {col.map((img, i) => (
                                 <div key={`${img.url}-${i}`} 
-                                  className="group relative rounded-[40px] overflow-hidden bg-[#0d0d0d] border border-white/5 shadow-[0_12px_45px_rgba(0,0,0,0.5)] hover:shadow-[0_50px_100px_rgba(0,0,0,0.9)] transition-all duration-700 hover:-translate-y-3 cursor-pointer animate-in fade-in slide-in-from-top-12 fill-mode-both"
+                                  className="group relative rounded-[40px] overflow-hidden bg-[#0d0d0d] border border-white/5 hover:shadow-[0_50px_100px_rgba(0,0,0,0.9)] transition-all duration-700 hover:-translate-y-3 cursor-pointer animate-in fade-in slide-in-from-top-12 fill-mode-both"
                                   style={{ animationDuration: '800ms', animationDelay: `${Math.min((i % 15) * 120, 1500)}ms` }}
                                   onClick={() => setActiveDetail({ type: 'image', id: img.url, metadata: img })}>
                                    
                                    {/* Glassmorphism Source Badge */}
                                    <div className="absolute top-6 left-6 z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 transform -translate-x-6 group-hover:translate-x-0">
-                                      <div className="px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-[3px] text-white shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-[32px] transition-all flex items-center gap-3"
+                                      <div className="px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-[3px] text-white backblur-[32px] transition-all flex items-center gap-3"
                                            style={{ border: `1px solid ${img.color}50`, backgroundColor: `${img.color}15` }}>
-                                         <div className="w-1.5 h-1.5 rounded-full shadow-[0_0_10px_currentColor] animate-pulse" style={{ backgroundColor: img.color, color: img.color }} />
+                                         <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: img.color, color: img.color }} />
                                          {img.source}
                                       </div>
                                    </div>
@@ -861,10 +861,10 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 flex items-end p-10">
                                       <div className="flex flex-col gap-3 transform translate-y-10 group-hover:translate-y-0 transition-all duration-700 ease-out">
                                          <div className="flex items-center gap-2.5">
-                                            <div className="w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_currentColor]" style={{ backgroundColor: img.color || c, color: img.color || c }} />
+                                            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: img.color || c, color: img.color || c }} />
                                             <p className="text-[11px] font-black text-white/40 uppercase tracking-[4px]" style={{ color: img.color ? `${img.color}90` : undefined }}>Alpha Twin Core</p>
                                          </div>
-                                         <h4 className="text-[15px] font-black text-white leading-[1.3] uppercase tracking-tight line-clamp-4 drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
+                                         <h4 className="text-[15px] font-black text-white leading-[1.3] uppercase tracking-tight line-clamp-4">
                                             {img.prompt || 'Alpha Aesthetic Vision'}
                                          </h4>
                                       </div>
@@ -901,7 +901,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                           const neonColor = getNeonColor(activeCategory);
                           return (
                             <div key={`${item.type}-${item.id}-${index}`} 
-                              className="relative aspect-[10/14] rounded-[28px] overflow-hidden cursor-pointer group shadow-2xl border-[2px] transition-all hover:scale-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700"
+                              className="relative aspect-[10/14] rounded-[28px] overflow-hidden cursor-pointer group  border-[2px] transition-all hover:scale-[1.05] animate-in fade-in slide-in-from-bottom-8 duration-700"
                               style={{ 
                                 borderColor: `${neonColor}40`,
                                 boxShadow: `0 10px 30px rgba(0,0,0,0.5)`,
@@ -951,7 +951,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
               <section>
                  <div className="flex items-center justify-between mb-5 px-2">
                     <div className="flex items-center gap-2">
-                       <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse"/>
+                       <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"/>
                        <h2 className={`text-[18px] font-black tracking-tight ${textPrimary}`}>Watch Mode</h2>
                     </div>
                  </div>
@@ -979,7 +979,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                  )}
 
                  {activeVideo && (
-                    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
+                    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/95 backblur-xl">
                        <div className="w-full max-w-5xl">
                           <button onClick={() => setActiveVideo(null)} className="mb-4 text-white font-black text-sm uppercase tracking-widest cursor-pointer bg-transparent border-none">✕ Fechar Player</button>
                           <YoutubeEmbed videoId={activeVideo.id} title={activeVideo.title} channel={activeVideo.channel} accentColor="#ef4444" compact={false}/>
@@ -999,13 +999,13 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                     {creators.map((cr, index) => {
                       const fStatus = isFriend(cr.userId) ? 'friend' : hasSentRequest(cr.userId) ? 'sent' : 'none';
                       return (
-                        <div key={`${cr.userId}-${index}`} className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer group shadow-lg min-h-[260px]"
+                        <div key={`${cr.userId}-${index}`} className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer group  min-h-[260px]"
                           style={{ borderColor: borderCol }} onClick={() => onProfileClick?.(cr.userId)}>
                           <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-110" 
                                style={{ backgroundImage: `url(${cr.profile?.bannerUrl || cr.avatar})`, opacity: 0.5, filter: 'blur(8px) brightness(0.7)' }}/>
                           <div className="absolute inset-0 bg-gradient-to-bottom from-transparent to-black/90"/>
                           <div className="relative p-6 flex flex-col items-center text-center h-full pt-8">
-                             <Avatar src={cr.avatar} name={cr.name} className="w-[80px] h-[80px] rounded-[28px] shadow-2xl mb-4 border-2" style={{ borderColor: c }}/>
+                             <Avatar src={cr.avatar} name={cr.name} className="w-[80px] h-[80px] rounded-[28px]  mb-4 border-2" style={{ borderColor: c }}/>
                              <DisplayName profile={cr.profile} fallbackName={cr.name} className="font-black text-[16px] text-white"/>
                              <p className="text-[11px] font-bold text-white/60 mb-6">{cr.score} Pontos</p>
                              <button className="mt-auto px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white border-none w-full"
@@ -1023,7 +1023,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                   <h2 className={`text-[18px] font-black tracking-tight mb-5 ${textPrimary}`}>Publicações Trendings</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {filteredPosts.map((p, index) => (
-                      <div key={`${p.id}-${index}`} className="relative rounded-[36px] overflow-hidden cursor-pointer group shadow-xl aspect-[3/4] border-[1.5px]"
+                      <div key={`${p.id}-${index}`} className="relative rounded-[36px] overflow-hidden cursor-pointer group  aspect-[3/4] border-[1.5px]"
                         style={{ borderColor: borderCol }} onClick={() => onPostClick?.(p.id)}>
                         <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-110">
                            {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> 
@@ -1053,7 +1053,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
           <aside className="hidden xl:flex flex-col gap-6 sticky top-6">
             
             {/* User Ranking System */}
-            <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
+            <div className={`rounded-[32px] border-[1.5px] backblur-xl p-6  ${cardBg}`} style={{ borderColor: borderCol }}>
                <div className="flex items-center justify-between mb-5">
                  <div className="flex items-center gap-2">
                    <IconStar/>
@@ -1072,7 +1072,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                            style={{ color: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#b45309' : (isLight ? '#aaa' : '#666'), textShadow: i < 3 ? '0 2px 10px rgba(0,0,0,0.2)' : 'none' }}>
                        {i + 1}
                      </span>
-                     <Avatar src={u.avatar} name={u.name} className="w-10 h-10 rounded-full shadow-md group-hover:scale-105 transition-transform border-[1.5px]" style={{ borderColor: i < 3 ? '#fbbf24' : 'transparent' }}/>
+                     <Avatar src={u.avatar} name={u.name} className="w-10 h-10 rounded-full  group-hover:scale-105 transition-transform border-[1.5px]" style={{ borderColor: i < 3 ? '#fbbf24' : 'transparent' }}/>
                      <div className="flex-1 min-w-0">
                        <DisplayName profile={u.profile} fallbackName={u.name} className={`text-[13px] font-extrabold truncate ${textPrimary}`} />
                        <p className={`text-[10px] font-black mt-0.5 ${textSecondary}`}>Score: <span style={{ color: c }}>{u.score}</span></p>
@@ -1085,7 +1085,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                {authUser && (
                  <div className="mt-5 pt-4 border-t-[1.5px] flex items-center gap-3 bg-black/5 dark:bg-white/5 -mx-6 px-6 -mb-6 pb-6 rounded-b-[32px]" style={{ borderColor: `${c}30` }}>
                     <span className="w-6 font-black text-[14px] text-center shrink-0 opacity-80" style={{ color: c }}>{myRank}</span>
-                    <Avatar src={authUser?.profile?.avatarUrl} name={authUser?.profile?.username || 'User'} className="w-10 h-10 rounded-[14px] shadow-sm border-2" style={{ borderColor: c }}/>
+                    <Avatar src={authUser?.profile?.avatarUrl} name={authUser?.profile?.username || 'User'} className="w-10 h-10 rounded-[14px]  border-2" style={{ borderColor: c }}/>
                     <div className="flex-1 min-w-0">
                       <p className={`text-[13px] font-extrabold truncate ${textPrimary}`}>Tu</p>
                       <p className={`text-[10px] font-black mt-0.5 opacity-60 ${textSecondary}`}>O teu lugar atual</p>
@@ -1095,7 +1095,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
             </div>
 
             {/* Trending Tropes */}
-            <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
+            <div className={`rounded-[32px] border-[1.5px] backblur-xl p-6  ${cardBg}`} style={{ borderColor: borderCol }}>
               <div className="flex items-center gap-2 mb-5">
                 <IconFlame/>
                 <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] ${textPrimary}`}>Trending Tropes</h3>
@@ -1150,8 +1150,8 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
       )}
 
       {readerLoading && (
-        <div className="fixed inset-0 z-[250] flex flex-col items-center justify-center bg-black/80 backdrop-blur-3xl animate-in fade-in duration-500">
-           <div className="w-20 h-20 rounded-full border-4 border-t-transparent animate-spin mb-8 shadow-[0_0_30px_rgba(0,242,255,0.3)]" style={{ borderColor: c }} />
+        <div className="fixed inset-0 z-[250] flex flex-col items-center justify-center bg-black/80 backblur-3xl animate-in fade-in duration-500">
+           <div className="w-20 h-20 rounded-full border-4 border-t-transparent animate-spin mb-8" style={{ borderColor: c }} />
            <div className="flex flex-col items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-[6px] text-white/40 mb-2">Alpha Neural Network</span>
               <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic">Decodificando Internet...</h2>
@@ -1162,13 +1162,13 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
 
       {/* External Redirect Confirmation Modal */}
       {redirectUrl && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-2xl animate-in zoom-in-95 duration-300">
-           <div className={`max-w-md w-full rounded-[40px] border-[2px] p-10 flex flex-col items-center text-center shadow-2xl relative overflow-hidden ${isLight ? 'bg-white' : 'bg-[#0a0a0a]'}`}
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backblur-2xl animate-in zoom-in-95 duration-300">
+           <div className={`max-w-md w-full rounded-[40px] border-[2px] p-10 flex flex-col items-center text-center  relative overflow-hidden ${isLight ? 'bg-white' : 'bg-[#0a0a0a]'}`}
                 style={{ borderColor: `${c}40` }}>
               
               <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ background: `radial-gradient(circle at top, ${c}, transparent 70%)` }} />
               
-              <div className="w-20 h-20 rounded-[30px] bg-white/5 flex items-center justify-center border border-white/10 mb-8 shadow-xl relative z-10">
+              <div className="w-20 h-20 rounded-[30px] bg-white/5 flex items-center justify-center border border-white/10 mb-8  relative z-10">
                  <span className="text-4xl">🌐</span>
                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-orange-500 animate-ping opacity-20" />
                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-[10px] font-black text-white border-2 border-white/20">!</div>
@@ -1188,7 +1188,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                       window.open(redirectUrl, '_blank', 'noopener,noreferrer');
                       setRedirectUrl(null);
                    }}
-                   className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-white border-none transition-all hover:scale-105 active:scale-95 shadow-lg group relative overflow-hidden"
+                   className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-white border-none transition-all hover:scale-105 active:scale-95  group relative overflow-hidden"
                    style={{ background: c }}>
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                     <span className="relative">Sim, Visitar Site</span>

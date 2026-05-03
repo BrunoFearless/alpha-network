@@ -31,7 +31,7 @@ export function SpotifyCard({ playback, accentColor, isLight }: SpotifyCardProps
 
   return (
     <div 
-      className="w-full rounded-[24px] p-4 flex items-center gap-4 border-[1.5px] shadow-lg backdrop-blur-3xl transition-all hover:scale-[1.02] cursor-pointer"
+      className="w-full rounded-[24px] p-4 flex items-center gap-4 border-[1.5px]  backblur-3xl transition-all hover:scale-[1.02] cursor-pointer"
       style={{ 
         backgroundColor: isLight ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)',
         borderColor: isActuallyPlaying ? '#1db95460' : `${accentColor}20`
@@ -43,10 +43,10 @@ export function SpotifyCard({ playback, accentColor, isLight }: SpotifyCardProps
         <img 
           src={data.albumArt} 
           alt="Album Art" 
-          className="w-16 h-16 rounded-2xl object-cover shadow-2xl"
+          className="w-16 h-16 rounded-2xl object-cover "
         />
         {isActuallyPlaying && (
-          <div className="absolute -bottom-1 -right-1 bg-[#1db954] p-1.5 rounded-full shadow-lg border-2 border-alpha-bg">
+          <div className="absolute -bottom-1 -right-1 bg-[#1db954] p-1.5 rounded-full  border-2 border-alpha-bg">
              <div className="flex gap-0.5 items-end h-2">
                 <div className="w-0.5 bg-white animate-[spotify-bar_0.6s_ease-in-out_infinite]" />
                 <div className="w-0.5 bg-white animate-[spotify-bar_0.8s_ease-in-out_infinite] delay-100" />

@@ -50,7 +50,7 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
           <div className="w-full h-[160px] sm:h-[180px] bg-black flex items-center justify-center relative overflow-hidden">
             <video src={first} className="w-full h-full object-cover opacity-60" muted />
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-lg">
+              <div className="w-10 h-10 rounded-full bg-white/20 backblur-md flex items-center justify-center border border-white/30 ">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
               </div>
             </div>
@@ -60,13 +60,13 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
         )}
 
         {hasMore && (
-          <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-xl bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-2xl">
+          <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-xl bg-black/40 backblur-md border border-white/20 flex items-center justify-center ">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </div>
         )}
 
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center pointer-events-none">
-           <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0 text-white font-bold text-[10px] uppercase tracking-[0.2em] bg-black/60 px-5 py-2 rounded-full backdrop-blur-md border border-white/10 shadow-2xl">Explorar</div>
+           <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0 text-white font-bold text-[10px] uppercase tracking-[0.2em] bg-black/60 px-5 py-2 rounded-full backblur-md border border-white/10 ">Explorar</div>
         </div>
       </>
     );
@@ -79,7 +79,7 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
           <div className="flex-1 pr-6 lg:pr-12 text-right">
             <div 
               onClick={() => onClick?.(String(item.id))}
-              className={`${cardBg} backdrop-blur-2xl rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.15)] border-[1.5px] inline-block text-left w-full sm:max-w-[340px] transition-transform hover:-translate-y-1 cursor-pointer group`} 
+              className={`${cardBg} backblur-2xl rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.15)] border-[1.5px] inline-block text-left w-full sm:max-w-[340px] transition-transform hover:-translate-y-1 cursor-pointer group`} 
               style={{ borderColor: borderCol }}
             >
               <div className="relative overflow-hidden bg-gradient-to-br from-black/20 to-black/5 min-h-[160px]">
@@ -104,7 +104,7 @@ function Chronicle({ item, color, isLight, onClick }: ChronicleProps) {
           <div className="flex-1 pl-6 lg:pl-12">
              <div 
                 onClick={() => onClick?.(String(item.id))}
-                className={`${cardBg} backdrop-blur-2xl rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.15)] border-[1.5px] inline-block text-left w-full sm:max-w-[340px] transition-transform hover:-translate-y-1 cursor-pointer group`} 
+                className={`${cardBg} backblur-2xl rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.15)] border-[1.5px] inline-block text-left w-full sm:max-w-[340px] transition-transform hover:-translate-y-1 cursor-pointer group`} 
                 style={{ borderColor: borderCol }}
               >
               <div className="relative overflow-hidden bg-gradient-to-br from-black/20 to-black/5 min-h-[160px]">
@@ -192,10 +192,10 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
         <div className="max-w-[1400px] mx-auto px-4 sm:px-8 pb-24 flex flex-col lg:flex-row gap-8 lg:gap-16 relative">
            
            {/* Sidebar Card */}
-           <div className={`w-full lg:w-[380px] shrink-0 lg:-mt-[160px] lg:sticky lg:top-8 h-max rounded-[2.5rem] p-6 lg:p-8 shadow-2xl border backdrop-blur-3xl ${cardBg}`} style={{ borderColor: borderCol, zIndex: 20 }}>
+           <div className={`w-full lg:w-[380px] shrink-0 lg:-mt-[160px] lg:sticky lg:top-8 h-max rounded-[2.5rem] p-6 lg:p-8  border backblur-3xl ${cardBg}`} style={{ borderColor: borderCol, zIndex: 20 }}>
               
               <div className="mt-[-70px] lg:mt-[-90px] mb-4 relative flex items-center lg:justify-center">
-                 <div className="rounded-full border-[6px] border-alpha-bg bg-[#1e1e2e] shadow-xl relative flex items-center justify-center shrink-0 w-[116px] h-[116px] lg:w-[140px] lg:h-[140px]">
+                 <div className="rounded-full border-[6px] border-alpha-bg bg-[#1e1e2e]  relative flex items-center justify-center shrink-0 w-[116px] h-[116px] lg:w-[140px] lg:h-[140px]">
                    <Avatar src={user.avatarUrl} name={user.displayName} size="xl" className="!w-[104px] !h-[104px] lg:!w-[128px] lg:!h-[128px] text-5xl border-[3px] shrink-0" style={{ borderColor: c }} />
                  </div>
                  <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-green-500 border-[3.5px] border-white absolute bottom-1 right-2 lg:right-4 z-10" />
@@ -228,7 +228,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 {/* Static Listening (Fallback) */}
                 {(!user.spotifyEnabled || !spotifyPlayback?.isPlaying) && user.listening && (
                   <div 
-                     className="inline-flex items-center gap-2.5 rounded-full px-5 py-2.5 border-[1.5px] w-full justify-center mb-6 shadow-sm"
+                     className="inline-flex items-center gap-2.5 rounded-full px-5 py-2.5 border-[1.5px] w-full justify-center mb-6 "
                      style={{ backgroundColor: `${c}18`, borderColor: `${c}40` }}
                   >
                     <span className="text-sm animate-pulse">🎵</span>
@@ -240,7 +240,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 {user.aiAssistant && (
                   <div 
                     onClick={() => setShowAiModal(true)}
-                    className="flex items-center gap-4 px-4 py-3 rounded-2xl border-[1.5px] mb-6 cursor-pointer hover:bg-white/5 transition-colors shadow-sm text-left relative overflow-hidden"
+                    className="flex items-center gap-4 px-4 py-3 rounded-2xl border-[1.5px] mb-6 cursor-pointer hover:bg-white/5 transition-colors  text-left relative overflow-hidden"
                     style={{ borderColor: borderCol, background: `${user.aiAssistant.themeColor}10` }}
                   >
                     <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: user.aiAssistant.themeColor }} />
@@ -273,14 +273,14 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
               {/* Actions */}
               <div className="flex gap-3 mb-6">
                 {onEdit ? (
-                  <button onClick={onEdit} className="flex-[1.5] text-white border-none rounded-full py-3.5 font-bold text-sm cursor-pointer transition-transform hover:scale-[1.03] flex items-center justify-center gap-2 shadow-xl" style={{ backgroundColor: c, boxShadow: `0 8px 30px ${c}50` }}>
+                  <button onClick={onEdit} className="flex-[1.5] text-white border-none rounded-full py-3.5 font-bold text-sm cursor-pointer transition-transform hover:scale-[1.03] flex items-center justify-center gap-2 " style={{ backgroundColor: c, boxShadow: `0 8px 30px ${c}50` }}>
                     <span className="text-lg">✏️</span> Editar Perfil
                   </button>
                 ) : (
                   <>
                   <button 
                     onClick={handleFriendBtn}
-                    className="flex-[1.5] text-white border-none rounded-full py-3.5 font-bold text-sm cursor-pointer transition-transform hover:scale-[1.03] flex items-center justify-center gap-2 shadow-xl"
+                    className="flex-[1.5] text-white border-none rounded-full py-3.5 font-bold text-sm cursor-pointer transition-transform hover:scale-[1.03] flex items-center justify-center gap-2 "
                     style={{ backgroundColor: fStatus === 'friend' ? '#ef4444' : c, boxShadow: `0 8px 30px ${fStatus === 'friend' ? '#ef4444' : c}50` }}
                   >
                     <span className="text-lg">{fStatus === 'friend' ? '👤x' : fStatus === 'sent' ? '⏳' : '👥'}</span> {fStatus === 'friend' ? 'Remover amigo' : fStatus === 'sent' ? 'Cancelar pedido' : 'Adicionar amigo'}
@@ -300,7 +300,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 {user.quickActions.map(a => (
                   <button 
                     key={a} 
-                     className={`backdrop-blur-md border-[1.5px] rounded-2xl py-3.5 text-[11px] lg:text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all ${cardBg} ${textPrimary}`}
+                     className={`backblur-md border-[1.5px] rounded-2xl py-3.5 text-[11px] lg:text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:-translate-y-0.5 hover: transition-all ${cardBg} ${textPrimary}`}
                      style={{ borderColor: borderCol }}
                   >
                     {a}
@@ -313,7 +313,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 {user.communities.map(co => (
                   <div 
                      key={co} 
-                     className={`flex items-center gap-2 backdrop-blur-md border-[1.5px] rounded-full px-4 py-2.5 text-xs lg:text-[13px] font-bold cursor-pointer hover:bg-white/5 transition-colors shadow-sm ${cardBg} ${textPrimary}`}
+                     className={`flex items-center gap-2 backblur-md border-[1.5px] rounded-full px-4 py-2.5 text-xs lg:text-[13px] font-bold cursor-pointer hover:bg-white/5 transition-colors  ${cardBg} ${textPrimary}`}
                      style={{ borderColor: borderCol }}
                   >
                     <span className="text-[14px]" style={{ color: c }}>✦</span>

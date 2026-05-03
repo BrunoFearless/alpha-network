@@ -63,7 +63,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
   const inputClassName = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-gray-100 text-sm outline-none focus:border-white/30 transition-colors";
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backblur-md p-4">
       <div className="w-full max-w-[900px] h-full max-h-[740px] bg-[#0f0f17] rounded-2xl overflow-hidden flex flex-col border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
 
         {/* Header */}
@@ -128,7 +128,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
                     className="p-5 rounded-2xl border-[1.5px] border-dashed flex flex-col items-center text-center gap-3 transition-colors hover:bg-white/5"
                     style={{ borderColor: form.spotifyEnabled ? '#1db954' : 'rgba(255,255,255,0.1)' }}
                   >
-                    <div className="w-12 h-12 rounded-full bg-[#1db954] flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 rounded-full bg-[#1db954] flex items-center justify-center ">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.492 17.301c-.216.353-.673.465-1.026.249-2.859-1.748-6.458-2.143-10.697-1.176-.403.092-.806-.162-.898-.565-.092-.403.162-.806.565-.898 4.639-1.061 8.611-.611 11.807 1.344.353.216.465.673.249 1.026v.02zm1.465-3.264c-.272.443-.85.586-1.294.314-3.273-2.012-8.259-2.593-12.127-1.419-.496.151-1.027-.129-1.178-.625-.151-.497.129-1.028.625-1.178 4.417-1.34 9.914-.689 13.66 1.614.444.272.587.85.314 1.294zm.126-3.414c-3.924-2.33-10.395-2.546-14.156-1.404-.602.183-1.241-.163-1.424-.764-.183-.601.163-1.241.764-1.424 4.316-1.31 11.455-1.054 15.962 1.621.541.321.718 1.018.397 1.559-.321.541-1.018.718-1.559.397l.016-.01z"/></svg>
                     </div>
                     <div>
@@ -143,7 +143,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
                     </div>
                     <a 
                       href={`http://localhost:3001/api/v1/lazer/spotify/auth?userId=${form.userId}`}
-                      className="mt-2 inline-block rounded-lg px-6 py-2.5 text-[12px] font-bold text-white cursor-pointer transition-transform hover:scale-105 active:scale-95 shadow-md no-underline"
+                      className="mt-2 inline-block rounded-lg px-6 py-2.5 text-[12px] font-bold text-white cursor-pointer transition-transform hover:scale-105 active:scale-95  no-underline"
                       style={{ backgroundColor: '#1db954' }}
                     >
                       {form.spotifyEnabled ? 'Reconectar Spotify' : 'Conectar Agora'}
@@ -398,7 +398,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
                           borderColor: form.bannerColor && !BANNER_PRESETS.find(p=>p.color===form.bannerColor) ? accentColor : "transparent"
                        }}
                     >
-                      <span className="text-[10px] font-bold text-white drop-shadow-md">Custom</span>
+                      <span className="text-[10px] font-bold text-white ">Custom</span>
                       <input type="color" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setKey("bannerColor", e.target.value)} />
                     </label>
                   </div>
@@ -441,7 +441,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
                     }} />
                   </div>
                   {form.bgImageUrl && (
-                    <div className="h-24 rounded-xl overflow-hidden border border-white/10 relative mt-3 shadow-lg">
+                    <div className="h-24 rounded-xl overflow-hidden border border-white/10 relative mt-3 ">
                       {form.bgImageUrl.match(/\.(mp4|webm|mov)(\?|$)/i) ? (
                         <video src={form.bgImageUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
                       ) : (
@@ -461,7 +461,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
             </div>
             <div className="flex-1 overflow-y-auto p-4 relative custom-scrollbar">
               
-              <div className={`rounded-2xl overflow-hidden border-[1.5px] relative pb-4 shadow-xl backdrop-blur-xl ${form.themeMode === 'light' ? 'bg-white/40' : 'bg-black/25'}`} style={{ borderColor: `${accentColor}30` }}>
+              <div className={`rounded-2xl overflow-hidden border-[1.5px] relative pb-4  backblur-xl ${form.themeMode === 'light' ? 'bg-white/40' : 'bg-black/25'}`} style={{ borderColor: `${accentColor}30` }}>
                 <ThemeBg color={accentColor} mode={form.themeMode} />
                 
                 <div 

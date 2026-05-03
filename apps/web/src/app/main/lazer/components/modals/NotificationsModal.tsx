@@ -101,7 +101,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
       <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode}/></div>
 
       {/* Header */}
-      <div className={`flex items-center justify-between px-5 sm:px-8 py-4 shrink-0 border-b backdrop-blur-2xl ${cardBg}`}
+      <div className={`flex items-center justify-between px-5 sm:px-8 py-4 shrink-0 border-b backblur-2xl ${cardBg}`}
         style={{ borderColor: borderCol }}>
         <button onClick={onClose}
           className={`flex items-center gap-2 text-sm font-bold bg-transparent border-none cursor-pointer hover:opacity-60 transition-opacity ${textPrimary}`}>
@@ -121,7 +121,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
             
             {/* My Profile Quick Look (from ExploreModal match) */}
             {authUser?.profile && (
-              <div className={`rounded-[32px] overflow-hidden border-[1.5px] backdrop-blur-xl shadow-lg ${cardBg}`} style={{ borderColor: borderCol }}>
+              <div className={`rounded-[32px] overflow-hidden border-[1.5px] backblur-xl  ${cardBg}`} style={{ borderColor: borderCol }}>
                 <div className="h-28 relative" style={{ background: `linear-gradient(135deg, ${c}80, ${c}20)` }}>
                   {authUser.profile.bannerUrl && (
                     authUser.profile.bannerUrl.includes('.mp4') || authUser.profile.bannerUrl.includes('.webm') ? (
@@ -133,7 +133,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
                   <div className="absolute inset-0 bg-black/20" />
                 </div>
                 <div className="flex flex-col items-center px-5 pb-6">
-                  <div className="-mt-14 mb-3 w-[88px] h-[88px] rounded-[24px] border-[3px] overflow-hidden shadow-2xl relative z-10 bg-black" style={{ borderColor: isLight ? '#fff' : '#000' }}>
+                  <div className="-mt-14 mb-3 w-[88px] h-[88px] rounded-[24px] border-[3px] overflow-hidden  relative z-10 bg-black" style={{ borderColor: isLight ? '#fff' : '#000' }}>
                     <Avatar src={authUser.profile.avatarUrl} name={authUser.profile.username || 'user'} className="w-full h-full object-cover"/>
                   </div>
                   <DisplayName profile={authUser.profile} fallbackName={authUser.profile.displayName || authUser.profile?.username || 'User'} className="font-black text-[18px] text-center" />
@@ -143,11 +143,11 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
             )}
 
             {/* My Engagement Stats Panel */}
-            <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm flex flex-col gap-5 ${cardBg}`} style={{ borderColor: borderCol }}>
+            <div className={`rounded-[32px] border-[1.5px] backblur-xl p-6  flex flex-col gap-5 ${cardBg}`} style={{ borderColor: borderCol }}>
                <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] ${textSecondary}`}>Dados de Engajamento</h3>
                
                <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 flex items-center justify-center rounded-[16px] shadow-sm text-white" style={{ background: '#ec4899' }}>
+                 <div className="w-12 h-12 flex items-center justify-center rounded-[16px]  text-white" style={{ background: '#ec4899' }}>
                    <IconHeart/>
                  </div>
                  <div>
@@ -157,7 +157,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
                </div>
 
                <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 flex items-center justify-center rounded-[16px] shadow-sm border" style={{ background: 'rgba(6, 182, 212, 0.2)', borderColor: '#06b6d4', color: '#06b6d4' }}>
+                 <div className="w-12 h-12 flex items-center justify-center rounded-[16px]  border" style={{ background: 'rgba(6, 182, 212, 0.2)', borderColor: '#06b6d4', color: '#06b6d4' }}>
                    <IconComment/>
                  </div>
                  <div>
@@ -180,7 +180,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
               <div className="flex gap-2 pb-4 overflow-x-auto scrollbar-hide mb-2 sticky top-0 z-30 pt-2" style={{ background: `linear-gradient(to bottom, ${isLight ? 'var(--background)' : '#000'} 60%, transparent)` }}>
                 {TABS.map(tab => (
                   <button key={tab} onClick={() => setActiveTab(tab)}
-                    className="px-6 py-2.5 rounded-full text-[13px] font-black tracking-wide whitespace-nowrap border-none cursor-pointer transition-all shadow-sm"
+                    className="px-6 py-2.5 rounded-full text-[13px] font-black tracking-wide whitespace-nowrap border-none cursor-pointer transition-all "
                     style={{
                       background: activeTab === tab ? c : cardBg,
                       color: activeTab === tab ? '#fff' : (isLight ? '#444' : '#ccc'),
@@ -189,7 +189,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
                     }}>
                     {tab}
                     {tab === 'Pedidos' && pendingReceived.length > 0 && (
-                      <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-black inline-flex items-center justify-center border shadow-sm" style={{ background: '#ef4444', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                      <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-black inline-flex items-center justify-center border " style={{ background: '#ef4444', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
                         {pendingReceived.length}
                       </span>
                     )}
@@ -214,17 +214,17 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
                     const req = notif.request;
                     const fp = req.fromUser?.profile;
                     return (
-                      <div key={notif.id} className="relative flex items-center gap-4 p-5 rounded-[28px] border-[1.5px] shadow-lg overflow-hidden group"
+                      <div key={notif.id} className="relative flex items-center gap-4 p-5 rounded-[28px] border-[1.5px]  overflow-hidden group"
                         style={{ background: cardBg, borderColor: nColor, backdropFilter: 'blur(30px)' }}>
                         
                         <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ background: `linear-gradient(135deg, ${nColor}, transparent)` }} />
 
-                        <div className="relative w-14 h-14 rounded-[20px] flex items-center justify-center shrink-0 shadow-md border-[2px]" style={{ background: `${nColor}20`, borderColor: nColor, color: nColor }}>
+                        <div className="relative w-14 h-14 rounded-[20px] flex items-center justify-center shrink-0  border-[2px]" style={{ background: `${nColor}20`, borderColor: nColor, color: nColor }}>
                           <IconUserPlus/>
                         </div>
 
                         <div className="cursor-pointer shrink-0 z-10" onClick={() => onProfileClick?.(req.fromUserId)}>
-                          <Avatar src={fp?.avatarUrl} name={fp?.displayName || fp?.username || '?'} className="w-[52px] h-[52px] rounded-full border-[1.5px] shadow-sm group-hover:scale-105 transition-transform" style={{ borderColor: borderCol }}/>
+                          <Avatar src={fp?.avatarUrl} name={fp?.displayName || fp?.username || '?'} className="w-[52px] h-[52px] rounded-full border-[1.5px]  group-hover:scale-105 transition-transform" style={{ borderColor: borderCol }}/>
                         </div>
                         
                         <div className="flex-1 min-w-0 z-10">
@@ -239,12 +239,12 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
                         
                         <div className="flex gap-2 shrink-0 z-10">
                           <button onClick={() => acceptFriendRequest(req.id, req.fromUserId)}
-                            className="px-4 py-2.5 rounded-full text-[12px] font-black uppercase tracking-widest border-none cursor-pointer text-white hover:scale-105 transition-transform shadow-md"
+                            className="px-4 py-2.5 rounded-full text-[12px] font-black uppercase tracking-widest border-none cursor-pointer text-white hover:scale-105 transition-transform "
                             style={{ background: nColor }}>
                             Aceitar
                           </button>
                           <button onClick={() => rejectFriendRequest(req.id)}
-                            className="px-4 py-2.5 rounded-full text-[12px] font-black uppercase tracking-widest border-[1.5px] cursor-pointer bg-transparent hover:scale-105 transition-transform shadow-sm"
+                            className="px-4 py-2.5 rounded-full text-[12px] font-black uppercase tracking-widest border-[1.5px] cursor-pointer bg-transparent hover:scale-105 transition-transform "
                             style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>
                             Recusar
                           </button>
@@ -255,20 +255,20 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
 
                   if (notif.type === 'reaction') {
                     return (
-                      <div key={notif.id} className="relative flex items-center gap-4 p-5 rounded-[28px] border-[1.5px] cursor-pointer hover:scale-[1.01] transition-transform shadow-lg group"
+                      <div key={notif.id} className="relative flex items-center gap-4 p-5 rounded-[28px] border-[1.5px] cursor-pointer hover:scale-[1.01] transition-transform  group"
                         style={{ background: cardBg, borderColor: nColor, backdropFilter: 'blur(30px)' }}
                         onClick={() => onPostClick?.(notif.postId)}>
 
                         <div className="absolute inset-0 opacity-[0.08] pointer-events-none transition-opacity group-hover:opacity-[0.15]" style={{ background: `linear-gradient(135deg, ${nColor}, transparent)` }} />
 
-                        <div className="relative w-14 h-14 rounded-[20px] flex items-center justify-center shrink-0 shadow-md border-[2px] transition-transform group-hover:scale-110" style={{ background: `${nColor}20`, borderColor: nColor, color: nColor }}>
+                        <div className="relative w-14 h-14 rounded-[20px] flex items-center justify-center shrink-0  border-[2px] transition-transform group-hover:scale-110" style={{ background: `${nColor}20`, borderColor: nColor, color: nColor }}>
                           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                         </div>
                         
                         <div className="flex-1 min-w-0 z-10">
                           <p className={`text-[15px] font-medium leading-tight ${textPrimary}`}>
                             Choveram{' '}
-                            <span className="font-black text-[16px] drop-shadow-md" style={{ color: nColor }}>{notif.count} Reação{notif.count !== 1 ? 'ões' : ''}</span>{' '}
+                            <span className="font-black text-[16px] " style={{ color: nColor }}>{notif.count} Reação{notif.count !== 1 ? 'ões' : ''}</span>{' '}
                             na tua publicação!
                           </p>
                           <p className={`text-[12px] font-bold mt-1.5 truncate ${textSecondary} opacity-80`}>"{notif.content?.slice(0, 80)}{notif.content?.length > 80 ? '…' : ''}"</p>
@@ -285,20 +285,20 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
 
                   if (notif.type === 'comment') {
                     return (
-                      <div key={notif.id} className="relative flex items-center gap-4 p-5 rounded-[28px] border-[1.5px] cursor-pointer hover:scale-[1.01] transition-transform shadow-lg group"
+                      <div key={notif.id} className="relative flex items-center gap-4 p-5 rounded-[28px] border-[1.5px] cursor-pointer hover:scale-[1.01] transition-transform  group"
                         style={{ background: cardBg, borderColor: nColor, backdropFilter: 'blur(30px)' }}
                         onClick={() => onPostClick?.(notif.postId)}>
 
                         <div className="absolute inset-0 opacity-[0.08] pointer-events-none transition-opacity group-hover:opacity-[0.15]" style={{ background: `linear-gradient(135deg, ${nColor}, transparent)` }} />
 
-                        <div className="relative w-14 h-14 rounded-[20px] flex items-center justify-center shrink-0 shadow-md border-[2px] transition-transform group-hover:scale-110" style={{ background: `${nColor}20`, borderColor: nColor, color: nColor }}>
+                        <div className="relative w-14 h-14 rounded-[20px] flex items-center justify-center shrink-0  border-[2px] transition-transform group-hover:scale-110" style={{ background: `${nColor}20`, borderColor: nColor, color: nColor }}>
                           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
                         </div>
                         
                         <div className="flex-1 min-w-0 z-10">
                           <p className={`text-[15px] font-medium leading-tight ${textPrimary}`}>
                             Tens{' '}
-                            <span className="font-black text-[16px] drop-shadow-md" style={{ color: nColor }}>{notif.count} Comentário{notif.count !== 1 ? 's' : ''}</span>{' '}
+                            <span className="font-black text-[16px] " style={{ color: nColor }}>{notif.count} Comentário{notif.count !== 1 ? 's' : ''}</span>{' '}
                             à espera de leitura.
                           </p>
                           <p className={`text-[12px] font-bold mt-1.5 truncate ${textSecondary} opacity-80`}>"{notif.content?.slice(0, 80)}{notif.content?.length > 80 ? '…' : ''}"</p>
@@ -324,7 +324,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
           <aside className="hidden xl:flex flex-col gap-6 sticky top-6">
             
             {/* Actividade nas Tuas Publicações */}
-            <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
+            <div className={`rounded-[32px] border-[1.5px] backblur-xl p-6  ${cardBg}`} style={{ borderColor: borderCol }}>
               <div className="flex items-center gap-2 mb-5">
                 <IconActivity/>
                 <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] ${textPrimary}`}>As Tuas Publicações Em Alta</h3>

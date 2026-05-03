@@ -102,12 +102,12 @@ function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = tr
         videoRef.current.src = src;
         videoRef.current.load();
       }
-      if (playing) videoRef.current.play().catch(() => {});
+      if (playing) videoRef.current.play().catch(() => { });
     } else {
       videoRef.current.pause();
       // Optimization: Force browser to stop buffering when not visible
       // This is crucial for long feeds with many heavy videos
-      videoRef.current.removeAttribute('src'); 
+      videoRef.current.removeAttribute('src');
       videoRef.current.load();
     }
   }, [isIntersecting, playing, src]);
@@ -126,7 +126,7 @@ function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = tr
         videoRef.current.pause();
         setPlaying(false);
       } else {
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
         setPlaying(true);
       }
     }
@@ -155,47 +155,47 @@ function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = tr
   };
 
   const IconLargePlay = () => (
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" className="drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" className="">
       <path d="M8 5v14l11-7z" />
     </svg>
   );
-  
+
   const IconLargePause = () => (
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" className="drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" className="">
       <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
     </svg>
   );
 
   return (
-    <div ref={containerRef} className={`relative group ${className} overflow-hidden bg-black cursor-pointer`} 
+    <div ref={containerRef} className={`relative group ${className} overflow-hidden bg-black cursor-pointer`}
       onClick={(e) => {
         if (!showControlsEnabled) onClick?.();
         else togglePlay(e);
       }}
-      onMouseMove={handleMouseMove} 
+      onMouseMove={handleMouseMove}
       onMouseLeave={() => setShowControls(false)}>
-      <video 
-        ref={videoRef} 
-        src={isIntersecting ? src : undefined} 
-        loop={loop} 
-        muted={isMuted} 
-        playsInline 
+      <video
+        ref={videoRef}
+        src={isIntersecting ? src : undefined}
+        loop={loop}
+        muted={isMuted}
+        playsInline
         preload="metadata"
-        onTimeUpdate={handleProgress} 
-        className="w-full h-full object-contain" 
+        onTimeUpdate={handleProgress}
+        className="w-full h-full object-contain"
       />
-      
+
       {/* Central Controls Overlay */}
       {showControlsEnabled && (
         <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${showControls ? 'opacity-100 scale-100' : 'opacity-0 scale-110 pointer-events-none'}`}>
           <div className="flex items-center gap-16 px-12 py-8 bg-transparent">
-            <button onClick={(e) => skip(-10, e)} className="bg-transparent border-none text-white cursor-pointer opacity-70 hover:opacity-100 hover:scale-125 transition-all drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+            <button onClick={(e) => skip(-10, e)} className="bg-transparent border-none text-white cursor-pointer opacity-70 hover:opacity-100 hover:scale-125 transition-all">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5V3l-4 4 4 4V9c3.3 0 6 2.7 6 6s-2.7 6-6 6-6-2.7-6-6" /><path d="M12 13v4" /><path d="M9 13v4" /></svg>
             </button>
-            <div className="text-white flex items-center justify-center pointer-events-none transition-all drop-shadow-[0_4px_15px_rgba(0,0,0,0.5)]">
+            <div className="text-white flex items-center justify-center pointer-events-none transition-all">
               {playing ? <IconLargePause /> : <IconLargePlay />}
             </div>
-            <button onClick={(e) => skip(10, e)} className="bg-transparent border-none text-white cursor-pointer opacity-70 hover:opacity-100 hover:scale-125 transition-all drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+            <button onClick={(e) => skip(10, e)} className="bg-transparent border-none text-white cursor-pointer opacity-70 hover:opacity-100 hover:scale-125 transition-all">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5V3l4 4-4 4V9c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6" /><path d="M12 13v4" /><path d="M15 13v4" /></svg>
             </button>
           </div>
@@ -206,7 +206,7 @@ function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = tr
       {showControlsEnabled && (
         <div className={`absolute bottom-0 left-0 right-0 p-6 pt-10 transition-all duration-300 bg-gradient-to-t from-black/80 via-black/40 to-transparent ${showControls ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'}`}>
           <div className="relative w-full h-1 group/progress mb-4" onClick={e => e.stopPropagation()}>
-            <input type="range" min="0" max="100" value={progress} onChange={onSeek} 
+            <input type="range" min="0" max="100" value={progress} onChange={onSeek}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
             <div className="absolute inset-0 bg-white/20 rounded-full overflow-hidden">
               <div className="h-full transition-all duration-100" style={{ width: `${progress}%`, background: accentColor }} />
@@ -220,7 +220,7 @@ function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = tr
               </button>
               <div className="flex items-center gap-3 group/volume">
                 <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="bg-transparent border-none text-white cursor-pointer"><IconVolume level={isMuted ? 0 : volume} /></button>
-                <input type="range" min="0" max="1" step="0.1" value={isMuted ? 0 : volume} onChange={(e) => setVolume(parseFloat(e.target.value))} 
+                <input type="range" min="0" max="1" step="0.1" value={isMuted ? 0 : volume} onChange={(e) => setVolume(parseFloat(e.target.value))}
                   className="w-0 group-hover/volume:w-24 transition-all duration-300 h-1 accent-white" />
               </div>
             </div>
@@ -238,7 +238,7 @@ function CommunityPreviewCard({ community, onClick, c, isLight, borderCol, cardB
   const banner = community.bannerUrl;
 
   return (
-    <div onClick={onClick} className={`group cursor-pointer rounded-[24px] overflow-hidden border-[1.5px] transition-all hover:scale-[1.02] hover:shadow-xl ${cardBg}`}
+    <div onClick={onClick} className={`group cursor-pointer rounded-[24px] overflow-hidden border-[1.5px] transition-all hover:scale-[1.02] ${cardBg}`}
       style={{ borderColor: borderCol }}>
       <div className="h-20 relative bg-cover bg-center" style={{ backgroundImage: banner ? `url(${banner})` : `linear-gradient(135deg, ${c}dd, ${c}44)` }}>
         {banner?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={banner} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />}
@@ -246,7 +246,7 @@ function CommunityPreviewCard({ community, onClick, c, isLight, borderCol, cardB
       </div>
       <div className="px-4 pb-4 pt-10 relative">
         <div className="absolute -top-7 left-4">
-          <div className="w-14 h-14 rounded-[18px] border-[3px] overflow-hidden shadow-lg bg-cover bg-center"
+          <div className="w-14 h-14 rounded-[18px] border-[3px] overflow-hidden bg-cover bg-center"
             style={{ borderColor: isLight ? '#fff' : '#09090b', backgroundColor: icon ? 'transparent' : c, backgroundImage: icon ? `url(${icon})` : 'none' }}>
             {!icon && <span className="flex items-center justify-center h-full text-2xl">🌐</span>}
             {icon?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={icon} autoPlay muted loop playsInline className="w-full h-full object-cover" />}
@@ -386,7 +386,7 @@ function CommentItem({
               <EmojiRenderer content={cm.content} emojiSize={16} />
             </div>
             {(cm._count?.reactions > 0 || cm.isLiked) && (
-              <div className="absolute -right-2.5 -bottom-2 px-1.5 py-0.5 rounded-full border flex items-center gap-1 shadow-md"
+              <div className="absolute -right-2.5 -bottom-2 px-1.5 py-0.5 rounded-full border flex items-center gap-1 "
                 style={{ background: isLight ? '#fff' : '#1e1e2e', borderColor: borderCol }}>
                 <span style={{ color: c, fontSize: 10 }}><IconHeart filled size={10} /></span>
                 <span className={`text-[10px] font-black ${textPrimary}`}>{Math.max(1, cm._count?.reactions || 0)}</span>
@@ -425,7 +425,7 @@ function CommentItem({
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-50 min-w-[150px] rounded-xl border py-1 shadow-2xl"
+                  <div className="absolute right-0 top-full mt-1 z-50 min-w-[150px] rounded-xl border py-1 "
                     style={{ background: menuBg, borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }}>
                     {canDelete && (
                       <button onClick={() => { deleteComment(postId, cm.id); setMenuOpen(false); }}
@@ -523,7 +523,7 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
   const tropesList = rawPost?.tropes || post.tropes || [];
 
   return (
-    <div className={`glass-card rounded-3xl border-[1.5px] backdrop-blur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-500 hover:shadow-[0_8px_48px_rgba(0,0,0,0.2)] overflow-hidden ${cardBg}`} style={{ borderColor: isPinned ? c : borderCol }}>
+    <div className={`glass-card rounded-3xl border-[1.5px] backblur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-500 hover:shadow-[0_8px_48px_rgba(0,0,0,0.2)] overflow-hidden ${cardBg}`} style={{ borderColor: isPinned ? c : borderCol }}>
       <div className="glass-shine-effect" />
       {isPinned && (
         <div className="flex items-center gap-1.5 px-5 pt-3 pb-0 text-[11px] font-bold tracking-wide" style={{ color: c }}>
@@ -659,14 +659,14 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
                       src={resolveLazerMediaUrl(media[0])}
                       accentColor={c}
                       onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(0); }}
-                      className="w-full max-h-[350px] rounded-[20px] border border-white/10 shadow-sm"
+                      className="w-full max-h-[350px] rounded-[20px] border border-white/10 "
                       showControlsEnabled={false}
                       initialMuted={true}
                     />
                   ) : (
                     <img
                       onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(0); }}
-                      src={resolveLazerMediaUrl(media[0])} alt="post" className="w-full max-h-[350px] object-contain block rounded-[20px] border border-white/10 shadow-sm cursor-pointer" />
+                      src={resolveLazerMediaUrl(media[0])} alt="post" className="w-full max-h-[350px] object-contain block rounded-[20px] border border-white/10  cursor-pointer" />
                   )}
                 </div>
               );
@@ -677,7 +677,7 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
                 {media.map((m, idx) => (
                   <div key={idx}
                     onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(idx); }}
-                    className="h-[180px] shrink-0 snap-start rounded-2xl overflow-hidden border border-white/5 bg-black/20 shadow-sm transition-transform hover:scale-[1.02] cursor-pointer">
+                    className="h-[180px] shrink-0 snap-start rounded-2xl overflow-hidden border border-white/5 bg-black/20  transition-transform hover:scale-[1.02] cursor-pointer">
                     {isVid(m) ? (
                       <ModernVideoPlayer src={resolveLazerMediaUrl(m)} accentColor={c} className="h-full w-auto" onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(idx); }} showControlsEnabled={false} initialMuted={true} />
                     ) : (
@@ -779,7 +779,7 @@ function CustomFontSelector({ selected, onSelect, fonts, borderColor, textColor,
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[60]" onClick={() => setIsOpen(false)} />
-          <div className="absolute left-0 bottom-full mb-2 w-[160px] rounded-2xl overflow-hidden border-[1.5px] z-[70] shadow-2xl"
+          <div className="absolute left-0 bottom-full mb-2 w-[160px] rounded-2xl overflow-hidden border-[1.5px] z-[70] "
             style={{ borderColor, background: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(14,14,20,0.98)', backdropFilter: 'blur(32px)' }}>
             {fonts.map(f => (
               <button key={f.id} onClick={() => { onSelect(f.id); setIsOpen(false); }}
@@ -825,7 +825,7 @@ function TrendingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
   const { trendingTropes } = useLazerStore();
 
   return (
-    <div className={`rounded-3xl border-[1.5px] backdrop-blur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
       <div className="flex items-center gap-2 mb-3">
         <IconFlame />
         <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Trending Tropes</h3>
@@ -881,7 +881,7 @@ function WatchingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
   };
 
   return (
-    <div className={`rounded-3xl border-[1.5px] backdrop-blur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
       <div className="flex items-center gap-2 mb-3">
         <IconTv />
         <div className="flex-1">
@@ -968,7 +968,7 @@ function WatchingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
 
 function HotDiscussionsWidget({ c, isLight, textPrimary, textSecondary, borderCol, cardBg, onDiscussionClick }: any) {
   return (
-    <div className={`rounded-3xl border-[1.5px] backdrop-blur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
       <div className="flex items-center gap-2 mb-3">
         <IconMessageSquare />
         <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Hot Discussions</h3>
@@ -1005,7 +1005,7 @@ function ActiveNowWidget({ c, isLight, textPrimary, textSecondary, borderCol, ca
     .slice(0, 5);
 
   return (
-    <div className={`rounded-3xl border-[1.5px] backdrop-blur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
       <div className="flex items-center gap-2 mb-3">
         <IconUsers />
         <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Ativos agora</h3>
@@ -1042,7 +1042,7 @@ function MyCommunities({ c, isLight, textPrimary, textSecondary, borderCol, card
   const { myCommunities } = useLazerStore();
 
   return (
-    <div className={`rounded-3xl border-[1.5px] backdrop-blur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
       <button className="flex items-center gap-2 mb-3 w-full bg-transparent border-none cursor-pointer hover:opacity-70 transition-opacity p-0" onClick={() => onCommunityClick?.()}>
         <IconHash />
         <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary} flex-1 text-left`}>Minhas Communities</h3>
@@ -1193,7 +1193,7 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
             <div className="w-10 h-10 lg:w-14 lg:h-14 flex items-center justify-center">
               {currentMediaIndex > 0 && (
                 <button onClick={(e) => { e.stopPropagation(); prevMedia(); }}
-                  className="w-10 h-10 lg:w-14 lg:h-14 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/80 text-white border border-white/10 cursor-pointer backdrop-blur-3xl transition-all shadow-2xl pointer-events-auto hover:scale-110 active:scale-95">
+                  className="w-10 h-10 lg:w-14 lg:h-14 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/80 text-white border border-white/10 cursor-pointer backblur-3xl transition-all  pointer-events-auto hover:scale-110 active:scale-95">
                   <svg width="20" height="20" className="lg:w-8 lg:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
                 </button>
               )}
@@ -1201,7 +1201,7 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
             <div className="w-10 h-10 lg:w-14 lg:h-14 flex items-center justify-center">
               {currentMediaIndex < allMedia.length - 1 && (
                 <button onClick={(e) => { e.stopPropagation(); nextMedia(); }}
-                  className="w-10 h-10 lg:w-14 lg:h-14 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/80 text-white border border-white/10 cursor-pointer backdrop-blur-3xl transition-all shadow-2xl pointer-events-auto hover:scale-110 active:scale-95">
+                  className="w-10 h-10 lg:w-14 lg:h-14 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/80 text-white border border-white/10 cursor-pointer backblur-3xl transition-all  pointer-events-auto hover:scale-110 active:scale-95">
                   <svg width="20" height="20" className="lg:w-8 lg:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
                 </button>
               )}
@@ -1211,14 +1211,14 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
 
         {/* Close Button */}
         <button onClick={() => setSelectedPostId(null)}
-          className="absolute top-6 left-6 lg:top-10 lg:left-10 z-[70] w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/80 text-white border border-white/10 cursor-pointer backdrop-blur-3xl transition-all shadow-2xl">
+          className="absolute top-6 left-6 lg:top-10 lg:left-10 z-[70] w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/80 text-white border border-white/10 cursor-pointer backblur-3xl transition-all ">
           <IconClose size={20} />
         </button>
       </div>
 
       {/* Cinematic Interaction Panel (Floating Glass Sidebar) */}
-      <div className={`w-full lg:w-[450px] xl:w-[500px] h-auto lg:h-[calc(100vh-40px)] lg:m-5 flex flex-col glass-card rounded-[32px] border border-white/10 shadow-2xl relative z-[100] transition-all duration-700 animate-in slide-in-from-right-20 mb-20 lg:mb-5 ${cardBg}`}>
-        
+      <div className={`w-full lg:w-[450px] xl:w-[500px] h-auto lg:h-[calc(100vh-40px)] lg:m-5 flex flex-col glass-card rounded-[32px] border border-white/10  relative z-[100] transition-all duration-700 animate-in slide-in-from-right-20 mb-20 lg:mb-5 ${cardBg}`}>
+
         {/* Author Spotlight Header */}
         <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
@@ -1238,13 +1238,13 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
 
         <div className="flex-1 lg:overflow-y-auto custom-scrollbar flex flex-col">
           <div className="px-8 py-8 border-b border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent">
-            <div className={`text-xl lg:text-2xl leading-relaxed mb-8 font-medium tracking-tight animate-glow-pulse drop-shadow-2xl ${textPrimary}`}>
+            <div className={`text-xl lg:text-2xl leading-relaxed mb-8 font-medium tracking-tight animate-glow-pulse  ${textPrimary}`}>
               {formatContent(raw.content, raw.titleFont, raw.titleColor, isLight)}
             </div>
 
             <div className="flex items-center gap-8">
               <button onClick={() => toggleReaction(raw.id)} className={`flex items-center gap-3 bg-white/5 hover:bg-white/10 px-5 py-2.5 rounded-2xl border border-white/5 cursor-pointer text-xs font-black transition-all hover:scale-110 ${raw.isLiked ? 'animate-heart-burst' : ''}`} style={{ color: c }}>
-                <IconHeart filled={raw.isLiked} size={22} /> 
+                <IconHeart filled={raw.isLiked} size={22} />
                 <span className="text-sm">{raw._count?.reactions || 0}</span>
               </button>
               <div className="flex items-center gap-3 opacity-30 text-[10px] font-black tracking-[0.2em] uppercase">
@@ -1257,7 +1257,7 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
             {postComments.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center opacity-10 py-20 text-center">
                 <div className="scale-[2.5] mb-8"><IconComment /></div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em]">O silêncio é absoluto.<br/>Sê o primeiro a ecoar.</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em]">O silêncio é absoluto.<br />Sê o primeiro a ecoar.</p>
               </div>
             ) : (
               postComments.filter(cm => !cm.parentId).map((cm: any) => (
@@ -1275,7 +1275,7 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
         </div>
 
         {/* Futuristic Floating Input Bar */}
-        <div className={`absolute bottom-6 left-6 right-6 p-4 glass-card rounded-[24px] border border-white/10 shadow-2xl flex flex-col gap-3 z-[110] animate-in slide-in-from-bottom-5 ${cardBg}`}>
+        <div className={`absolute bottom-6 left-6 right-6 p-4 glass-card rounded-[24px] border border-white/10  flex flex-col gap-3 z-[110] animate-in slide-in-from-bottom-5 ${cardBg}`}>
           {replyingTo && (
             <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-dashed border-white/10">
               <span className={`text-[10px] font-bold tracking-tight ${textSecondary}`}>Ecoando para <span style={{ color: c }}>@{replyingTo.author?.profile?.username}</span></span>
@@ -1298,14 +1298,14 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
               <button
                 onClick={handleModalComment}
                 disabled={!modalCommentText.trim() || submitting}
-                className="w-10 h-10 rounded-xl flex items-center justify-center border-none cursor-pointer disabled:opacity-20 transition-all hover:scale-110 active:scale-95 shadow-xl shadow-black/40"
+                className="w-10 h-10 rounded-xl flex items-center justify-center border-none cursor-pointer disabled:opacity-20 transition-all hover:scale-110 active:scale-95  shadow-black/40"
                 style={{ background: c, color: '#000' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>
             </div>
           </div>
           {showEmojiPicker && (
-            <div className="absolute bottom-full right-5 mb-4 z-[120] scale-[0.9] origin-bottom-right shadow-2xl">
+            <div className="absolute bottom-full right-5 mb-4 z-[120] scale-[0.9] origin-bottom-right ">
               <EmojiPicker onSelect={e => { setModalCommentText(prev => prev + e); setShowEmojiPicker(false); }} onClose={() => setShowEmojiPicker(false)} />
             </div>
           )}
@@ -1426,7 +1426,6 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
     if (!comments[postId]) await fetchComments(postId);
   };
 
-  // Filter posts based on active tab/tag
   const displayPosts = feedPosts.filter(p => {
     if (activeTag) {
       const tagToMatch = activeTag.replace('#', '').toLowerCase();
@@ -1455,36 +1454,20 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
           0%, 100% { text-shadow: 0 0 5px rgba(255,255,255,0.1); }
           50% { text-shadow: 0 0 15px rgba(255,255,255,0.4); }
         }
-        @keyframes glass-shine {
-          from { transform: translateX(-100%) skewX(-15deg); }
-          to { transform: translateX(200%) skewX(-15deg); }
-        }
-        .glass-panel-light {
-          background: rgba(255, 255, 255, 0.22) !important;
-          backdrop-filter: blur(40px) saturate(220%) brightness(1.06) !important;
-          -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(1.06) !important;
-          border: 1px solid rgba(255, 255, 255, 0.55) !important;
-          box-shadow: 0 12px 48px rgba(0, 0, 0, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.80), inset 0 -1px 0 rgba(0, 0, 0, 0.04) !important;
-        }
-        .glass-panel-dark {
-          background: rgba(255, 248, 240, 0.07) !important;
-          backdrop-filter: blur(40px) saturate(180%) brightness(1.10) !important;
-          -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.10) !important;
-          border: 1px solid rgba(255, 240, 220, 0.14) !important;
-          box-shadow: 0 12px 48px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.13), inset 0 -1px 0 rgba(0, 0, 0, 0.10) !important;
-        }
         .animate-heart-burst { animation: heart-burst 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .animate-glow-pulse { animation: glow-pulse 3s infinite ease-in-out; }
         .glass-card { 
+          position: relative;
           border-radius: 24px;
-          transition: all 0.2s ease-in-out;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 
+            inset 1px 1px 0px rgba(255, 255, 255, 0.6),
+            inset -1px 0px 0px rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .glass-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        }
-        .glass-shine-effect {
-          display: none;
+          background: rgba(255, 255, 255, 0.05);
         }
       `}</style>
       <PostDetailModal
@@ -1494,7 +1477,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         borderCol={borderCol} cardBg={cardBg} onProfileClick={onProfileClick}
         initialIndex={initialMediaIndex} />
 
-      <div className={`h-[92vh] w-full font-['Nunito',sans-serif] relative rounded-[32px] shadow-2xl flex flex-col overflow-hidden ${cardBg}`} style={{ border: `1px solid ${borderCol}` }}>
+      <div className={`h-[92vh] w-full font-['Nunito',sans-serif] relative rounded-[32px] flex flex-col overflow-hidden ${cardBg}`} style={{ borderColor: borderCol }}>
         {showTropesModal && (
           <TropesModal
             c={c}
@@ -1507,205 +1490,205 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] xl:grid-cols-[260px_1fr_300px] gap-6 items-start">
 
-          {/* Left sidebar */}
-          <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
-            <div className={`rounded-3xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.06)] border-[1.5px] backdrop-blur-xl ${cardBg}`} style={{ borderColor: borderCol }}>
-              <div className="h-[100px] relative overflow-hidden" style={{ backgroundImage: user?.bannerUrl ? `url('${user.bannerUrl}')` : `linear-gradient(135deg, ${c}80, ${c}20)`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                {user?.bannerUrl?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={user.bannerUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover z-0" />}
-              </div>
-              <div className="px-4 pb-4 relative text-center flex flex-col items-center">
-                <div className={`mt-[-42px] mb-2 w-[84px] h-[84px] rounded-full border-[3px] overflow-hidden shrink-0 shadow-xl ${cardBg}`} style={{ borderColor: borderCol }}>
-                  <Avatar src={user?.avatarUrl} name={user?.displayName || user?.username || 'U'} className="w-full h-full object-cover" />
+            {/* Left sidebar */}
+            <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
+              <div className={`rounded-3xl overflow-hidden glass-card border-[1.5px] backdrop-blur-xl ${cardBg}`} style={{ borderColor: borderCol }}>
+                <div className="h-[100px] relative overflow-hidden" style={{ backgroundImage: user?.bannerUrl ? `url('${user.bannerUrl}')` : `linear-gradient(135deg, ${c}80, ${c}20)`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                  {user?.bannerUrl?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={user.bannerUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover z-0" />}
                 </div>
-                <DisplayName profile={user} fallbackName={user?.displayName || 'Alpha'} className="font-extrabold text-base flex justify-center w-full mb-1" />
-                <div className={`text-xs mb-4 font-medium ${textSecondary}`}>@{user?.username || 'user'}</div>
-                <div className="grid grid-cols-3 w-full text-center pt-3 border-t-[1.5px]" style={{ borderColor: borderCol }}>
-                  {(user?.stats?.slice(0, 3) || [{ label: 'POSTS', value: feedPosts.filter(p => p.authorId === authUser?.id).length.toString() }]).map(s => (
-                    <div key={s.label} className="cursor-pointer">
-                      <div className={`font-extrabold text-[15px] ${textPrimary}`}>{s.value}</div>
-                      <div className={`text-[9px] font-bold tracking-widest mt-1 uppercase ${textSecondary}`}>{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* My Communities */}
-            <MyCommunities c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg} onCommunityClick={onCommunityClick} />
-          </aside>
-
-          {/* Center feed */}
-          <main className="flex flex-col gap-5 w-full">
-            {/* Tabs */}
-            <div className={`flex gap-4 border-b-[1.5px] border-x-[1.5px] border-t-0 sm:border-[1.5px] pt-1 px-4 sm:px-6 rounded-b-3xl sm:rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-x-auto backdrop-blur-xl mb-1 ${cardBg}`} style={{ borderColor: borderCol }}>
-              {TABS.map(tab => (
-                <button key={tab} onClick={() => { setActiveTab(tab); setActiveTag(null); }}
-                  className="py-3 px-1 mt-1 bg-transparent border-none cursor-pointer text-sm whitespace-nowrap transition-all"
-                  style={{ borderBottom: activeTab === tab ? `3px solid ${c}` : '3px solid transparent', marginBottom: '-2px', color: activeTab === tab ? c : (isLight ? '#9e9e9e' : '#666'), fontWeight: activeTab === tab ? 800 : 500 }}>
-                  {tab}
-                </button>
-              ))}
-              {activeTag && (
-                <button onClick={() => setActiveTag(null)} className="py-3 px-1 mt-1 bg-transparent border-none cursor-pointer text-sm whitespace-nowrap flex items-center gap-1.5"
-                  style={{ borderBottom: `3px solid ${c}`, marginBottom: '-2px', color: c, fontWeight: 800 }}>
-                  {activeTag} <IconClose size={12} />
-                </button>
-              )}
-            </div>
-
-            {/* Composer */}
-            <div className={`rounded-3xl p-4 sm:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] border-[1.5px] backdrop-blur-xl ${cardBg}`} style={{ borderColor: borderCol }}>
-              <div className="flex gap-3 items-start">
-                <Avatar src={myProfile?.avatarUrl} name={myProfile?.displayName || myProfile?.username || 'U'} className="w-[42px] h-[42px] rounded-full shrink-0" />
-                <div className="flex-1">
-                  <textarea className={`w-full border-none resize-none text-sm bg-transparent min-h-[48px] outline-none ${textPrimary}`}
-                    placeholder="O que está a acontecer no teu universo?..."
-                    value={postText} onChange={e => setPostText(e.target.value)} rows={2} />
-
-                  {/* Media Previews */}
-                  {mediaPreviews.length > 0 && (
-                    <div className="flex gap-2 overflow-x-auto pb-3 mt-1 custom-scrollbar">
-                      {mediaPreviews.map((p, idx) => (
-                        <div key={idx} className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden border shadow-lg group/preview" style={{ borderColor: borderCol }}>
-                          {p.match(/\.(mp4|webm|mov|ogg)(\?|$)/i) || p.startsWith('data:video') ? (
-                            <video src={p} className="w-full h-full object-cover" muted />
-                          ) : (
-                            <img src={p} alt="preview" className="w-full h-full object-cover" />
-                          )}
-                          <button onClick={() => handleRemoveMedia(idx)}
-                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center border-none cursor-pointer hover:bg-black/80 transition-all backdrop-blur-md">
-                            <IconClose size={10} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {showTag && (
-                    <input type="text" placeholder="#tag..." value={tag} onChange={e => setTag(e.target.value)}
-                      className={`w-full mt-2 text-xs px-3 py-1.5 rounded-lg border bg-transparent outline-none ${textPrimary}`} style={{ borderColor: borderCol }} />
-                  )}
-
-                  <div className="flex items-center justify-between pt-3 mt-2 border-t-[1.5px]" style={{ borderColor: borderCol }}>
-                    <div className="flex gap-2 flex-wrap">
-                      <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden" onChange={handleMediaPick} />
-                      <button onClick={() => fileInputRef.current?.click()}
-                        className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                        style={{ borderColor: mediaPreviews.length > 0 ? c : borderCol, color: c }}><IconImage /></button>
-                      <button onClick={() => setIsSparkle(!isSparkle)}
-                        className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                        style={{ borderColor: borderCol, color: isSparkle ? '#fbbf24' : c }}><IconSparkle /></button>
-                      <button onClick={() => setShowTag(!showTag)}
-                        className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                        style={{ borderColor: borderCol, color: c }}><IconTag /></button>
-                      <div className="relative">
-                        <button onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                          className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                          style={{ borderColor: borderCol, color: c }}><IconEmoji /></button>
-                        {showEmojiPicker && <div className="absolute top-full left-0 mt-2 z-50"><EmojiPicker onSelect={e => { setPostText(p => p + e); setShowEmojiPicker(false); }} onClose={() => setShowEmojiPicker(false)} /></div>}
+                <div className="px-4 pb-4 relative text-center flex flex-col items-center">
+                  <div className={`mt-[-42px] mb-2 w-[84px] h-[84px] rounded-full border-[3px] overflow-hidden shrink-0  ${cardBg}`} style={{ borderColor: borderCol }}>
+                    <Avatar src={user?.avatarUrl} name={user?.displayName || user?.username || 'U'} className="w-full h-full object-cover" />
+                  </div>
+                  <DisplayName profile={user} fallbackName={user?.displayName || 'Alpha'} className="font-extrabold text-base flex justify-center w-full mb-1" />
+                  <div className={`text-xs mb-4 font-medium ${textSecondary}`}>@{user?.username || 'user'}</div>
+                  <div className="grid grid-cols-3 w-full text-center pt-3 border-t-[1.5px]" style={{ borderColor: borderCol }}>
+                    {(user?.stats?.slice(0, 3) || [{ label: 'POSTS', value: feedPosts.filter(p => p.authorId === authUser?.id).length.toString() }]).map(s => (
+                      <div key={s.label} className="cursor-pointer">
+                        <div className={`font-extrabold text-[15px] ${textPrimary}`}>{s.value}</div>
+                        <div className={`text-[9px] font-bold tracking-widest mt-1 uppercase ${textSecondary}`}>{s.label}</div>
                       </div>
-                      <CustomFontSelector selected={selectedFont} onSelect={setSelectedFont} fonts={PREMIUM_FONTS} borderColor={borderCol} textColor={textPrimary} isLightMode={isLight} />
-                      <div className="flex gap-1 items-center px-2 py-1 rounded-lg border-[1.5px]" style={{ borderColor: borderCol }}>
-                        {PREMIUM_COLORS.map(col => (
-                          <button key={col.id} onClick={() => setSelectedColor(selectedColor === col.value ? '' : col.value)}
-                            className="w-3.5 h-3.5 rounded-full border-none cursor-pointer transition-all hover:scale-125"
-                            style={{ background: col.value, outline: selectedColor === col.value ? '2px solid #fff' : 'none', opacity: selectedColor === col.value ? 1 : 0.5 }} />
-                        ))}
-                      </div>
-                    </div>
-                    <button onClick={handleCreate} disabled={(!postText.trim() && mediaFiles.length === 0) || isPosting}
-                      className="text-black border-none rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity disabled:opacity-50 hover:opacity-90 shadow-lg"
-                      style={{ background: `linear-gradient(135deg, ${c}dd, ${c})`, boxShadow: `0 4px 14px ${c}50` }}>
-                      {isPosting ? 'A publicar...' : 'Publicar'}
-                    </button>
+                    ))}
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Active discussion banner */}
-            {activeDiscussion && (
-              <div className={`rounded-2xl px-4 py-3 flex items-center justify-between border-[1.5px] ${cardBg}`} style={{ borderColor: `${c}40` }}>
-                <span className={`text-sm font-bold ${textPrimary}`}>💬 {activeDiscussion}</span>
-                <button onClick={() => setActiveDiscussion(null)} className="bg-transparent border-none cursor-pointer opacity-50 hover:opacity-100" style={{ color: isLight ? '#000' : '#fff' }}><IconClose /></button>
-              </div>
-            )}
+              {/* My Communities */}
+              <MyCommunities c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg} onCommunityClick={onCommunityClick} />
+            </aside>
 
-            {/* Posts */}
-            <div className="flex flex-col gap-4">
-              {displayPosts.length === 0
-                ? <div className={`text-center py-10 opacity-60 text-sm ${textPrimary}`}>
-                  {activeTag ? `Nenhuma publicação com ${activeTag}` : 'Nenhuma publicação para mostrar.'}
-                </div>
-                : displayPosts.map((post: any) => (
-                  <div key={post.id} className="relative">
-                    {post.isSparkle && <div className="absolute -top-1 -right-1 z-10 w-4 h-4 text-yellow-400 rotate-12 drop-shadow-md"><IconSparkle /></div>}
-                    <div className={post.isSparkle ? 'p-[2px] rounded-3xl' : ''} style={{ background: post.isSparkle ? `linear-gradient(135deg, ${c}, transparent, ${c})` : 'transparent' }}>
-                      <PostCard
-                        post={post}
-                        isOwner={post.authorId === authUser?.id}
-                        openModal={() => handleOpenPost(post.id)}
-                        onProfileClick={onProfileClick}
-                        authUser={authUser}
-                        myProfile={myProfile}
-                        isLight={isLight} c={c}
-                        textPrimary={textPrimary} textSecondary={textSecondary}
-                        cardBg={cardBg} borderCol={borderCol}
-                        setSelectedPostId={setSelectedPostId}
-                        setInitialMediaIndex={setInitialMediaIndex} />
-                    </div>
-                  </div>
+            {/* Center feed */}
+            <main className="flex flex-col gap-5 w-full">
+              {/* Tabs */}
+              <div className={`flex gap-4 border-b-[1.5px] border-x-[1.5px] border-t-0 sm:border-[1.5px] pt-1 px-4 sm:px-6 rounded-b-3xl sm:rounded-3xl overflow-x-auto backblur-xl mb-1 ${cardBg}`} style={{ borderColor: borderCol }}>
+                {TABS.map(tab => (
+                  <button key={tab} onClick={() => { setActiveTab(tab); setActiveTag(null); }}
+                    className="py-3 px-1 mt-1 bg-transparent border-none cursor-pointer text-sm whitespace-nowrap transition-all"
+                    style={{ borderBottom: activeTab === tab ? `3px solid ${c}` : '3px solid transparent', marginBottom: '-2px', color: activeTab === tab ? c : (isLight ? '#9e9e9e' : '#666'), fontWeight: activeTab === tab ? 800 : 500 }}>
+                    {tab}
+                  </button>
                 ))}
-            </div>
-          </main>
-
-          {/* Right sidebar */}
-          <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
-            <div className={`rounded-3xl border-[1.5px] backdrop-blur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
-              <div className="flex items-center gap-2 mb-4">
-                <IconFlame />
-                <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Em Alta</h3>
-                <button onClick={() => onCommunityClick?.()} className="ml-auto text-[10px] font-black uppercase tracking-widest bg-transparent border-none cursor-pointer" style={{ color: c }}>Ver todas</button>
-              </div>
-              <div className="flex flex-col gap-4">
-                {exploreCommunities.length === 0 ? (
-                  <div className="py-8 flex flex-col items-center justify-center gap-2 opacity-30">
-                    <div className="text-2xl">🌐</div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest">A carregar...</p>
-                  </div>
-                ) : (
-                  exploreCommunities.slice(0, 3).map(com => (
-                    <CommunityPreviewCard
-                      key={com.id}
-                      community={com}
-                      c={c}
-                      isLight={isLight}
-                      cardBg={isLight ? 'bg-white/60' : 'bg-white/5'}
-                      borderCol={borderCol}
-                      textPrimary={textPrimary}
-                      textSecondary={textSecondary}
-                      onClick={() => onCommunityClick?.(com.id)}
-                    />
-                  ))
+                {activeTag && (
+                  <button onClick={() => setActiveTag(null)} className="py-3 px-1 mt-1 bg-transparent border-none cursor-pointer text-sm whitespace-nowrap flex items-center gap-1.5"
+                    style={{ borderBottom: `3px solid ${c}`, marginBottom: '-2px', color: c, fontWeight: 800 }}>
+                    {activeTag} <IconClose size={12} />
+                  </button>
                 )}
               </div>
-            </div>
 
-            <TrendingWidget
-              c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary}
-              borderCol={borderCol} cardBg={cardBg}
-              onTagClick={(tag) => { setActiveTag(tag); setActiveTab(''); }}
-              onVerTodas={() => setShowTropesModal(true)} />
+              {/* Composer */}
+              <div className={`rounded-3xl p-4 sm:p-5 glass-card border-[1.5px] backdrop-blur-xl ${cardBg}`} style={{ borderColor: borderCol }}>
+                <div className="flex gap-3 items-start">
+                  <Avatar src={myProfile?.avatarUrl} name={myProfile?.displayName || myProfile?.username || 'U'} className="w-[42px] h-[42px] rounded-full shrink-0" />
+                  <div className="flex-1">
+                    <textarea className={`w-full border-none resize-none text-sm bg-transparent min-h-[48px] outline-none ${textPrimary}`}
+                      placeholder="O que está a acontecer no teu universo?..."
+                      value={postText} onChange={e => setPostText(e.target.value)} rows={2} />
 
-            <WatchingWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg} watchingNow={watchingNow} onSubmitCheckIn={submitCheckIn} />
+                    {/* Media Previews */}
+                    {mediaPreviews.length > 0 && (
+                      <div className="flex gap-2 overflow-x-auto pb-3 mt-1 custom-scrollbar">
+                        {mediaPreviews.map((p, idx) => (
+                          <div key={idx} className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden border  group/preview" style={{ borderColor: borderCol }}>
+                            {p.match(/\.(mp4|webm|mov|ogg)(\?|$)/i) || p.startsWith('data:video') ? (
+                              <video src={p} className="w-full h-full object-cover" muted />
+                            ) : (
+                              <img src={p} alt="preview" className="w-full h-full object-cover" />
+                            )}
+                            <button onClick={() => handleRemoveMedia(idx)}
+                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center border-none cursor-pointer hover:bg-black/80 transition-all backblur-md">
+                              <IconClose size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-            <HotDiscussionsWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}
-              onDiscussionClick={(title: string) => setActiveDiscussion(title)} />
+                    {showTag && (
+                      <input type="text" placeholder="#tag..." value={tag} onChange={e => setTag(e.target.value)}
+                        className={`w-full mt-2 text-xs px-3 py-1.5 rounded-lg border bg-transparent outline-none ${textPrimary}`} style={{ borderColor: borderCol }} />
+                    )}
 
-            <ActiveNowWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}
-              feedPosts={feedPosts} authUserId={authUser?.id} onProfileClick={onProfileClick} />
-          </aside>
-        </div>
+                    <div className="flex items-center justify-between pt-3 mt-2 border-t-[1.5px]" style={{ borderColor: borderCol }}>
+                      <div className="flex gap-2 flex-wrap">
+                        <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden" onChange={handleMediaPick} />
+                        <button onClick={() => fileInputRef.current?.click()}
+                          className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                          style={{ borderColor: mediaPreviews.length > 0 ? c : borderCol, color: c }}><IconImage /></button>
+                        <button onClick={() => setIsSparkle(!isSparkle)}
+                          className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                          style={{ borderColor: borderCol, color: isSparkle ? '#fbbf24' : c }}><IconSparkle /></button>
+                        <button onClick={() => setShowTag(!showTag)}
+                          className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                          style={{ borderColor: borderCol, color: c }}><IconTag /></button>
+                        <div className="relative">
+                          <button onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                            style={{ borderColor: borderCol, color: c }}><IconEmoji /></button>
+                          {showEmojiPicker && <div className="absolute top-full left-0 mt-2 z-50"><EmojiPicker onSelect={e => { setPostText(p => p + e); setShowEmojiPicker(false); }} onClose={() => setShowEmojiPicker(false)} /></div>}
+                        </div>
+                        <CustomFontSelector selected={selectedFont} onSelect={setSelectedFont} fonts={PREMIUM_FONTS} borderColor={borderCol} textColor={textPrimary} isLightMode={isLight} />
+                        <div className="flex gap-1 items-center px-2 py-1 rounded-lg border-[1.5px]" style={{ borderColor: borderCol }}>
+                          {PREMIUM_COLORS.map(col => (
+                            <button key={col.id} onClick={() => setSelectedColor(selectedColor === col.value ? '' : col.value)}
+                              className="w-3.5 h-3.5 rounded-full border-none cursor-pointer transition-all hover:scale-125"
+                              style={{ background: col.value, outline: selectedColor === col.value ? '2px solid #fff' : 'none', opacity: selectedColor === col.value ? 1 : 0.5 }} />
+                          ))}
+                        </div>
+                      </div>
+                      <button onClick={handleCreate} disabled={(!postText.trim() && mediaFiles.length === 0) || isPosting}
+                        className="text-black border-none rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity disabled:opacity-50 hover:opacity-90 "
+                        style={{ background: `linear-gradient(135deg, ${c}dd, ${c})` }}>
+                        {isPosting ? 'A publicar...' : 'Publicar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active discussion banner */}
+              {activeDiscussion && (
+                <div className={`rounded-2xl px-4 py-3 flex items-center justify-between border-[1.5px] ${cardBg}`} style={{ borderColor: `${c}40` }}>
+                  <span className={`text-sm font-bold ${textPrimary}`}>💬 {activeDiscussion}</span>
+                  <button onClick={() => setActiveDiscussion(null)} className="bg-transparent border-none cursor-pointer opacity-50 hover:opacity-100" style={{ color: isLight ? '#000' : '#fff' }}><IconClose /></button>
+                </div>
+              )}
+
+              {/* Posts */}
+              <div className="flex flex-col gap-4">
+                {displayPosts.length === 0
+                  ? <div className={`text-center py-10 opacity-60 text-sm ${textPrimary}`}>
+                    {activeTag ? `Nenhuma publicação com ${activeTag}` : 'Nenhuma publicação para mostrar.'}
+                  </div>
+                  : displayPosts.map((post: any) => (
+                    <div key={post.id} className="relative">
+                      {post.isSparkle && <div className="absolute -top-1 -right-1 z-10 w-4 h-4 text-yellow-400 rotate-12"><IconSparkle /></div>}
+                      <div className={post.isSparkle ? 'p-[2px] rounded-3xl' : ''} style={{ background: post.isSparkle ? `linear-gradient(135deg, ${c}, transparent, ${c})` : 'transparent' }}>
+                        <PostCard
+                          post={post}
+                          isOwner={post.authorId === authUser?.id}
+                          openModal={() => handleOpenPost(post.id)}
+                          onProfileClick={onProfileClick}
+                          authUser={authUser}
+                          myProfile={myProfile}
+                          isLight={isLight} c={c}
+                          textPrimary={textPrimary} textSecondary={textSecondary}
+                          cardBg={cardBg} borderCol={borderCol}
+                          setSelectedPostId={setSelectedPostId}
+                          setInitialMediaIndex={setInitialMediaIndex} />
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </main>
+
+            {/* Right sidebar */}
+            <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
+              <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <IconFlame />
+                  <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Em Alta</h3>
+                  <button onClick={() => onCommunityClick?.()} className="ml-auto text-[10px] font-black uppercase tracking-widest bg-transparent border-none cursor-pointer" style={{ color: c }}>Ver todas</button>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {exploreCommunities.length === 0 ? (
+                    <div className="py-8 flex flex-col items-center justify-center gap-2 opacity-30">
+                      <div className="text-2xl">🌐</div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest">A carregar...</p>
+                    </div>
+                  ) : (
+                    exploreCommunities.slice(0, 3).map(com => (
+                      <CommunityPreviewCard
+                        key={com.id}
+                        community={com}
+                        c={c}
+                        isLight={isLight}
+                        cardBg={isLight ? 'bg-white/60' : 'bg-white/5'}
+                        borderCol={borderCol}
+                        textPrimary={textPrimary}
+                        textSecondary={textSecondary}
+                        onClick={() => onCommunityClick?.(com.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <TrendingWidget
+                c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary}
+                borderCol={borderCol} cardBg={cardBg}
+                onTagClick={(tag) => { setActiveTag(tag); setActiveTab(''); }}
+                onVerTodas={() => setShowTropesModal(true)} />
+
+              <WatchingWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg} watchingNow={watchingNow} onSubmitCheckIn={submitCheckIn} />
+
+              <HotDiscussionsWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}
+                onDiscussionClick={(title: string) => setActiveDiscussion(title)} />
+
+              <ActiveNowWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}
+                feedPosts={feedPosts} authUserId={authUser?.id} onProfileClick={onProfileClick} />
+            </aside>
+          </div>
         </div>
       </div>
     </>

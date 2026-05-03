@@ -31,7 +31,7 @@ export function BrowserModal({ initialUrl, onClose, themeColor: c }: BrowserModa
           <div className="absolute inset-0 pointer-events-none opacity-20" style={{ background: `radial-gradient(circle at top, ${c}, transparent 60%)` }}/>
 
           {/* Browser Header Panel */}
-          <div className="flex items-center gap-4 px-6 py-4 border-b border-white/5 bg-white/5 backdrop-blur-2xl shrink-0 z-20 relative shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center gap-4 px-6 py-4 border-b border-white/5 bg-white/5 backblur-2xl shrink-0 z-20 relative shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
              <div className="flex items-center gap-2 mr-2">
                 <div onClick={onClose} className="w-3.5 h-3.5 rounded-full bg-[#ff3b30] hover:bg-[#ff6b60] cursor-pointer transition-colors shadow-[0_0_10px_rgba(255,59,48,0.4)]"/>
                 <div className="w-3.5 h-3.5 rounded-full bg-[#ffcc00] cursor-default opacity-80"/>
@@ -39,10 +39,10 @@ export function BrowserModal({ initialUrl, onClose, themeColor: c }: BrowserModa
              </div>
 
              <div className="flex gap-2">
-                <button onClick={onClose} className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 transition-colors border border-white/10 text-white/70 shadow-sm">
+                <button onClick={onClose} className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 transition-colors border border-white/10 text-white/70 ">
                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
                 </button>
-                <button onClick={handleRefresh} className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 transition-colors border border-white/10 text-white/70 shadow-sm">
+                <button onClick={handleRefresh} className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 transition-colors border border-white/10 text-white/70 ">
                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 2.1-5.7L2 8"/></svg>
                 </button>
              </div>

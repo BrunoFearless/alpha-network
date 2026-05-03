@@ -138,18 +138,18 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
 
         {/* Content Rendered Over Image */}
         <div className="relative p-6 flex flex-col items-center text-center h-full pt-8 flex-1">
-          <Avatar src={avatarUrl || p.avatarUrl} name={nameStr} className="w-[88px] h-[88px] rounded-[28px] shadow-2xl mb-4 border-[2.5px] group-hover:scale-105 transition-transform" style={{ borderColor: c }} />
+          <Avatar src={avatarUrl || p.avatarUrl} name={nameStr} className="w-[88px] h-[88px] rounded-[28px]  mb-4 border-[2.5px] group-hover:scale-105 transition-transform" style={{ borderColor: c }} />
           <DisplayName profile={p} fallbackName={nameStr} className={`font-black text-[18px] truncate max-w-full text-white`} style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }} />
-          <p className={`text-[12px] font-bold mt-1 text-white/70 drop-shadow-md tracking-wide`}>@{p.username || 'user'}</p>
+          <p className={`text-[12px] font-bold mt-1 text-white/70  tracking-wide`}>@{p.username || 'user'}</p>
 
-          {bio && <p className={`text-[12px] font-semibold leading-relaxed line-clamp-2 mt-4 text-white/95 drop-shadow-md px-1`}>{bio}</p>}
+          {bio && <p className={`text-[12px] font-semibold leading-relaxed line-clamp-2 mt-4 text-white/95  px-1`}>{bio}</p>}
 
           <div className="mt-4 flex flex-wrap justify-center gap-1.5 w-full">
             {p.tags && p.tags.split(',').slice(0, 3).map((tag: string, i: number) => (
               <span key={`tag-${i}`} className="text-[9.5px] uppercase font-black tracking-widest px-2.5 py-1 rounded-md bg-black/50 text-white border" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>{tag.trim()}</span>
             ))}
             {p.status && (
-              <span className="text-[9.5px] uppercase font-black tracking-widest px-2.5 py-1 rounded-md bg-white/20 text-white backdrop-blur-md flex items-center gap-1"><i>•</i> {p.status}</span>
+              <span className="text-[9.5px] uppercase font-black tracking-widest px-2.5 py-1 rounded-md bg-white/20 text-white backblur-md flex items-center gap-1"><i>•</i> {p.status}</span>
             )}
           </div>
 
@@ -157,10 +157,10 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
             {isPendingRecv ? (
               <div className="flex gap-2 w-full">
                 <button onClick={e => { e.stopPropagation(); acceptFriendRequest(isPendingRecv.id, isPendingRecv.fromUserId); }}
-                  className="flex-1 py-3 rounded-full font-black text-white hover:scale-105 transition-transform shadow-md border-none text-[11px] uppercase tracking-widest"
+                  className="flex-1 py-3 rounded-full font-black text-white hover:scale-105 transition-transform  border-none text-[11px] uppercase tracking-widest"
                   style={{ background: c }}>Aceitar</button>
                 <button onClick={e => { e.stopPropagation(); rejectFriendRequest(isPendingRecv.id); }}
-                  className="flex-1 py-3 rounded-full font-black text-white hover:bg-red-500 hover:border-red-500 transition-colors border-[1.5px] text-[11px] uppercase tracking-widest bg-black/20 backdrop-blur-md"
+                  className="flex-1 py-3 rounded-full font-black text-white hover:bg-red-500 hover:border-red-500 transition-colors border-[1.5px] text-[11px] uppercase tracking-widest bg-black/20 backblur-md"
                   style={{ borderColor: 'rgba(255,255,255,0.2)' }}>Recusar</button>
               </div>
             ) : (
@@ -171,7 +171,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
                   else if (fStatus === 'sent') cancelFriendRequest(uid);
                   else sendFriendRequest(uid);
                 }}
-                className="w-full py-3 rounded-full text-[11px] font-black uppercase tracking-widest border-[1.5px] transition-all hover:scale-[1.02] active:scale-95 shadow-md backdrop-blur-md"
+                className="w-full py-3 rounded-full text-[11px] font-black uppercase tracking-widest border-[1.5px] transition-all hover:scale-[1.02] active:scale-95  backblur-md"
                 style={{
                   background: fStatus === 'friend' ? 'rgba(255,255,255,0.1)' : fStatus === 'sent' ? 'rgba(249,115,22,0.8)' : c,
                   borderColor: fStatus === 'friend' ? 'rgba(255,255,255,0.2)' : fStatus === 'sent' ? '#f97316' : c,
@@ -191,7 +191,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
       <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode} /></div>
 
       {/* Explorer/Network Header */}
-      <div className={`flex items-center justify-between px-5 sm:px-8 py-4 shrink-0 border-b backdrop-blur-2xl ${cardBg}`}
+      <div className={`flex items-center justify-between px-5 sm:px-8 py-4 shrink-0 border-b backblur-2xl ${cardBg}`}
         style={{ borderColor: borderCol }}>
         <button onClick={onClose}
           className={`flex items-center gap-2 text-sm font-bold bg-transparent border-none cursor-pointer hover:opacity-60 transition-opacity ${textPrimary}`}>
@@ -210,7 +210,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
 
             {/* My Profile Quick Look (from ExploreModal match) */}
             {authUser?.profile && (
-              <div className={`rounded-[32px] overflow-hidden border-[1.5px] backdrop-blur-xl shadow-lg ${cardBg}`} style={{ borderColor: borderCol }}>
+              <div className={`rounded-[32px] overflow-hidden border-[1.5px] backblur-xl  ${cardBg}`} style={{ borderColor: borderCol }}>
                 <div className="h-28 relative" style={{ background: `linear-gradient(135deg, ${c}80, ${c}20)` }}>
                   {authUser.profile.bannerUrl && (
                     authUser.profile.bannerUrl.includes('.mp4') || authUser.profile.bannerUrl.includes('.webm') ? (
@@ -222,7 +222,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
                   <div className="absolute inset-0 bg-black/20" />
                 </div>
                 <div className="flex flex-col items-center px-5 pb-6">
-                  <div className="-mt-14 mb-3 w-[88px] h-[88px] rounded-[24px] border-[3px] overflow-hidden shadow-2xl relative z-10 bg-black" style={{ borderColor: isLight ? '#fff' : '#000' }}>
+                  <div className="-mt-14 mb-3 w-[88px] h-[88px] rounded-[24px] border-[3px] overflow-hidden  relative z-10 bg-black" style={{ borderColor: isLight ? '#fff' : '#000' }}>
                     <Avatar src={authUser.profile.avatarUrl} name={authUser.profile.username || 'user'} className="w-full h-full object-cover" />
                   </div>
                   <DisplayName profile={authUser.profile} fallbackName={authUser.profile.displayName || authUser.profile?.username || 'User'} className="font-black text-[18px] text-center" />
@@ -232,12 +232,12 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
             )}
 
             {/* My Stats Panel */}
-            <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
+            <div className={`rounded-[32px] border-[1.5px] backblur-xl p-6  ${cardBg}`} style={{ borderColor: borderCol }}>
               <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] mb-5 ${textSecondary}`}>Estado da Rede</h3>
 
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 flex items-center justify-center rounded-[16px] shadow-sm text-white" style={{ background: c }}>
+                  <div className="w-12 h-12 flex items-center justify-center rounded-[16px]  text-white" style={{ background: c }}>
                     <IconUsers />
                   </div>
                   <div>
@@ -247,7 +247,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 flex items-center justify-center rounded-[16px] shadow-sm border border-black/10 dark:border-white/10" style={{ background: `${c}20`, color: c }}>
+                  <div className="w-12 h-12 flex items-center justify-center rounded-[16px]  border border-black/10 dark:border-white/10" style={{ background: `${c}20`, color: c }}>
                     <IconActivity />
                   </div>
                   <div>
@@ -269,7 +269,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
               </div>
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Procura na tua rede ou na Lazer Global..."
-                className={`w-full py-5 pl-14 pr-6 rounded-[24px] border-[2px] font-extrabold text-[15px] outline-none transition-all shadow-lg focus:shadow-[0_8px_30px_rgba(0,0,0,0.2)] focus:-translate-y-1 ${textPrimary} ${cardBg}`}
+                className={`w-full py-5 pl-14 pr-6 rounded-[24px] border-[2px] font-extrabold text-[15px] outline-none transition-all  focus:shadow-[0_8px_30px_rgba(0,0,0,0.2)] focus:-translate-y-1 ${textPrimary} ${cardBg}`}
                 style={{ borderColor: search.trim() ? c : borderCol, backdropFilter: 'blur(30px)', backgroundColor: isLight ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)' }} />
             </div>
 
@@ -278,7 +278,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
               <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide -mx-2 px-2 sticky top-6 z-30">
                 {TABS.map(tab => (
                   <button key={tab} onClick={() => setActiveTab(tab)}
-                    className="relative px-7 py-3 rounded-full text-[14px] font-black tracking-wide border-none cursor-pointer transition-all shrink-0 shadow-sm"
+                    className="relative px-7 py-3 rounded-full text-[14px] font-black tracking-wide border-none cursor-pointer transition-all shrink-0 "
                     style={{
                       background: activeTab === tab ? c : cardBg,
                       boxShadow: activeTab === tab ? `0 8px 24px ${c}50` : '0 2px 10px rgba(0,0,0,0.05)',
@@ -287,7 +287,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
                     }}>
                     {tab}
                     {tab === 'Pedidos' && pendingReceived.length > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-black inline-flex items-center justify-center border-2 shadow-lg animate-pulse"
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-black inline-flex items-center justify-center border-2  animate-pulse"
                         style={{ background: '#ef4444', color: '#fff', borderColor: isLight ? '#fff' : '#000' }}>
                         {pendingReceived.length}
                       </span>
@@ -328,11 +328,11 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
 
             {/* Action Required: Pendentes */}
             {pendingReceived.length > 0 && (
-              <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-xl relative overflow-hidden`} style={{ background: cardBg, borderColor: `${c}60` }}>
+              <div className={`rounded-[32px] border-[1.5px] backblur-xl p-6  relative overflow-hidden`} style={{ background: cardBg, borderColor: `${c}60` }}>
                 <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: c }} />
                 <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] mb-5 text-white flex items-center justify-between`} style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
                   <span>Ação Necessária</span>
-                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-full shadow-lg">{pendingReceived.length}</span>
+                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-full ">{pendingReceived.length}</span>
                 </h3>
 
                 <div className="flex flex-col gap-3 relative z-10">
@@ -340,13 +340,13 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
                     const p = req.fromUser?.profile;
                     return (
                       <div key={req.id} className="flex items-center gap-3 w-full bg-black/20 dark:bg-white/10 p-3 rounded-[20px] transition-transform hover:scale-[1.02]">
-                        <Avatar src={p?.avatarUrl} name={p?.displayName || p?.username || '?'} className="w-10 h-10 rounded-[14px] shadow-md border-[1.5px]" style={{ borderColor: c }} />
+                        <Avatar src={p?.avatarUrl} name={p?.displayName || p?.username || '?'} className="w-10 h-10 rounded-[14px]  border-[1.5px]" style={{ borderColor: c }} />
                         <div className="flex-1 min-w-0 pr-1">
                           <DisplayName profile={p} fallbackName={p?.displayName || p?.username || 'User'} className={`text-[13px] font-extrabold truncate text-white`} />
                           <p className={`text-[10px] font-bold mt-0.5 text-white/60`}>quer conectar-se.</p>
                         </div>
                         <div className="flex flex-col gap-1 shrink-0">
-                          <button onClick={() => acceptFriendRequest(req.id, req.fromUserId)} className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold hover:scale-110 transition-transform shadow-md border-none" style={{ background: c }}><IconCheck /></button>
+                          <button onClick={() => acceptFriendRequest(req.id, req.fromUserId)} className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold hover:scale-110 transition-transform  border-none" style={{ background: c }}><IconCheck /></button>
                         </div>
                       </div>
                     );
@@ -356,7 +356,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
             )}
 
             {/* Sugestões Rápidas (Right Sidebar Pin) */}
-            <div className={`rounded-[32px] border-[1.5px] backdrop-blur-xl p-6 shadow-sm ${cardBg}`} style={{ borderColor: borderCol }}>
+            <div className={`rounded-[32px] border-[1.5px] backblur-xl p-6  ${cardBg}`} style={{ borderColor: borderCol }}>
               <div className="flex items-center gap-2 mb-5">
                 <IconActivity />
                 <h3 className={`text-[11px] font-black uppercase tracking-[1.5px] ${textPrimary}`}>Rede Ativa</h3>
@@ -369,13 +369,13 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
                     const fStatus = hasSentRequest(u.id) ? 'sent' : 'none';
                     return (
                       <div key={u.id} className="flex items-center gap-3 w-full cursor-pointer group" onClick={() => onProfileClick?.(u.id)}>
-                        <Avatar src={u.avatar} name={u.name} className="w-11 h-11 rounded-[16px] shadow-sm group-hover:scale-105 transition-transform" />
+                        <Avatar src={u.avatar} name={u.name} className="w-11 h-11 rounded-[16px]  group-hover:scale-105 transition-transform" />
                         <div className="flex-1 min-w-0">
                           <DisplayName profile={u.profile} fallbackName={u.name} className={`text-[14px] font-extrabold truncate ${textPrimary}`} />
                           <p className={`text-[11px] font-bold mt-0.5 opacity-60 ${textSecondary}`}>@{u.profile?.username || 'user'}</p>
                         </div>
                         <button onClick={e => { e.stopPropagation(); fStatus === 'sent' ? cancelFriendRequest(u.id) : sendFriendRequest(u.id); }}
-                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[10px] font-bold border-2 transition-all hover:scale-110 shadow-sm"
+                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[10px] font-bold border-2 transition-all hover:scale-110 "
                           style={{
                             background: fStatus === 'sent' ? 'rgba(249,115,22,0.12)' : c,
                             borderColor: fStatus === 'sent' ? '#f97316' : c,

@@ -20,9 +20,9 @@ export function MessagesModal({ onClose, themeColor, themeMode }: MessagesModalP
       {/* Header Bar */}
       <div className={`relative z-10 flex items-center justify-between px-6 py-4 border-b ${
         isLight ? 'glass-panel-light' : 'glass-panel-dark'
-      } backdrop-blur-xl shrink-0`}>
+      } backblur-xl shrink-0`}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg" style={{ background: themeColor }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl " style={{ background: themeColor }}>
             💬
           </div>
           <div>

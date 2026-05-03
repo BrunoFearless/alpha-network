@@ -126,7 +126,7 @@ export function TropesModal({ onClose, c, isLight, onTropeClick }: TropesModalPr
                         style={{ background: `${rankColor}15`, color: rankColor, boxShadow: `0 0 20px ${rankColor}20` }}>
                         #{idx + 1}
                       </div>
-                      <span className="text-3xl drop-shadow-md">{trope.iconEmoji}</span>
+                      <span className="text-3xl ">{trope.iconEmoji}</span>
                     </div>
                     <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border"
                       style={{ background: 'rgba(0,0,0,0.2)', borderColor: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)', color: textPrimary }}>

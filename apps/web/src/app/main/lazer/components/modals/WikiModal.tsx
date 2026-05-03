@@ -63,9 +63,9 @@ export function WikiModal({ initialTitle, onClose, themeColor: c, themeMode }: W
 
   return (
     <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/90 backblur-xl" onClick={onClose} />
       
-      <div className={`relative w-full max-w-5xl h-[85vh] flex flex-col rounded-[40px] shadow-2xl border-[1.5px] ${bg} animate-in zoom-in-95 duration-300 overflow-hidden`}
+      <div className={`relative w-full max-w-5xl h-[85vh] flex flex-col rounded-[40px]  border-[1.5px] ${bg} animate-in zoom-in-95 duration-300 overflow-hidden`}
         style={{ borderColor: `${c}40` }}>
         
         {/* Header */}
@@ -99,7 +99,7 @@ export function WikiModal({ initialTitle, onClose, themeColor: c, themeMode }: W
                 
                 <div className="flex flex-col md:flex-row gap-8 items-end mb-12 relative z-10">
                    {data?.imageUrl && (
-                      <div className="w-full md:w-56 aspect-[10/14] rounded-[32px] overflow-hidden shrink-0 shadow-2xl border-4 border-white/10 bg-black/5">
+                      <div className="w-full md:w-56 aspect-[10/14] rounded-[32px] overflow-hidden shrink-0  border-4 border-white/10 bg-black/5">
                          <img src={data.imageUrl} alt="" className="w-full h-full object-cover" />
                       </div>
                    )}

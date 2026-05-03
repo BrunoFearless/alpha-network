@@ -121,7 +121,7 @@ function CommunityCard({ com: initialCom, onClick, borderCol, isLight, textPrima
           </div>
         )}
 
-        <div className="absolute -bottom-7 left-5 w-14 h-14 rounded-[18px] border-[3px] shadow-2xl flex items-center justify-center text-2xl z-20 overflow-hidden group-hover:scale-105 transition-transform"
+        <div className="absolute -bottom-7 left-5 w-14 h-14 rounded-[18px] border-[3px]  flex items-center justify-center text-2xl z-20 overflow-hidden group-hover:scale-105 transition-transform"
           style={{ borderColor: isLight ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.7)', background: com.iconUrl ? 'transparent' : com.accentColor, backdropFilter: 'blur(4px)' }}>
           {isVideo(com.iconUrl) ? <video src={com.iconUrl!} autoPlay loop muted playsInline className="w-full h-full object-cover"/>
             : com.iconUrl ? <img src={com.iconUrl} alt="" className="w-full h-full object-cover"/>
@@ -267,7 +267,7 @@ function EditCommunityModal({ com, onSave, onClose, isLight, textPrimary, textSe
 
   return (
     <OverlayModal onClose={onClose}>
-      <div className="w-full max-w-[500px] rounded-[32px] overflow-hidden shadow-2xl max-h-[92vh] flex flex-col"
+      <div className="w-full max-w-[500px] rounded-[32px] overflow-hidden  max-h-[92vh] flex flex-col"
         style={{ background: isLight ? 'rgba(255,255,255,0.9)' : 'rgba(12,12,20,0.95)', border: `1.5px solid ${accent}30`, backdropFilter: 'blur(40px)' }}>
 
         <div className="relative h-40 shrink-0 cursor-pointer group" style={{ background: `linear-gradient(135deg, ${accent}80, ${accent}20)` }} onClick={() => bannerRef.current?.click()}>
@@ -275,7 +275,7 @@ function EditCommunityModal({ com, onSave, onClose, isLight, textPrimary, textSe
             : bannerPreview ? <img src={bannerPreview} alt="" className="absolute inset-0 w-full h-full object-cover"/>
             : null}
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="bg-black/50 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-md"><Ic.Camera/> Alterar capa</span>
+            <span className="bg-black/50 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 backblur-md"><Ic.Camera/> Alterar capa</span>
           </div>
           <input ref={bannerRef} type="file" accept="image/*,video/mp4,video/webm" className="hidden" onChange={async e => { 
             const f = e.target.files?.[0]; 
@@ -283,7 +283,7 @@ function EditCommunityModal({ com, onSave, onClose, isLight, textPrimary, textSe
           }}/>
 
           <div className="absolute -bottom-8 left-6 cursor-pointer group/icon" onClick={e => { e.stopPropagation(); iconRef.current?.click(); }}>
-            <div className="w-16 h-16 rounded-[20px] border-[3px] flex items-center justify-center text-2xl overflow-hidden shadow-2xl"
+            <div className="w-16 h-16 rounded-[20px] border-[3px] flex items-center justify-center text-2xl overflow-hidden "
               style={{ borderColor: isLight ? '#fff' : '#000', background: iconPreview ? 'transparent' : accent }}>
               {isVideo(iconPreview) ? <video src={iconPreview!} autoPlay loop muted playsInline className="w-full h-full object-cover rounded-[17px]"/>
                 : iconPreview ? <img src={iconPreview} alt="" className="w-full h-full object-cover"/>
@@ -332,7 +332,7 @@ function EditCommunityModal({ com, onSave, onClose, isLight, textPrimary, textSe
         <div className="flex gap-3 p-6 pt-0 shrink-0">
           <button onClick={onClose} className={`flex-1 py-3 rounded-full font-black text-[13px] uppercase tracking-widest border-none cursor-pointer ${textPrimary}`} style={{ background: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)' }}>Cancelar</button>
           <button onClick={handleSave} disabled={saving}
-            className="flex-1 py-3 rounded-full font-black text-[13px] uppercase tracking-widest text-white border-none cursor-pointer shadow-lg hover:scale-[1.02] transition-transform disabled:opacity-50"
+            className="flex-1 py-3 rounded-full font-black text-[13px] uppercase tracking-widest text-white border-none cursor-pointer  hover:scale-[1.02] transition-transform disabled:opacity-50"
             style={{ background: accent }}>
             {saving ? 'A guardar...' : 'Guardar ✓'}
           </button>
@@ -399,7 +399,7 @@ function CreateCommunityModal({ onCreated, onClose, isLight, textPrimary, textSe
 
   return (
     <OverlayModal onClose={onClose}>
-      <div className="w-full max-w-[480px] rounded-[32px] overflow-hidden shadow-2xl max-h-[92vh] flex flex-col"
+      <div className="w-full max-w-[480px] rounded-[32px] overflow-hidden  max-h-[92vh] flex flex-col"
         style={{ background: isLight ? 'rgba(255,255,255,0.92)' : 'rgba(12,12,20,0.95)', border: `1.5px solid ${accent}30`, backdropFilter: 'blur(40px)' }}>
 
         {step === 'type' && (
@@ -423,7 +423,7 @@ function CreateCommunityModal({ onCreated, onClose, isLight, textPrimary, textSe
                 </div>
               </div>
             ))}
-            <button onClick={() => setStep('details')} className="w-full mt-4 py-3.5 rounded-full text-white font-black text-[13px] uppercase tracking-widest border-none cursor-pointer hover:scale-[1.02] transition-transform shadow-lg" style={{ background: accent }}>
+            <button onClick={() => setStep('details')} className="w-full mt-4 py-3.5 rounded-full text-white font-black text-[13px] uppercase tracking-widest border-none cursor-pointer hover:scale-[1.02] transition-transform " style={{ background: accent }}>
               Próximo →
             </button>
           </div>
@@ -436,7 +436,7 @@ function CreateCommunityModal({ onCreated, onClose, isLight, textPrimary, textSe
                 ? <video src={bannerPreview} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover"/>
                 : <img src={bannerPreview} alt="" className="absolute inset-0 w-full h-full object-cover"/>)}
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="bg-black/50 text-white text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5"><Ic.Camera/> Capa</span>
+                <span className="bg-black/50 text-white text-xs font-bold px-3 py-1.5 rounded-full backblur-md flex items-center gap-1.5"><Ic.Camera/> Capa</span>
               </div>
               <input ref={bannerRef} type="file" accept="image/*,video/mp4,video/webm" className="hidden" onChange={async e => { 
                 const f = e.target.files?.[0]; 
@@ -447,7 +447,7 @@ function CreateCommunityModal({ onCreated, onClose, isLight, textPrimary, textSe
               }}/>
 
               <div className="absolute -bottom-7 left-5 cursor-pointer" onClick={e => { e.stopPropagation(); iconRef.current?.click(); }}>
-                <div className="w-14 h-14 rounded-[18px] border-[3px] flex items-center justify-center text-2xl overflow-hidden shadow-xl" style={{ borderColor: isLight ? '#fff' : '#000', background: iconPreview ? 'transparent' : accent }}>
+                <div className="w-14 h-14 rounded-[18px] border-[3px] flex items-center justify-center text-2xl overflow-hidden " style={{ borderColor: isLight ? '#fff' : '#000', background: iconPreview ? 'transparent' : accent }}>
                   {isVideo(iconPreview) ? <video src={iconPreview!} autoPlay loop muted playsInline className="w-full h-full object-cover rounded-[15px]"/>
                     : iconPreview ? <img src={iconPreview} alt="" className="w-full h-full object-cover"/> 
                     : '📷'}
@@ -484,7 +484,7 @@ function CreateCommunityModal({ onCreated, onClose, isLight, textPrimary, textSe
 
             <div className="flex gap-3 p-6 pt-2 shrink-0">
               <button onClick={() => setStep('type')} className={`flex-1 py-3 rounded-full font-black text-[13px] uppercase tracking-widest border-none cursor-pointer ${textPrimary}`} style={{ background: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)' }}>← Voltar</button>
-              <button onClick={handleCreate} disabled={!name.trim() || isLoading} className="flex-1 py-3 rounded-full text-white font-black text-[13px] uppercase tracking-widest border-none cursor-pointer disabled:opacity-30 hover:scale-[1.02] transition-transform shadow-lg" style={{ background: accent }}>
+              <button onClick={handleCreate} disabled={!name.trim() || isLoading} className="flex-1 py-3 rounded-full text-white font-black text-[13px] uppercase tracking-widest border-none cursor-pointer disabled:opacity-30 hover:scale-[1.02] transition-transform " style={{ background: accent }}>
                 {isLoading ? 'A criar...' : 'Criar 🚀'}
               </button>
             </div>
@@ -493,7 +493,7 @@ function CreateCommunityModal({ onCreated, onClose, isLight, textPrimary, textSe
 
         {step === 'success' && created && (
           <div className="p-8 text-center">
-            <div className="w-24 h-24 rounded-[28px] flex items-center justify-center text-4xl mx-auto mb-6 shadow-2xl overflow-hidden" style={{ background: created.accentColor }}>
+            <div className="w-24 h-24 rounded-[28px] flex items-center justify-center text-4xl mx-auto mb-6  overflow-hidden" style={{ background: created.accentColor }}>
               {isVideo(created.iconUrl) ? <video src={created.iconUrl!} autoPlay loop muted playsInline className="w-full h-full object-cover"/>
                 : created.iconUrl ? <img src={created.iconUrl} alt="" className="w-full h-full object-cover"/> 
                 : '🌐'}
@@ -505,7 +505,7 @@ function CreateCommunityModal({ onCreated, onClose, isLight, textPrimary, textSe
               <span className="flex-1 text-left font-black text-[14px]" style={{ color: created.accentColor }}>{created.inviteCode}</span>
               <button onClick={() => navigator.clipboard.writeText(created.inviteCode)} className="text-[11px] font-black uppercase px-3 py-1.5 rounded-lg text-white border-none cursor-pointer hover:scale-105 transition-transform" style={{ background: created.accentColor }}>📋 Copiar</button>
             </div>
-            <button onClick={onClose} className="w-full py-3.5 rounded-full text-white font-black text-[13px] uppercase tracking-widest border-none cursor-pointer hover:scale-[1.02] transition-transform shadow-lg" style={{ background: created.accentColor }}>
+            <button onClick={onClose} className="w-full py-3.5 rounded-full text-white font-black text-[13px] uppercase tracking-widest border-none cursor-pointer hover:scale-[1.02] transition-transform " style={{ background: created.accentColor }}>
               🚀 Abrir Community
             </button>
           </div>
@@ -840,7 +840,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
       {/* Join Modal */}
       {showJoin && (
         <OverlayModal onClose={() => { setShowJoin(false); setJoinCode(''); setJoinErr(''); }}>
-          <div className="w-full max-w-[380px] rounded-[32px] p-8 shadow-2xl text-center"
+          <div className="w-full max-w-[380px] rounded-[32px] p-8  text-center"
             style={{ background: isLight ? 'rgba(255,255,255,0.92)' : 'rgba(12,12,20,0.95)', border: `1.5px solid ${c}30`, backdropFilter: 'blur(40px)' }}>
             <div className="text-5xl mb-4">#️⃣</div>
             <h2 className={`font-black text-[20px] mb-2 ${tp}`}>Entrar por Código</h2>
@@ -895,7 +895,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
           )}
 
           <div className="absolute bottom-0 left-0 right-0 px-6 pb-4 flex items-end gap-4 z-10">
-            <div className="w-[72px] h-[72px] rounded-[22px] border-[3.5px] flex items-center justify-center text-3xl overflow-hidden shadow-2xl shrink-0 relative"
+            <div className="w-[72px] h-[72px] rounded-[22px] border-[3.5px] flex items-center justify-center text-3xl overflow-hidden  shrink-0 relative"
               style={{ borderColor: 'rgba(255,255,255,0.28)', background: com.iconUrl ? 'transparent' : `${a}dd`, marginBottom: '-26px' }}>
               {isVideo(com.iconUrl)
                 ? <video src={com.iconUrl!} autoPlay loop muted playsInline className="w-full h-full object-cover"/>
@@ -904,7 +904,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
             </div>
 
             <div className="flex-1 min-w-0 pb-1.5">
-              <h1 className="text-white font-black text-[26px] leading-tight drop-shadow-lg truncate">{com.name}</h1>
+              <h1 className="text-white font-black text-[26px] leading-tight  truncate">{com.name}</h1>
               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ background: 'rgba(255,255,255,0.16)', backdropFilter: 'blur(8px)' }}>
                   <Ic.Users/>
@@ -920,7 +920,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
             </div>
 
             <button onClick={() => handleToggleMember(com)}
-              className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-black border-none cursor-pointer hover:scale-[1.04] active:scale-95 transition-all shadow-xl mb-1"
+              className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-black border-none cursor-pointer hover:scale-[1.04] active:scale-95 transition-all  mb-1"
               style={{ background: com.role !== 'none' ? 'rgba(255,255,255,0.92)' : a, color: com.role !== 'none' ? '#333' : '#fff', boxShadow: com.role === 'none' ? `0 8px 24px ${a}55` : '0 4px 14px rgba(0,0,0,0.2)' }}>
               {com.role === 'admin' ? <><Ic.Crown/> Admin</> : com.role === 'member' ? <><Ic.Check/> Joined</> : <><Ic.Plus/> Join</>}
             </button>
@@ -993,7 +993,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
                           <Ic.Img/>
                         </button>
                         <button onClick={handlePost} disabled={!postText.trim() || isPosting}
-                          className="px-5 py-2 rounded-full text-[12px] font-black uppercase tracking-widest text-white border-none cursor-pointer disabled:opacity-30 hover:scale-[1.05] active:scale-95 transition-all shadow-lg"
+                          className="px-5 py-2 rounded-full text-[12px] font-black uppercase tracking-widest text-white border-none cursor-pointer disabled:opacity-30 hover:scale-[1.05] active:scale-95 transition-all "
                           style={{ background: a, boxShadow: `0 8px 20px ${a}40` }}>{isPosting ? '...' : 'Publicar'}</button>
                       </div>
                     </div>
@@ -1099,7 +1099,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
         <span className="text-sm font-extrabold tracking-widest uppercase" style={{ color: c }}>Communities</span>
         <div className="flex gap-2">
           <button onClick={() => setShowJoin(true)} className="px-4 py-2 rounded-full text-[12px] font-black uppercase tracking-widest border-[1.5px] cursor-pointer hover:scale-105 transition-transform bg-transparent" style={{ borderColor: c, color: c }}># Entrar</button>
-          <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded-full text-[12px] font-black uppercase tracking-widest text-white border-none cursor-pointer hover:scale-105 transition-transform shadow-lg" style={{ background: c }}>+ Criar</button>
+          <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded-full text-[12px] font-black uppercase tracking-widest text-white border-none cursor-pointer hover:scale-105 transition-transform " style={{ background: c }}>+ Criar</button>
         </div>
       </div>
 
@@ -1116,7 +1116,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
                   <div className="absolute inset-0 bg-black/20"/>
                 </div>
                 <div className="flex flex-col items-center pb-6 px-5">
-                  <div className="w-[80px] h-[80px] rounded-full border-[4px] overflow-hidden shadow-2xl -mt-10 relative z-10 mb-2" style={{ borderColor: isLight ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)' }}>
+                  <div className="w-[80px] h-[80px] rounded-full border-[4px] overflow-hidden  -mt-10 relative z-10 mb-2" style={{ borderColor: isLight ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)' }}>
                     <Avatar src={myProfile.avatarUrl} name={myProfile.username || 'U'} className="w-full h-full object-cover"/>
                   </div>
                   <DisplayName profile={myProfile} fallbackName={myProfile.displayName || myProfile.username || 'User'} className={`font-black text-[16px] text-center ${tp}`}/>
@@ -1219,7 +1219,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
               <h3 className={`text-[10px] font-black uppercase tracking-[2px] mb-5 ${ts} opacity-80`}>Acesso Rápido</h3>
               <div className="flex flex-col gap-3">
                 <button onClick={() => setShowCreate(true)} 
-                  className="w-full h-[52px] rounded-[20px] text-white font-black text-[13px] uppercase tracking-widest border-none cursor-pointer hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 group relative overflow-hidden" 
+                  className="w-full h-[52px] rounded-[20px] text-white font-black text-[13px] uppercase tracking-widest border-none cursor-pointer hover:scale-[1.02] active:scale-95 transition-all  flex items-center justify-center gap-2 group relative overflow-hidden" 
                   style={{ background: `linear-gradient(135deg, ${c}, ${c}dd)` }}>
                   <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"/>
                   <span className="text-xl relative z-10 transition-transform group-hover:rotate-12">🌐</span>
@@ -1259,7 +1259,7 @@ function CustomFontSelector({ selected, onSelect, fonts, borderColor, textColor,
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[60]" onClick={() => setIsOpen(false)}/>
-          <div className="absolute left-0 bottom-full mb-2 w-[160px] rounded-2xl overflow-hidden border-[1.5px] z-[70] shadow-2xl"
+          <div className="absolute left-0 bottom-full mb-2 w-[160px] rounded-2xl overflow-hidden border-[1.5px] z-[70] "
             style={{ borderColor, background: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(14,14,20,0.98)', backdropFilter: 'blur(32px)' }}>
             {fonts.map(f => (
               <button key={f.id} onClick={() => { onSelect(f.id); setIsOpen(false); }}
