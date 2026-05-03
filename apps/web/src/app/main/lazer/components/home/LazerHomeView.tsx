@@ -1217,7 +1217,7 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
       </div>
 
       {/* Cinematic Interaction Panel (Floating Glass Sidebar) */}
-      <div className="w-full lg:w-[450px] xl:w-[500px] h-auto lg:h-[calc(100vh-40px)] lg:m-5 flex flex-col glass-card rounded-[32px] border border-white/10 shadow-2xl relative z-[100] transition-all duration-700 animate-in slide-in-from-right-20 mb-20 lg:mb-5">
+      <div className={`w-full lg:w-[450px] xl:w-[500px] h-auto lg:h-[calc(100vh-40px)] lg:m-5 flex flex-col glass-card rounded-[32px] border border-white/10 shadow-2xl relative z-[100] transition-all duration-700 animate-in slide-in-from-right-20 mb-20 lg:mb-5 ${cardBg}`}>
         
         {/* Author Spotlight Header */}
         <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between shrink-0">
@@ -1261,7 +1261,7 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
               </div>
             ) : (
               postComments.filter(cm => !cm.parentId).map((cm: any) => (
-                <div key={cm.id} className="glass-card p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all group/comment">
+                <div key={cm.id} className={`glass-card p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all group/comment ${cardBg}`}>
                   <CommentItem cm={cm} allComments={postComments} postId={selectedPostId}
                     postAuthorId={raw.authorId} authUser={authUser} myProfile={myProfile}
                     isLight={isLight} c={c} textPrimary={textPrimary} textSecondary={textSecondary}
@@ -1275,7 +1275,7 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
         </div>
 
         {/* Futuristic Floating Input Bar */}
-        <div className="absolute bottom-6 left-6 right-6 p-4 glass-card rounded-[24px] border border-white/10 shadow-2xl flex flex-col gap-3 z-[110] animate-in slide-in-from-bottom-5">
+        <div className={`absolute bottom-6 left-6 right-6 p-4 glass-card rounded-[24px] border border-white/10 shadow-2xl flex flex-col gap-3 z-[110] animate-in slide-in-from-bottom-5 ${cardBg}`}>
           {replyingTo && (
             <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-dashed border-white/10">
               <span className={`text-[10px] font-bold tracking-tight ${textSecondary}`}>Ecoando para <span style={{ color: c }}>@{replyingTo.author?.profile?.username}</span></span>
@@ -1352,8 +1352,8 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
 
   const isLight = user?.themeMode === 'light';
   const c = user?.themeColor || '#e879f9';
-  const cardBg = isLight ? 'bg-[#f0f0f5]' : 'bg-[#1a1a24]';
-  const borderCol = isLight ? '#e0e0e0' : '#333333';
+  const cardBg = isLight ? 'glass-panel-light' : 'glass-panel-dark';
+  const borderCol = 'transparent';
   const textPrimary = isLight ? 'text-[#111]' : 'text-[#fff]';
   const textSecondary = isLight ? 'text-[#666]' : 'text-[#888]';
 
@@ -1459,6 +1459,20 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
           from { transform: translateX(-100%) skewX(-15deg); }
           to { transform: translateX(200%) skewX(-15deg); }
         }
+        .glass-panel-light {
+          background: rgba(255, 255, 255, 0.15) !important;
+          backdrop-filter: blur(32px) !important;
+          -webkit-backdrop-filter: blur(32px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.4) !important;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05) !important;
+        }
+        .glass-panel-dark {
+          background: rgba(255, 255, 255, 0.03) !important;
+          backdrop-filter: blur(32px) !important;
+          -webkit-backdrop-filter: blur(32px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02), 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+        }
         .animate-heart-burst { animation: heart-burst 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .animate-glow-pulse { animation: glow-pulse 3s infinite ease-in-out; }
         .glass-card { 
@@ -1480,7 +1494,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         borderCol={borderCol} cardBg={cardBg} onProfileClick={onProfileClick}
         initialIndex={initialMediaIndex} />
 
-      <div className="h-[92vh] w-full font-[Nunito,sans-serif] relative rounded-[32px] shadow-2xl flex flex-col overflow-hidden" style={{ background: isLight ? '#fafafa' : '#111116', border: `1px solid ${borderCol}` }}>
+      <div className={`h-[92vh] w-full font-['Nunito',sans-serif] relative rounded-[32px] shadow-2xl flex flex-col overflow-hidden ${cardBg}`} style={{ border: `1px solid ${borderCol}` }}>
         {showTropesModal && (
           <TropesModal
             c={c}

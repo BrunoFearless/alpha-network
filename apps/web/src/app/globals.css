@@ -279,3 +279,38 @@ textarea::placeholder {
   background-size: 40px 40px; /* Reduced for modal density */
   opacity: 0.6;
 }
+
+/* ─── LIQUID GLASS (SPATIAL UI) ─── */
+/* ═══════════════════════════════════════════
+   LIQUID GLASS — Spatial UI System
+   Based on premium refraction physics
+   ═══════════════════════════════════════════ */
+
+@keyframes liquid-shimmer {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50%       { filter: brightness(1.04) saturate(1.10); }
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(40px) saturate(220%) brightness(1.06) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(1.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.80),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04) !important;
+  animation: liquid-shimmer 8s ease-in-out infinite;
+}
+
+.glass-panel-dark {
+  background: rgba(255, 248, 240, 0.07) !important;
+  backdrop-filter: blur(40px) saturate(180%) brightness(1.10) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.10) !important;
+  border: 1px solid rgba(255, 240, 220, 0.14) !important;
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.10) !important;
+  animation: liquid-shimmer 8s ease-in-out infinite;
+}

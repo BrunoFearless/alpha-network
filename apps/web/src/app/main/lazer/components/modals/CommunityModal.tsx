@@ -97,10 +97,9 @@ function CommunityCard({ com: initialCom, onClick, borderCol, isLight, textPrima
   const com = { ...initialCom, tags: initialCom.tags || [] };
   return (
     <div onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      className="relative rounded-[28px] overflow-hidden cursor-pointer group flex flex-col transition-all duration-300"
-      style={{
-        border: `1.5px solid ${hov ? `${com.accentColor}60` : `${com.accentColor}20`}`,
-        background: isLight ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)',
+        className={`relative rounded-[28px] overflow-hidden cursor-pointer group flex flex-col transition-all duration-300 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'}`}
+        style={{
+          border: `1.5px solid ${hov ? `${com.accentColor}60` : `${com.accentColor}20`}`,
         backdropFilter: 'blur(24px)',
         boxShadow: hov ? `0 20px 60px ${com.accentColor}20, 0 0 0 1px ${com.accentColor}30` : '0 4px 20px rgba(0,0,0,0.15)',
         transform: hov ? 'translateY(-4px)' : 'translateY(0)',
@@ -163,8 +162,8 @@ function PostCard({ post, com, onLike, onProfileClick, textPrimary, textSecondar
   const profile = isMe ? authUser?.profile : null;
 
   return (
-    <div className="rounded-[24px] overflow-hidden transition-all duration-200 hover:translate-y-[-2px]"
-      style={{ background: isLight ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.4)', backdropFilter: 'blur(24px)', border: `1.5px solid ${com.accentColor}20`, boxShadow: `0 4px 24px rgba(0,0,0,0.1)` }}>
+    <div className={`rounded-[24px] overflow-hidden transition-all duration-200 hover:translate-y-[-2px] ${isLight ? 'glass-panel-light' : 'glass-panel-dark'}`}
+      style={{ backdropFilter: 'blur(24px)', border: `1.5px solid ${com.accentColor}20`, boxShadow: `0 4px 24px rgba(0,0,0,0.1)` }}>
       <div className="p-5">
         <div className="flex items-center gap-3 mb-4">
           <div className="cursor-pointer transition-transform hover:scale-110 shrink-0" onClick={() => onProfileClick?.(post.authorId)}>
@@ -212,10 +211,9 @@ function PostCard({ post, com, onLike, onProfileClick, textPrimary, textSecondar
   );
 }
 
-// ─── Glass Panel Helper ────────────────────────────────────────────────────────
 function GlassPanel({ children, accent, isLight, className = '', style = {} }: { children: React.ReactNode; accent: string; isLight: boolean; className?: string; style?: React.CSSProperties }) {
   return (
-    <div className={`rounded-[28px] ${className}`} style={{ background: isLight ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)', backdropFilter: 'blur(28px)', border: `1.5px solid ${accent}22`, boxShadow: `0 8px 40px rgba(0,0,0,0.12)`, ...style }}>
+    <div className={`rounded-[28px] ${className} ${isLight ? 'glass-panel-light' : 'glass-panel-dark'}`} style={{ backdropFilter: 'blur(28px)', border: `1.5px solid ${accent}22`, boxShadow: `0 8px 40px rgba(0,0,0,0.12)`, ...style }}>
       {children}
     </div>
   );

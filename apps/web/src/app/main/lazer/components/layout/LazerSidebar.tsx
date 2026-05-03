@@ -32,8 +32,10 @@ export function LazerSidebar({
 
   return (
     <aside 
-      className="fixed left-6 top-1/2 -translate-y-1/2 z-[200] flex flex-col items-center gap-4 px-2 py-6 rounded-full"
-      style={{ background: '#1a1a24', width: '80px', border: '1px solid #333' }}
+      className="fixed left-6 top-1/2 -translate-y-1/2 z-[200] flex flex-col items-center gap-4 px-2 py-6 rounded-[40px] transition-all duration-300 glass-panel-dark"
+      style={{ 
+        width: '80px', 
+      }}
     >
       {/* User Icon */}
       <button
@@ -62,9 +64,10 @@ export function LazerSidebar({
               onClick={() => setActiveView(item.id)}
               className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl cursor-pointer transition-colors"
               style={{
-                background: isActive ? `${themeColor}33` : 'transparent',
-                color: isActive ? themeColor : '#888',
-                border: 'none'
+                background: isActive ? `${themeColor}40` : 'rgba(255, 255, 255, 0.03)',
+                color: isActive ? themeColor : '#aaa',
+                border: isActive ? `1px solid ${themeColor}50` : '1px solid rgba(255,255,255,0.05)',
+                boxShadow: isActive ? `inset 0 0 10px ${themeColor}30` : 'none'
               }}
               title={item.label}
             >

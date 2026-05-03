@@ -43,8 +43,8 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
   const isLight = themeMode === 'light';
   const textPrimary = isLight ? 'text-black' : 'text-white';
   const textSecondary = isLight ? 'text-black/60' : 'text-white/60';
-  const cardBg = isLight ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)';
-  const borderCol = isLight ? `${c}40` : `${c}18`;
+  const cardBg = isLight ? 'glass-panel-light' : 'glass-panel-dark';
+  const borderCol = 'transparent';
 
   useEffect(() => {
     fetchFriends();
@@ -119,8 +119,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
     const isVideo = p.bannerUrl && (p.bannerUrl.includes('.mp4') || p.bannerUrl.includes('.webm'));
 
     return (
-      <div className="relative rounded-[32px] overflow-hidden border-[1.5px] cursor-pointer group shadow-lg min-h-[300px] flex flex-col"
-        style={{ borderColor: borderCol, background: cardBg }}
+      <div className={`relative rounded-[32px] overflow-hidden cursor-pointer group min-h-[300px] flex flex-col ${cardBg}`}
         onClick={() => onProfileClick?.(uid)}>
 
         {/* Deep Full Background Image or Video */}
@@ -192,8 +191,8 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
       <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode} /></div>
 
       {/* Explorer/Network Header */}
-      <div className="flex items-center justify-between px-5 sm:px-8 py-4 shrink-0 border-b backdrop-blur-2xl"
-        style={{ borderColor: borderCol, background: isLight ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)' }}>
+      <div className={`flex items-center justify-between px-5 sm:px-8 py-4 shrink-0 border-b backdrop-blur-2xl ${cardBg}`}
+        style={{ borderColor: borderCol }}>
         <button onClick={onClose}
           className={`flex items-center gap-2 text-sm font-bold bg-transparent border-none cursor-pointer hover:opacity-60 transition-opacity ${textPrimary}`}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>

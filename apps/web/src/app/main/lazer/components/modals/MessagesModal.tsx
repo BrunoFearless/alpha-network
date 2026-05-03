@@ -13,13 +13,13 @@ export function MessagesModal({ onClose, themeColor, themeMode }: MessagesModalP
   const isLight = themeMode === 'light';
 
   return (
-    <div className="fixed top-0 right-0 bottom-0 left-[120px] z-[500] flex flex-col bg-black animate-in fade-in duration-300">
+    <div className="fixed top-0 right-0 bottom-0 left-[120px] z-[500] flex flex-col animate-in fade-in duration-300" style={{ isolation: 'isolate' }}>
       {/* Background with theme colors */}
       <ThemeBg color={themeColor} mode={themeMode} />
       
       {/* Header Bar */}
       <div className={`relative z-10 flex items-center justify-between px-6 py-4 border-b ${
-        isLight ? 'border-black/5 bg-white/40' : 'border-white/5 bg-black/40'
+        isLight ? 'glass-panel-light' : 'glass-panel-dark'
       } backdrop-blur-xl shrink-0`}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg" style={{ background: themeColor }}>
