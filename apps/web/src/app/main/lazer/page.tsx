@@ -5,6 +5,7 @@ import { useLazerStore } from '@/store/lazer.store';
 import { LazerProfileView } from './components/profile/LazerProfileView';
 import { LazerProfileEditor } from './components/profile/LazerProfileEditor';
 import { DEMO_USER, LazerUserProfile } from './components/profile/types';
+import { ThemeBg } from './components/profile/ThemeBg';
 import { LazerHomeView } from './components/home/LazerHomeView';
 import { ExploreModal } from './components/modals/ExploreModal';
 import { NotificationsModal } from './components/modals/NotificationsModal';
@@ -14,6 +15,7 @@ import { MessagesModal } from './components/modals/MessagesModal';
 import { useAlphaCoreStore } from '@/store/useAlphaCoreStore';
 import { AlphaCoreAvatar } from '@/components/alpha-core/AlphaCoreAvatar';
 import AlphaCoreChat from '@/components/alpha-core/AlphaCoreChat';
+import { LazerSidebar } from './components/layout/LazerSidebar';
 
 type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community' | 'messages';
 
@@ -182,10 +184,10 @@ export default function LazerPage() {
     };
   }, [viewingUser, userPosts, myProfileData]);
 
-  async function handleSaveProfile(newUser: LazerUserProfile, files: { avatar: File | null; banner: File | null }) {
+  async function handleSaveProfile(newUser: LazerUserProfile, files: { avatar: File | null; banner: File | null; bgImage: File | null }) {
     setIsSaving(true);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    let avatarUrl = newUser.avatarUrl, bannerUrl = newUser.bannerUrl;
+    let avatarUrl = newUser.avatarUrl, bannerUrl = newUser.bannerUrl, bgImageUrl = newUser.bgImageUrl;
     try {
       if (files.avatar) {
         const fd = new FormData(); fd.append('file', files.avatar);
@@ -201,6 +203,13 @@ export default function LazerPage() {
         });
         if (res.ok) { const j = await res.json(); bannerUrl = j.data?.url || j.data?.bannerUrl; }
       }
+      if (files.bgImage) {
+        const fd = new FormData(); fd.append('file', files.bgImage);
+        const res = await fetch(`${apiUrl}/api/v1/users/me/banner`, {
+          method: 'POST', headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body: fd,
+        });
+        if (res.ok) { const j = await res.json(); bgImageUrl = j.data?.url || j.data?.bannerUrl; }
+      }
       const payload = {
         displayName: newUser.displayName, avatarUrl, bannerUrl, bannerColor: newUser.bannerColor,
         bio: newUser.bio, status: newUser.status, nameFont: newUser.nameFont,
@@ -210,6 +219,7 @@ export default function LazerPage() {
           quickActions: newUser.quickActions, communities: newUser.communities,
           sectionLabel: newUser.sectionLabel, relics: newUser.relics,
           themeColor: newUser.themeColor, themeMode: newUser.themeMode,
+          bgImageUrl,
         },
       };
       const response = await fetch(`${apiUrl}/api/v1/users/me`, {
@@ -251,42 +261,22 @@ export default function LazerPage() {
   // isOwnProfile — only true when viewing self
   const isOwnProfile = !viewingUser;
 
-  const NavBtn = ({
-    view, icon, badge, pulse: doPulse,
-  }: {
-    view: ActiveView; icon: React.ReactNode; badge?: number; pulse?: boolean;
-  }) => {
-    const isActive = activeView === view;
-    return (
-      <div className="relative">
-        <button
-          onClick={() => setActiveView(view)}
-          className="cursor-pointer border-none flex items-center justify-center w-[44px] h-[44px] rounded-full transition-all"
-          style={{
-            backgroundColor: isActive ? `${c}33` : 'transparent',
-            color: isActive ? c : (isLight ? '#888' : '#666'),
-            boxShadow: isActive ? `inset 0 2px 8px ${c}20` : 'none',
-          }}>
-          {icon}
-        </button>
-        {/* Only render badge when badge is a real positive number */}
-        {badge !== undefined && badge > 0 && (
-          <div
-            className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white px-1"
-            style={{
-              background: '#ef4444',
-              animation: doPulse ? 'pulse 2s infinite' : 'none',
-            }}>
-            {badge > 9 ? '9+' : badge}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
-    <div className="w-full min-h-screen relative">
-      <div className="animate-in fade-in duration-300 pt-4">
+    <div className="w-full min-h-screen relative flex">
+      <ThemeBg color={c} mode={themeMode} />
+      {/* Sidebar Vertical (Estrutura) */}
+      <LazerSidebar
+        activeView={activeView}
+        setActiveView={setActiveView}
+        themeColor={c}
+        alphaStatus={alphaStatus}
+        onAlphaClick={openChat}
+        userAvatar={authUser?.profile?.avatarUrl}
+        userName={authUser?.profile?.displayName || authUser?.profile?.username}
+      />
+
+      {/* Main Content Area com margem para a sidebar */}
+      <div className="flex-1 ml-[120px] p-6 animate-in fade-in duration-300">
         {activeView === 'feed' && (
           <LazerHomeView
             user={myProfileData}
@@ -296,130 +286,48 @@ export default function LazerPage() {
             onPostOpened={() => setAutoOpenPostId(null)} />
         )}
         {activeView === 'profile' && (
-          <div className="-mt-[88px]">
-            <LazerProfileView
-              user={viewingProfileData}
-              isOwnProfile={isOwnProfile}
-              onEdit={isOwnProfile ? () => setIsEditing(true) : undefined}
-              viewingUserId={viewingUser?.id}
-              onPostClick={navigateToPost} />
+          <LazerProfileView
+            user={viewingProfileData}
+            isOwnProfile={isOwnProfile}
+            onEdit={isOwnProfile ? () => setIsEditing(true) : undefined}
+            viewingUserId={viewingUser?.id}
+            onPostClick={navigateToPost} />
+        )}
+
+        {/* Full-screen modals */}
+        {activeView === 'explore' && (
+          <ExploreModal onClose={() => setActiveView('feed')} onPostClick={navigateToPost}
+            onCommunityClick={navigateToCommunity}
+            onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
+        )}
+        {activeView === 'notifications' && (
+          <NotificationsModal onClose={() => setActiveView('feed')} onPostClick={navigateToPost}
+            onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
+        )}
+        {activeView === 'friends' && (
+          <FriendsModal onClose={() => setActiveView('feed')}
+            onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
+        )}
+        {activeView === 'community' && (
+          <CommunityModal onClose={() => setActiveView('feed')}
+            themeColor={c} themeMode={themeMode}
+            initialCommunityId={communityId}
+            onProfileClick={navigateToProfile} />
+        )}
+        {activeView === 'messages' && (
+          <MessagesModal onClose={() => setActiveView('feed')}
+            themeColor={c} themeMode={themeMode} />
+        )}
+
+        {isEditing && (
+          <LazerProfileEditor user={myProfileData} onClose={() => setIsEditing(false)} onSave={handleSaveProfile} />
+        )}
+
+        {showSavedMessage && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 border-[3px] border-green-400 rounded-full font-bold shadow-[0_8px_32px_rgba(34,197,94,0.4)] z-[300]">
+            ✓ Perfil guardado com sucesso!
           </div>
         )}
-      </div>
-
-      {/* Full-screen modals */}
-      {activeView === 'explore' && (
-        <ExploreModal onClose={() => setActiveView('feed')} onPostClick={navigateToPost}
-          onCommunityClick={navigateToCommunity}
-          onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
-      )}
-      {activeView === 'notifications' && (
-        <NotificationsModal onClose={() => setActiveView('feed')} onPostClick={navigateToPost}
-          onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
-      )}
-      {activeView === 'friends' && (
-        <FriendsModal onClose={() => setActiveView('feed')}
-          onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
-      )}
-      {activeView === 'community' && (
-        <CommunityModal onClose={() => setActiveView('feed')}
-          themeColor={c} themeMode={themeMode}
-          initialCommunityId={communityId}
-          onProfileClick={navigateToProfile} />
-      )}
-      {activeView === 'messages' && (
-        <MessagesModal onClose={() => setActiveView('feed')}
-          themeColor={c} themeMode={themeMode} />
-      )}
-
-      {isEditing && (
-        <LazerProfileEditor user={myProfileData} onClose={() => setIsEditing(false)} onSave={handleSaveProfile} />
-      )}
-
-      {showSavedMessage && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 border-[3px] border-green-400 rounded-full font-bold shadow-[0_8px_32px_rgba(34,197,94,0.4)] animate-in slide-in-from-bottom-5 duration-300 z-[300]">
-          ✓ Perfil guardado com sucesso!
-        </div>
-      )}
-
-      {/* Bottom Nav — ALWAYS uses MY theme colors, never changes */}
-      <div
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 rounded-[32px] border-[1.5px]"
-        style={{
-          background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(14,14,20,0.85)',
-          backdropFilter: 'blur(32px)',
-          borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
-          boxShadow: '0 16px 40px rgba(0,0,0,0.2)',
-        }}>
-
-        {/* Home */}
-        <NavBtn view="feed" icon={
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>} />
-
-        {/* Explore */}
-        <NavBtn view="explore" icon={
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
-          </svg>} />
-
-        {/* Messages */}
-        <NavBtn view="messages" icon={
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>} />
-
-        {/* Center Alpha Core button */}
-        <button
-          onClick={openChat}
-          className="cursor-pointer border-none w-[52px] h-[52px] rounded-full flex items-center justify-center mx-1 hover:scale-[1.15] active:scale-95 transition-all duration-300"
-          style={{
-            background: `linear-gradient(135deg, ${c}, ${c}88)`,
-            boxShadow: `0 8px 32px ${c}60, inset 0 0 12px rgba(255,255,255,0.4)`,
-            border: '2px solid rgba(255,255,255,0.3)',
-          }}>
-          <AlphaCoreAvatar size={44} state={alphaStatus} themeColor="#fff" />
-        </button>
-
-        {/* Notifications — badge disappears & stops pulsing when open */}
-        <NavBtn
-          view="notifications"
-          badge={showNotifBadge ? totalNotifs : 0}
-          pulse={showNotifBadge}
-          icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>} />
-
-        {/* Friends — badge only when pending */}
-        <NavBtn
-          view="friends"
-          badge={showFriendBadge ? pendingRequests : 0}
-          pulse={showFriendBadge}
-          icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>} />
-
-        <div className="w-px h-6 mx-1" style={{ background: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)' }} />
-
-        {/* Profile avatar */}
-        <button
-          onClick={() => { setViewingUser(null); setActiveView('profile'); }}
-          className="cursor-pointer border-none flex items-center justify-center w-[44px] h-[44px] rounded-full transition-all overflow-hidden"
-          style={{
-            border: `2px solid ${activeView === 'profile' && !viewingUser ? c : 'transparent'}`,
-            boxShadow: activeView === 'profile' && !viewingUser ? `0 0 0 2px ${c}40` : 'none',
-          }}>
-          {authUser?.profile?.avatarUrl
-            ? <img src={authUser.profile.avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
-            : <div className="w-full h-full flex items-center justify-center text-sm font-bold rounded-full"
-                style={{ background: `${c}30`, color: c }}>
-                {(authUser?.profile?.displayName || authUser?.profile?.username || 'U')[0].toUpperCase()}
-              </div>}
-        </button>
       </div>
 
       {/* Alpha Core Phase 3 Integration */}

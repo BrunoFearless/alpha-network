@@ -188,7 +188,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex flex-col font-['Nunito',sans-serif]" style={{ isolation: 'isolate' }}>
+    <div className="fixed top-0 right-0 bottom-0 left-[120px] z-[160] flex flex-col font-['Nunito',sans-serif]" style={{ isolation: 'isolate' }}>
       <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode} /></div>
 
       {/* Explorer/Network Header */}

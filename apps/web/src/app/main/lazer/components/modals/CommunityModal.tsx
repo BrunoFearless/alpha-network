@@ -874,7 +874,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
     const a = com.accentColor;
 
     return (
-      <div className="fixed inset-0 z-[160] flex flex-col overflow-hidden pb-24" style={{ isolation: 'isolate', fontFamily: "'Nunito', sans-serif" }}>
+      <div className="fixed top-0 right-0 bottom-0 left-[120px] z-[160] flex flex-col overflow-hidden pb-24" style={{ isolation: 'isolate', fontFamily: "'Nunito', sans-serif" }}>
         <div className="absolute inset-0 -z-10"><ThemeBg color={a} mode={themeMode}/></div>
 
         <div className="relative shrink-0" style={{ height: 196, overflow: 'visible' }}>
@@ -1093,7 +1093,7 @@ export function CommunityModal({ onClose, themeColor: c, themeMode, initialCommu
   }
 
   return (
-    <div className="fixed inset-0 z-[160] flex flex-col pb-24" style={{ isolation: 'isolate', fontFamily: "'Nunito', sans-serif" }}>
+    <div className="fixed top-0 right-0 bottom-0 left-[120px] z-[160] flex flex-col pb-24" style={{ isolation: 'isolate', fontFamily: "'Nunito', sans-serif" }}>
       <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode}/></div>
 
       <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b" style={{ borderColor: `${c}20`, background: isLight ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)', backdropFilter: 'blur(24px)' }}>

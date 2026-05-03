@@ -32,6 +32,7 @@ export interface LazerUserProfile {
   themeColor: string;
   themeMode: "light" | "dark";
   bannerColor?: string;
+  bgImageUrl?: string | null;
   spotifyEnabled?: boolean;
   lastPlayedTrack?: any;
   chronicles: LazerChronicle[];

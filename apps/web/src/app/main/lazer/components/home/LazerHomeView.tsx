@@ -1352,10 +1352,10 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
 
   const isLight = user?.themeMode === 'light';
   const c = user?.themeColor || '#e879f9';
-  const cardBg = isLight ? 'bg-white/40' : 'bg-black/25';
-  const borderCol = isLight ? `${c}40` : `${c}15`;
-  const textPrimary = isLight ? 'text-black' : 'text-white';
-  const textSecondary = isLight ? 'text-black/60' : 'text-white/60';
+  const cardBg = isLight ? 'bg-[#f0f0f5]' : 'bg-[#1a1a24]';
+  const borderCol = isLight ? '#e0e0e0' : '#333333';
+  const textPrimary = isLight ? 'text-[#111]' : 'text-[#fff]';
+  const textSecondary = isLight ? 'text-[#666]' : 'text-[#888]';
 
   // Current user profile (for composer & comments)
   const myProfile = authUser?.profile || null;
@@ -1462,29 +1462,15 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         .animate-heart-burst { animation: heart-burst 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .animate-glow-pulse { animation: glow-pulse 3s infinite ease-in-out; }
         .glass-card { 
-          backdrop-filter: blur(10px);
-          background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
-          transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+          border-radius: 24px;
+          transition: all 0.2s ease-in-out;
         }
         .glass-card:hover {
-          background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
-          border-color: rgba(255,255,255,0.2) !important;
-          transform: translateY(-4px) scale(1.01);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
         .glass-shine-effect {
-          position: absolute;
-          inset: 0;
-          overflow: hidden;
-          pointer-events: none;
-          z-index: 10;
-        }
-        .glass-shine-effect::after {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; width: 30%; height: 100%;
-          background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
-          animation: glass-shine 6s infinite ease-in-out;
+          display: none;
         }
       `}</style>
       <PostDetailModal
@@ -1494,9 +1480,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         borderCol={borderCol} cardBg={cardBg} onProfileClick={onProfileClick}
         initialIndex={initialMediaIndex} />
 
-      <div className="min-h-full font-[Nunito,sans-serif] pb-32 relative rounded-3xl shadow-2xl border-[1.5px] backdrop-blur-3xl" style={{ isolation: 'isolate', borderColor: borderCol }}>
-        <div className="absolute inset-0 rounded-3xl overflow-hidden -z-10 pointer-events-none"><ThemeBg color={c} mode={user?.themeMode || 'dark'} /></div>
-
+      <div className="h-[92vh] w-full font-[Nunito,sans-serif] relative rounded-[32px] shadow-2xl flex flex-col overflow-hidden" style={{ background: isLight ? '#fafafa' : '#111116', border: `1px solid ${borderCol}` }}>
         {showTropesModal && (
           <TropesModal
             c={c}
@@ -1506,7 +1490,8 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
           />
         )}
 
-        <div className="max-w-[1440px] mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] xl:grid-cols-[260px_1fr_300px] gap-6 items-start relative z-10">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar">
+          <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] xl:grid-cols-[260px_1fr_300px] gap-6 items-start">
 
           {/* Left sidebar */}
           <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
@@ -1706,6 +1691,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
             <ActiveNowWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}
               feedPosts={feedPosts} authUserId={authUser?.id} onProfileClick={onProfileClick} />
           </aside>
+        </div>
         </div>
       </div>
     </>

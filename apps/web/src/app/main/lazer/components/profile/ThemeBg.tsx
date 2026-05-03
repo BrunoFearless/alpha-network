@@ -1,3 +1,5 @@
+import { useAuthStore } from '@/store/auth.store';
+
 export function hex2rgb(hex?: string) {
   if (!hex || !hex.startsWith('#')) return [232, 121, 249]; // default pink
   const r = parseInt(hex.slice(1, 3), 16);
@@ -15,17 +17,24 @@ export function luminance(hex?: string) {
 interface ThemeBgProps {
   color: string;
   mode: 'light' | 'dark';
+  bgImageUrl?: string | null;
 }
 
-export function ThemeBg({ color, mode }: ThemeBgProps) {
+export function ThemeBg({ color, mode, bgImageUrl }: ThemeBgProps) {
+  const { user } = useAuthStore() as any;
+  const storeBg = user?.profile?.lazerData?.bgImageUrl;
+  const finalBg = bgImageUrl !== undefined ? bgImageUrl : storeBg;
+
   const [r, g, b] = hex2rgb(color);
   const isLight = mode === 'light';
 
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-      <div 
-        className={`absolute inset-0 ${isLight ? 'bg-gray-50' : 'bg-[#09090b]'}`} 
-      />
+      {finalBg ? (
+        <img src={finalBg} alt="Background" className="absolute inset-0 w-full h-full object-cover" />
+      ) : (
+        <div className={`absolute inset-0 ${isLight ? 'bg-gray-50' : 'bg-[#09090b]'}`} />
+      )}
       <div 
         className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full blur-[120px]" 
         style={{ background: `rgba(${r},${g},${b},${isLight ? 0.18 : 0.12})` }} 

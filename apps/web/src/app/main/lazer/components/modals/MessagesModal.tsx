@@ -13,7 +13,7 @@ export function MessagesModal({ onClose, themeColor, themeMode }: MessagesModalP
   const isLight = themeMode === 'light';
 
   return (
-    <div className="fixed inset-0 z-[500] flex flex-col bg-black animate-in fade-in duration-300">
+    <div className="fixed top-0 right-0 bottom-0 left-[120px] z-[500] flex flex-col bg-black animate-in fade-in duration-300">
       {/* Background with theme colors */}
       <ThemeBg color={themeColor} mode={themeMode} />
       

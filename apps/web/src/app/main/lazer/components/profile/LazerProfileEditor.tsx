@@ -40,7 +40,7 @@ function Field({ label, children }: { label?: string; children: React.ReactNode 
 interface LazerProfileEditorProps {
   user: LazerUserProfile;
   onClose: () => void;
-  onSave: (user: LazerUserProfile, files: { avatar: File | null; banner: File | null }) => void;
+  onSave: (user: LazerUserProfile, files: { avatar: File | null; banner: File | null; bgImage: File | null }) => void;
 }
 
 export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditorProps) {
@@ -49,8 +49,10 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
   const [tab, setTab]   = useState("perfil");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bgImageFile, setBgImageFile] = useState<File | null>(null);
   const avatarRef       = useRef<HTMLInputElement>(null);
   const bannerRef       = useRef<HTMLInputElement>(null);
+  const bgImageRef      = useRef<HTMLInputElement>(null);
 
   function setKey<K extends keyof LazerUserProfile>(key: K, val: LazerUserProfile[K]) {
     setForm(f => ({ ...f, [key]: val }));
@@ -413,6 +415,41 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
                     </div>
                   </div>
                 </Section>
+
+                <Section title="Imagem de Fundo Global (Novo)">
+                  <p className="m-0 mb-3.5 text-[13px] text-gray-400 leading-relaxed">
+                    Personaliza o fundo principal de todo o ambiente Lazer. Fica visível por trás de todos os painéis e modais.
+                  </p>
+                  <div className="flex gap-2.5 mb-3">
+                    <button 
+                       onClick={() => bgImageRef.current?.click()} 
+                       className="border-none rounded-lg px-4 py-2 text-[13px] font-semibold text-white cursor-pointer hover:opacity-90"
+                       style={{ backgroundColor: accentColor }}
+                    >
+                      Carregar Imagem Global
+                    </button>
+                    <button 
+                       onClick={() => setKey("bgImageUrl", null)} 
+                       className="bg-transparent border border-white/10 rounded-lg px-4 py-2 text-[13px] text-gray-400 cursor-pointer hover:bg-white/5"
+                    >
+                      Remover Fundo
+                    </button>
+                    <input ref={bgImageRef} type="file" accept="image/*,video/mp4,video/webm" hidden onChange={e => {
+                      const f = e.target.files?.[0]; if (!f) return;
+                      setBgImageFile(f);
+                      setKey("bgImageUrl", URL.createObjectURL(f));
+                    }} />
+                  </div>
+                  {form.bgImageUrl && (
+                    <div className="h-24 rounded-xl overflow-hidden border border-white/10 relative mt-3 shadow-lg">
+                      {form.bgImageUrl.match(/\.(mp4|webm|mov)(\?|$)/i) ? (
+                        <video src={form.bgImageUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+                      ) : (
+                        <img src={form.bgImageUrl} className="absolute inset-0 w-full h-full object-cover" />
+                      )}
+                    </div>
+                  )}
+                </Section>
               </div>
             )}
           </div>
@@ -481,7 +518,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
             Cancelar
           </button>
           <button 
-             onClick={() => onSave(form, { avatar: avatarFile, banner: bannerFile })} 
+             onClick={() => onSave(form, { avatar: avatarFile, banner: bannerFile, bgImage: bgImageFile })} 
              className="text-white border-none rounded-xl px-7 py-2.5 text-[13px] font-bold cursor-pointer hover:opacity-90 transition-all hover:scale-[1.02]"
              style={{ backgroundColor: accentColor, boxShadow: `0 4px 20px ${accentColor}60` }}
           >
