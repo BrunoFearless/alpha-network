@@ -1460,18 +1460,18 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
           to { transform: translateX(200%) skewX(-15deg); }
         }
         .glass-panel-light {
-          background: rgba(255, 255, 255, 0.15) !important;
-          backdrop-filter: blur(32px) !important;
-          -webkit-backdrop-filter: blur(32px) !important;
-          border: 1px solid rgba(255, 255, 255, 0.4) !important;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05) !important;
+          background: rgba(255, 255, 255, 0.22) !important;
+          backdrop-filter: blur(40px) saturate(220%) brightness(1.06) !important;
+          -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(1.06) !important;
+          border: 1px solid rgba(255, 255, 255, 0.55) !important;
+          box-shadow: 0 12px 48px rgba(0, 0, 0, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.80), inset 0 -1px 0 rgba(0, 0, 0, 0.04) !important;
         }
         .glass-panel-dark {
-          background: rgba(255, 255, 255, 0.03) !important;
-          backdrop-filter: blur(32px) !important;
-          -webkit-backdrop-filter: blur(32px) !important;
-          border: 1px solid rgba(255, 255, 255, 0.08) !important;
-          box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02), 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+          background: rgba(255, 248, 240, 0.07) !important;
+          backdrop-filter: blur(40px) saturate(180%) brightness(1.10) !important;
+          -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.10) !important;
+          border: 1px solid rgba(255, 240, 220, 0.14) !important;
+          box-shadow: 0 12px 48px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.13), inset 0 -1px 0 rgba(0, 0, 0, 0.10) !important;
         }
         .animate-heart-burst { animation: heart-burst 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .animate-glow-pulse { animation: glow-pulse 3s infinite ease-in-out; }
@@ -1481,7 +1481,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         }
         .glass-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
         .glass-shine-effect {
           display: none;
