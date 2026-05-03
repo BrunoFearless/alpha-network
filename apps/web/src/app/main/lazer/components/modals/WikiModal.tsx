@@ -34,10 +34,28 @@ export function WikiModal({ initialTitle, onClose, themeColor: c, themeMode }: W
           setData(json.data);
           scrollRef.current?.scrollTo(0, 0);
         } else {
-          setError(json.error || 'Não foi possível encontrar este artigo.');
+          throw new Error('Fallback to public API');
         }
       } catch (err) {
-        setError('Erro de conexão com a enciclopédia.');
+        // Fallback to Public Wikipedia API
+        try {
+          const wikiRes = await fetch(`https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(currentTitle)}`);
+          const wikiJson = await wikiRes.json();
+          if (wikiJson.title) {
+            setData({
+              title: wikiJson.displaytitle || wikiJson.title,
+              description: wikiJson.description,
+              imageUrl: wikiJson.originalimage?.source || wikiJson.thumbnail?.source,
+              sections: [{ id: 'intro', text: wikiJson.extract_html || wikiJson.extract }],
+              url: wikiJson.content_urls?.desktop?.page
+            });
+            scrollRef.current?.scrollTo(0, 0);
+          } else {
+            setError('Artigo não encontrado na Wikipédia.');
+          }
+        } catch (publicErr) {
+          setError('Erro ao conectar aos servidores da Wikipedia.');
+        }
       } finally {
         setLoading(false);
       }

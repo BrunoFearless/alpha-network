@@ -92,6 +92,22 @@ const MOCK_TRAILERS = [
   { title: 'Monster Hunter Wilds', imageUrl: 'https://images.alphacoders.com/134/1344697.jpeg', type: 'game' },
 ];
 
+  const MOCK_DISCOVER = [
+  { id: 'Anime', title: 'Anime', imageUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg', type: 'wiki', rating: 'Wiki', releaseYear: 'Info' },
+  { id: 'Manga', title: 'Manga', imageUrl: 'https://i.ytimg.com/vi/L_jWHffIx5E/maxresdefault.jpg', type: 'wiki', rating: 'Wiki', releaseYear: 'Info' },
+  { id: 'Cyberpunk', title: 'Cyberpunk', imageUrl: 'https://i.ytimg.com/vi/8X2kIfS6fb8/maxresdefault.jpg', type: 'wiki', rating: 'Wiki', releaseYear: 'Info' },
+  { id: 'One_Piece', title: 'One Piece', imageUrl: 'https://i.ytimg.com/vi/MCb13bmV32k/maxresdefault.jpg', type: 'wiki', rating: '9.9', releaseYear: '1999' },
+  { id: 'Solo_Leveling', title: 'Solo Leveling', imageUrl: 'https://i.ytimg.com/vi/uYfNOC_E3p0/maxresdefault.jpg', type: 'wiki', rating: '9.8', releaseYear: '2024' },
+];
+
+function getImageUrl(url: string) {
+  if (!url) return '';
+  if (url.includes('localhost') || url.startsWith('blob:') || url.startsWith('data:')) return url;
+  // Use weserv.nl as a high-performance proxy
+  const cleanUrl = url.replace(/^https?:\/\//, '');
+  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=800&fit=cover&output=webp`;
+}
+
 interface ExploreProps {
   onClose: () => void;
   onPostClick?: (postId: string) => void;
@@ -255,30 +271,58 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
   }, [isGalleryMode, hasMoreGal, hubGalPage, hubGalLoading]);
 
   useEffect(() => {
-    if (!isDiscoverCategory) return;
     const fetchDiscover = async () => {
       setDiscoverLoading(true);
       try {
-        const catMap: any = { '🏮 Animes': 'anime', '📖 Mangás': 'manga', '🎮 Jogos': 'games', '🍿 Cinema': 'cinema' };
+        const catMap: any = { '🏮 Animes': 'anime', '📖 Mangás': 'manga', '🎮 Jogos': 'games', '🍿 Cinema': 'cinema', 'All': 'anime' };
+        const category = catMap[activeCategory] || 'anime';
         const token = (useAuthStore.getState() as any).accessToken;
-        const res = await fetch(`${API}/api/v1/lazer/discover/trending?category=${catMap[activeCategory]}`, {
+        const res = await fetch(`${API}/api/v1/lazer/discover/trending?category=${category}`, {
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         });
         const json = await res.json();
-        if (json.success) setDiscoverData(json.data || []);
-        else setDiscoverData([]);
-      } catch (err) { setDiscoverData([]); } finally { setDiscoverLoading(false); }
+        if (json.success && json.data?.length > 0) {
+          setDiscoverData(json.data);
+        } else {
+          // Fallback to a broader set of Wikipedia popular topics (Randomized)
+          const allTopics = [
+            'Matrix', 'Naruto', 'Studio_Ghibli', 'Gamer', 'Hatsune_Miku', 
+            'Final_Fantasy', 'Neon_Genesis_Evangelion', 'Cosplay', 
+            'Death_Note', 'Steins;Gate', 'Cowboy_Bebop', 'Akira'
+          ];
+          const wikiTopics = allTopics.sort(() => Math.random() - 0.5).slice(0, 8);
+          
+          const wikiData = await Promise.all(wikiTopics.map(async (t) => {
+            try {
+              const wRes = await fetch(`https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t)}`);
+              const wJson = await wRes.json();
+              return {
+                id: t,
+                title: wJson.title || t.replace(/_/g, ' '),
+                imageUrl: wJson.originalimage?.source || wJson.thumbnail?.source || `https://en.wikipedia.org/static/images/project-logos/enwiki.png`,
+                type: 'wiki',
+                rating: 'Wiki',
+                releaseYear: 'Live'
+              };
+            } catch {
+              return { id: t, title: t.replace(/_/g, ' '), imageUrl: '', type: 'wiki', rating: 'Wiki', releaseYear: 'Live' };
+            }
+          }));
+          setDiscoverData(wikiData);
+        }
+      } catch (err) { 
+        setDiscoverData(MOCK_DISCOVER); 
+      } finally { setDiscoverLoading(false); }
     };
     fetchDiscover();
-  }, [activeCategory, isDiscoverCategory]);
+  }, [activeCategory]);
 
   useEffect(() => {
-    if (!isWatchMode) return;
     const fetchYt = async () => {
       setYtLoading(true);
       try {
         const token = (useAuthStore.getState() as any).accessToken;
-        const res = await fetch(`${API}/api/v1/lazer/youtube/search?q=${encodeURIComponent(ytQuery || 'anime trailer')}&maxResults=12`, {
+        const res = await fetch(`${API}/api/v1/lazer/youtube/search?q=${encodeURIComponent(ytQuery || 'anime trailer 2024')}&maxResults=12`, {
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         });
         const json = await res.json();
@@ -286,7 +330,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
       } catch { } finally { setYtLoading(false); }
     };
     fetchYt();
-  }, [isWatchMode, ytQuery]);
+  }, [ytQuery]);
 
   useEffect(() => {
     const map = new Map<string, any>();
@@ -426,29 +470,24 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
               </div>
             ) : (
               <div className="flex flex-col gap-12">
-                {discoverData.length > 0 ? (
-                  <section className="relative h-[520px] rounded-[56px] overflow-hidden group cursor-pointer shadow-2xl glass-panel-dark border-none mb-16" onClick={() => setActiveDetail({ type: discoverData[0].type, id: discoverData[0].id })}>
-                    <img src={discoverData[0].imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-12 flex flex-col justify-end">
-                      <div className="flex items-center gap-3 mb-6">
-                        <span className="px-5 py-2 rounded-full bg-red-600 text-[11px] font-black text-white uppercase tracking-[2px]">Now Trending</span>
+                {(() => {
+                  const heroItem = discoverData.length > 0 ? discoverData[0] : MOCK_DISCOVER[0];
+                  return (
+                    <section className="relative h-[520px] rounded-[56px] overflow-hidden group cursor-pointer shadow-2xl glass-panel-dark border-none mb-16" onClick={() => heroItem.type === 'wiki' ? setActiveWiki(heroItem.id) : setActiveDetail({ type: heroItem.type, id: heroItem.id })}>
+                      <img src={getImageUrl(heroItem.imageUrl)} alt="" className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-12 flex flex-col justify-end">
+                        <div className="flex items-center gap-3 mb-6">
+                          <span className="px-5 py-2 rounded-full bg-red-600 text-[11px] font-black text-white uppercase tracking-[2px]">Featured Discovery</span>
+                        </div>
+                        <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-[0.85]">{heroItem.title}</h1>
+                        <p className="text-white/60 text-[16px] font-medium max-w-2xl mb-10 line-clamp-2 leading-relaxed">The ultimate discovery experience on Alpha.</p>
+                        <div className="flex items-center gap-5">
+                          <button className="px-10 py-4.5 rounded-3xl bg-white text-black font-black text-[14px] uppercase flex items-center gap-3 hover:scale-105 transition-all cursor-pointer border-none shadow-xl">Explore Now</button>
+                        </div>
                       </div>
-                      <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-[0.85]">{discoverData[0].title}</h1>
-                      <p className="text-white/60 text-[16px] font-medium max-w-2xl mb-10 line-clamp-2 leading-relaxed">The ultimate discovery experience on Alpha.</p>
-                      <div className="flex items-center gap-5">
-                        <button className="px-10 py-4.5 rounded-3xl bg-white text-black font-black text-[14px] uppercase flex items-center gap-3 hover:scale-105 transition-all cursor-pointer border-none shadow-xl">Watch Now</button>
-                      </div>
-                    </div>
-                  </section>
-                ) : (
-                  <div className="h-[520px] rounded-[56px] bg-white/[0.01] backdrop-blur-2xl flex flex-col items-center justify-center animate-pulse mb-16 relative overflow-hidden border border-white/5">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-20" />
-                    <div className="relative z-10 flex flex-col items-center">
-                      <div className="w-16 h-16 rounded-3xl border-2 border-white/5 border-t-white/40 animate-spin mb-6" />
-                      <p className="text-white/20 font-black uppercase tracking-[6px] text-[10px]">Harmonizing Discovery</p>
-                    </div>
-                  </div>
-                )}
+                    </section>
+                  );
+                })()}
 
                 <section className="mb-16">
                   <div className="flex items-center justify-between mb-8 px-4">
@@ -456,9 +495,9 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                     <span className="text-[12px] font-black text-white/20 uppercase tracking-[2px]">Updated Today</span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {(discoverData && discoverData.length > 5 ? discoverData.slice(4, 8) : MOCK_TRAILERS).map((item: any, i: number) => (
+                    {(ytResults.length > 0 ? ytResults.slice(0, 4) : MOCK_TRAILERS).map((item: any, i: number) => (
                       <div key={i} className="group relative rounded-[32px] overflow-hidden aspect-video glass-panel-dark border-none cursor-pointer hover:scale-[1.02] transition-all" onClick={() => setActiveDetail({ type: item.type || 'tv', id: item.id })}>
-                        <img src={item.imageUrl || item.thumbnail} alt="" className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" />
+                        <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent p-6 flex flex-col justify-end">
                           <p className="text-[14px] font-black text-white line-clamp-1">{item.title}</p>
                           <p className="text-[10px] font-bold text-white/30 uppercase mt-1 tracking-widest">{item.type || 'Show'}</p>
@@ -479,18 +518,18 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                     <button className="text-[12px] font-black uppercase text-white/30 hover:text-white transition-colors border-none bg-transparent cursor-pointer tracking-widest">See all</button>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 pb-10">
-                    {(discoverData.length > 0 ? discoverData.slice(1, 11) : rankedUsers.slice(0, 5)).map((item, i) => (
-                      <div key={i} className="group flex flex-col gap-4 cursor-pointer" onClick={() => setActiveDetail({ type: item.type || 'tv', id: item.id })}>
+                    {(discoverData.length > 1 ? discoverData.slice(1, 11) : MOCK_DISCOVER).map((item: any, i: number) => (
+                      <div key={i} className="group flex flex-col gap-4 cursor-pointer" onClick={() => item.type === 'wiki' ? setActiveWiki(item.id) : setActiveDetail({ type: item.type || 'anime', id: item.id })}>
                         <div className="aspect-[3/4] rounded-[44px] overflow-hidden glass-card border-white/5 relative shadow-xl">
-                          <img src={item.imageUrl || item.avatar} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-115" />
+                          <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-115" />
                         </div>
                         <div className="px-3 flex items-center justify-between">
                           <div className="flex-1 min-w-0">
-                            <p className="text-[15px] font-black text-white truncate">{item.title || item.name}</p>
+                            <p className="text-[15px] font-black text-white truncate">{item.title}</p>
                             <p className="text-[11px] font-bold text-white/30 mt-1">{item.releaseYear || '2024'} • ⭐ {item.rating || '9.0'}</p>
                           </div>
-                          <button className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shrink-0 border-none shadow-lg">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                          <button className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shrink-0 border-none shadow-lg group-hover:scale-110 transition-transform">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                           </button>
                         </div>
                       </div>
