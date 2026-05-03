@@ -79,6 +79,10 @@ const WATCHING_NOW = [
   { title: 'Oshi no Ko', ep: 'EP 11', genre: 'Drama', emoji: '🌟' },
   { title: 'Vinland Saga', ep: 'EP 24', genre: 'Seinen', emoji: '🪓' },
   { title: 'Jujutsu Kaisen', ep: 'EP 23', genre: 'Shonen', emoji: '🤞' },
+  { title: 'Bleach: TYBW', ep: 'EP 26', genre: 'Ação', emoji: '⚔️' },
+  { title: 'Mushoku Tensei', ep: 'EP 12', genre: 'Isekai', emoji: '🪄' },
+  { title: 'Spy x Family', ep: 'EP 25', genre: 'Comédia', emoji: '🕵️' },
+  { title: 'Cyberpunk ER', ep: 'EP 10', genre: 'Sci-Fi', emoji: '🦾' },
 ];
 
 const MOCK_TRAILERS = [
@@ -437,8 +441,8 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                     </div>
                   </section>
                 ) : (
-                  <div className="h-[520px] rounded-[56px] bg-white/[0.01] backdrop-blur-2xl flex flex-col items-center justify-center animate-pulse mb-16 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-30" />
+                  <div className="h-[520px] rounded-[56px] bg-white/[0.01] backdrop-blur-2xl flex flex-col items-center justify-center animate-pulse mb-16 relative overflow-hidden border border-white/5">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-20" />
                     <div className="relative z-10 flex flex-col items-center">
                       <div className="w-16 h-16 rounded-3xl border-2 border-white/5 border-t-white/40 animate-spin mb-6" />
                       <p className="text-white/20 font-black uppercase tracking-[6px] text-[10px]">Harmonizing Discovery</p>
@@ -499,50 +503,52 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
         </main>
 
         {/* ── COLUMN 3: RIGHT SIDEBAR (Stats/Watching) ── */}
-        <aside className="w-[360px] h-full max-h-full hidden lg:flex flex-col glass-panel-dark border-none p-8 custom-scrollbar relative overflow-y-auto overflow-x-hidden shrink-0 pointer-events-auto z-10">
-          <section>
-            <h3 className="text-[12px] font-black uppercase tracking-[3px] text-white/50 mb-8">Continue Watching</h3>
-            <div className="flex flex-col gap-6">
-              {WATCHING_NOW.map((w, i) => (
-                <div key={i} className="flex items-center gap-5 p-5 rounded-[32px] glass-panel-dark border-none hover:bg-white/5 transition-all cursor-pointer group">
-                  <div className="w-16 h-16 rounded-[22px] bg-white/5 flex items-center justify-center text-3xl shrink-0 border border-white/10">{w.emoji}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-black text-white truncate">{w.title}</p>
-                    <p className="text-[11px] font-bold text-white/40 mt-1.5 uppercase tracking-wider">{w.ep} • {w.genre}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <div className="rounded-[32px] glass-panel-dark border-none p-8">
-              <div className="flex items-center gap-3 mb-6"><IconFlame /><h3 className="text-[11px] font-black uppercase tracking-[2px] text-white">Trending Tropes</h3></div>
-              <div className="flex flex-col gap-5">
-                {TRENDING_TROPES.slice(0, 5).map((t, i) => (
-                  <div key={i} className="flex items-center justify-between group cursor-pointer">
-                    <span className="text-[13px] font-black group-hover:translate-x-1 transition-transform" style={{ color: t.color }}>{t.tag}</span>
-                    <span className="text-[10px] font-bold text-white/20">{t.count}</span>
+        <aside className="w-[360px] h-full hidden lg:flex flex-col glass-panel-dark border-none relative shrink-0 z-20 overflow-hidden pointer-events-auto">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-8 scroll-smooth overscroll-contain">
+            <section className="mb-12">
+              <h3 className="text-[12px] font-black uppercase tracking-[3px] text-white/50 mb-8">Continue Watching</h3>
+              <div className="flex flex-col gap-6">
+                {WATCHING_NOW.map((w, i) => (
+                  <div key={i} className="flex items-center gap-5 p-5 rounded-[32px] glass-panel-dark border-none hover:bg-white/5 transition-all cursor-pointer group">
+                    <div className="w-16 h-16 rounded-[22px] bg-white/5 flex items-center justify-center text-3xl shrink-0 border border-white/10">{w.emoji}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-black text-white truncate">{w.title}</p>
+                      <p className="text-[11px] font-bold text-white/40 mt-1.5 uppercase tracking-wider">{w.ep} • {w.genre}</p>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="mt-auto">
-            <h2 className="text-[12px] font-black text-white/50 tracking-[3px] uppercase mb-8">Top Citizens</h2>
-            <div className="flex flex-col gap-4">
-              {rankedUsers.slice(0, 3).map((u, i) => (
-                <div key={i} className="glass-panel-dark rounded-[32px] p-5 flex items-center gap-4 hover:bg-white/5 transition-all cursor-pointer group" onClick={() => onProfileClick?.(u.userId)}>
-                  <Avatar src={u.avatar} name={u.name} className="w-12 h-12 rounded-2xl border-2 group-hover:scale-105 transition-transform" style={{ borderColor: c }} />
-                  <div className="flex-1 min-w-0">
-                    <DisplayName profile={u.profile} fallbackName={u.name} className="font-black text-[14px] text-white" />
-                    <p className="text-[10px] font-bold text-white/30 uppercase mt-0.5">Rank #{i + 1}</p>
-                  </div>
+            <section className="mb-12">
+              <div className="rounded-[32px] glass-panel-dark border-none p-8">
+                <div className="flex items-center gap-3 mb-6"><IconFlame /><h3 className="text-[11px] font-black uppercase tracking-[2px] text-white">Trending Tropes</h3></div>
+                <div className="flex flex-col gap-5">
+                  {TRENDING_TROPES.slice(0, 5).map((t, i) => (
+                    <div key={i} className="flex items-center justify-between group cursor-pointer">
+                      <span className="text-[13px] font-black group-hover:translate-x-1 transition-transform" style={{ color: t.color }}>{t.tag}</span>
+                      <span className="text-[10px] font-bold text-white/20">{t.count}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </div>
+            </section>
+
+            <section className="mt-auto pb-6">
+              <h2 className="text-[12px] font-black text-white/50 tracking-[3px] uppercase mb-8">Top Citizens</h2>
+              <div className="flex flex-col gap-4">
+                {rankedUsers.slice(0, 3).map((u, i) => (
+                  <div key={i} className="glass-panel-dark rounded-[32px] p-5 flex items-center gap-4 hover:bg-white/5 transition-all cursor-pointer group" onClick={() => onProfileClick?.(u.userId)}>
+                    <Avatar src={u.avatar} name={u.name} className="w-12 h-12 rounded-2xl border-2 group-hover:scale-105 transition-transform" style={{ borderColor: c }} />
+                    <div className="flex-1 min-w-0">
+                      <DisplayName profile={u.profile} fallbackName={u.name} className="font-black text-[14px] text-white" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase mt-0.5">Rank #{i + 1}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
         </aside>
       </div>
 
