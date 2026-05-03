@@ -34,18 +34,60 @@ body {
 }
 
 /* ─── ANIMAÇÕES GLOBAIS ─── */
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* ─── DARK THEME APRIMORADO ─── */
-html { color-scheme: dark; }
+html {
+  color-scheme: dark;
+}
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
-:focus-visible { outline: none; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+:focus-visible {
+  outline: none;
+}
 
 /* ─── LIQUID GLASS (SPATIAL UI) — SISTEMA LASER RIM LIGHT ─── */
 
@@ -56,7 +98,7 @@ html { color-scheme: dark; }
   -webkit-backdrop-filter: blur(25px) saturate(250%) brightness(1.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   /* Linha laser branca INTENSA (90%) contornando a quina */
-  box-shadow: 
+  box-shadow:
     inset 1px 1px 0px rgba(255, 255, 255, 0.9),
     inset -1px -1px 0px rgba(255, 255, 255, 0.1) !important;
   overflow: hidden;
@@ -69,13 +111,13 @@ html { color-scheme: dark; }
   -webkit-backdrop-filter: blur(10px) saturate(200%) brightness(0.95) !important;
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
   /* Fio de luz nítido (70%) */
-  box-shadow: 
+  box-shadow:
     inset 1px 1px 0px rgba(255, 255, 255, 0.7),
     inset -1px -1px 0px rgba(255, 255, 255, 0.05) !important;
   overflow: hidden;
 }
 
-.glass-card { 
+.glass-card {
   position: relative;
   border-radius: 24px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -83,7 +125,7 @@ html { color-scheme: dark; }
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   /* Linha de luz para cards */
-  box-shadow: 
+  box-shadow:
     inset 1px 1px 0px rgba(255, 255, 255, 0.8),
     inset -1px 0px 0px rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -92,7 +134,7 @@ html { color-scheme: dark; }
 .glass-card:hover {
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.05);
-  box-shadow: 
+  box-shadow:
     inset 1.5px 1.5px 0px rgba(255, 255, 255, 1),
     inset -1px 0px 0px rgba(255, 255, 255, 0.1) !important;
 }
