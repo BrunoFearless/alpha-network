@@ -249,7 +249,7 @@ Authorization: Bearer <access_token>
 |--------|--------|--------|
 | Adolfo Figueiredo | Autenticação | [@ArdFigueiredo](https://github.com/ArdFigueiredo) |
 | Obed Jorge | Modo Lazer | [@ObedJorge](https://github.com/ObedJorge) |
-| Pedro Evaristo | Modo Criador | [@PedroEvaristo](https://github.com/PedroEvaristo) |
+| Pedro Evaristo | Modo Criador | [@PedroEvaristo](https://github.com/pedroevaristo960) |
 | Alexandre Landa | Modo Desenvolvedor | [@AlexandreLanda](https://github.com/AlexandreLanda) |
 | Luís Gonçalves | Design | [@LuisGoncalves](https://github.com/LuisGoncalves) |
 | Bruno Fearless | Comunidade · Bots · Líder | [@BrunoFearless](https://github.com/BrunoFearless) |
