@@ -336,6 +336,75 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
               </div>
             )}
 
+            {activeTab === 'media' && (
+              <div className="p-8 animate-in fade-in zoom-in-95 duration-1000">
+                {(() => {
+                  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                  const resolveUrl = (url: string) => {
+                    if (!url) return '';
+                    if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+                    return `${apiBase}${url}`;
+                  };
+                  const isVid = (url: string) => /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
+
+                  const allMedia = userPosts.flatMap(p => {
+                    let raw = p.imageUrl;
+                    if (typeof raw === 'string' && raw.startsWith('[')) {
+                      try { raw = JSON.parse(raw); } catch { return []; }
+                    }
+                    const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+                    return arr.map(url => ({ 
+                      url: resolveUrl(url), 
+                      postId: p.id, 
+                      date: p.createdAt,
+                      isVideo: isVid(resolveUrl(url))
+                    }));
+                  }).filter(m => m.url);
+
+                  if (allMedia.length === 0) {
+                    return (
+                      <div className="text-center py-20 opacity-30">
+                        <p className="text-xs font-black uppercase tracking-[0.3em]">Nenhuma mídia encontrada</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {allMedia.map((m, i) => (
+                        <div 
+                          key={`${m.postId}-${i}`}
+                          className="group relative aspect-square rounded-[2rem] overflow-hidden bg-white/5 border border-white/5 hover:border-white/20 transition-all duration-500 cursor-pointer shadow-xl hover:-translate-y-1"
+                          onClick={() => onPostClick?.(m.postId)}
+                        >
+                          {m.isVideo ? (
+                            <video src={m.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" autoPlay muted loop playsInline />
+                          ) : (
+                            <img src={m.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="" />
+                          )}
+                          
+                          {/* Hover Overlay */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6">
+                            <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                               <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">
+                                 {new Date(m.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                               </p>
+                               <div className="flex items-center gap-2">
+                                 <div className="w-6 h-6 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                                 </div>
+                                 <span className="text-[10px] font-black text-white tracking-widest uppercase">Ver Post</span>
+                               </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {activeTab === 'posts' && (
               <div className="max-w-2xl mx-auto py-8 px-4 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
                 {userPosts && userPosts.length > 0 ? (
