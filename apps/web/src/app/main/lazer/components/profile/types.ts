@@ -3,7 +3,7 @@ export interface LazerChronicle {
   side: "left" | "right";
   title: string;
   quote: string;
-  img: string;
+  img: string | string[] | null;
 }
 
 export interface LazerStat {

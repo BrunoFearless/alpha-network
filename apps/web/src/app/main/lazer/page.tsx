@@ -144,11 +144,13 @@ export default function LazerPage() {
     if (!viewingUser) {
       return {
         ...myProfileData,
-        chronicles: userPosts.map((post: any, idx: number) => ({
-          id: post.id, side: idx % 2 === 0 ? 'left' : 'right',
-          title: post.tag || '', quote: post.content,
-          img: post.imageUrl || null, // null → elegant placeholder in ProfileView
-        })),
+        chronicles: userPosts.map((post: any, idx: number) => {
+          let img = post.imageUrl ?? null;
+          if (typeof img === 'string' && img.startsWith('[')) {
+            try { img = JSON.parse(img); } catch { /* keep as string */ }
+          }
+          return { id: post.id, side: idx % 2 === 0 ? 'left' : 'right', title: post.tag || '', quote: post.content, img };
+        }),
       };
     }
     const p = viewingUser.profile || viewingUser as any;
@@ -176,18 +178,22 @@ export default function LazerPage() {
         avatarUrl: viewingUser.user.alphaAI.avatarUrl,
         themeColor: viewingUser.user.alphaAI.bannerColor || '#a78bfa',
       } : undefined,
-      chronicles: userPosts.map((post: any, idx: number) => ({
-        id: post.id, side: idx % 2 === 0 ? 'left' : 'right',
-        title: post.tag || '', quote: post.content,
-        img: post.imageUrl || null,
-      })),
+      chronicles: userPosts.map((post: any, idx: number) => {
+        let img = post.imageUrl ?? null;
+        if (typeof img === 'string' && img.startsWith('[')) {
+          try { img = JSON.parse(img); } catch { /* keep as string */ }
+        }
+        return { id: post.id, side: idx % 2 === 0 ? 'left' : 'right', title: post.tag || '', quote: post.content, img };
+      }),
     };
   }, [viewingUser, userPosts, myProfileData]);
 
   async function handleSaveProfile(newUser: LazerUserProfile, files: { avatar: File | null; banner: File | null; bgImage: File | null }) {
     setIsSaving(true);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    let avatarUrl = newUser.avatarUrl, bannerUrl = newUser.bannerUrl, bgImageUrl = newUser.bgImageUrl;
+    // Sanitize: never persist blob: URLs — they're browser-local previews that expire on reload
+    const sanitize = (url: string | null | undefined) => (url?.startsWith('blob:') ? null : url ?? null);
+    let avatarUrl = sanitize(newUser.avatarUrl), bannerUrl = sanitize(newUser.bannerUrl), bgImageUrl = sanitize(newUser.bgImageUrl);
     try {
       if (files.avatar) {
         const fd = new FormData(); fd.append('file', files.avatar);

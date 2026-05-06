@@ -232,14 +232,75 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                       {/* Image Card Side */}
                       <div className="w-[45%]">
                         <div className="group relative p-1 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-700 overflow-hidden shadow-2xl hover:-translate-y-2">
-                          <div className="aspect-[16/9] rounded-[2rem] overflow-hidden relative">
-                             <img src={item.img} className="w-full h-full object-cover opacity-60 grayscale-[0.4] group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 scale-110 group-hover:scale-100" alt="" />
-                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                             {item.title && (
-                               <div className="absolute bottom-6 left-8 right-8">
-                                 <h3 className="text-lg font-black text-white tracking-tight group-hover:translate-x-1 transition-transform">{item.title}</h3>
-                               </div>
-                             )}
+                          <div className="aspect-[16/9] rounded-[2rem] overflow-hidden relative bg-white/5">
+                            
+                            {/* Media Renderer */}
+                            {(() => {
+                              const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                              const resolveUrl = (url: string) => {
+                                if (!url) return '';
+                                if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+                                return `${apiBase}${url}`;
+                              };
+                              const isVideo = (url: string) => 
+                                /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
+                              const media = item.img;
+                              const rawArr = Array.isArray(media) ? media : media ? [media] : [];
+                              const mediaArr = rawArr.map(resolveUrl).filter(Boolean);
+
+                              if (mediaArr.length === 0) {
+                                // No media — elegant gradient placeholder
+                                return (
+                                  <div className="absolute inset-0 flex items-center justify-center"
+                                       style={{ background: `linear-gradient(135deg, ${c}20, transparent)` }}>
+                                    <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-white/10">
+                                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              if (mediaArr.length === 1) {
+                                // Single media
+                                const url = mediaArr[0];
+                                return isVideo(url) ? (
+                                  <video src={url} className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-700" autoPlay muted loop playsInline />
+                                ) : (
+                                  <img src={url} className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[0.3] group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 scale-110 group-hover:scale-100" alt="" />
+                                );
+                              }
+
+                              // Multiple media — mini grid (max 4)
+                              const visible = mediaArr.slice(0, 4);
+                              const extra = mediaArr.length - 4;
+                              return (
+                                <div className={`absolute inset-0 grid gap-0.5 ${visible.length === 2 ? 'grid-cols-2' : visible.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                                  {visible.map((url, mi) => (
+                                    <div key={mi} className={`relative overflow-hidden ${visible.length === 3 && mi === 0 ? 'row-span-2' : ''}`}>
+                                      {isVideo(url) ? (
+                                        <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                                      ) : (
+                                        <img src={url} className="w-full h-full object-cover" alt="" />
+                                      )}
+                                      {mi === 3 && extra > 0 && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                          <span className="text-white font-black text-lg">+{extra}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+
+                            {/* Overlay gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+
+                            {item.title && (
+                              <div className="absolute bottom-5 left-7 right-7 z-10">
+                                <h3 className="text-sm font-black text-white tracking-tight group-hover:translate-x-1 transition-transform drop-shadow-lg">{item.title}</h3>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
