@@ -20,7 +20,7 @@ interface ProfileViewProps {
 export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId }: ProfileViewProps) {
   const [showAiModal, setShowAiModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'chronicles' | 'media' | 'about'>('chronicles');
-  const { isFriend, sendFriendRequest } = useLazerStore();
+  const { isFriend, sendFriendRequest, userPosts } = useLazerStore();
 
   const c = user.themeColor || '#e879f9';
   const mode = user.themeMode || 'dark';
@@ -337,8 +337,27 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
             )}
 
             {activeTab === 'posts' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 text-center py-20">
-                <p className="text-xs font-black uppercase tracking-[0.3em] text-white/10">Feed de Postagens em breve...</p>
+              <div className="max-w-2xl mx-auto py-8 px-4 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                {userPosts && userPosts.length > 0 ? (
+                  userPosts.map((post) => (
+                    <ProfilePostCard 
+                      key={post.id} 
+                      post={post} 
+                      themeColor={c} 
+                      isLight={isLight}
+                      onPostClick={onPostClick}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-20 opacity-30">
+                    <p className="text-xs font-black uppercase tracking-[0.3em]">Nenhuma postagem recente</p>
+                  </div>
+                )}
+                
+                {/* End of Feed Decor */}
+                <div className="flex flex-col items-center pt-10 opacity-10">
+                  <div className="w-px h-20 bg-gradient-to-b from-white to-transparent" />
+                </div>
               </div>
             )}
           </main>
@@ -364,6 +383,90 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
           animation: bounce-slow 4s ease-in-out infinite;
         }
       `}</style>
+    </div>
+  );
+}
+
+/**
+ * Minimalist Post Card for Profile View
+ */
+function ProfilePostCard({ post, themeColor, isLight, onPostClick }: { post: any, themeColor: string, isLight: boolean, onPostClick?: (id: string) => void }) {
+  const isVideo = (url: string) => /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  
+  const resolveUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+    return `${apiBase}${url}`;
+  };
+
+  const media = (() => {
+    let raw = post.imageUrl;
+    if (typeof raw === 'string' && raw.startsWith('[')) {
+      try { raw = JSON.parse(raw); } catch { /* ignore */ }
+    }
+    const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    return arr.map(resolveUrl).filter(Boolean);
+  })();
+
+  return (
+    <div className={`group relative p-1 rounded-[2.5rem] bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-500 cursor-pointer overflow-hidden`}
+         onClick={() => onPostClick?.(post.id)}>
+      <div className="p-6">
+        {/* Header - Date & Tropes */}
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+            {new Date(post.createdAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+          </span>
+          <div className="flex gap-2">
+            {post.tropes?.slice(0, 2).map((t: any) => (
+              <span key={t.id} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/50">
+                {t.iconEmoji} {t.name}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        <p className="text-sm text-white/80 leading-relaxed mb-6 whitespace-pre-wrap">
+          {post.content}
+        </p>
+
+        {/* Media Grid */}
+        {media.length > 0 && (
+          <div className={`relative rounded-3xl overflow-hidden border border-white/5 mb-6 bg-black/20 ${media.length === 1 ? 'aspect-video' : 'grid grid-cols-2 gap-1 aspect-square md:aspect-video'}`}>
+            {media.slice(0, 4).map((url, i) => (
+              <div key={i} className={`relative h-full w-full overflow-hidden ${media.length === 3 && i === 0 ? 'row-span-2' : ''}`}>
+                {isVideo(url) ? (
+                  <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                ) : (
+                  <img src={url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-700" alt="" />
+                )}
+                {i === 3 && media.length > 4 && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <span className="text-white font-black">+{media.length - 4}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer - Stats */}
+        <div className="flex items-center gap-6 opacity-40 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: themeColor }} />
+            <span className="text-[10px] font-black text-white tracking-widest">{post._count?.reactions || 0} REAÇÕES</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+            <span className="text-[10px] font-black text-white tracking-widest">{post._count?.comments || 0} COMENTÁRIOS</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Decorative Gradient Line */}
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
     </div>
   );
 }
