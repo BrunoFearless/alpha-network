@@ -56,7 +56,7 @@ export const DEMO_USER: LazerUserProfile = {
   username: "hikari_chan",
   status: "Exploring the skies",
   bio: "Magic academy student by day, dream walker by night. ✨ Collecting fragments of stars.",
-  avatarUrl: null, // we can rely on initials if no URL
+  avatarUrl: null,
   bannerUrl: null,
   listening: "Starry Sky OST",
   stats: [

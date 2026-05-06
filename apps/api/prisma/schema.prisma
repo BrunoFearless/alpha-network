@@ -649,6 +649,7 @@ model AlphaAI {
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   messages           AlphaAiMessage[]
+  memories           AlphaAiMemory[]
   user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("alpha_ais")
@@ -706,4 +707,18 @@ model ChatMessageReaction {
 
   @@unique([messageId, userId, emoji])
   @@map("chat_message_reactions")
+}
+
+model AlphaAiMemory {
+  id         String   @id @default(uuid())
+  aiId       String
+  content    String
+  type       String   @default("fact")
+  importance Int      @default(1)
+  embedding  Float[]
+  createdAt  DateTime @default(now())
+  ai         AlphaAI  @relation(fields: [aiId], references: [id], onDelete: Cascade)
+
+  @@index([aiId])
+  @@map("alpha_ai_memories")
 }
