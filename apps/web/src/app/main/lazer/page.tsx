@@ -146,7 +146,7 @@ export default function LazerPage() {
         ...myProfileData,
         chronicles: userPosts.map((post: any, idx: number) => ({
           id: post.id, side: idx % 2 === 0 ? 'left' : 'right',
-          title: post.tag || 'Publicação', quote: post.content,
+          title: post.tag || '', quote: post.content,
           img: post.imageUrl || null, // null → elegant placeholder in ProfileView
         })),
       };
@@ -178,7 +178,7 @@ export default function LazerPage() {
       } : undefined,
       chronicles: userPosts.map((post: any, idx: number) => ({
         id: post.id, side: idx % 2 === 0 ? 'left' : 'right',
-        title: post.tag || 'Publicação', quote: post.content,
+        title: post.tag || '', quote: post.content,
         img: post.imageUrl || null,
       })),
     };
