@@ -64,15 +64,15 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backblur-md p-4">
-      <div className="w-full max-w-[900px] h-full max-h-[740px] bg-[#0f0f17] rounded-2xl overflow-hidden flex flex-col border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
+      <div className="w-full max-w-[940px] h-full max-h-[780px] glass-card rounded-[2.5rem] overflow-hidden flex flex-col border border-white/10 shadow-[0_50px_150px_rgba(0,0,0,0.6)] backblur-3xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4.5 border-b border-white/5 shrink-0">
+        <div className="flex items-center justify-between px-8 py-5 border-b border-white/5 shrink-0 bg-white/[0.02]">
           <div className="flex items-center gap-3">
-            <span className="text-lg text-white">✦</span>
-            <span className="font-bold text-base text-gray-100">Editar Perfil Lazer</span>
+            <span className="text-xl animate-glow-pulse" style={{ color: accentColor }}>✦</span>
+            <span className="font-black text-[13px] uppercase tracking-[0.2em] text-gray-100">Editar Perfil Lazer</span>
           </div>
-          <button onClick={onClose} className="bg-transparent border-none text-gray-400 text-xl cursor-pointer hover:text-white transition-colors">✕</button>
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-gray-400 text-lg cursor-pointer hover:text-white hover:bg-white/10 transition-all">✕</button>
         </div>
 
         {/* Tabs */}
@@ -461,7 +461,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
             </div>
             <div className="flex-1 overflow-y-auto p-4 relative custom-scrollbar">
               
-              <div className={`rounded-2xl overflow-hidden border-[1.5px] relative pb-4  backblur-xl ${form.themeMode === 'light' ? 'bg-white/40' : 'bg-black/25'}`} style={{ borderColor: `${accentColor}30` }}>
+              <div className={`rounded-[2rem] overflow-hidden border-[1.5px] relative pb-4 glass-card backblur-2xl ${form.themeMode === 'light' ? 'bg-white/30' : 'bg-black/20'}`} style={{ borderColor: `${accentColor}20` }}>
                 <ThemeBg color={accentColor} mode={form.themeMode} />
                 
                 <div 

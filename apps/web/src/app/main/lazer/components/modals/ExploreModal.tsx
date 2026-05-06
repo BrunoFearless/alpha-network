@@ -15,13 +15,15 @@ import { AlphaReaderModal } from './AlphaReaderModal';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const CATEGORIES = [
   'All',
-  '🏮 Animes',
-  '📖 Mangás',
-  '🎮 Jogos',
-  '🍿 Cinema',
-  '🏮 Galeria ',
-  '🎥 Watch Mode'
+  'Animes',
+  'Mangás',
+  'Jogos',
+  'Cinema',
+  'Imagem',
+  'Watch Mode'
 ];
+
+const NAV_TABS = ['All', 'Imagem', 'Watch Mode'];
 
 const getNeonColor = (category: string) => {
   if (category.includes('Animes')) return '#00f2ff'; // Cyan
@@ -90,22 +92,28 @@ const MOCK_TRAILERS = [
   { title: 'Overlord: The Sacred Kingdom', imageUrl: 'https://images7.alphacoders.com/135/1351543.png', type: 'anime' },
   { title: 'Spider-Man: Beyond the Spider-Verse', imageUrl: 'https://images2.alphacoders.com/131/1311545.jpg', type: 'movie' },
   { title: 'Monster Hunter Wilds', imageUrl: 'https://images.alphacoders.com/134/1344697.jpeg', type: 'game' },
-];
+].sort(() => Math.random() - 0.5);
 
-  const MOCK_DISCOVER = [
+const MOCK_DISCOVER = [
   { id: 'Anime', title: 'Anime', imageUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg', type: 'wiki', rating: 'Wiki', releaseYear: 'Info' },
   { id: 'Manga', title: 'Manga', imageUrl: 'https://i.ytimg.com/vi/L_jWHffIx5E/maxresdefault.jpg', type: 'wiki', rating: 'Wiki', releaseYear: 'Info' },
   { id: 'Cyberpunk', title: 'Cyberpunk', imageUrl: 'https://i.ytimg.com/vi/8X2kIfS6fb8/maxresdefault.jpg', type: 'wiki', rating: 'Wiki', releaseYear: 'Info' },
   { id: 'One_Piece', title: 'One Piece', imageUrl: 'https://i.ytimg.com/vi/MCb13bmV32k/maxresdefault.jpg', type: 'wiki', rating: '9.9', releaseYear: '1999' },
   { id: 'Solo_Leveling', title: 'Solo Leveling', imageUrl: 'https://i.ytimg.com/vi/uYfNOC_E3p0/maxresdefault.jpg', type: 'wiki', rating: '9.8', releaseYear: '2024' },
-];
+].sort(() => Math.random() - 0.5);
 
-function getImageUrl(url: string) {
+const YT_QUERIES = [
+  'anime trailer 2024', 'anime official trailer', 'new anime 2024 trailer', 
+  'shonen jump trailer 2024', 'seasonal anime trailer', 'top upcoming anime 2024',
+  'anime teaser official', 'crunchyroll trailer 2024', 'netflix anime trailer 2024'
+];
+const RANDOM_YT_QUERY = YT_QUERIES[Math.floor(Math.random() * YT_QUERIES.length)];
+
+function getImageUrl(url: string, width = 800) {
   if (!url) return '';
   if (url.includes('localhost') || url.startsWith('blob:') || url.startsWith('data:')) return url;
-  // Use weserv.nl as a high-performance proxy
-  const cleanUrl = url.replace(/^https?:\/\//, '');
-  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=800&fit=cover&output=webp`;
+  // Use weserv.nl as a high-performance proxy with dynamic width
+  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=${width}&fit=cover&output=webp&q=90`;
 }
 
 interface ExploreProps {
@@ -148,9 +156,9 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
   const [readerLoading, setReaderLoading] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
-  const isWatchMode = activeCategory === '🎥 Watch Mode';
-  const isGalleryMode = activeCategory === '🏮 Galeria ';
-  const isDiscoverCategory = ['🏮 Animes', '📖 Mangás', '🎮 Jogos', '🍿 Cinema'].includes(activeCategory);
+  const isWatchMode = activeCategory === 'Watch Mode';
+  const isGalleryMode = activeCategory === 'Imagem';
+  const isDiscoverCategory = ['Animes', 'Mangás', 'Jogos', 'Cinema'].includes(activeCategory);
 
   // Auto-Suggest State
   const [tagSuggestions, setTagSuggestions] = useState<any[]>([]);
@@ -234,12 +242,22 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
     setHubGalLoading(true);
     try {
       const token = (useAuthStore.getState() as any).accessToken;
-      const query = (galSearch.trim() || search.trim());
+      const query = (galSearch.trim() || search.trim() || 'anime aesthetic 4k art');
       const res = await fetch(`${API}/api/v1/lazer/discover/gallery?q=${encodeURIComponent(query)}&page=${page}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
       const json = await res.json();
-      const newImages = Array.isArray(json) ? json : [];
+      let newImages = Array.isArray(json) ? json : [];
+      
+      // Fallback if Alpha API is empty
+      if (newImages.length === 0) {
+        newImages = [1,2,3,4,5,6,7,8,9,10].map(i => ({
+          url: `https://source.unsplash.com/featured/?anime,art,${i}`,
+          source: 'Alpha Discovery',
+          title: `Art Piece #${i}`
+        }));
+      }
+
       if (append) {
         setHubGallery(prev => {
           const currentUrls = new Set(prev.map(img => img.url));
@@ -248,7 +266,9 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
         });
       } else { setHubGallery(newImages); }
       setHasMoreGal(newImages.length > 4);
-    } catch { setHasMoreGal(false); } finally { setHubGalLoading(false); }
+    } catch { 
+      setHasMoreGal(false); 
+    } finally { setHubGalLoading(false); }
   };
 
   useEffect(() => {
@@ -274,25 +294,60 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
     const fetchDiscover = async () => {
       setDiscoverLoading(true);
       try {
-        const catMap: any = { '🏮 Animes': 'anime', '📖 Mangás': 'manga', '🎮 Jogos': 'games', '🍿 Cinema': 'cinema', 'All': 'anime' };
+        const catMap: any = { 'Animes': 'anime', 'Mangás': 'manga', 'Jogos': 'games', 'Cinema': 'cinema', 'Imagem': 'images', 'All': 'anime' };
         const category = catMap[activeCategory] || 'anime';
+        
+        const ytQueryMap: any = { 
+          'Animes': `anime trailer ${['2024', 'official', 'trending', 'new'][Math.floor(Math.random() * 4)]}`, 
+          'Mangás': `manga trailer ${['2024', 'official', 'shonen', 'seinen'][Math.floor(Math.random() * 4)]}`, 
+          'Jogos': `gameplay trailer ${['2024', 'official', '4k', 'new'][Math.floor(Math.random() * 4)]}`, 
+          'Cinema': `movie trailer ${['2024', 'official', 'teaser', 'imax'][Math.floor(Math.random() * 4)]}`, 
+          'Imagem': `anime art aesthetic 4k`,
+          'All': `anime trailer ${['2024', 'teaser', 'official'][Math.floor(Math.random() * 3)]}`
+        };
+        if (ytQueryMap[activeCategory]) setYtQuery(ytQueryMap[activeCategory]);
+
         const token = (useAuthStore.getState() as any).accessToken;
         const res = await fetch(`${API}/api/v1/lazer/discover/trending?category=${category}`, {
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         });
         const json = await res.json();
+        
         if (json.success && json.data?.length > 0) {
           setDiscoverData(json.data);
         } else {
-          // Fallback to a broader set of Wikipedia popular topics (Randomized)
-          const allTopics = [
-            'Matrix', 'Naruto', 'Studio_Ghibli', 'Gamer', 'Hatsune_Miku', 
-            'Final_Fantasy', 'Neon_Genesis_Evangelion', 'Cosplay', 
-            'Death_Note', 'Steins;Gate', 'Cowboy_Bebop', 'Akira'
-          ];
-          const wikiTopics = allTopics.sort(() => Math.random() - 0.5).slice(0, 8);
+          // Fallback to contextual Wikipedia topics with HIGH VARIETY
+          const contextPool: any = {
+            'Animes': [
+              'Naruto', 'One_Piece', 'Jujutsu_Kaisen', 'Demon_Slayer', 'Dragon_Ball', 
+              'Attack_on_Titan', 'My_Hero_Academia', 'Bleach_(manga)', 'Fullmetal_Alchemist', 
+              'Hunter_×_Hunter', 'Sword_Art_Online', 'Tokyo_Ghoul', 'Fate/stay_night', 
+              'Re:Zero', 'Black_Clover', 'Chainsaw_Man', 'Spy_×_Family', 'Mob_Psycho_100', 
+              'One-Punch_Man', 'Vinland_Saga', 'JoJo%27s_Bizarre_Adventure', 'Code_Geass'
+            ],
+            'Mangás': [
+              'Manga', 'Berserk_(manga)', 'Death_Note', 'Uzumaki', 'Vagabond_(manga)', 
+              'Kingdom_(manga)', 'Goodnight_Punpun', 'Monster_(manga)', 'Slam_Dunk_(manga)', 
+              'Akira_(manga)', '20th_Century_Boys', 'Gantz', 'Oyasumi_Punpun', 'Blue_Lock',
+              'Tokyo_Revengers', 'Haikyu!!', 'Solo_Leveling', 'The_Promised_Neverland'
+            ],
+            'Jogos': [
+              'Elden_Ring', 'The_Legend_of_Zelda', 'Final_Fantasy', 'Resident_Evil', 
+              'Cyberpunk_2077', 'God_of_War', 'Grand_Theft_Auto', 'Dark_Souls', 
+              'Minecraft', 'League_of_Legends', 'Genshin_Impact', 'Valorant', 
+              'Red_Dead_Redemption', 'The_Last_of_Us', 'Metal_Gear_Solid', 'Halo_(franchise)'
+            ],
+            'Cinema': [
+              'The_Matrix', 'Inception', 'Interstellar', 'Blade_Runner_2049', 'Spirited_Away', 
+              'Your_Name', 'Princess_Mononoke', 'Perfect_Blue', 'Pulp_Fiction', 
+              'The_Dark_Knight', 'Parasite_(2019_film)', 'Dune_(2021_film)', 'Oppenheimer_(film)'
+            ],
+            'Imagem': ['Anime_art', 'Digital_art', 'Concept_art', 'Illustration', 'Landscape_painting'],
+            'All': ['Anime', 'Manga', 'Cyberpunk', 'Gamer', 'Studio_Ghibli', 'Cosplay', 'Vocaloid', 'Otaku']
+          };
+          const wikiTopics = (contextPool[activeCategory] || contextPool['All']).sort(() => Math.random() - 0.5).slice(0, 10);
           
-          const wikiData = await Promise.all(wikiTopics.map(async (t) => {
+          const wikiData = await Promise.all(wikiTopics.sort(() => Math.random() - 0.5).map(async (t: string) => {
             try {
               const wRes = await fetch(`https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t)}`);
               const wJson = await wRes.json();
@@ -322,7 +377,8 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
       setYtLoading(true);
       try {
         const token = (useAuthStore.getState() as any).accessToken;
-        const res = await fetch(`${API}/api/v1/lazer/youtube/search?q=${encodeURIComponent(ytQuery || 'anime trailer 2024')}&maxResults=12`, {
+        const query = ytQuery || RANDOM_YT_QUERY;
+        const res = await fetch(`${API}/api/v1/lazer/youtube/search?q=${encodeURIComponent(query)}&maxResults=25`, {
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         });
         const json = await res.json();
@@ -391,7 +447,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
                   className="w-full glass-panel-dark border-none py-4 pl-16 pr-8 text-[15px] font-bold text-white outline-none focus:bg-white/10 transition-all" />
               </div>
               <nav className="flex items-center gap-6 px-10 py-1 rounded-full glass-panel-dark border-none overflow-x-auto no-scrollbar scroll-smooth">
-                {CATEGORIES.map(cat => {
+                {['All', 'Galeria', 'Watch Mode'].map(cat => {
                   const isActive = activeCategory === cat;
                   return (
                     <button key={cat} onClick={() => setActiveCategory(cat)}
@@ -470,84 +526,180 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
               </div>
             ) : (
               <div className="flex flex-col gap-12">
-                {(() => {
-                  const heroItem = discoverData.length > 0 ? discoverData[0] : MOCK_DISCOVER[0];
-                  return (
-                    <section className="relative h-[520px] rounded-[56px] overflow-hidden group cursor-pointer shadow-2xl glass-panel-dark border-none mb-16" onClick={() => heroItem.type === 'wiki' ? setActiveWiki(heroItem.id) : setActiveDetail({ type: heroItem.type, id: heroItem.id })}>
-                      <img src={getImageUrl(heroItem.imageUrl)} alt="" className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-12 flex flex-col justify-end">
-                        <div className="flex items-center gap-3 mb-6">
-                          <span className="px-5 py-2 rounded-full bg-red-600 text-[11px] font-black text-white uppercase tracking-[2px]">Featured Discovery</span>
-                        </div>
-                        <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-[0.85]">{heroItem.title}</h1>
-                        <p className="text-white/60 text-[16px] font-medium max-w-2xl mb-10 line-clamp-2 leading-relaxed">The ultimate discovery experience on Alpha.</p>
-                        <div className="flex items-center gap-5">
-                          <button className="px-10 py-4.5 rounded-3xl bg-white text-black font-black text-[14px] uppercase flex items-center gap-3 hover:scale-105 transition-all cursor-pointer border-none shadow-xl">Explore Now</button>
-                        </div>
+                {discoverLoading ? (
+                  <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in zoom-in duration-700">
+                    <div className="relative w-40 h-40 mb-12">
+                      <div className="absolute inset-0 rounded-full border-[6px] border-white/5" />
+                      <div className="absolute inset-0 rounded-full border-[6px] border-t-transparent animate-spin" style={{ borderColor: getNeonColor(activeCategory) }} />
+                      <div className="absolute inset-4 rounded-full bg-white/5 backdrop-blur-3xl flex items-center justify-center border border-white/10 shadow-2xl">
+                         <span className="text-5xl animate-pulse">{activeCategory === 'All' ? '🏮' : activeCategory[0]}</span>
+                      </div>
+                    </div>
+                    <div className="text-center space-y-4">
+                       <h2 className="text-white text-3xl font-black tracking-tighter uppercase italic">Harmonizing {activeCategory.replace(/[🏮📖🎮🍿🎥]/g, '').trim()}</h2>
+                       <div className="flex items-center justify-center gap-3">
+                          <span className="w-2.5 h-2.5 rounded-full bg-white/20 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-2.5 h-2.5 rounded-full bg-white/20 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-2.5 h-2.5 rounded-full bg-white/20 animate-bounce" style={{ animationDelay: '300ms' }} />
+                       </div>
+                       <p className="text-white/20 text-[11px] font-black uppercase tracking-[5px] mt-8">Connecting to Alpha Core...</p>
+                    </div>
+                    
+                    {/* Ghost Skeleton Grid */}
+                    <div className="mt-20 grid grid-cols-2 md:grid-cols-5 gap-8 opacity-[0.03] grayscale pointer-events-none">
+                       {[1,2,3,4,5].map(i => (
+                         <div key={i} className="w-44 aspect-[3/4] rounded-[44px] bg-white" />
+                       ))}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {activeCategory === 'All' ? (
+                  <>
+                    {/* ── HERO: VIDEO SPOTLIGHT ── */}
+                    {(() => {
+                      const videoPool = ytResults.length > 0 ? ytResults : MOCK_TRAILERS;
+                      const heroIndex = Math.floor(Math.random() * videoPool.length);
+                      const heroItem = videoPool[heroIndex];
+                      if (!heroItem) return null;
+                      return (
+                        <section className="relative h-[520px] rounded-[56px] overflow-hidden group cursor-pointer shadow-2xl glass-panel-dark border-none mb-16" onClick={() => setActiveDetail({ type: 'tv', id: heroItem.id })}>
+                          <img src={getImageUrl(heroItem.imageUrl || heroItem.thumbnail, 1920)} alt="" className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-105 opacity-80" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-12 flex flex-col justify-end">
+                            <div className="flex items-center gap-3 mb-6">
+                              <span className="px-5 py-2 rounded-full bg-red-600 text-[11px] font-black text-white uppercase tracking-[2px] flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                Featured Trailer
+                              </span>
+                            </div>
+                            <h1 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tighter leading-[0.9] max-w-3xl">{heroItem.title}</h1>
+                            <p className="text-white/60 text-[16px] font-medium max-w-2xl mb-10 line-clamp-2 leading-relaxed">Experience the latest and most trending trailers globally on Alpha Network.</p>
+                            <div className="flex items-center gap-5">
+                              <button className="px-10 py-4.5 rounded-3xl bg-white text-black font-black text-[14px] uppercase flex items-center gap-3 hover:scale-105 transition-all cursor-pointer border-none shadow-xl">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                                Watch Now
+                              </button>
+                            </div>
+                          </div>
+                        </section>
+                      );
+                    })()}
+
+                    {/* ── FEATURED CATEGORIES ── */}
+                    <section className="mb-16">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {CATEGORIES.slice(1, 5).map((cat) => (
+                          <div key={cat} className="group relative h-48 rounded-[32px] overflow-hidden glass-panel border-white/5 cursor-pointer hover:scale-[1.03] transition-all shadow-xl" onClick={() => setActiveCategory(cat)}>
+                            <img src={getImageUrl(`https://source.unsplash.com/featured/?${cat.toLowerCase()},anime`)} alt="" className="w-full h-full object-cover opacity-40 group-hover:scale-110 transition-transform duration-700" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-6 flex flex-col justify-end">
+                              <span className="text-[12px] font-black text-white/40 uppercase tracking-[3px] mb-2">Explore</span>
+                              <h3 className="text-2xl font-black text-white tracking-tighter" style={{ textShadow: `0 0 20px ${getNeonColor(cat)}60` }}>{cat}</h3>
+                            </div>
+                            <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/10 group-hover:bg-white group-hover:text-black transition-all">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </section>
-                  );
-                })()}
 
-                <section className="mb-16">
-                  <div className="flex items-center justify-between mb-8 px-4">
-                    <h2 className="text-[24px] font-black text-white tracking-tight">New Trailers</h2>
-                    <span className="text-[12px] font-black text-white/20 uppercase tracking-[2px]">Updated Today</span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {(ytResults.length > 0 ? ytResults.slice(0, 4) : MOCK_TRAILERS).map((item: any, i: number) => (
-                      <div key={i} className="group relative rounded-[32px] overflow-hidden aspect-video glass-panel-dark border-none cursor-pointer hover:scale-[1.02] transition-all" onClick={() => setActiveDetail({ type: item.type || 'tv', id: item.id })}>
-                        <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent p-6 flex flex-col justify-end">
-                          <p className="text-[14px] font-black text-white line-clamp-1">{item.title}</p>
-                          <p className="text-[10px] font-bold text-white/30 uppercase mt-1 tracking-widest">{item.type || 'Show'}</p>
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-xl flex items-center justify-center border border-white/40">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z" /></svg>
+                    {/* ── NEW TRAILERS ── */}
+                    <section className="mb-16">
+                      <div className="flex items-center justify-between mb-8 px-4">
+                        <h2 className="text-[20px] font-black text-white tracking-tight flex items-center gap-3">
+                          <span className="w-1.5 h-6 rounded-full bg-red-600" />
+                          New Trailers
+                        </h2>
+                        <span className="text-[12px] font-black text-white/20 uppercase tracking-[2px]">Updated Today</span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 px-2">
+                        {(ytResults.length > 0 ? ytResults.slice(0, 4) : MOCK_TRAILERS).map((item: any, i: number) => (
+                          <div key={i} className="group flex flex-col gap-4 cursor-pointer" onClick={() => setActiveDetail({ type: item.type || 'tv', id: item.id })}>
+                            <div className="aspect-video rounded-[32px] overflow-hidden glass-panel-dark border border-white/5 relative shadow-xl">
+                              <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-1000" />
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 bg-black/40">
+                                <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform">
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="px-1">
+                              <p className="text-[14px] font-black text-white line-clamp-1 group-hover:text-red-500 transition-colors">{item.title}</p>
+                              <p className="text-[10px] font-bold text-white/30 uppercase mt-1 tracking-widest">Official Trailer</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    {/* ── MIXED DISCOVERY ── */}
+                    <section>
+                      <div className="flex items-center justify-between mb-8 px-2">
+                        <h2 className="text-[24px] font-black text-white tracking-tight">You might like</h2>
+                        <button className="text-[12px] font-black uppercase text-white/30 hover:text-white transition-colors border-none bg-transparent cursor-pointer tracking-widest">See all</button>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 pb-10">
+                        {discoverData.map((item: any, i: number) => (
+                          <div key={i} className="group flex flex-col gap-4 cursor-pointer" onClick={() => item.type === 'wiki' ? setActiveWiki(item.id) : setActiveDetail({ type: item.type || 'anime', id: item.id })}>
+                            <div className="aspect-[3/4] rounded-[44px] overflow-hidden glass-card border-white/5 relative shadow-xl">
+                              <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-115" />
+                            </div>
+                            <div className="px-3 flex items-center justify-between">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[15px] font-black text-white truncate">{item.title}</p>
+                                <p className="text-[11px] font-bold text-white/30 mt-1">{item.releaseYear || '2024'} • ⭐ {item.rating || '9.0'}</p>
+                              </div>
+                              <button className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shrink-0 border-none shadow-lg group-hover:scale-110 transition-transform">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </>
+                ) : (
+                  <section>
+                    <div className="flex items-center justify-between mb-12 px-2">
+                       <div className="flex flex-col gap-1">
+                          <h2 className="text-5xl font-black text-white tracking-tighter">{activeCategory}</h2>
+                          <p className="text-white/40 text-[14px] font-black uppercase tracking-[3px]">Explore curated content for this category</p>
+                       </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 pb-10">
+                      {discoverData.map((item: any, i: number) => (
+                        <div key={i} className="group flex flex-col gap-4 cursor-pointer" onClick={() => item.type === 'wiki' ? setActiveWiki(item.id) : setActiveDetail({ type: item.type || 'anime', id: item.id })}>
+                          <div className="aspect-[3/4] rounded-[44px] overflow-hidden glass-card border-white/5 relative shadow-xl">
+                            <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-115" />
+                          </div>
+                          <div className="px-3 flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[15px] font-black text-white truncate">{item.title}</p>
+                              <p className="text-[11px] font-bold text-white/40 mt-1 uppercase tracking-wider">{item.releaseYear || '2024'} • ⭐ {item.rating || '9.0'}</p>
+                            </div>
+                            <button className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shrink-0 border-none shadow-lg group-hover:scale-110 transition-transform">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </button>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section>
-                  <div className="flex items-center justify-between mb-8 px-2">
-                    <h2 className="text-[24px] font-black text-white tracking-tight">You might like</h2>
-                    <button className="text-[12px] font-black uppercase text-white/30 hover:text-white transition-colors border-none bg-transparent cursor-pointer tracking-widest">See all</button>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 pb-10">
-                    {(discoverData.length > 1 ? discoverData.slice(1, 11) : MOCK_DISCOVER).map((item: any, i: number) => (
-                      <div key={i} className="group flex flex-col gap-4 cursor-pointer" onClick={() => item.type === 'wiki' ? setActiveWiki(item.id) : setActiveDetail({ type: item.type || 'anime', id: item.id })}>
-                        <div className="aspect-[3/4] rounded-[44px] overflow-hidden glass-card border-white/5 relative shadow-xl">
-                          <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-115" />
-                        </div>
-                        <div className="px-3 flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[15px] font-black text-white truncate">{item.title}</p>
-                            <p className="text-[11px] font-bold text-white/30 mt-1">{item.releaseYear || '2024'} • ⭐ {item.rating || '9.0'}</p>
-                          </div>
-                          <button className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shrink-0 border-none shadow-lg group-hover:scale-110 transition-transform">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                  </>
+                )}
               </div>
             )}
           </div>
         </main>
 
-        {/* ── COLUMN 3: RIGHT SIDEBAR (Stats/Watching) ── */}
+                {/* ── COLUMN 3: RIGHT SIDEBAR (Stats/Watching) ── */}
         <aside className="w-[360px] h-full hidden lg:flex flex-col glass-panel-dark border-none relative shrink-0 z-20 overflow-hidden pointer-events-auto">
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-8 scroll-smooth overscroll-contain">
             <section className="mb-12">
               <h3 className="text-[12px] font-black uppercase tracking-[3px] text-white/50 mb-8">Continue Watching</h3>
               <div className="flex flex-col gap-6">
-                {WATCHING_NOW.map((w, i) => (
+                {WATCHING_NOW.sort(() => Math.random() - 0.5).slice(0, 8).map((w, i) => (
                   <div key={i} className="flex items-center gap-5 p-5 rounded-[32px] glass-panel-dark border-none hover:bg-white/5 transition-all cursor-pointer group">
                     <div className="w-16 h-16 rounded-[22px] bg-white/5 flex items-center justify-center text-3xl shrink-0 border border-white/10">{w.emoji}</div>
                     <div className="flex-1 min-w-0">
@@ -563,7 +715,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
               <div className="rounded-[32px] glass-panel-dark border-none p-8">
                 <div className="flex items-center gap-3 mb-6"><IconFlame /><h3 className="text-[11px] font-black uppercase tracking-[2px] text-white">Trending Tropes</h3></div>
                 <div className="flex flex-col gap-5">
-                  {TRENDING_TROPES.slice(0, 5).map((t, i) => (
+                  {TRENDING_TROPES.sort(() => Math.random() - 0.5).slice(0, 5).map((t, i) => (
                     <div key={i} className="flex items-center justify-between group cursor-pointer">
                       <span className="text-[13px] font-black group-hover:translate-x-1 transition-transform" style={{ color: t.color }}>{t.tag}</span>
                       <span className="text-[10px] font-bold text-white/20">{t.count}</span>
