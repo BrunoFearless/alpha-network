@@ -429,6 +429,86 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 </div>
               </div>
             )}
+
+            {activeTab === 'about' && (
+              <div className="max-w-4xl mx-auto p-12 space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                
+                {/* Bio Section - Large & Stylized */}
+                <section>
+                  <div className="flex items-center gap-4 mb-8 opacity-40">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/20" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em]">Biografia</span>
+                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/20" />
+                  </div>
+                  <div className="relative group">
+                    <div className="absolute -inset-4 bg-gradient-to-r from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+                    <p className="text-2xl font-medium text-white/90 leading-[1.6] text-center italic font-['Outfit',sans-serif]">
+                      "{user.bio || 'Este utilizador ainda não escreveu a sua história...'}"
+                    </p>
+                  </div>
+                </section>
+
+                {/* Relics & Collection */}
+                <section>
+                  <div className="flex items-center gap-4 mb-10 opacity-40">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/20" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em]">Coleção de Relíquias</span>
+                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/20" />
+                  </div>
+                  <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                    {user.relics?.map((relic, i) => (
+                      <div key={i} className="aspect-square rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-3xl shadow-lg hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 transition-all duration-300">
+                        {relic}
+                      </div>
+                    ))}
+                    {/* Empty Slots */}
+                    {Array.from({ length: Math.max(0, 8 - (user.relics?.length || 0)) }).map((_, i) => (
+                      <div key={`empty-${i}`} className="aspect-square rounded-2xl border border-dashed border-white/5 flex items-center justify-center text-white/5 text-sm">
+                        ?
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Communities & Guilds */}
+                <section>
+                  <div className="flex items-center gap-4 mb-10 opacity-40">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/20" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em]">Guildas & Comunidades</span>
+                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/20" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {user.communities?.map((comm, i) => (
+                      <div key={i} className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center text-xl">
+                          🏰
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-white/90">{comm}</h4>
+                          <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">Membro Ativo</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Detailed Stats Card */}
+                <section>
+                   <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-white/[0.03] to-transparent border border-white/5 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                        {user.stats?.map((stat, i) => (
+                          <div key={i} className="text-center md:text-left">
+                            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2">{stat.label}</p>
+                            <p className="text-2xl font-black text-white tracking-tight">{stat.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                   </div>
+                </section>
+
+              </div>
+            )}
           </main>
         </div>
 
