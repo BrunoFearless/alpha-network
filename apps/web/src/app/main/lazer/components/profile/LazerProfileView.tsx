@@ -126,8 +126,34 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
               ))}
             </div>
 
+            {/* Tags / Communities Section */}
+            <div className="mt-4 flex flex-wrap gap-2 justify-center w-full shrink-0">
+              {(user.communities || ["Shoujo Club", "RomCom Fans", "Tearjerkers"]).map((tag, i) => (
+                <div key={i} className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2 hover:bg-white/10 transition-all cursor-default">
+                   <span className="text-[10px] opacity-40">🔖</span>
+                   <span className="text-[10px] font-bold text-white/60">{tag}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Favorite Tropes Section */}
+            <div className="mt-4 w-full shrink-0 mb-4">
+               <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-4 text-center">Favorite Tropes</p>
+               <div className="flex justify-center gap-3 flex-wrap">
+                  {(user.relics || ["💖", "☁️", "✨"]).map((trope, i) => (
+                    <div key={i} className={`w-12 h-12 rounded-full border border-white/5 flex items-center justify-center text-lg hover:scale-110 transition-all cursor-help`}
+                         style={{ background: i === 0 ? `linear-gradient(135deg, ${c}40, transparent)` : 'rgba(255,255,255,0.05)' }}>
+                      {trope}
+                    </div>
+                  ))}
+                  <button className="w-12 h-12 rounded-full border border-dashed border-white/10 flex items-center justify-center text-white/10 hover:border-white/20 hover:text-white/20 transition-all">
+                    +
+                  </button>
+               </div>
+            </div>
+
             {/* Spotify Widget (Se disponível) */}
-            <div className="mt-10 p-4 w-full rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3 shrink-0 mb-10">
+            <div className="mt-4 p-4 w-full rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3 shrink-0 mb-8">
                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.303c-.215.353-.675.467-1.025.253-2.822-1.725-6.375-2.113-10.562-1.156-.403.093-.812-.16-.906-.563-.094-.403.16-.812.563-.906 4.584-1.047 8.513-.6 11.675 1.334.35.215.464.675.255 1.038zm1.464-3.26c-.272.44-.847.58-1.287.308-3.228-1.983-8.148-2.557-11.957-1.398-.497.15-1.023-.13-1.173-.627-.15-.497.13-1.023.627-1.173 4.356-1.32 9.778-.68 13.483 1.6 0.44.27 0.58.847 0.308 1.29zm.126-3.41c-3.87-2.3-10.25-2.512-13.98-1.383-.593.18-1.22-.158-1.4-.75-.18-.593.158-1.22.75-1.4 4.28-1.3 11.33-1.04 15.8 1.61.534.317.71 1 .39 1.535-.32.536-1.012.712-1.56.388z"/></svg>
                </div>
