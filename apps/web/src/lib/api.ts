@@ -83,6 +83,21 @@ export async function uploadUserFile(
 }
 
 /**
+ * Upload da Persona Transparente (aba "Sobre").
+ * Guarda o ficheiro separado do avatar, sem o afectar.
+ */
+export async function uploadUserPersona(file: File): Promise<string> {
+  const form = new FormData();
+  form.append('file', file);
+  const result = await api.postForm<{ personaUrl?: string }>(
+    '/users/me/persona',
+    form,
+  );
+  if (!result.personaUrl) throw new Error('O servidor não devolveu o URL da persona.');
+  return result.personaUrl;
+}
+
+/**
  * Lazer Communities
  */
 export async function uploadLazerCommunityFile(file: File, communityId: string): Promise<string> {

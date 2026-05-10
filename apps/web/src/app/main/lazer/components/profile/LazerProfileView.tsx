@@ -2,12 +2,13 @@
 
 import React from 'react';
 import { LazerUserProfile } from './types';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { AlphaAIProfileModal } from '@/components/alpha-core/AlphaAIProfileModal';
 import { ThemeBg } from './ThemeBg';
 import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
 import { useLazerStore } from '@/store/lazer.store';
+import { uploadUserPersona } from '@/lib/api';
 
 interface ProfileViewProps {
   user: LazerUserProfile;
@@ -20,7 +21,32 @@ interface ProfileViewProps {
 export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId }: ProfileViewProps) {
   const [showAiModal, setShowAiModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'chronicles' | 'media' | 'about'>('chronicles');
+  const [localPersonaUrl, setLocalPersonaUrl] = useState<string | null>(null);
+  const [uploadingPersona, setUploadingPersona] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { isFriend, sendFriendRequest, userPosts } = useLazerStore();
+
+  const displayPersona = localPersonaUrl || user.foregroundUrl || (user as any).personaUrl;
+
+  const handlePersonaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Optimistic preview
+    const previewUrl = URL.createObjectURL(file);
+    setLocalPersonaUrl(previewUrl);
+    // Persist to backend
+    setUploadingPersona(true);
+    try {
+      const persistedUrl = await uploadUserPersona(file);
+      setLocalPersonaUrl(persistedUrl);
+    } catch (err) {
+      console.error('Persona upload failed:', err);
+      // Keep the local preview even if the upload fails
+    } finally {
+      setUploadingPersona(false);
+      e.target.value = '';
+    }
+  };
 
   const c = user.themeColor || '#e879f9';
   const mode = user.themeMode || 'dark';
@@ -38,11 +64,23 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
         style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
 
         {/* IDENTITY SECTION (Com Scroll Interno) */}
-        <aside className="w-full lg:w-[350px] h-full border-r border-white/5 flex flex-col overflow-y-auto no-scrollbar relative z-20 shrink-0">
+        {activeTab !== 'about' && (
+          <aside className="w-full lg:w-[350px] h-full border-r border-white/5 flex flex-col overflow-y-auto no-scrollbar relative z-20 shrink-0">
 
           {/* Top Decorative Banner Area */}
           <div className="h-32 w-full shrink-0 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${c}30, ${c}05)` }}>
-            {user.bannerUrl && <img src={user.bannerUrl} className="w-full h-full object-cover opacity-40" alt="" />}
+            {user.bannerUrl && (() => {
+              const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(user.bannerUrl!) || user.bannerUrl!.includes('video');
+              return isVideo ? (
+                <video
+                  src={user.bannerUrl!}
+                  className="w-full h-full object-cover opacity-40"
+                  autoPlay muted loop playsInline
+                />
+              ) : (
+                <img src={user.bannerUrl!} className="w-full h-full object-cover opacity-40" alt="" />
+              );
+            })()}
           </div>
 
           {/* User Info Content */}
@@ -74,7 +112,6 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
             <div className="flex flex-col mb-1 items-center text-center relative w-full">
               <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
                 <DisplayName profile={user} fallbackName={user.displayName || user.username || ''} />
-                <span className="text-xl">💖</span>
               </h1>
               <span className="text-white/40 font-bold text-xs uppercase tracking-widest">@{user.username}</span>
             </div>
@@ -172,6 +209,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
 
           </div>
         </aside>
+        )}
 
         {/* RIGHT AREA */}
         <div className="flex-1 flex flex-col min-w-0 relative">
@@ -213,126 +251,135 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
           </header>
 
           {/* Main Content Scroll Area */}
-          <main className="flex-1 overflow-y-auto no-scrollbar p-10 relative">
+          <main className={`flex-1 overflow-y-auto no-scrollbar relative ${activeTab === 'about' ? 'p-0' : 'p-10'}`}>
             
             {/* CHRONICLES VIEW */}
             {activeTab === 'chronicles' && (
               <div className="relative pt-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                {/* Vertical Timeline Line */}
-                <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-white/5 -translate-x-1/2" />
-                
-                <div className="flex flex-col gap-32 relative">
-                  {(user.chronicles?.length ? user.chronicles : [
-                    { id: '1', side: 'left', title: 'O Encontro Sob as Estrelas', quote: 'Naquele momento, o céu parou para nos ouvir.', img: 'https://images.unsplash.com/photo-1506318137071-a8e063b4b519?w=800&q=80' },
-                    { id: '2', side: 'right', title: 'O Fragmento de Memória', quote: 'Algumas coisas não devem ser esquecidas.', img: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&q=80' },
-                    { id: '3', side: 'left', title: 'Despertar Alpha', quote: 'A rede conectou o que estava separado.', img: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=800&q=80' }
-                  ]).map((item, i) => (
-                    <div key={item.id} className={`flex w-full items-center ${item.side === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
-                      
-                      {/* Image Card Side */}
-                      <div className="w-[45%]">
-                        <div className="group relative p-1 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-700 overflow-hidden shadow-2xl hover:-translate-y-2">
-                          <div className="aspect-[16/9] rounded-[2rem] overflow-hidden relative bg-white/5">
-                            
-                            {/* Media Renderer */}
-                            {(() => {
-                              const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                              const resolveUrl = (url: string) => {
-                                if (!url) return '';
-                                if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
-                                return `${apiBase}${url}`;
-                              };
-                              const isVideo = (url: string) => 
-                                /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
-                              const media = item.img;
-                              const rawArr = Array.isArray(media) ? media : media ? [media] : [];
-                              const mediaArr = rawArr.map(resolveUrl).filter(Boolean);
 
-                              if (mediaArr.length === 0) {
-                                // No media — elegant gradient placeholder
-                                return (
-                                  <div className="absolute inset-0 flex items-center justify-center"
-                                       style={{ background: `linear-gradient(135deg, ${c}20, transparent)` }}>
-                                    <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-white/10">
-                                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    </div>
-                                  </div>
-                                );
-                              }
+                {user.chronicles?.length ? (
+                  <>
+                    {/* Vertical Timeline Line */}
+                    <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-white/5 -translate-x-1/2" />
+                    
+                    <div className="flex flex-col gap-32 relative">
+                      {user.chronicles.map((item, i) => (
+                        <div key={item.id} className={`flex w-full items-center ${item.side === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
+                          
+                          {/* Image Card Side */}
+                          <div className="w-[45%]">
+                            <div className="group relative p-1 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-700 overflow-hidden shadow-2xl hover:-translate-y-2">
+                              <div className="aspect-[16/9] rounded-[2rem] overflow-hidden relative bg-white/5">
+                                
+                                {/* Media Renderer */}
+                                {(() => {
+                                  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                                  const resolveUrl = (url: string) => {
+                                    if (!url) return '';
+                                    if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+                                    return `${apiBase}${url}`;
+                                  };
+                                  const isVideo = (url: string) => 
+                                    /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
+                                  const media = item.img;
+                                  const rawArr = Array.isArray(media) ? media : media ? [media] : [];
+                                  const mediaArr = rawArr.map(resolveUrl).filter(Boolean);
 
-                              if (mediaArr.length === 1) {
-                                // Single media
-                                const url = mediaArr[0];
-                                return isVideo(url) ? (
-                                  <video src={url} className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-700" autoPlay muted loop playsInline />
-                                ) : (
-                                  <img src={url} className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[0.3] group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 scale-110 group-hover:scale-100" alt="" />
-                                );
-                              }
-
-                              // Multiple media — mini grid (max 4)
-                              const visible = mediaArr.slice(0, 4);
-                              const extra = mediaArr.length - 4;
-                              return (
-                                <div className={`absolute inset-0 grid gap-0.5 ${visible.length === 2 ? 'grid-cols-2' : visible.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
-                                  {visible.map((url, mi) => (
-                                    <div key={mi} className={`relative overflow-hidden ${visible.length === 3 && mi === 0 ? 'row-span-2' : ''}`}>
-                                      {isVideo(url) ? (
-                                        <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
-                                      ) : (
-                                        <img src={url} className="w-full h-full object-cover" alt="" />
-                                      )}
-                                      {mi === 3 && extra > 0 && (
-                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                          <span className="text-white font-black text-lg">+{extra}</span>
+                                  if (mediaArr.length === 0) {
+                                    return (
+                                      <div className="absolute inset-0 flex items-center justify-center"
+                                           style={{ background: `linear-gradient(135deg, ${c}20, transparent)` }}>
+                                        <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-white/10">
+                                          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                         </div>
-                                      )}
+                                      </div>
+                                    );
+                                  }
+
+                                  if (mediaArr.length === 1) {
+                                    const url = mediaArr[0];
+                                    return isVideo(url) ? (
+                                      <video src={url} className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-700" autoPlay muted loop playsInline />
+                                    ) : (
+                                      <img src={url} className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[0.3] group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 scale-110 group-hover:scale-100" alt="" />
+                                    );
+                                  }
+
+                                  const visible = mediaArr.slice(0, 4);
+                                  const extra = mediaArr.length - 4;
+                                  return (
+                                    <div className={`absolute inset-0 grid gap-0.5 ${visible.length === 2 ? 'grid-cols-2' : visible.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                                      {visible.map((url, mi) => (
+                                        <div key={mi} className={`relative overflow-hidden ${visible.length === 3 && mi === 0 ? 'row-span-2' : ''}`}>
+                                          {isVideo(url) ? (
+                                            <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                                          ) : (
+                                            <img src={url} className="w-full h-full object-cover" alt="" />
+                                          )}
+                                          {mi === 3 && extra > 0 && (
+                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                              <span className="text-white font-black text-lg">+{extra}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
-                                </div>
-                              );
-                            })()}
+                                  );
+                                })()}
 
-                            {/* Overlay gradient */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+                                {/* Overlay gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
-                            {item.title && (
-                              <div className="absolute bottom-5 left-7 right-7 z-10">
-                                <h3 className="text-sm font-black text-white tracking-tight group-hover:translate-x-1 transition-transform drop-shadow-lg">{item.title}</h3>
+                                {item.title && (
+                                  <div className="absolute bottom-5 left-7 right-7 z-10">
+                                    <h3 className="text-sm font-black text-white tracking-tight group-hover:translate-x-1 transition-transform drop-shadow-lg">{item.title}</h3>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </div>
-                        </div>
-                      </div>
 
-                      {/* Connection Dot & Branch */}
-                      <div className="w-[10%] flex justify-center items-center relative z-10">
-                        <div className="w-4 h-4 rounded-full border-2 bg-transparent flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-500 hover:scale-125"
-                             style={{ borderColor: c }}>
-                           <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: c }} />
-                        </div>
-                        <div className={`absolute top-1/2 h-[1px] w-full -z-10 ${item.side === 'right' ? 'right-1/2' : 'left-1/2'}`}
-                             style={{ background: `linear-gradient(${item.side === 'right' ? 'to left' : 'to right'}, ${c}60, transparent)` }} />
-                      </div>
+                          {/* Connection Dot & Branch */}
+                          <div className="w-[10%] flex justify-center items-center relative z-10">
+                            <div className="w-4 h-4 rounded-full border-2 bg-transparent flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-500 hover:scale-125"
+                                 style={{ borderColor: c }}>
+                               <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: c }} />
+                            </div>
+                            <div className={`absolute top-1/2 h-[1px] w-full -z-10 ${item.side === 'right' ? 'right-1/2' : 'left-1/2'}`}
+                                 style={{ background: `linear-gradient(${item.side === 'right' ? 'to left' : 'to right'}, ${c}60, transparent)` }} />
+                          </div>
 
-                      {/* Quote Text Side (Opposite to Image) */}
-                      <div className={`w-[45%] flex flex-col justify-center ${item.side === 'right' ? 'items-end pr-4' : 'items-start pl-4'}`}>
-                        <div className={`border-l-2 pl-4 ${item.side === 'right' ? 'border-l-0 border-r-2 pl-0 pr-4' : ''}`}
-                             style={{ borderColor: `${c}60` }}>
-                          <p className="text-[13px] italic font-medium text-white/50 leading-relaxed">
-                            "{item.quote}"
-                          </p>
-                        </div>
-                      </div>
+                          {/* Quote Text Side */}
+                          <div className={`w-[45%] flex flex-col justify-center ${item.side === 'right' ? 'items-end pr-4' : 'items-start pl-4'}`}>
+                            <div className={`border-l-2 pl-4 ${item.side === 'right' ? 'border-l-0 border-r-2 pl-0 pr-4' : ''}`}
+                                 style={{ borderColor: `${c}60` }}>
+                              <p className="text-[13px] italic font-medium text-white/50 leading-relaxed">
+                                "{item.quote}"
+                              </p>
+                            </div>
+                          </div>
 
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
 
-                {/* Bottom Decorative Circle */}
-                <div className="w-full flex justify-center mt-20">
-                   <div className="w-1 h-20 bg-gradient-to-b from-white/5 to-transparent" />
-                </div>
+                    {/* Bottom Decorative */}
+                    <div className="w-full flex justify-center mt-20">
+                       <div className="w-1 h-20 bg-gradient-to-b from-white/5 to-transparent" />
+                    </div>
+                  </>
+                ) : (
+                  /* Empty State — clean, no mockups */
+                  <div className="flex flex-col items-center justify-center py-32 gap-6 opacity-30">
+                    <div className="w-16 h-16 rounded-full border border-white/10 flex items-center justify-center">
+                      <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white/40">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                      </svg>
+                    </div>
+                    <p className="text-xs font-black uppercase tracking-[0.4em] text-white/40">Nenhuma crónica ainda</p>
+                  </div>
+                )}
+
               </div>
             )}
 
@@ -431,81 +478,227 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
             )}
 
             {activeTab === 'about' && (
-              <div className="max-w-4xl mx-auto p-12 space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+              <div className="relative w-full h-full min-h-[600px] overflow-hidden p-4 md:p-8 flex items-center justify-center animate-in fade-in zoom-in duration-1000">
                 
-                {/* Bio Section - Large & Stylized */}
-                <section>
-                  <div className="flex items-center gap-4 mb-8 opacity-40">
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/20" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em]">Biografia</span>
-                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/20" />
-                  </div>
-                  <div className="relative group">
-                    <div className="absolute -inset-4 bg-gradient-to-r from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
-                    <p className="text-2xl font-medium text-white/90 leading-[1.6] text-center italic font-['Outfit',sans-serif]">
-                      "{user.bio || 'Este utilizador ainda não escreveu a sua história...'}"
-                    </p>
-                  </div>
-                </section>
+                {/* ── BACKGROUND ORB GLOWS & GRID ── */}
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[120px] opacity-20 animate-pulse" style={{ background: c }} />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-[120px] opacity-10" style={{ background: '#ffffff' }} />
+                
+                {/* Crosshair Grid Overlay */}
+                <div className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z' fill='white' fill-rule='evenodd'/%3E%3C/svg%3E")`, backgroundSize: '24px 24px' }} />
+                
+                {/* Corner Framing Accents */}
+                <div className="absolute top-6 left-6 w-6 h-6 border-t-2 border-l-2 border-white/20 z-0 rounded-tl-lg" />
+                <div className="absolute top-6 right-6 w-6 h-6 border-t-2 border-r-2 border-white/20 z-0 rounded-tr-lg" />
+                <div className="absolute bottom-6 left-6 w-6 h-6 border-b-2 border-l-2 border-white/20 z-0 rounded-bl-lg" />
+                <div className="absolute bottom-6 right-6 w-6 h-6 border-b-2 border-r-2 border-white/20 z-0 rounded-br-lg" />
 
-                {/* Relics & Collection */}
-                <section>
-                  <div className="flex items-center gap-4 mb-10 opacity-40">
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/20" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em]">Coleção de Relíquias</span>
-                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/20" />
-                  </div>
-                  <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                    {user.relics?.map((relic, i) => (
-                      <div key={i} className="aspect-square rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-3xl shadow-lg hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 transition-all duration-300">
-                        {relic}
-                      </div>
-                    ))}
-                    {/* Empty Slots */}
-                    {Array.from({ length: Math.max(0, 8 - (user.relics?.length || 0)) }).map((_, i) => (
-                      <div key={`empty-${i}`} className="aspect-square rounded-2xl border border-dashed border-white/5 flex items-center justify-center text-white/5 text-sm">
-                        ?
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                {/* ── SCALED CONTENT WRAPPER ── */}
+                <div className="absolute inset-0 transform scale-[0.85] origin-center">
 
-                {/* Communities & Guilds */}
-                <section>
-                  <div className="flex items-center gap-4 mb-10 opacity-40">
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/20" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em]">Guildas & Comunidades</span>
-                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/20" />
+                {/* ── BACKGROUND WIDGETS (Behind Character Z-10) ── */}
+                <div className="absolute inset-0 z-10 pointer-events-none">
+                  
+                  {/* Date & Status (Top Left) */}
+                  <div className="absolute top-10 left-10 md:top-14 md:left-14 flex items-center gap-4 animate-in slide-in-from-top-10 duration-1000 delay-200">
+                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 text-white px-5 py-3 rounded-t-2xl rounded-br-2xl rounded-bl-md shadow-2xl transform -rotate-3 hover:rotate-0 transition-transform pointer-events-auto cursor-default">
+                      <p className="text-[9px] font-black uppercase tracking-widest opacity-50 mb-0.5">Data Estelar</p>
+                      <p className="text-sm font-black">{new Date().toLocaleDateString('pt-PT', { month: 'long', day: 'numeric' }).toUpperCase()}</p>
+                    </div>
+                    <div className="flex flex-col">
+                       <span className="text-[9px] font-black text-white/50 tracking-[0.2em] uppercase">Sinal</span>
+                       <span className="text-xs font-black text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.6)]">ATIVO</span>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {user.communities?.map((comm, i) => (
-                      <div key={i} className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center text-xl">
-                          🏰
+
+                  {/* Vertical Music Player Card (Middle Left) */}
+                  <div className="absolute top-1/2 -translate-y-1/2 left-6 md:left-12 w-[160px] md:w-[200px] animate-in slide-in-from-left-10 duration-1000 delay-300">
+                    <div className="glass-panel-light p-3 md:p-4 rounded-3xl border border-white/20 shadow-2xl transform -rotate-2 hover:rotate-0 transition-transform backdrop-blur-xl pointer-events-auto group cursor-pointer">
+                      <div className="w-full aspect-square rounded-2xl overflow-hidden mb-3 bg-white/10 relative shadow-inner">
+                         {userPosts?.[0]?.imageUrl ? (
+                           <img src={userPosts[0].imageUrl.startsWith('[') ? JSON.parse(userPosts[0].imageUrl)[0] : userPosts[0].imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
+                         ) : (
+                           <div className="w-full h-full bg-gradient-to-tr from-purple-500/50 to-pink-500/50" />
+                         )}
+                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                           <div className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center border border-white/50">
+                             <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                           </div>
+                         </div>
+                      </div>
+                      <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-[0.2em] mb-1">A tocar agora</p>
+                      <p className="text-xs md:text-sm font-bold text-white truncate drop-shadow-md">{user.listening || 'Vibe Alpha'}</p>
+                      
+                      <div className="flex items-center justify-between mt-3 px-1">
+                        <span className="text-[8px] font-black text-white/50">1:44</span>
+                        <div className="flex-1 h-1 bg-white/10 mx-2 rounded-full overflow-hidden">
+                          <div className="w-1/3 h-full bg-white rounded-full shadow-[0_0_5px_white]" />
                         </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-white/90">{comm}</h4>
-                          <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">Membro Ativo</p>
-                        </div>
+                        <span className="text-[8px] font-black text-white/50">2:43</span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Giant Faded Text Background */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[8rem] md:text-[14rem] font-black text-white/[0.02] uppercase tracking-tighter whitespace-nowrap select-none">
+                    {user.username}
+                  </div>
+
+                  {/* Scattered Polaroids - Background (Z-10) */}
+                  {userPosts && userPosts.length > 1 && (
+                    <div className="absolute top-10 right-10 md:top-16 md:right-32 z-10 animate-in slide-in-from-right duration-1000 delay-500 pointer-events-auto">
+                      {(() => {
+                         const img = userPosts[1].imageUrl ? (userPosts[1].imageUrl.startsWith('[') ? JSON.parse(userPosts[1].imageUrl)[0] : userPosts[1].imageUrl) : '';
+                         return (
+                           <div className="w-48 h-48 md:w-64 md:h-64 rounded-[2.5rem] bg-white/5 backdrop-blur-sm border border-white/10 p-2 shadow-2xl transform rotate-12 blur-[3px] opacity-40 hover:opacity-100 hover:blur-none hover:rotate-6 transition-all duration-700 cursor-pointer"
+                                onClick={() => onPostClick && onPostClick(userPosts[1].id)}>
+                             <div className="w-full h-full rounded-[2rem] overflow-hidden">
+                               <img src={img.startsWith('http') || img.startsWith('data:') ? img : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${img}`} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700" alt="" />
+                             </div>
+                           </div>
+                         );
+                      })()}
+                    </div>
+                  )}
+
+                  {userPosts && userPosts.length > 2 && (
+                    <div className="absolute bottom-20 left-10 md:bottom-24 md:left-40 z-10 animate-in slide-in-from-left duration-1000 delay-700 pointer-events-auto">
+                      {(() => {
+                         const img = userPosts[2].imageUrl ? (userPosts[2].imageUrl.startsWith('[') ? JSON.parse(userPosts[2].imageUrl)[0] : userPosts[2].imageUrl) : '';
+                         return (
+                           <div className="w-32 h-32 md:w-48 md:h-48 rounded-[2rem] bg-white/10 backdrop-blur-md border border-white/20 p-2 shadow-2xl transform -rotate-12 opacity-50 hover:opacity-100 hover:-rotate-3 transition-all duration-700 cursor-pointer"
+                                onClick={() => onPostClick && onPostClick(userPosts[2].id)}>
+                             <div className="w-full h-full rounded-[1.5rem] overflow-hidden">
+                               <img src={img.startsWith('http') || img.startsWith('data:') ? img : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${img}`} className="w-full h-full object-cover transition-all duration-700" alt="" />
+                             </div>
+                           </div>
+                         );
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── THE PERSONA (CENTERPIECE Z-20) ── */}
+                <div className="relative z-20 w-full max-w-4xl h-full flex items-center justify-center pointer-events-none">
+                  
+                  <div className="relative group perspective-1000 pointer-events-auto">
+                    <div className="absolute -inset-20 bg-gradient-to-b from-transparent via-white/10 to-transparent blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+                    
+                    {displayPersona ? (
+                      <img 
+                        src={displayPersona} 
+                        alt="Persona" 
+                        className="relative z-10 max-h-[650px] w-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.4)] transform-gpu group-hover:scale-[1.02] transition-all duration-1000 animate-bounce-slow"
+                      />
+                    ) : (
+                      <div className="relative z-10 flex flex-col items-center gap-6 mt-20">
+                        {/* Persona Base - Clear and Vibrant while waiting for removal */}
+                        <img 
+                          src={user.avatarUrl || ''} 
+                          alt="Persona Base" 
+                          className="max-h-[450px] w-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.4)] transition-all duration-700"
+                          style={{ 
+                            WebkitMaskImage: 'radial-gradient(circle at center, black 60%, transparent 100%)',
+                            maskImage: 'radial-gradient(circle at center, black 60%, transparent 100%)',
+                            filter: 'contrast(1.05) brightness(1.05)'
+                          }}
+                        />
+                        
+                        {isOwnProfile && (
+                          <>
+                            <input 
+                              type="file" 
+                              ref={fileInputRef} 
+                              className="hidden" 
+                              accept="image/png,image/webp,image/gif" 
+                              onChange={handlePersonaUpload}
+                            />
+                            <button 
+                              className="group/btn relative px-8 py-4 rounded-2xl bg-white text-black font-black text-xs uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(255,255,255,0.3)] overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={uploadingPersona}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/10 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
+                              <span className="relative flex items-center gap-3">
+                                {uploadingPersona ? '⏳ A processar...' : '🖼️ Inserir Modelo 3D / Persona'}
+                              </span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── FOREGROUND WIDGETS (In Front of Character Z-30) ── */}
+                <div className="absolute inset-0 z-30 pointer-events-none">
+                  
+                  {/* Dialog Speech Bubble (Middle Right) */}
+                  <div className="absolute top-1/3 right-6 md:right-16 z-30 max-w-[240px] md:max-w-[280px] animate-in slide-in-from-right-10 duration-1000 delay-400">
+                    <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 text-white p-5 md:p-6 rounded-[2rem] rounded-bl-sm shadow-2xl transform rotate-2 hover:rotate-0 transition-transform pointer-events-auto cursor-default">
+                      <div className="flex justify-between items-center mb-3">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-white/50">Conexão</p>
+                        <div className="px-2 py-0.5 rounded-full bg-white/10 text-[8px] font-black tracking-widest text-white/80">PT</div>
+                      </div>
+                      <p className="text-sm font-bold leading-relaxed">
+                        "{user.bio || 'A explorar a rede em busca de novas ligações e inspiração...'}"
+                      </p>
+                      
+                      {/* Speech Bubble Tail pointing left towards character */}
+                      <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white/10 backdrop-blur-xl border-l border-b border-white/20 rotate-45" style={{ clipPath: 'polygon(0 0, 100% 0, 0 100%)' }} />
+                    </div>
+                  </div>
+
+                  {/* Scattered Polaroids - Foreground (Z-30) */}
+                  {userPosts && userPosts.length > 0 && (
+                    <div className="absolute top-1/2 right-4 md:right-24 z-30 animate-in zoom-in duration-1000 delay-1000 pointer-events-auto">
+                      {(() => {
+                         const img = userPosts[0].imageUrl ? (userPosts[0].imageUrl.startsWith('[') ? JSON.parse(userPosts[0].imageUrl)[0] : userPosts[0].imageUrl) : '';
+                         return (
+                           <div className="w-40 h-40 md:w-56 md:h-56 rounded-[2rem] bg-white/20 backdrop-blur-2xl border border-white/30 p-2.5 shadow-[0_30px_60px_rgba(0,0,0,0.5)] transform -rotate-6 hover:rotate-0 hover:scale-110 transition-all duration-700 cursor-pointer"
+                                onClick={() => onPostClick && onPostClick(userPosts[0].id)}>
+                             <div className="w-full h-full rounded-[1.5rem] overflow-hidden relative group/polaroid">
+                               <img src={img.startsWith('http') || img.startsWith('data:') ? img : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${img}`} className="w-full h-full object-cover" alt="" />
+                               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/polaroid:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                                  <span className="text-[10px] font-black uppercase text-white tracking-[0.2em]">Ver Publicação</span>
+                               </div>
+                             </div>
+                           </div>
+                         );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Toggle Style Personality Tags (Bottom Left) */}
+                  <div className="absolute bottom-10 left-6 md:bottom-16 md:left-14 z-30 flex flex-col gap-3 animate-in slide-in-from-left-10 duration-1000 delay-500">
+                    {(user.personalityTags || ['CRIATIVO', 'EXPLORADOR', 'ALPHA']).map((tag, i) => (
+                       <div key={i} className="flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 pl-4 pr-1 py-1 rounded-full shadow-2xl pointer-events-auto transform hover:translate-x-2 transition-transform cursor-default">
+                         <span className="text-[10px] font-black text-white tracking-[0.2em] uppercase drop-shadow-md">{tag}</span>
+                         <div className="w-10 h-6 rounded-full p-0.5 flex items-center justify-end shadow-inner" style={{ backgroundColor: i === 0 ? c : 'rgba(255,255,255,0.2)' }}>
+                            <div className="w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center">
+                              {i === 0 && <span className="text-[8px] font-black text-black">ON</span>}
+                            </div>
+                         </div>
+                       </div>
                     ))}
                   </div>
-                </section>
 
-                {/* Detailed Stats Card */}
-                <section>
-                   <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-white/[0.03] to-transparent border border-white/5 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                        {user.stats?.map((stat, i) => (
-                          <div key={i} className="text-center md:text-left">
-                            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2">{stat.label}</p>
-                            <p className="text-2xl font-black text-white tracking-tight">{stat.value}</p>
-                          </div>
-                        ))}
-                      </div>
-                   </div>
-                </section>
+                  {/* Massive Nameplate (Bottom Right) */}
+                  <div className="absolute bottom-8 right-6 md:bottom-12 md:right-12 z-30 animate-in slide-in-from-bottom-10 duration-1000 delay-600 pointer-events-none">
+                    <div className="flex flex-col items-end">
+                       <h1 className="text-5xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 tracking-tighter drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] leading-none" style={{ WebkitTextStroke: '1.5px rgba(255,255,255,0.4)' }}>
+                         {user.displayName}
+                       </h1>
+                       <div className="flex items-center gap-3 mt-2 mr-2 bg-black/60 backdrop-blur-xl px-5 py-2 rounded-full border border-white/10 shadow-2xl pointer-events-auto">
+                          <span className="text-lg leading-none" style={{ color: c }}>✦</span>
+                          <span className="text-[10px] font-black text-white uppercase tracking-[0.4em] pt-0.5">{user.username}</span>
+                       </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                </div>
 
               </div>
             )}

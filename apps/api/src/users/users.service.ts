@@ -63,6 +63,10 @@ export class UsersService {
     });
   }
 
+  async getProfile(userId: string) {
+    return this.prisma.profile.findUnique({ where: { userId } });
+  }
+
   async updateActiveModes(userId: string, modes: string[]) {
     // activeModes is a String[] in prisma schema
     return this.prisma.profile.update({
@@ -76,6 +80,7 @@ export class UsersService {
     bio?: string;
     avatarUrl?: string;
     bannerUrl?: string;
+    personaUrl?: string;
     bannerColor?: string;
     auroraTheme?: string;
     nameFont?: string;
@@ -92,6 +97,7 @@ export class UsersService {
         ...(data.bio !== undefined && { bio: data.bio }),
         ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
         ...(data.bannerUrl !== undefined && { bannerUrl: data.bannerUrl }),
+        ...(data.personaUrl !== undefined && { personaUrl: data.personaUrl }),
         ...(data.bannerColor !== undefined && { bannerColor: data.bannerColor }),
         ...(data.auroraTheme !== undefined && { auroraTheme: data.auroraTheme }),
         ...(data.nameFont !== undefined && { nameFont: data.nameFont }),
@@ -106,7 +112,7 @@ export class UsersService {
 
   async saveUserUpload(
     userId: string,
-    type: 'avatar' | 'banner' | 'ai-avatar' | 'ai-banner',
+    type: 'avatar' | 'banner' | 'persona' | 'bgImage' | 'ai-avatar' | 'ai-banner',
     file: Express.Multer.File,
   ): Promise<string> {
     const dir = join(process.cwd(), 'uploads', 'users', userId, type);

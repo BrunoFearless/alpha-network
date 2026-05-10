@@ -40,9 +40,18 @@ export function LazerSidebar({
         className="w-12 h-12 rounded-full overflow-hidden border-2 cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95"
         style={{ borderColor: activeView === 'profile' ? themeColor : 'transparent' }}
       >
-        {userAvatar ? (
-          <img src={userAvatar} alt={userName || 'User'} className="w-full h-full object-cover" />
-        ) : (
+        {userAvatar ? (() => {
+          const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(userAvatar) || userAvatar.includes('/video');
+          return isVideo ? (
+            <video
+              src={userAvatar}
+              className="w-full h-full object-cover"
+              autoPlay muted loop playsInline
+            />
+          ) : (
+            <img src={userAvatar} alt={userName || 'User'} className="w-full h-full object-cover" />
+          );
+        })() : (
           <div className="w-full h-full flex items-center justify-center font-bold text-white text-xs" style={{ background: 'rgba(255,255,255,0.1)' }}>
             {(userName || 'U')[0].toUpperCase()}
           </div>

@@ -30,9 +30,14 @@ export function ThemeBg({ color, mode, bgImageUrl }: ThemeBgProps) {
 
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-      {finalBg ? (
-        <img src={finalBg} alt="Background" className="absolute inset-0 w-full h-full object-cover" />
-      ) : (
+      {finalBg ? (() => {
+        const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(finalBg) || finalBg.includes('video');
+        return isVideo ? (
+          <video src={finalBg} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <img src={finalBg} alt="Background" className="absolute inset-0 w-full h-full object-cover" />
+        );
+      })() : (
         <div className={`absolute inset-0 ${isLight ? 'bg-gray-50' : 'bg-[#09090b]'}`} />
       )}
       <div 

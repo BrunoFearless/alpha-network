@@ -43,6 +43,8 @@ export interface LazerUserProfile {
     avatarUrl: string | null;
     themeColor: string;
   };
+  foregroundUrl?: string | null;
+  personalityTags?: string[];
   creator?: {
     username: string;
     displayName: string;

@@ -13,6 +13,9 @@ export class UpdateProfileDto {
   @IsOptional() @IsString() @MaxLength(500)
   bannerUrl?: string;
 
+  @IsOptional() @IsString() @MaxLength(500)
+  personaUrl?: string;
+
   @IsOptional() @IsString() @MaxLength(20)
   bannerColor?: string;
 

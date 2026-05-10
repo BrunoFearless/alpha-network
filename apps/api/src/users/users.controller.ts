@@ -107,6 +107,63 @@ export class UsersController {
     return { success: true, data: updated };
   }
 
+  // ── Upload de Fundo Global (bgImage) ────────────────────────────────
+  @Post('me/bgImage')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 15 * 1024 * 1024 },
+    fileFilter: (_, file, cb) => {
+      const allowed = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/webm', 'video/quicktime',
+      ];
+      if (!allowed.includes(file.mimetype)) {
+        return cb(new BadRequestException('Formato não suportado.'), false);
+      }
+      cb(null, true);
+    },
+  }))
+  async uploadBgImage(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Ficheiro em falta.');
+    const url = await this.usersService.saveUserUpload(user.id, 'bgImage', file);
+    
+    // Store inside lazerData JSON
+    const existing = await this.usersService.getProfile(user.id);
+    const lazerData = { ...((existing?.lazerData as object) || {}), bgImageUrl: url };
+    const updated = await this.usersService.updateProfile(user.id, { lazerData });
+    return { success: true, data: { ...updated, bgImageUrl: url } };
+  }
+
+
+  // ── Upload de persona (transparent PNG for the 'Sobre' tab) ────────
+  @Post('me/persona')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_, file, cb) => {
+      const allowed = ['image/png', 'image/webp', 'image/gif'];
+      if (!allowed.includes(file.mimetype)) {
+        return cb(new BadRequestException('Persona: usa PNG, WebP ou GIF com transparência.'), false);
+      }
+      cb(null, true);
+    },
+  }))
+  async uploadPersona(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Ficheiro em falta.');
+    const url = await this.usersService.saveUserUpload(user.id, 'persona', file);
+    // Store inside lazerData JSON — no migration needed
+    const existing = await this.usersService.getProfile(user.id);
+    const lazerData = { ...((existing?.lazerData as object) || {}), personaUrl: url };
+    const updated = await this.usersService.updateProfile(user.id, { lazerData });
+    return { success: true, data: { ...updated, personaUrl: url } };
+  }
+
   // ── Activar/desactivar modos ───────────────────────────────────────
   @Patch('me/modes')
   @UseGuards(JwtAuthGuard)

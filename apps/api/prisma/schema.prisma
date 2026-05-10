@@ -55,6 +55,7 @@ model Profile {
   displayName         String?
   avatarUrl           String?
   bannerUrl           String?
+  personaUrl          String?
   bannerColor         String?
   bio                 String?
   status              String?

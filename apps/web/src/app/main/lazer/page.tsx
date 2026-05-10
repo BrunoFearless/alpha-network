@@ -131,6 +131,8 @@ export default function LazerPage() {
       bannerColor: p.bannerColor, chronicles: [],
       spotifyEnabled: p.spotifyEnabled || false,
       lastPlayedTrack: p.lastPlayedTrack || null,
+      foregroundUrl: laz.personaUrl || null,
+      bgImageUrl: laz.bgImageUrl || null,
       aiAssistant: authUser.alphaAI?.isActive ? {
         name: authUser.alphaAI.name,
         botname: authUser.alphaAI.botname,
@@ -172,6 +174,8 @@ export default function LazerPage() {
       bannerColor: p.bannerColor,
       spotifyEnabled: p.spotifyEnabled || false,
       lastPlayedTrack: p.lastPlayedTrack || null,
+      foregroundUrl: laz.personaUrl || null,
+      bgImageUrl: laz.bgImageUrl || null,
       aiAssistant: viewingUser.user?.alphaAI?.isActive ? {
         name: viewingUser.user.alphaAI.name,
         botname: viewingUser.user.alphaAI.botname,
@@ -191,8 +195,8 @@ export default function LazerPage() {
   async function handleSaveProfile(newUser: LazerUserProfile, files: { avatar: File | null; banner: File | null; bgImage: File | null }) {
     setIsSaving(true);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    // Sanitize: never persist blob: URLs — they're browser-local previews that expire on reload
-    const sanitize = (url: string | null | undefined) => (url?.startsWith('blob:') ? null : url ?? null);
+    // Sanitize: preserve undefined (unchanged) vs null (cleared by user)
+    const sanitize = (url: string | null | undefined) => (url?.startsWith('blob:') ? undefined : url);
     let avatarUrl = sanitize(newUser.avatarUrl), bannerUrl = sanitize(newUser.bannerUrl), bgImageUrl = sanitize(newUser.bgImageUrl);
     try {
       if (files.avatar) {
@@ -200,32 +204,45 @@ export default function LazerPage() {
         const res = await fetch(`${apiUrl}/api/v1/users/me/avatar`, {
           method: 'POST', headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body: fd,
         });
-        if (res.ok) { const j = await res.json(); avatarUrl = j.data?.url || j.data?.avatarUrl; }
+        if (res.ok) { const j = await res.json(); avatarUrl = j.data?.avatarUrl || j.data?.url || avatarUrl; }
       }
       if (files.banner) {
         const fd = new FormData(); fd.append('file', files.banner);
         const res = await fetch(`${apiUrl}/api/v1/users/me/banner`, {
           method: 'POST', headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body: fd,
         });
-        if (res.ok) { const j = await res.json(); bannerUrl = j.data?.url || j.data?.bannerUrl; }
+        if (res.ok) { const j = await res.json(); bannerUrl = j.data?.bannerUrl || j.data?.url || bannerUrl; }
       }
       if (files.bgImage) {
         const fd = new FormData(); fd.append('file', files.bgImage);
-        const res = await fetch(`${apiUrl}/api/v1/users/me/banner`, {
+        // Pointing to the new dedicated bgImage endpoint so it doesn't overwrite the banner
+        const res = await fetch(`${apiUrl}/api/v1/users/me/bgImage`, {
           method: 'POST', headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body: fd,
         });
-        if (res.ok) { const j = await res.json(); bgImageUrl = j.data?.url || j.data?.bannerUrl; }
+        if (res.ok) { const j = await res.json(); bgImageUrl = j.data?.bgImageUrl || j.data?.url || bgImageUrl; }
       }
+
+      // ── Read existing lazerData from the current auth profile to PRESERVE fields like
+      //    personaUrl (transparent persona) and ambient bgImageUrl that were set independently.
+      const authProfile = authUser?.profile as any;
+      const existingLazerData = authProfile?.lazerData || {};
+
+      // bgImageUrl: use the newly uploaded one, or explicitly cleared (null), or fallback to existing (undefined)
+      const finalBgImageUrl = bgImageUrl !== undefined ? bgImageUrl : (existingLazerData.bgImageUrl || null);
+
       const payload = {
         displayName: newUser.displayName, avatarUrl, bannerUrl, bannerColor: newUser.bannerColor,
         bio: newUser.bio, status: newUser.status, nameFont: newUser.nameFont,
         nameEffect: newUser.nameEffect, nameColor: newUser.nameColor,
         lazerData: {
+          // Spread existing lazerData FIRST so nothing is lost
+          ...existingLazerData,
+          // Then apply the new values from the editor
           listening: newUser.listening, stats: newUser.stats,
           quickActions: newUser.quickActions, communities: newUser.communities,
           sectionLabel: newUser.sectionLabel, relics: newUser.relics,
           themeColor: newUser.themeColor, themeMode: newUser.themeMode,
-          bgImageUrl,
+          bgImageUrl: finalBgImageUrl,
         },
       };
       const response = await fetch(`${apiUrl}/api/v1/users/me`, {
