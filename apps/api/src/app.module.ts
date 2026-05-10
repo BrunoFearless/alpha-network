@@ -14,6 +14,7 @@ import { FriendsModule } from './users/friends.module';
 import { AlphaCoreModule } from './modes/alpha-core/alpha-core.module';
 import { ChatModule } from './modes/chat/chat.module';
 import { MusicModule } from './music/music.module';
+import { WatchModule } from './watch/watch.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { MusicModule } from './music/music.module';
     AlphaCoreModule,
     ChatModule,
     MusicModule,
+    WatchModule,
   ],
 })
 export class AppModule {}

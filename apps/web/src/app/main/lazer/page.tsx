@@ -18,8 +18,10 @@ import AlphaCoreChat from '@/components/alpha-core/AlphaCoreChat';
 import { LazerSidebar } from './components/layout/LazerSidebar';
 import { LazerMusicView } from './components/music/LazerMusicView';
 import { AlphaMusicPlayer } from './components/music/AlphaMusicPlayer';
+import { LazerWatchView } from './components/watch/LazerWatchView';
+import { AlphaWatchPiP } from './components/watch/AlphaWatchPiP';
 
-type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community' | 'messages' | 'music';
+type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community' | 'messages' | 'music' | 'watch';
 
 export default function LazerPage() {
   const { user: authUser, accessToken, updateUserProfile } = useAuthStore();
@@ -301,7 +303,7 @@ export default function LazerPage() {
       />
 
       {/* Main Content Area com margem para a sidebar */}
-      <div className="flex-1 ml-[120px] p-6 animate-in fade-in duration-300 relative">
+      <div className="flex-1 ml-[50px] p-6 animate-in fade-in duration-300 relative">
         {activeView === 'feed' && (
           <LazerHomeView
             user={myProfileData}
@@ -348,6 +350,11 @@ export default function LazerPage() {
             <LazerMusicView />
           </div>
         )}
+        {activeView === 'watch' && (
+          <div className="w-full h-[calc(100vh-40px)] glass-panel-dark border border-white/[0.06] rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
+            <LazerWatchView />
+          </div>
+        )}
 
         {isEditing && (
           <LazerProfileEditor user={myProfileData} onClose={() => setIsEditing(false)} onSave={handleSaveProfile} />
@@ -361,6 +368,9 @@ export default function LazerPage() {
 
         {/* Global Music Player — anchored inside the content area */}
         <AlphaMusicPlayer />
+
+        {/* Global Watch PiP Player */}
+        <AlphaWatchPiP onExpand={() => setActiveView('watch')} />
       </div>
 
       {/* Alpha Core Phase 3 Integration */}
