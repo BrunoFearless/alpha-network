@@ -583,14 +583,27 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {profilePlaylists.map((pl: any) => {
                         const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                        const coverSrc = pl.tracks?.[0]?.track?.coverUrl;
+                        const coverSrc = pl.coverUrl || pl.tracks?.[0]?.track?.coverUrl;
                         return (
-                          <div key={pl.id} className="group p-3 rounded-[1.5rem] bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer">
-                            <div className="w-full aspect-square rounded-xl bg-white/10 mb-2 overflow-hidden">
-                              {coverSrc ? <img src={coverSrc.startsWith('http') ? coverSrc : `${apiBase}${coverSrc}`} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-3xl">🎵</div>}
+                          <div 
+                            key={pl.id} 
+                            onClick={() => {
+                              if (pl.tracks?.length > 0) {
+                                const tracks = pl.tracks.map((t: any) => t.track);
+                                playTrack?.(tracks[0], tracks);
+                              }
+                            }}
+                            className="group p-4 rounded-[2rem] bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer"
+                          >
+                            <div className="w-full aspect-square rounded-[1.5rem] bg-gradient-to-br from-white/10 to-white/5 mb-3 overflow-hidden flex items-center justify-center">
+                              {coverSrc ? (
+                                <img src={coverSrc.startsWith('http') ? coverSrc : `${apiBase}${coverSrc}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                              ) : (
+                                <div className="text-4xl opacity-20">🎵</div>
+                              )}
                             </div>
-                            <p className="text-xs font-black text-white truncate">{pl.title}</p>
-                            <p className="text-[10px] text-white/30">{pl._count?.tracks ?? 0} músicas</p>
+                            <p className="text-sm font-black text-white truncate">{pl.title}</p>
+                            <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mt-0.5">{pl._count?.tracks ?? 0} músicas</p>
                           </div>
                         );
                       })}

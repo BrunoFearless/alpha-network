@@ -280,21 +280,56 @@ export class MusicService {
 
   async addTrackToPlaylist(playlistId: string, trackId: string, userId: string) {
     const pl = await this.prisma.lazerPlaylist.findUnique({ where: { id: playlistId } });
-    if (!pl) throw new NotFoundException();
-    if (pl.authorId !== userId) throw new ForbiddenException();
+    if (!pl) throw new NotFoundException('Playlist not found');
+    if (pl.authorId !== userId) throw new ForbiddenException('You do not own this playlist');
+
+    const existing = await this.prisma.lazerPlaylistTrack.findUnique({
+      where: { playlistId_trackId: { playlistId, trackId } }
+    });
+
+    if (existing) return existing;
+
     const count = await this.prisma.lazerPlaylistTrack.count({ where: { playlistId } });
-    return this.prisma.lazerPlaylistTrack.upsert({
-      where: { playlistId_trackId: { playlistId, trackId } },
-      create: { playlistId, trackId, position: count },
-      update: {},
+    return this.prisma.lazerPlaylistTrack.create({
+      data: { playlistId, trackId, position: count },
     });
   }
 
   async removeTrackFromPlaylist(playlistId: string, trackId: string, userId: string) {
     const pl = await this.prisma.lazerPlaylist.findUnique({ where: { id: playlistId } });
+    if (!pl) throw new NotFoundException('Playlist not found');
+    if (pl.authorId !== userId) throw new ForbiddenException('You do not own this playlist');
+    
+    await this.prisma.lazerPlaylistTrack.delete({
+      where: { playlistId_trackId: { playlistId, trackId } }
+    });
+    return { success: true };
+  }
+
+  async updatePlaylist(id: string, userId: string, data: { title?: string; description?: string; isPublic?: boolean; coverUrl?: string }) {
+    const pl = await this.prisma.lazerPlaylist.findUnique({ where: { id } });
     if (!pl) throw new NotFoundException();
     if (pl.authorId !== userId) throw new ForbiddenException();
-    await this.prisma.lazerPlaylistTrack.delete({ where: { playlistId_trackId: { playlistId, trackId } } });
+
+    return this.prisma.lazerPlaylist.update({
+      where: { id },
+      data: {
+        title: data.title,
+        description: data.description,
+        isPublic: data.isPublic,
+        coverUrl: data.coverUrl,
+      },
+    });
+  }
+
+  async deletePlaylist(id: string, userId: string) {
+    const pl = await this.prisma.lazerPlaylist.findUnique({ where: { id } });
+    if (!pl) throw new NotFoundException();
+    if (pl.authorId !== userId) throw new ForbiddenException();
+
+    // Delete tracks first (cascade if possible, but let's be explicit if not)
+    await this.prisma.lazerPlaylistTrack.deleteMany({ where: { playlistId: id } });
+    await this.prisma.lazerPlaylist.delete({ where: { id } });
     return { success: true };
   }
 

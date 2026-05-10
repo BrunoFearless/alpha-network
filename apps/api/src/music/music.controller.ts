@@ -1,12 +1,13 @@
 import {
-  Controller, Get, Post, Delete, Param, Query, Body,
+  Controller, Get, Post, Patch, Delete, Param, Query, Body,
   UseGuards, UseInterceptors, UploadedFiles, BadRequestException,
   HttpCode, HttpStatus,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { MusicService } from './music.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { UploadedFile } from '@nestjs/common';
 
 @Controller('music')
 export class MusicController {
@@ -118,11 +119,25 @@ export class MusicController {
 
   @Post('playlists')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('cover'))
   async createPlaylist(
     @CurrentUser() user: { id: string },
-    @Body() body: { title: string; description?: string; isPublic?: boolean },
+    @UploadedFile() cover: Express.Multer.File,
+    @Body() body: { title: string; description?: string; isPublic?: string | boolean },
   ) {
-    const pl = await this.musicService.createPlaylist(user.id, body);
+    let coverUrl: string | undefined;
+    if (cover) {
+      coverUrl = this.musicService.saveCoverUpload(user.id, cover);
+    }
+
+    const isPublic = body.isPublic === 'true' || body.isPublic === true;
+
+    const pl = await this.musicService.createPlaylist(user.id, {
+      title: body.title,
+      description: body.description,
+      isPublic,
+      coverUrl,
+    });
     return { success: true, data: pl };
   }
 
@@ -158,5 +173,37 @@ export class MusicController {
     @CurrentUser() user: { id: string },
   ) {
     return this.musicService.removeTrackFromPlaylist(playlistId, trackId, user.id);
+  }
+
+  @Patch('playlists/:id')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('cover'))
+  async updatePlaylist(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+    @UploadedFile() cover: Express.Multer.File,
+    @Body() body: { title?: string; description?: string; isPublic?: string | boolean },
+  ) {
+    let coverUrl: string | undefined;
+    if (cover) {
+      coverUrl = this.musicService.saveCoverUpload(user.id, cover);
+    }
+
+    const isPublic = body.isPublic !== undefined ? (body.isPublic === 'true' || body.isPublic === true) : undefined;
+
+    const pl = await this.musicService.updatePlaylist(id, user.id, {
+      title: body.title,
+      description: body.description,
+      isPublic,
+      coverUrl,
+    });
+    return { success: true, data: pl };
+  }
+
+  @Delete('playlists/:id')
+  @UseGuards(JwtAuthGuard)
+  async deletePlaylist(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    await this.musicService.deletePlaylist(id, user.id);
+    return { success: true };
   }
 }

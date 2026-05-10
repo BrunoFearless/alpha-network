@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useAuthStore } from './auth.store';
 
 export interface Track {
   id: string;
@@ -74,6 +75,11 @@ interface MusicState {
   setSearchQuery: (q: string) => void;
   setActiveGenre: (g: string | null) => void;
   fetchRadio: (genre?: string) => Promise<void>;
+  createPlaylist: (fd: FormData, token: string) => Promise<boolean>;
+  updatePlaylist: (id: string, fd: FormData, token: string) => Promise<boolean>;
+  deletePlaylist: (id: string, token: string) => Promise<boolean>;
+  addTrackToPlaylist: (playlistId: string, trackId: string, token: string) => Promise<boolean>;
+  removeTrackFromPlaylist: (playlistId: string, trackId: string, token: string) => Promise<boolean>;
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -236,5 +242,81 @@ export const useMusicStore = create<MusicState>((set, get) => ({
       }
     } catch (e) { console.error(e); }
     finally { set({ isLoading: false }); }
+  },
+  
+  createPlaylist: async (fd, token) => {
+    try {
+      const res = await fetch(`${API}/api/v1/music/playlists`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const json = await res.json();
+      return json.success;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  },
+
+  addTrackToPlaylist: async (playlistId, trackId, token) => {
+    try {
+      const authToken = token || useAuthStore.getState().accessToken;
+      const res = await fetch(`${API}/api/v1/music/playlists/${playlistId}/tracks/${trackId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const json = await res.json();
+      return json.success || false;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  },
+
+  updatePlaylist: async (id, fd, token) => {
+    try {
+      const authToken = token || useAuthStore.getState().accessToken;
+      const res = await fetch(`${API}/api/v1/music/playlists/${id}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${authToken}` },
+        body: fd,
+      });
+      const json = await res.json();
+      return json.success || false;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  },
+
+  deletePlaylist: async (id, token) => {
+    try {
+      const authToken = token || useAuthStore.getState().accessToken;
+      const res = await fetch(`${API}/api/v1/music/playlists/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const json = await res.json();
+      return json.success || false;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  },
+
+  removeTrackFromPlaylist: async (playlistId, trackId, token) => {
+    try {
+      const authToken = token || useAuthStore.getState().accessToken;
+      const res = await fetch(`${API}/api/v1/music/playlists/${playlistId}/tracks/${trackId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const json = await res.json();
+      return json.success || false;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
   },
 }));

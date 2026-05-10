@@ -47,8 +47,15 @@ async function bootstrap() {
     console.error(`   ✗ Error creating bots dir:`, e.message);
   }
   
-  // Configure static file serving
-  app.useStaticAssets(uploadsPath, { prefix: '/uploads' });
+  // Configure static file serving with CORS headers
+  app.useStaticAssets(uploadsPath, {
+    prefix: '/uploads',
+    setHeaders: (res) => {
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+  });
   console.log(`📱 Static files serving:`);
   console.log(`   URL Prefix: /uploads`);
   console.log(`   Physical Path: ${uploadsPath}\n`);
