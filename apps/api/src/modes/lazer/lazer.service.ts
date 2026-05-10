@@ -474,4 +474,21 @@ export class LazerService {
       return { success: false, data: [], message: 'Failed to reach YouTube API.' };
     }
   }
+
+  async getNotifications(userId: string) {
+    const notifs = await (this.prisma as any).lazerNotification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return { success: true, data: notifs };
+  }
+
+  async markNotificationRead(id: string, userId: string) {
+    await (this.prisma as any).lazerNotification.updateMany({
+      where: { id, userId },
+      data: { isRead: true },
+    });
+    return { success: true };
+  }
 }

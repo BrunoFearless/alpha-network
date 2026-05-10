@@ -24,6 +24,7 @@ export function LazerSidebar({
   const navItems = [
     { id: 'feed', icon: '🏠', label: 'Início' },
     { id: 'explore', icon: '🧭', label: 'Explorar' },
+    { id: 'music', icon: '🎧', label: 'Alpha Music' },
     { id: 'messages', icon: '💬', label: 'Mensagens' },
     { id: 'notifications', icon: '🔔', label: 'Notificações' },
     { id: 'friends', icon: '👥', label: 'Amigos' },
@@ -68,12 +69,12 @@ export function LazerSidebar({
             <button
               key={item.id}
               onClick={() => setActiveView(item.id)}
-              className="w-12 h-12 rounded-[18px] flex items-center justify-center text-xl cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95"
+              className="w-12 h-12 rounded-[18px] flex items-center justify-center text-xl cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none"
               style={{
-                background: isActive ? `${themeColor}30` : 'rgba(255, 255, 255, 0.05)',
+                background: isActive ? `${themeColor}20` : 'rgba(255, 255, 255, 0.05)',
                 color: isActive ? themeColor : 'rgba(255, 255, 255, 0.6)',
-                border: isActive ? `1.5px solid ${themeColor}` : '1px solid rgba(255,255,255,0.1)',
-                boxShadow: isActive ? `0 0 15px ${themeColor}40` : 'none'
+                border: isActive ? `1.5px solid ${themeColor}60` : '1px solid rgba(255,255,255,0.05)',
+                boxShadow: isActive ? `0 0 15px ${themeColor}30` : 'none'
               }}
               title={item.label}
             >

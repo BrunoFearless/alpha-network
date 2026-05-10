@@ -91,6 +91,7 @@ interface LazerStoreState {
   trendingTropes: TrendingTrope[];
   watchingNow: WatchingSimulcast[];
   suggestions: any[];
+  notifications: any[];
   isLoading: boolean;
   spotifyPlayback: any | null;
   fetchFeed: () => Promise<void>;
@@ -98,6 +99,8 @@ interface LazerStoreState {
   createPost: (content: string, imageUrl?: string | string[], tropeNames?: string[], isSparkle?: boolean, titleFont?: string, titleColor?: string, communityId?: string) => Promise<boolean>;
   deletePost: (id: string) => Promise<boolean>;
   editPost: (id: string, content: string, imageUrl?: string | string[], tropeNames?: string[], titleFont?: string, titleColor?: string) => Promise<boolean>;
+  fetchNotifications: () => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
   pinPost: (id: string) => Promise<boolean>;
   fetchComments: (postId: string) => Promise<void>;
   addComment: (postId: string, content: string, parentId?: string) => Promise<boolean>;
@@ -138,6 +141,7 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
   trendingTropes: [],
   watchingNow: [],
   suggestions: [],
+  notifications: [],
   isLoading: false,
   spotifyPlayback: null,
 
@@ -553,5 +557,28 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
     } catch (e) {
       console.error('Erro ao conectar Spotify:', e);
     }
+  },
+
+  fetchNotifications: async () => {
+    try {
+      const res = await fetch(`${API}/api/v1/lazer/me/notifications`, { headers: authHeaders() });
+      const json = await res.json();
+      if (json.success) set({ notifications: json.data });
+    } catch (e) { console.error('Erro ao carregar notificações:', e); }
+  },
+
+  markNotificationRead: async (id: string) => {
+    try {
+      const res = await fetch(`${API}/api/v1/lazer/me/notifications/${id}/read`, { 
+        method: 'POST',
+        headers: authHeaders() 
+      });
+      const json = await res.json();
+      if (json.success) {
+        set(s => ({
+          notifications: s.notifications.map(n => n.id === id ? { ...n, isRead: true } : n)
+        }));
+      }
+    } catch (e) { console.error('Erro ao marcar notificação como lida:', e); }
   }
 }));

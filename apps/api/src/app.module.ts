@@ -13,6 +13,7 @@ import { BotPlatformModule } from './modes/bot-platform/bot-platform.module';
 import { FriendsModule } from './users/friends.module';
 import { AlphaCoreModule } from './modes/alpha-core/alpha-core.module';
 import { ChatModule } from './modes/chat/chat.module';
+import { MusicModule } from './music/music.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ChatModule } from './modes/chat/chat.module';
     FriendsModule,
     AlphaCoreModule,
     ChatModule,
+    MusicModule,
   ],
 })
 export class AppModule {}

@@ -41,8 +41,13 @@ model User {
   lazerCommunityMemberships LazerCommunityMember[]
   lazerPosts                LazerPost[]
   lazerReactions            LazerReaction[]
+  lazerTracks               LazerTrack[]           @relation("LazerTrackAuthor")
+  lazerTrackCollaborations LazerTrackCollaboration[] @relation("LazerTrackCollaborator")
+  lazerTrackLikes           LazerTrackLike[]       @relation("LazerTrackLikeUser")
+  lazerPlaylists            LazerPlaylist[]        @relation("LazerPlaylistAuthor")
   profile                   Profile?
   sessions                  Session[]
+  lazerNotifications        LazerNotification[]    @relation("UserNotification")
   chatConversations         ChatConversation[]     @relation("UserConversations")
 
   @@map("users")
@@ -722,4 +727,110 @@ model AlphaAiMemory {
 
   @@index([aiId])
   @@map("alpha_ai_memories")
+}
+
+// ── ALPHA MUSIC ──────────────────────────────────────────────
+
+model LazerTrack {
+  id          String             @id @default(uuid())
+  authorId    String
+  title       String
+  artist      String
+  album       String?
+  genre       String?
+  audioUrl    String
+  coverUrl    String?
+  duration    Int                @default(0) // seconds
+  plays       Int                @default(0)
+  isPublic    Boolean            @default(true)
+  lyrics      Json?              // Synchronized lyrics
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  deletedAt   DateTime?
+  author      User               @relation("LazerTrackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  likes       LazerTrackLike[]
+  playlists   LazerPlaylistTrack[]
+  collaborations LazerTrackCollaboration[]
+  playLogs    LazerTrackPlay[]
+
+  @@map("lazer_tracks")
+}
+
+model LazerTrackCollaboration {
+  id        String     @id @default(uuid())
+  trackId   String
+  userId    String
+  role      String     @default("featured") // e.g. "featured", "producer", "writer"
+  createdAt DateTime   @default(now())
+  track     LazerTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  user      User       @relation("LazerTrackCollaborator", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, userId])
+  @@map("lazer_track_collaborations")
+}
+
+model LazerTrackPlay {
+  id        String     @id @default(uuid())
+  trackId   String
+  userId    String?    // Null if anonymous or not logged in
+  createdAt DateTime   @default(now())
+  track     LazerTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@index([trackId, createdAt])
+  @@index([userId, createdAt])
+  @@map("lazer_track_plays")
+}
+
+model LazerTrackLike {
+  id        String     @id @default(uuid())
+  trackId   String
+  userId    String
+  createdAt DateTime   @default(now())
+  track     LazerTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  user      User       @relation("LazerTrackLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, userId])
+  @@map("lazer_track_likes")
+}
+
+model LazerPlaylist {
+  id          String               @id @default(uuid())
+  authorId    String
+  title       String
+  description String?
+  coverUrl    String?
+  isPublic    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  author      User                 @relation("LazerPlaylistAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  tracks      LazerPlaylistTrack[]
+
+  @@map("lazer_playlists")
+}
+
+model LazerPlaylistTrack {
+  id         String        @id @default(uuid())
+  playlistId String
+  trackId    String
+  position   Int           @default(0)
+  addedAt    DateTime      @default(now())
+  playlist   LazerPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  track      LazerTrack    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, trackId])
+  @@map("lazer_playlist_tracks")
+}
+
+model LazerNotification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  content   String
+  type      String   @default("info")
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation("UserNotification", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("lazer_notifications")
 }

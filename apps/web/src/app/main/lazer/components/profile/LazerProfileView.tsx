@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { LazerUserProfile } from './types';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AlphaAIProfileModal } from '@/components/alpha-core/AlphaAIProfileModal';
 import { ThemeBg } from './ThemeBg';
 import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
 import { useLazerStore } from '@/store/lazer.store';
 import { uploadUserPersona } from '@/lib/api';
+import { useMusicStore } from '@/store/music.store';
 
 interface ProfileViewProps {
   user: LazerUserProfile;
@@ -20,11 +21,29 @@ interface ProfileViewProps {
 
 export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId }: ProfileViewProps) {
   const [showAiModal, setShowAiModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'posts' | 'chronicles' | 'media' | 'about'>('chronicles');
+  const [activeTab, setActiveTab] = useState<'posts' | 'chronicles' | 'media' | 'about' | 'music'>('chronicles');
   const [localPersonaUrl, setLocalPersonaUrl] = useState<string | null>(null);
   const [uploadingPersona, setUploadingPersona] = useState(false);
+  const [profileTracks, setProfileTracks] = useState<any[]>([]);
+  const [profilePlaylists, setProfilePlaylists] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isFriend, sendFriendRequest, userPosts } = useLazerStore();
+  const { playTrack } = useMusicStore();
+
+  // Load music for profile
+  useEffect(() => {
+    if (activeTab !== 'music') return;
+    const userId = user.userId;
+    if (!userId) return;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    Promise.all([
+      fetch(`${apiBase}/api/v1/music/tracks/user/${userId}`).then(r => r.json()),
+      fetch(`${apiBase}/api/v1/music/playlists/user/${userId}`).then(r => r.json()),
+    ]).then(([t, p]) => {
+      setProfileTracks(t.success ? t.data : []);
+      setProfilePlaylists(p.success ? p.data : []);
+    }).catch(() => {});
+  }, [activeTab, user]);
 
   const displayPersona = localPersonaUrl || user.foregroundUrl || (user as any).personaUrl;
 
@@ -221,6 +240,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 { id: 'posts', label: 'Postagens' },
                 { id: 'chronicles', label: 'Crônicas' },
                 { id: 'media', label: 'Mídia' },
+                { id: 'music', label: '🎵 Música' },
                 { id: 'about', label: 'Sobre' }
               ].map((tab) => (
                 <button
@@ -476,6 +496,110 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 </div>
               </div>
             )}
+
+            {activeTab === 'music' && (() => {
+              const totalPlays = profileTracks.reduce((acc, t) => acc + (t.plays || 0), 0);
+              const totalCollabs = profileTracks.filter(t => t.collaborations?.length > 0).length;
+
+              return (
+              <div className="pt-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {/* Artist Stats Header */}
+                <div className="flex gap-4 mb-8">
+                  <div className="flex-1 bg-white/5 border border-white/10 rounded-[2rem] p-5 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-black text-white">{profileTracks.length}</span>
+                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Faixas Publicadas</span>
+                  </div>
+                  <div className="flex-1 bg-white/5 border border-white/10 rounded-[2rem] p-5 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-black text-white">{totalPlays.toLocaleString()}</span>
+                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Total de Plays</span>
+                  </div>
+                  {totalCollabs > 0 && (
+                    <div className="flex-1 bg-white/5 border border-white/10 rounded-[2rem] p-5 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-black text-white">{totalCollabs}</span>
+                      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Colaborações</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tracks Section */}
+                <div className="mb-8">
+                  <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-4">Discografia · {profileTracks.length} faixas</p>
+                  {profileTracks.length === 0 ? (
+                    <div className="flex flex-col items-center py-12 gap-3 text-white/20">
+                      <span className="text-5xl">🎵</span>
+                      <p className="text-xs font-bold">Ainda nenhuma música publicada.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      {profileTracks.map((track: any, i: number) => {
+                        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                        const resolveUrl = (url: string) => url?.startsWith('http') ? url : `${apiBase}${url}`;
+                        return (
+                          <div key={track.id}
+                            className="group flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-all"
+                            onClick={() => playTrack?.(track, profileTracks)}
+                          >
+                            <span className="w-6 text-center text-xs font-black text-white/20 group-hover:hidden">{i + 1}</span>
+                            <svg className="w-4 h-4 hidden group-hover:block text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/10 shrink-0">
+                              {track.coverUrl ? <img src={resolveUrl(track.coverUrl)} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-white/20">🎵</div>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-white truncate flex items-center gap-2">
+                                {track.title}
+                                {track.collaborations?.length > 0 && (
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/20 px-1.5 py-0.5 rounded-md">
+                                    + {track.collaborations.length} Collab{track.collaborations.length > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-white/40 truncate">
+                                {track.artist}
+                                {track.collaborations?.map((c: any) => ` & ${c.user?.profile?.displayName || c.user?.profile?.username}`).join('')}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end mr-4">
+                              <span className="text-xs font-black text-white">{track.plays?.toLocaleString() || 0}</span>
+                              <span className="text-[8px] uppercase tracking-widest text-white/20 font-bold">Plays</span>
+                            </div>
+                            {track.genre && <span className="text-[9px] font-black uppercase tracking-widest text-white/20 px-2 py-1 rounded-full bg-white/5">{track.genre}</span>}
+                            <span className="text-xs text-white/20 font-black ml-2">{Math.floor(track.duration/60)}:{String(track.duration%60).padStart(2,'0')}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Playlists Section */}
+                <div>
+                  <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-4">Playlists · {profilePlaylists.length}</p>
+                  {profilePlaylists.length === 0 ? (
+                    <div className="flex flex-col items-center py-8 gap-3 text-white/20">
+                      <span className="text-4xl">📂</span>
+                      <p className="text-xs font-bold">Sem playlists públicas.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {profilePlaylists.map((pl: any) => {
+                        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                        const coverSrc = pl.tracks?.[0]?.track?.coverUrl;
+                        return (
+                          <div key={pl.id} className="group p-3 rounded-[1.5rem] bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer">
+                            <div className="w-full aspect-square rounded-xl bg-white/10 mb-2 overflow-hidden">
+                              {coverSrc ? <img src={coverSrc.startsWith('http') ? coverSrc : `${apiBase}${coverSrc}`} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-3xl">🎵</div>}
+                            </div>
+                            <p className="text-xs font-black text-white truncate">{pl.title}</p>
+                            <p className="text-[10px] text-white/30">{pl._count?.tracks ?? 0} músicas</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              );
+            })()}
 
             {activeTab === 'about' && (
               <div className="relative w-full h-full min-h-[600px] overflow-hidden p-4 md:p-8 flex items-center justify-center animate-in fade-in zoom-in duration-1000">

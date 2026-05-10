@@ -24,7 +24,10 @@ const IconActivity = () => <svg width="18" height="18" viewBox="0 0 24 24" fill=
 
 export function NotificationsModal({ onClose, onPostClick, onProfileClick, themeColor: c, themeMode }: NotificationsProps) {
   const { user: authUser } = useAuthStore();
-  const { feedPosts, friendRequests, acceptFriendRequest, rejectFriendRequest, fetchFriends } = useLazerStore();
+  const { 
+    feedPosts, friendRequests, acceptFriendRequest, rejectFriendRequest, fetchFriends,
+    notifications, fetchNotifications, markNotificationRead
+  } = useLazerStore();
   const [activeTab, setActiveTab] = useState<NotifTab>('Todas');
 
   const isLight = themeMode === 'light';
@@ -33,7 +36,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
   const cardBg = isLight ? 'glass-panel-light' : 'glass-panel-dark';
   const borderCol = 'transparent';
 
-  useEffect(() => { fetchFriends(); }, []);
+  useEffect(() => { fetchFriends(); fetchNotifications(); }, []);
 
   const myId = authUser?.id;
 
@@ -69,6 +72,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
     ...pendingReceived.map(r => ({ type: 'friend_request' as const, id: r.id, request: r, createdAt: r.createdAt })),
     ...reactionNotifs,
     ...commentNotifs,
+    ...notifications.map(n => ({ ...n, type: n.type || 'info' })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const filtered = activeTab === 'Todas' ? allNotifs
@@ -83,6 +87,7 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
     if (type === 'friend_request') return '#fbbf24'; // Yellow/Gold
     if (type === 'reaction') return '#ec4899'; // Pink
     if (type === 'comment') return '#06b6d4'; // Cyan
+    if (type === 'music_published') return '#a855f7'; // Purple
     return c;
   };
 
@@ -309,6 +314,32 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
                             <path d="M9 18l6-6-6-6"/>
                           </svg>
                         </div>
+                      </div>
+                    );
+                  }
+
+                  if (notif.type === 'music_published') {
+                    return (
+                      <div key={notif.id} className={`relative flex items-center gap-4 p-5 rounded-[28px] border-[1.5px] cursor-pointer hover:scale-[1.01] transition-transform group ${notif.isRead ? 'opacity-60' : ''}`}
+                        style={{ background: cardBg, borderColor: nColor, backdropFilter: 'blur(30px)' }}
+                        onClick={() => {
+                           markNotificationRead(notif.id);
+                           if (notif.link) window.location.href = notif.link;
+                        }}>
+
+                        <div className="absolute inset-0 opacity-[0.08] pointer-events-none transition-opacity group-hover:opacity-[0.15]" style={{ background: `linear-gradient(135deg, ${nColor}, transparent)` }} />
+
+                        <div className="relative w-14 h-14 rounded-[20px] flex items-center justify-center shrink-0 border-[2px] transition-transform group-hover:scale-110" style={{ background: `${nColor}20`, borderColor: nColor, color: nColor }}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        </div>
+                        
+                        <div className="flex-1 min-w-0 z-10">
+                          <p className={`text-[15px] font-black leading-tight ${textPrimary}`}>{notif.title}</p>
+                          <p className={`text-[12px] font-bold mt-1 leading-relaxed ${textSecondary}`}>{notif.content}</p>
+                          <p className={`text-[10px] font-black mt-2 uppercase tracking-widest ${textSecondary} opacity-50`}>{new Date(notif.createdAt).toLocaleDateString('pt-PT')}</p>
+                        </div>
+
+                        {!notif.isRead && <div className="w-2 h-2 rounded-full bg-white animate-pulse" />}
                       </div>
                     );
                   }

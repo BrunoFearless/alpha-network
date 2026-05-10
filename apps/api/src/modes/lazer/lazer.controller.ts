@@ -314,4 +314,17 @@ export class LazerController {
     if (!target) return { success: false, error: 'Missing target URL' };
     return this.proxyService.extractVideo(target);
   }
+
+  // ── Notifications ──────────────────────────────────────────────────
+
+  @Get('me/notifications')
+  getNotifications(@Request() req: any) {
+    return this.lazerService.getNotifications(req.user.id);
+  }
+
+  @Post('me/notifications/:id/read')
+  @HttpCode(HttpStatus.OK)
+  markNotificationRead(@Param('id') id: string, @Request() req: any) {
+    return this.lazerService.markNotificationRead(id, req.user.id);
+  }
 }
