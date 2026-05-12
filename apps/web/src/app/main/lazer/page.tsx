@@ -375,7 +375,7 @@ export default function LazerPage() {
 
       {/* Alpha Core Phase 3 Integration */}
       {isChatOpen && (
-        <AlphaCoreChat 
+        <AlphaCoreChat
           themeColor={c}
           themeMode={themeMode}
           currentMode="Lazer"

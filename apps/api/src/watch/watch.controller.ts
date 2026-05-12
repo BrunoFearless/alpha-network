@@ -114,11 +114,29 @@ export class WatchController {
   async addComment(
     @Param('id') id: string,
     @CurrentUser() user: { id: string },
-    @Body() body: { content: string; parentId?: string },
+    @Body() body: { content: string; parentId?: string; timestamp?: number },
   ) {
     if (!body.content?.trim()) throw new BadRequestException('Comment content is required');
-    const comment = await this.watchService.addComment(id, user.id, body.content, body.parentId);
+    const comment = await this.watchService.addComment(id, user.id, body.content, body.parentId, body.timestamp);
     return { success: true, data: comment };
+  }
+
+  @Post('videos/:id/reactions')
+  @UseGuards(JwtAuthGuard)
+  async addReaction(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+    @Body() body: { emoji: string; timestamp: number },
+  ) {
+    if (!body.emoji || body.timestamp === undefined) throw new BadRequestException('Emoji and timestamp are required');
+    const reaction = await this.watchService.addReaction(id, user.id, body.emoji, body.timestamp);
+    return { success: true, data: reaction };
+  }
+
+  @Get('videos/:id/reactions')
+  async getReactions(@Param('id') id: string) {
+    const reactions = await this.watchService.getReactions(id);
+    return { success: true, data: reactions };
   }
 
   @Delete('videos/:id')

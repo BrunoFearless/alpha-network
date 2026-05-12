@@ -37,6 +37,16 @@ export interface VideoComment {
     profile?: { username: string; displayName?: string; avatarUrl?: string };
   };
   _count?: { likes: number; replies: number };
+  timestamp?: number;
+}
+
+export interface VideoReaction {
+  id: string;
+  emoji: string;
+  timestamp: number;
+  user: {
+    profile?: { username: string; avatarUrl?: string };
+  };
 }
 
 interface WatchStore {
@@ -44,6 +54,7 @@ interface WatchStore {
   currentVideo: Video | null;
   pipVideo: Video | null;
   comments: VideoComment[];
+  reactions: VideoReaction[];
   isLoading: boolean;
   isLoadingVideo: boolean;
   activeCategory: string;
@@ -57,8 +68,10 @@ interface WatchStore {
   fetchVideo: (id: string, requesterId?: string) => Promise<void>;
   likeVideo: (videoId: string, token: string) => Promise<void>;
   incrementView: (videoId: string, userId?: string) => Promise<void>;
-  addComment: (videoId: string, content: string, token: string) => Promise<void>;
+  addComment: (videoId: string, content: string, token: string, timestamp?: number) => Promise<void>;
   fetchComments: (videoId: string) => Promise<void>;
+  addReaction: (videoId: string, emoji: string, timestamp: number, token: string) => Promise<void>;
+  fetchReactions: (videoId: string) => Promise<void>;
   setActiveCategory: (cat: string) => void;
   setSearchQuery: (q: string) => void;
   deleteVideo: (id: string, token: string) => Promise<boolean>;
@@ -70,6 +83,7 @@ export const useWatchStore = create<WatchStore>((set, get) => ({
   currentVideo: null,
   pipVideo: null,
   comments: [],
+  reactions: [],
   isLoading: false,
   isLoadingVideo: false,
   activeCategory: 'Para Ti',
@@ -79,7 +93,7 @@ export const useWatchStore = create<WatchStore>((set, get) => ({
 
   setActiveCategory: (cat) => set({ activeCategory: cat }),
   setSearchQuery: (q) => set({ searchQuery: q }),
-  setCurrentVideo: (video) => set({ currentVideo: video, comments: [] }),
+  setCurrentVideo: (video) => set({ currentVideo: video, comments: [], reactions: [] }),
   setPipVideo: (video) => set({ pipVideo: video }),
 
   fetchVideos: async ({ category, search, page = 1, requesterId } = {}) => {
@@ -151,12 +165,12 @@ export const useWatchStore = create<WatchStore>((set, get) => ({
     } catch (e) { console.error(e); }
   },
 
-  addComment: async (videoId, content, token) => {
+  addComment: async (videoId, content, token, timestamp) => {
     try {
       const res = await fetch(`${API}/api/v1/watch/videos/${videoId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, timestamp }),
       });
       const json = await res.json();
       if (json.success) {
@@ -175,6 +189,28 @@ export const useWatchStore = create<WatchStore>((set, get) => ({
       const res = await fetch(`${API}/api/v1/watch/videos/${videoId}`);
       const json = await res.json();
       if (json.success) set({ comments: json.data.comments || [] });
+    } catch (e) { console.error(e); }
+  },
+
+  addReaction: async (videoId, emoji, timestamp, token) => {
+    try {
+      const res = await fetch(`${API}/api/v1/watch/videos/${videoId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ emoji, timestamp }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        set(s => ({ reactions: [...s.reactions, json.data].sort((a, b) => a.timestamp - b.timestamp) }));
+      }
+    } catch (e) { console.error(e); }
+  },
+
+  fetchReactions: async (videoId) => {
+    try {
+      const res = await fetch(`${API}/api/v1/watch/videos/${videoId}/reactions`);
+      const json = await res.json();
+      if (json.success) set({ reactions: json.data });
     } catch (e) { console.error(e); }
   },
 

@@ -46,9 +46,8 @@ function VideoCard({ video, onPlay }: { video: Video; onPlay: () => void }) {
   return (
     <div
       onClick={onPlay}
-      className={`group relative cursor-pointer rounded-[2rem] overflow-hidden bg-white/[0.04] border border-white/[0.06] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_32px_rgba(168,85,247,0.15)] ${
-        isVertical ? 'row-span-2' : ''
-      }`}
+      className={`group relative cursor-pointer rounded-[2rem] overflow-hidden bg-white/[0.04] border border-white/[0.06] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_32px_rgba(168,85,247,0.15)] ${isVertical ? 'row-span-2' : ''
+        }`}
     >
       {/* Thumbnail */}
       <div className={`relative overflow-hidden ${isVertical ? 'aspect-[9/16]' : 'aspect-video'}`}>
@@ -70,7 +69,7 @@ function VideoCard({ video, onPlay }: { video: Video; onPlay: () => void }) {
         </div>
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
-            <svg className="w-6 h-6 text-white ml-1" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg className="w-6 h-6 text-white ml-1" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
           </div>
         </div>
         {isVertical && (
@@ -179,7 +178,7 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
               className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/70 hover:text-white hover:border-white/30 transition-all"
               style={{ background: 'rgba(255,255,255,0.08)' }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
             </button>
           </div>
 
@@ -187,20 +186,19 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
             {/* Video dropzone */}
             <div
               onClick={() => videoInputRef.current?.click()}
-              className={`w-full h-24 rounded-2xl border-2 flex flex-col items-center justify-center cursor-pointer transition-all gap-2 ${
-                state.videoFile
+              className={`w-full h-24 rounded-2xl border-2 flex flex-col items-center justify-center cursor-pointer transition-all gap-2 ${state.videoFile
                   ? 'border-purple-400/50 bg-purple-400/10'
                   : 'border-white/15 border-dashed hover:border-white/30 hover:bg-white/[0.04]'
-              }`}
+                }`}
             >
               {state.videoFile ? (
                 <>
-                  <svg className="text-purple-300" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  <svg className="text-purple-300" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                   <p className="text-sm font-bold text-purple-300 max-w-xs truncate text-center px-4">{state.videoFile.name}</p>
                 </>
               ) : (
                 <>
-                  <svg className="text-white/25" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M15 10l4.553-2.277A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
+                  <svg className="text-white/25" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M15 10l4.553-2.277A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" /></svg>
                   <p className="text-xs text-white/30 font-bold">Arrasta um vídeo ou clica para selecionar</p>
                 </>
               )}
@@ -210,11 +208,10 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
             {/* Thumbnail */}
             <div
               onClick={() => thumbInputRef.current?.click()}
-              className={`w-full h-16 rounded-2xl border-2 flex items-center justify-center gap-3 cursor-pointer transition-all ${
-                state.thumbnailFile ? 'border-blue-400/50 bg-blue-400/10' : 'border-white/10 border-dashed hover:border-white/20 hover:bg-white/[0.03]'
-              }`}
+              className={`w-full h-16 rounded-2xl border-2 flex items-center justify-center gap-3 cursor-pointer transition-all ${state.thumbnailFile ? 'border-blue-400/50 bg-blue-400/10' : 'border-white/10 border-dashed hover:border-white/20 hover:bg-white/[0.03]'
+                }`}
             >
-              <svg className={state.thumbnailFile ? 'text-blue-300' : 'text-white/20'} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              <svg className={state.thumbnailFile ? 'text-blue-300' : 'text-white/20'} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg>
               <p className="text-[11px] font-bold text-white/30">{state.thumbnailFile ? state.thumbnailFile.name : 'Miniatura (opcional)'}</p>
             </div>
             <input ref={thumbInputRef} type="file" accept="image/*" className="hidden" onChange={e => setState(s => ({ ...s, thumbnailFile: e.target.files?.[0] || null }))} />
@@ -254,11 +251,10 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                   <button
                     key={f}
                     onClick={() => setState(s => ({ ...s, format: f }))}
-                    className={`px-4 py-3 text-xs font-black uppercase tracking-widest transition-all ${
-                      state.format === f
+                    className={`px-4 py-3 text-xs font-black uppercase tracking-widest transition-all ${state.format === f
                         ? 'bg-purple-500/25 text-purple-300 border-r border-white/10'
                         : 'text-white/35 hover:text-white/70'
-                    }`}
+                      }`}
                     style={{ background: state.format === f ? undefined : 'transparent' }}
                   >
                     {f === 'horizontal' ? '16:9' : '9:16'}
@@ -351,7 +347,7 @@ function EditModal({ video, onClose, onSuccess }: { video: Video; onClose: () =>
               className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/70 hover:text-white hover:border-white/30 transition-all"
               style={{ background: 'rgba(255,255,255,0.08)' }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
             </button>
           </div>
 
@@ -462,7 +458,7 @@ export function LazerWatchView() {
             {/* Logo */}
             <div className="flex items-center gap-3 mr-2 shrink-0">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
               </div>
               <div>
                 <p className="text-base font-black text-white leading-none">Alpha Watch</p>
@@ -473,7 +469,7 @@ export function LazerWatchView() {
             {/* Search — pure glass, no dark bg */}
             <div className="flex-1 relative">
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
               <input
                 type="text"
@@ -492,7 +488,7 @@ export function LazerWatchView() {
                 className="shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl border border-purple-400/30 text-white font-black text-xs uppercase tracking-widest transition-all hover:border-purple-400/50 hover:scale-105 active:scale-95"
                 style={{ background: 'rgba(168,85,247,0.12)', backdropFilter: 'blur(12px)' }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                 Publicar
               </button>
             )}
@@ -504,11 +500,10 @@ export function LazerWatchView() {
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`shrink-0 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
-                  activeCategory === cat
+                className={`shrink-0 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeCategory === cat
                     ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.3)]'
                     : 'text-white/50 border border-white/[0.08] hover:text-white hover:border-white/20'
-                }`}
+                  }`}
                 style={activeCategory !== cat ? { background: 'rgba(255,255,255,0.04)' } : {}}
               >
                 {cat}
@@ -532,7 +527,7 @@ export function LazerWatchView() {
               </div>
             ) : videos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4 text-white/20">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><path d="M15 10l4.553-2.277A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><path d="M15 10l4.553-2.277A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" /></svg>
                 <p className="text-sm font-bold">Nenhum vídeo encontrado.</p>
                 {accessToken && (
                   <button onClick={() => setShowUpload(true)} className="text-xs text-purple-400 hover:text-purple-300 font-black uppercase tracking-widest transition-colors">

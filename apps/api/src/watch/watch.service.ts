@@ -197,15 +197,31 @@ export class WatchService {
     return { liked: true };
   }
 
-  async addComment(videoId: string, userId: string, content: string, parentId?: string) {
+  async addComment(videoId: string, userId: string, content: string, parentId?: string, timestamp?: number) {
     const comment = await this.prisma.alphaVideoComment.create({
-      data: { videoId, authorId: userId, content, parentId },
+      data: { videoId, authorId: userId, content, parentId, timestamp },
       include: {
         author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } },
         _count: { select: { likes: true, replies: true } },
       },
     });
     return comment;
+  }
+
+  async addReaction(videoId: string, userId: string, emoji: string, timestamp: number) {
+    return this.prisma.alphaVideoReaction.create({
+      data: { videoId, userId, emoji, timestamp },
+    });
+  }
+
+  async getReactions(videoId: string) {
+    return this.prisma.alphaVideoReaction.findMany({
+      where: { videoId },
+      orderBy: { timestamp: 'asc' },
+      include: {
+        user: { select: { profile: { select: { username: true, avatarUrl: true } } } },
+      },
+    });
   }
 
   async deleteVideo(id: string, userId: string) {

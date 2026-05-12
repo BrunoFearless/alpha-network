@@ -54,6 +54,7 @@ model User {
   alphaVideoViews           AlphaVideoView[]       @relation("AlphaVideoViewUser")
   alphaVideoComments        AlphaVideoComment[]    @relation("AlphaVideoCommentAuthor")
   alphaVideoCommentLikes    AlphaVideoCommentLike[] @relation("AlphaVideoCommentLikeUser")
+  alphaVideoReactions       AlphaVideoReaction[]   @relation("AlphaVideoReactionUser")
 
   @@map("users")
 }
@@ -862,6 +863,7 @@ model AlphaVideo {
   likes        AlphaVideoLike[]
   views_log    AlphaVideoView[]
   comments     AlphaVideoComment[]
+  reactions    AlphaVideoReaction[]
 
   @@index([authorId, createdAt])
   @@index([category, createdAt])
@@ -900,6 +902,7 @@ model AlphaVideoComment {
   authorId  String
   content   String
   parentId  String?
+  timestamp Float?
   createdAt DateTime            @default(now())
   video     AlphaVideo          @relation(fields: [videoId], references: [id], onDelete: Cascade)
   author    User                @relation("AlphaVideoCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
@@ -921,4 +924,18 @@ model AlphaVideoCommentLike {
 
   @@unique([commentId, userId])
   @@map("alpha_video_comment_likes")
+}
+
+model AlphaVideoReaction {
+  id        String     @id @default(uuid())
+  videoId   String
+  userId    String
+  emoji     String
+  timestamp Float
+  createdAt DateTime   @default(now())
+  video     AlphaVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user      User       @relation("AlphaVideoReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([videoId, timestamp])
+  @@map("alpha_video_reactions")
 }
