@@ -20,8 +20,9 @@ import { LazerMusicView } from './components/music/LazerMusicView';
 import { AlphaMusicPlayer } from './components/music/AlphaMusicPlayer';
 import { LazerWatchView } from './components/watch/LazerWatchView';
 import { AlphaWatchPiP } from './components/watch/AlphaWatchPiP';
+import { LazerArtView } from './components/art/LazerArtView';
 
-type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community' | 'messages' | 'music' | 'watch';
+type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community' | 'messages' | 'music' | 'watch' | 'art';
 
 export default function LazerPage() {
   const { user: authUser, accessToken, updateUserProfile } = useAuthStore();
@@ -69,6 +70,12 @@ export default function LazerPage() {
 
     if (view === 'profile' && userId) {
       navigateToProfile(userId);
+    } else if (view === 'art') {
+      setActiveView('art');
+    } else if (view === 'music') {
+      setActiveView('music');
+    } else if (view === 'watch') {
+      setActiveView('watch');
     } else if (postId) {
       navigateToPost(postId);
     } else if (communityId) {
@@ -353,6 +360,11 @@ export default function LazerPage() {
         {activeView === 'watch' && (
           <div className="w-full h-[calc(100vh-40px)] glass-panel-dark border border-white/[0.06] rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
             <LazerWatchView />
+          </div>
+        )}
+        {activeView === 'art' && (
+          <div className="w-full max-w-[1050px] mx-auto h-[calc(100vh-40px)] glass-panel-dark border border-white/[0.06] rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
+            <LazerArtView />
           </div>
         )}
 

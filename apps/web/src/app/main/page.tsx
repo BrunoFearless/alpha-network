@@ -17,6 +17,7 @@ const ALPHA_MODULES = [
   { id: 'developer', label: 'Developer', emoji: '💻', color: '#3b82f6', path: '/main/developer', desc: 'Projetos · Ficheiros' },
   { id: 'community', label: 'Community', emoji: '🏘️', color: '#f97316', path: '/main/community', desc: 'Servidores · Canais' },
   { id: 'alpha-ai',  label: 'Minha IA',  emoji: '🤖', color: '#ec4899', path: '/main/alpha-ai',  desc: 'Alpha Core · Assistente' },
+  { id: 'art',       label: 'Alpha Art', emoji: '🎨', color: '#f87171', path: '/main/lazer?view=art', desc: 'Galeria · Inspiração · Design' },
   { id: 'bots',      label: 'Bots',      emoji: '⚙️', color: '#14b8a6', path: '/main/bots',      desc: 'Automações' },
   { id: 'messages',  label: 'Mensagens', emoji: '💬', color: '#6366f1', path: '/main/messages',  desc: 'DMs · Privadas' },
 ];

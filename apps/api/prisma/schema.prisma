@@ -55,6 +55,11 @@ model User {
   alphaVideoComments        AlphaVideoComment[]    @relation("AlphaVideoCommentAuthor")
   alphaVideoCommentLikes    AlphaVideoCommentLike[] @relation("AlphaVideoCommentLikeUser")
   alphaVideoReactions       AlphaVideoReaction[]   @relation("AlphaVideoReactionUser")
+  alphaArts                 AlphaArt[]             @relation("AlphaArtAuthor")
+  alphaArtLikes             AlphaArtLike[]         @relation("AlphaArtLikeUser")
+  alphaArtCollections       AlphaArtCollection[]   @relation("AlphaArtCollectionAuthor")
+  alphaArtComments          AlphaArtComment[]      @relation("AlphaArtCommentAuthor")
+  alphaArtCollaborations    AlphaArtCollectionCollaborator[]
 
   @@map("users")
 }
@@ -938,4 +943,96 @@ model AlphaVideoReaction {
 
   @@index([videoId, timestamp])
   @@map("alpha_video_reactions")
+}
+
+// ── ALPHA ART ──────────────────────────────────────────────────────────────────
+
+model AlphaArt {
+  id          String               @id @default(uuid())
+  authorId    String
+  title       String
+  description String?
+  imageUrl    String
+  width       Int?
+  height      Int?
+  category    String               @default("Geral")
+  tags        String?              // JSON array
+  isPublic    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  deletedAt   DateTime?
+  author      User                 @relation("AlphaArtAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  likes       AlphaArtLike[]
+  comments    AlphaArtComment[]
+  collections AlphaArtCollectionItem[]
+
+  @@index([authorId, createdAt])
+  @@index([category, createdAt])
+  @@map("alpha_arts")
+}
+
+model AlphaArtLike {
+  id        String   @id @default(uuid())
+  artId     String
+  userId    String
+  createdAt DateTime @default(now())
+  art       AlphaArt @relation(fields: [artId], references: [id], onDelete: Cascade)
+  user      User     @relation("AlphaArtLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([artId, userId])
+  @@map("alpha_art_likes")
+}
+
+model AlphaArtCollection {
+  id             String                           @id @default(uuid())
+  authorId       String
+  title          String
+  description    String?
+  coverUrl       String?
+  isPublic       Boolean                          @default(true)
+  createdAt      DateTime                         @default(now())
+  updatedAt      DateTime                         @updatedAt
+  author         User                             @relation("AlphaArtCollectionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  items          AlphaArtCollectionItem[]
+  collaborators  AlphaArtCollectionCollaborator[]
+
+  @@map("alpha_art_collections")
+}
+
+model AlphaArtCollectionCollaborator {
+  id           String             @id @default(uuid())
+  collectionId String
+  userId       String
+  role         String             @default("collaborator") // collaborator, admin
+  createdAt    DateTime           @default(now())
+  collection   AlphaArtCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, userId])
+  @@map("alpha_art_collection_collaborators")
+}
+
+model AlphaArtCollectionItem {
+  id           String             @id @default(uuid())
+  collectionId String
+  artId        String
+  createdAt    DateTime           @default(now())
+  collection   AlphaArtCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  art          AlphaArt           @relation(fields: [artId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, artId])
+  @@map("alpha_art_collection_items")
+}
+
+model AlphaArtComment {
+  id        String   @id @default(uuid())
+  artId     String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  art       AlphaArt @relation(fields: [artId], references: [id], onDelete: Cascade)
+  author    User     @relation("AlphaArtCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([artId, createdAt])
+  @@map("alpha_art_comments")
 }
