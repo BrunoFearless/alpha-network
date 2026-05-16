@@ -37,17 +37,22 @@ export class ArtController {
 
     const imageUrl = this.artService.saveArtUpload(user.id, file);
 
-    let tags: string[] = [];
+    let tagsStr: string | undefined;
     if (body.tags) {
-      try { tags = JSON.parse(body.tags); } catch { tags = body.tags.split(',').map(t => t.trim()); }
+      try { 
+        const parsed = JSON.parse(body.tags); 
+        tagsStr = JSON.stringify(parsed);
+      } catch { 
+        tagsStr = JSON.stringify(body.tags.split(',').map(t => t.trim())); 
+      }
     }
 
     const art = await this.artService.createArt(user.id, {
       title: body.title,
       description: body.description,
       imageUrl,
-      category: body.category,
-      tags
+      category: body.category || 'Geral',
+      tags: tagsStr
     });
 
     return { success: true, data: art };
@@ -55,21 +60,34 @@ export class ArtController {
 
   @Put('arts/:id')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('image'))
   async updateArt(
     @Param('id') id: string,
     @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
     @Body() body: { title?: string; description?: string; category?: string; tags?: string },
   ) {
-    let tags: string[] | undefined;
+    let tagsStr: string | undefined;
     if (body.tags) {
-      try { tags = JSON.parse(body.tags); } catch { tags = body.tags.split(',').map(t => t.trim()); }
+      try { 
+        const parsed = JSON.parse(body.tags); 
+        tagsStr = JSON.stringify(parsed);
+      } catch { 
+        tagsStr = JSON.stringify(body.tags.split(',').map(t => t.trim())); 
+      }
+    }
+
+    let imageUrl: string | undefined;
+    if (file) {
+      imageUrl = this.artService.saveArtUpload(user.id, file);
     }
 
     const art = await this.artService.updateArt(id, user.id, {
       title: body.title,
       description: body.description,
       category: body.category,
-      tags
+      tags: tagsStr,
+      imageUrl
     });
     return { success: true, data: art };
   }
@@ -161,18 +179,20 @@ export class ArtController {
     return { success: true, data: collection };
   }
 
-  @Put('collections/:id')
+  @Put('folder/:id')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('cover'))
   async updateCollection(
     @Param('id') id: string,
     @CurrentUser() user: { id: string },
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { title?: string; description?: string; isPublic?: string },
+    @Body() body: { title?: string; description?: string; isPublic?: string; removeCover?: string },
   ) {
-    let coverUrl: string | undefined;
+    let coverUrl: string | undefined | null;
     if (file) {
       coverUrl = this.artService.saveCollectionCoverUpload(user.id, file);
+    } else if (body.removeCover === 'true') {
+      coverUrl = null;
     }
 
     const collection = await this.artService.updateCollection(id, user.id, {
@@ -190,7 +210,7 @@ export class ArtController {
     return { success: true, data: collections };
   }
 
-  @Get('collections/:id')
+  @Get('folder/:id')
   async getCollection(@Param('id') id: string) {
     const collection = await this.artService.getCollection(id);
     return { success: true, data: collection };

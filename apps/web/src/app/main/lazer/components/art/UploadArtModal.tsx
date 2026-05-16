@@ -27,11 +27,24 @@ export function UploadArtModal({ art, onClose }: Props) {
 
   useEffect(() => {
     if (art) {
+      let tagsStr = '';
+      if (Array.isArray(art.tags)) {
+        tagsStr = art.tags.join(', ');
+      } else if (typeof art.tags === 'string') {
+        try {
+          const parsed = JSON.parse(art.tags);
+          if (Array.isArray(parsed)) tagsStr = parsed.join(', ');
+          else tagsStr = art.tags;
+        } catch {
+          tagsStr = art.tags;
+        }
+      }
+
       setForm({
         title: art.title,
         description: art.description || '',
         category: art.category,
-        tags: art.tags?.join(', ') || '',
+        tags: tagsStr,
         image: null
       });
     }

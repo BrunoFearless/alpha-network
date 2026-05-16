@@ -207,7 +207,7 @@ export const useArtStore = create<ArtStore>((set, get) => ({
 
   updateCollection: async (id: string, formData: FormData, token: string) => {
     try {
-      const res = await fetch(`${API}/api/v1/art/collections/${id}`, {
+      const res = await fetch(`${API}/api/v1/art/folder/${id}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
         body: formData

@@ -9,7 +9,7 @@ export class ArtService {
 
   // ── ARTWORKS ───────────────────────────────────────────────
 
-  async createArt(authorId: string, data: { title: string; description?: string; imageUrl: string; category: string; tags?: string[]; width?: number; height?: number }) {
+  async createArt(authorId: string, data: { title: string; description?: string; imageUrl: string; category: string; tags?: string; width?: number; height?: number }) {
     return this.prisma.alphaArt.create({
       data: {
         authorId,
@@ -17,14 +17,14 @@ export class ArtService {
         description: data.description,
         imageUrl: data.imageUrl,
         category: data.category,
-        tags: data.tags || [],
+        tags: data.tags,
         width: data.width,
         height: data.height,
       },
     });
   }
 
-  async updateArt(artId: string, userId: string, data: { title?: string; description?: string; category?: string; tags?: string[] }) {
+  async updateArt(artId: string, userId: string, data: { title?: string; description?: string; category?: string; tags?: string; imageUrl?: string }) {
     const art = await this.prisma.alphaArt.findUnique({ where: { id: artId } });
     if (!art) throw new NotFoundException('Art not found');
     if (art.authorId !== userId) throw new ForbiddenException();
@@ -36,6 +36,7 @@ export class ArtService {
         description: data.description,
         category: data.category,
         tags: data.tags,
+        imageUrl: data.imageUrl,
       },
     });
   }
@@ -113,7 +114,7 @@ export class ArtService {
 
   async addComment(artId: string, userId: string, content: string) {
     return this.prisma.alphaArtComment.create({
-      data: { artId, userId, content }
+      data: { artId, authorId: userId, content }
     });
   }
 
@@ -149,7 +150,7 @@ export class ArtService {
     });
   }
 
-  async updateCollection(id: string, userId: string, data: { title?: string; description?: string; isPublic?: boolean; coverUrl?: string }) {
+  async updateCollection(id: string, userId: string, data: { title?: string; description?: string; isPublic?: boolean; coverUrl?: string | null }) {
     console.log(`[ArtService] updateCollection searching for ID: ${id}`);
     const col = await this.prisma.alphaArtCollection.findUnique({ where: { id } });
     if (!col) {
@@ -219,6 +220,7 @@ export class ArtService {
       include: {
         _count: { select: { items: true } },
         items: {
+          orderBy: { createdAt: 'desc' },
           include: { 
             art: { 
               include: { 
@@ -242,6 +244,7 @@ export class ArtService {
           include: { user: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } } }
         },
         items: {
+          orderBy: { createdAt: 'desc' },
           include: {
             art: {
               include: {

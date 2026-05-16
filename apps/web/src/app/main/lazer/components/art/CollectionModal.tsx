@@ -19,6 +19,7 @@ export function CollectionModal({ art, collection, onClose }: Props) {
   const [showCreate, setShowCreate] = useState(!!collection); // Auto show form if editing
   const [savingId, setSavingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [removeCover, setRemoveCover] = useState(false);
 
   // Form State
   const [form, setForm] = useState({
@@ -46,6 +47,7 @@ export function CollectionModal({ art, collection, onClose }: Props) {
         isPublic: collection.isPublic ?? true,
         collaborators: collection.collaborators?.map((c: any) => c.user?.profile ? { ...c.user.profile, id: c.userId } : null).filter(Boolean) || []
       });
+      setRemoveCover(false);
     }
   }, [authUser?.id, collection]);
 
@@ -65,7 +67,12 @@ export function CollectionModal({ art, collection, onClose }: Props) {
       fd.append('title', form.title);
       fd.append('description', form.description);
       fd.append('isPublic', String(form.isPublic));
-      if (form.cover) fd.append('cover', form.cover);
+      
+      if (form.cover) {
+        fd.append('cover', form.cover);
+      } else if (removeCover) {
+        fd.append('removeCover', 'true');
+      }
       
       const collabIds = form.collaborators.map(c => c.id);
       if (collabIds.length > 0) fd.append('collaborators', JSON.stringify(collabIds));
@@ -148,18 +155,24 @@ export function CollectionModal({ art, collection, onClose }: Props) {
                          onClick={() => fileInputRef.current?.click()}
                          className="relative h-[160px] rounded-[1.5rem] bg-white/5 border-[1.5px] border-dashed border-white/20 flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-all overflow-hidden group shadow-[inset_0_0_20px_rgba(0,0,0,0.2)]"
                        >
-                         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => setForm(s => ({ ...s, cover: e.target.files?.[0] || null }))} />
-                         {(form.cover || collection?.coverUrl) ? (
+                         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => { setForm(s => ({ ...s, cover: e.target.files?.[0] || null })); setRemoveCover(false); }} />
+                         {(form.cover || (collection?.coverUrl && !removeCover)) ? (
                            <>
                              <img src={form.cover ? URL.createObjectURL(form.cover) : resolveUrl(collection.coverUrl)} className="w-full h-full object-cover" alt="" />
-                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <span className="px-4 py-2 rounded-full bg-white text-black text-[8px] font-black uppercase tracking-widest shadow-xl">Alterar</span>
+                             <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <span className="px-4 py-2 rounded-full bg-white text-black text-[8px] font-black uppercase tracking-widest shadow-xl">Alterar Capa</span>
+                                 <button 
+                                   onClick={(e) => { e.stopPropagation(); setForm(s => ({ ...s, cover: null })); setRemoveCover(true); }}
+                                   className="px-4 py-1.5 rounded-full bg-red-500 text-white text-[8px] font-black uppercase tracking-widest shadow-[0_4px_12px_rgba(220,38,38,0.4)] hover:bg-red-400 transition-colors"
+                                 >
+                                   Remover
+                                 </button>
                              </div>
                            </>
                          ) : (
                            <div className="text-center p-4">
                                <div className="text-xl mb-2 opacity-40 group-hover:scale-110 transition-transform">📸</div>
-                               <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Capa</p>
+                               <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Adicionar Capa</p>
                            </div>
                          )}
                        </div>
