@@ -60,6 +60,7 @@ model User {
   alphaArtCollections       AlphaArtCollection[]   @relation("AlphaArtCollectionAuthor")
   alphaArtComments          AlphaArtComment[]      @relation("AlphaArtCommentAuthor")
   alphaArtCollaborations    AlphaArtCollectionCollaborator[]
+  alphaArtSaves             AlphaArtSave[]         @relation("AlphaArtSaveUser")
 
   @@map("users")
 }
@@ -965,6 +966,7 @@ model AlphaArt {
   likes       AlphaArtLike[]
   comments    AlphaArtComment[]
   collections AlphaArtCollectionItem[]
+  saves       AlphaArtSave[]
 
   @@index([authorId, createdAt])
   @@index([category, createdAt])
@@ -981,6 +983,18 @@ model AlphaArtLike {
 
   @@unique([artId, userId])
   @@map("alpha_art_likes")
+}
+
+model AlphaArtSave {
+  id        String   @id @default(uuid())
+  artId     String
+  userId    String
+  createdAt DateTime @default(now())
+  art       AlphaArt @relation(fields: [artId], references: [id], onDelete: Cascade)
+  user      User     @relation("AlphaArtSaveUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([artId, userId])
+  @@map("alpha_art_saves")
 }
 
 model AlphaArtCollection {

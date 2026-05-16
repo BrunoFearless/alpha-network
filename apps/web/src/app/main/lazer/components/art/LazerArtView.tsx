@@ -10,16 +10,23 @@ import { CollectionModal } from './CollectionModal';
 const CATEGORIES = ['Para Ti', 'Design', 'Arquitetura', 'Ilustração', 'Fotografia', 'Digital Art', 'Natureza', 'Minimalismo', 'Culinária'];
 
 export function LazerArtView() {
-  const { arts, collections, isLoading, searchQuery, activeCategory, fetchArts, fetchUserCollections, setActiveCategory, setSearchQuery } = useArtStore();
-  const { user: authUser } = useAuthStore();
+  const { arts, savedArts, collections, isLoading, searchQuery, activeCategory, fetchArts, fetchSavedArts, fetchUserCollections, setActiveCategory, setSearchQuery } = useArtStore();
+  const { user: authUser, accessToken } = useAuthStore();
   
   const [viewMode, setViewMode] = useState<'feed' | 'profile'>('feed');
+  const [profileTab, setProfileTab] = useState<'collections' | 'saved'>('collections');
   const [selectedArt, setSelectedArt] = useState<Art | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState<Art | null>(null);
   const [selectedCollection, setSelectedCollection] = useState<any>(null);
   const [editingArt, setEditingArt] = useState<Art | null>(null);
   const [editingCollection, setEditingCollection] = useState<any>(null);
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  // Sincroniza a pesquisa local se for limpa por outro lado (ex: mudar de categoria)
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (viewMode === 'feed') {
@@ -29,9 +36,12 @@ export function LazerArtView() {
         requesterId: authUser?.id 
       });
     } else {
-      if (authUser?.id) fetchUserCollections(authUser.id);
+      if (authUser?.id) {
+        fetchUserCollections(authUser.id);
+        if (accessToken) fetchSavedArts(accessToken);
+      }
     }
-  }, [viewMode, activeCategory, searchQuery, authUser?.id]);
+  }, [viewMode, activeCategory, searchQuery, authUser?.id, accessToken]);
 
   useEffect(() => {
     if (selectedCollection && collections.length > 0) {
@@ -61,9 +71,14 @@ export function LazerArtView() {
              <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-white/40 transition-colors" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
              <input 
                type="text" 
-               placeholder="Pesquisar inspirações..."
-               value={searchQuery}
-               onChange={(e) => setSearchQuery(e.target.value)}
+               placeholder="Pesquisar inspirações... (Prima Enter)"
+               value={localSearch}
+               onChange={(e) => setLocalSearch(e.target.value)}
+               onKeyDown={(e) => {
+                 if (e.key === 'Enter') {
+                   setSearchQuery(localSearch);
+                 }
+               }}
                className="w-full h-12 pl-12 pr-6 rounded-full bg-white/5 border border-white/5 focus:bg-white/10 focus:border-white/20 text-white placeholder-white/20 text-sm transition-all focus:outline-none"
              />
            </div>
@@ -104,41 +119,60 @@ export function LazerArtView() {
         )}
 
         {viewMode === 'profile' && (
-          <div className="flex items-center justify-between">
-             <div className="flex items-center gap-4">
-                {selectedCollection && (
-                  <button 
-                    onClick={() => setSelectedCollection(null)}
-                    className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all mr-2"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
-                  </button>
-                )}
-                <div className="flex flex-col">
-                  <h2 className="text-sm font-black text-white uppercase tracking-[0.3em]">
-                    {selectedCollection ? selectedCollection.title : 'As Minhas Coleções'}
-                  </h2>
-                  {selectedCollection && (
-                    <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest mt-0.5">Criada por {selectedCollection.author?.profile?.displayName || 'mim'}</p>
-                  )}
+          <div className="flex flex-col gap-4">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                   {selectedCollection && (
+                     <button 
+                       onClick={() => setSelectedCollection(null)}
+                       className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all mr-2"
+                     >
+                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
+                     </button>
+                   )}
+                   <div className="flex flex-col">
+                     <h2 className="text-sm font-black text-white uppercase tracking-[0.3em]">
+                       {selectedCollection ? selectedCollection.title : 'As Minhas Inspirações'}
+                     </h2>
+                     {selectedCollection && (
+                       <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest mt-0.5">Criada por {selectedCollection.author?.profile?.displayName || 'mim'}</p>
+                     )}
+                   </div>
+                   {selectedCollection && selectedCollection.authorId === authUser?.id && (
+                     <button 
+                       onClick={() => setEditingCollection(selectedCollection)}
+                       className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all ml-2"
+                       title="Configurações da Coleção"
+                     >
+                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                     </button>
+                   )}
                 </div>
-                {selectedCollection && selectedCollection.authorId === authUser?.id && (
-                  <button 
-                    onClick={() => setEditingCollection(selectedCollection)}
-                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all ml-2"
-                    title="Configurações da Coleção"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                  </button>
-                )}
+                <div className="flex gap-4 text-[10px] font-black text-white/40 uppercase tracking-widest">
+                   <span className="text-white">
+                     {selectedCollection ? `${selectedCollection.items?.length || 0} Itens` : profileTab === 'collections' ? `${collections.length} Pastas` : `${savedArts.length} Guardados`}
+                   </span>
+                   <span>•</span>
+                   <span>Organizado por Recentes</span>
+                </div>
              </div>
-             <div className="flex gap-4 text-[10px] font-black text-white/40 uppercase tracking-widest">
-                <span className="text-white">
-                  {selectedCollection ? `${selectedCollection.items?.length || 0} Itens` : `${collections.length} Pastas`}
-                </span>
-                <span>•</span>
-                <span>Organizado por Recentes</span>
-             </div>
+
+             {!selectedCollection && (
+               <div className="flex items-center gap-2 mt-2">
+                 <button 
+                   onClick={() => setProfileTab('collections')}
+                   className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${profileTab === 'collections' ? 'bg-white text-black shadow-xl' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
+                 >
+                   Coleções
+                 </button>
+                 <button 
+                   onClick={() => setProfileTab('saved')}
+                   className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${profileTab === 'saved' ? 'bg-white text-black shadow-xl' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
+                 >
+                   Guardados
+                 </button>
+               </div>
+             )}
           </div>
         )}
       </header>
@@ -188,7 +222,7 @@ export function LazerArtView() {
                   <div className="col-span-full py-40 text-center opacity-20 italic text-xs uppercase tracking-widest">Esta coleção ainda está vazia.</div>
                 )}
               </div>
-            ) : (
+            ) : profileTab === 'collections' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                 {collections.map(col => (
                   <div 
@@ -228,6 +262,20 @@ export function LazerArtView() {
                     </div>
                     <span className="text-[10px] font-black text-white/20 uppercase tracking-widest group-hover:text-white/40 transition-colors">Nova Coleção</span>
                 </div>
+              </div>
+            ) : (
+              <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {savedArts.map(art => (
+                  <ArtCard 
+                    key={art.id} 
+                    art={art} 
+                    onOpen={setSelectedArt}
+                    onSave={setShowSaveModal}
+                  />
+                ))}
+                {savedArts.length === 0 && (
+                  <div className="col-span-full py-40 text-center opacity-20 italic text-xs uppercase tracking-widest">Ainda não guardaste nenhuma inspiração.</div>
+                )}
               </div>
             )}
           </>

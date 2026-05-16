@@ -11,7 +11,7 @@ interface Props {
 
 export function ArtCard({ art, onOpen, onSave }: Props) {
   const [isHovered, setIsHovered] = useState(false);
-  const { likeArt } = useArtStore();
+  const { likeArt, toggleSaveArt } = useArtStore();
   const { accessToken } = useAuthStore();
   
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -39,12 +39,19 @@ export function ArtCard({ art, onOpen, onSave }: Props) {
         <div 
           className={`absolute inset-0 bg-black/20 transition-opacity duration-300 flex flex-col justify-between p-3 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
         >
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <button 
+              onClick={(e) => { e.stopPropagation(); if (accessToken) toggleSaveArt(art.id, accessToken); }}
+              className={`px-4 py-2.5 rounded-full font-black text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-xl ${art.saved ? 'bg-black text-white border border-white/20' : 'bg-red-600 hover:bg-red-700 text-white'}`}
+            >
+              {art.saved ? 'Guardado' : 'Guardar'}
+            </button>
             <button 
               onClick={(e) => { e.stopPropagation(); onSave(art); }}
-              className="px-4 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-xl"
+              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 backdrop-blur-md shadow-xl border border-white/10"
+              title="Organizar em Coleção"
             >
-              Guardar
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
             </button>
           </div>
 

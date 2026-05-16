@@ -124,6 +124,21 @@ export class ArtController {
     return { success: true, data: result };
   }
 
+  @Get('arts/user/saved')
+  @UseGuards(JwtAuthGuard)
+  async getSavedArts(@CurrentUser() user: { id: string }) {
+    const savedArts = await this.artService.getSavedArts(user.id);
+    return { success: true, data: savedArts };
+  }
+
+  @Post('arts/:id/save')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async toggleSaveArt(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    const result = await this.artService.toggleSaveArt(id, user.id);
+    return { success: true, data: result };
+  }
+
   @Post('arts/:id/comments')
   @UseGuards(JwtAuthGuard)
   async addComment(

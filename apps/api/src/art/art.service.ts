@@ -56,11 +56,19 @@ export class ArtService {
     const where: any = {};
     if (category && category !== 'Para Ti') where.category = category;
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { tags: { hasSome: [search] } },
-      ];
+      // Divide a frase em palavras-chave (ignorando palavras muito curtas)
+      const keywords = search.split(/\s+/).filter(word => word.length > 1);
+
+      // Para cada palavra-chave, gera condições OR em todos os campos relevantes.
+      // O resultado final é também um OR: qualquer arte que corresponda a QUALQUER palavra aparece.
+      const keywordConditions = keywords.flatMap(kw => [
+        { title: { contains: kw, mode: 'insensitive' as const } },
+        { description: { contains: kw, mode: 'insensitive' as const } },
+        { category: { contains: kw, mode: 'insensitive' as const } },
+        { tags: { contains: kw, mode: 'insensitive' as const } },
+      ]);
+
+      where.OR = keywordConditions;
     }
 
     const [arts, total] = await Promise.all([
@@ -73,13 +81,14 @@ export class ArtService {
           author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } },
           _count: { select: { likes: true, comments: true } },
           likes: requesterId ? { where: { userId: requesterId } } : false,
+          saves: requesterId ? { where: { userId: requesterId } } : false,
         },
       }),
       this.prisma.alphaArt.count({ where }),
     ]);
 
     return {
-      arts: arts.map(a => ({ ...a, liked: a.likes?.length > 0, likes: undefined })),
+      arts: arts.map(a => ({ ...a, liked: a.likes?.length > 0, likes: undefined, saved: a.saves?.length > 0, saves: undefined })),
       total,
       pages: Math.ceil(total / limit),
     };
@@ -92,10 +101,11 @@ export class ArtService {
         author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } },
         _count: { select: { likes: true, comments: true } },
         likes: userId ? { where: { userId } } : false,
+        saves: userId ? { where: { userId } } : false,
       },
     });
     if (!art) throw new NotFoundException();
-    return { ...art, liked: art.likes?.length > 0, likes: undefined };
+    return { ...art, liked: art.likes?.length > 0, likes: undefined, saved: art.saves?.length > 0, saves: undefined };
   }
 
   async likeArt(artId: string, userId: string) {
@@ -110,6 +120,45 @@ export class ArtService {
       await this.prisma.alphaArtLike.create({ data: { artId, userId } });
       return { liked: true };
     }
+  }
+
+  async toggleSaveArt(artId: string, userId: string) {
+    const existing = await this.prisma.alphaArtSave.findUnique({
+      where: { artId_userId: { artId, userId } },
+    });
+
+    if (existing) {
+      await this.prisma.alphaArtSave.delete({ where: { id: existing.id } });
+      return { saved: false };
+    } else {
+      await this.prisma.alphaArtSave.create({ data: { artId, userId } });
+      return { saved: true };
+    }
+  }
+
+  async getSavedArts(userId: string) {
+    const saves = await this.prisma.alphaArtSave.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        art: {
+          include: {
+            author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } },
+            _count: { select: { likes: true, comments: true } },
+            likes: { where: { userId } },
+            saves: { where: { userId } },
+          }
+        }
+      }
+    });
+
+    return saves.map(s => ({
+      ...s.art,
+      liked: s.art.likes?.length > 0,
+      likes: undefined,
+      saved: true,
+      saves: undefined
+    }));
   }
 
   async addComment(artId: string, userId: string, content: string) {
