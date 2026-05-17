@@ -8,6 +8,7 @@ export interface Art {
   title: string;
   description?: string;
   imageUrl: string;
+  imageUrls?: string[]; // Multiple images (carousel)
   width?: number;
   height?: number;
   category: string;
@@ -50,7 +51,7 @@ interface ArtStore {
   totalPages: number;
   currentPage: number;
 
-  fetchArts: (opts?: { category?: string; search?: string; page?: number; requesterId?: string }) => Promise<void>;
+  fetchArts: (opts?: { category?: string; search?: string; page?: number; requesterId?: string; authorId?: string }) => Promise<void>;
   fetchArt: (id: string, requesterId?: string) => Promise<void>;
   fetchSavedArts: (token: string) => Promise<void>;
   likeArt: (artId: string, token: string) => Promise<void>;
@@ -61,6 +62,7 @@ interface ArtStore {
   addCollaborator: (collectionId: string, userId: string, token: string) => Promise<boolean>;
   removeCollaborator: (collectionId: string, userId: string, token: string) => Promise<boolean>;
   updateArt: (id: string, formData: FormData | any, token: string) => Promise<boolean>;
+  deleteArt: (id: string, token: string) => Promise<boolean>;
   updateCollection: (id: string, formData: FormData, token: string) => Promise<boolean>;
   setActiveCategory: (cat: string) => void;
   setSearchQuery: (q: string) => void;
@@ -82,7 +84,26 @@ export const useArtStore = create<ArtStore>((set, get) => ({
   setSearchQuery: (q) => set({ searchQuery: q }),
   setCurrentArt: (art) => set({ currentArt: art }),
 
-  fetchArts: async ({ category, search, page = 1, requesterId } = {}) => {
+  deleteArt: async (id, token) => {
+    try {
+      const res = await fetch(`${API}/api/v1/art/arts/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success) {
+        set(state => ({
+          arts: state.arts.filter(a => a.id !== id),
+          savedArts: state.savedArts.filter(a => a.id !== id),
+          currentArt: state.currentArt?.id === id ? null : state.currentArt,
+        }));
+        return true;
+      }
+      return false;
+    } catch { return false; }
+  },
+
+  fetchArts: async ({ category, search, page = 1, requesterId, authorId } = {}) => {
     set({ isLoading: true });
     try {
       const params = new URLSearchParams();
@@ -91,6 +112,7 @@ export const useArtStore = create<ArtStore>((set, get) => ({
       params.set('page', String(page));
       params.set('limit', '40');
       if (requesterId) params.set('userId', requesterId);
+      if (authorId) params.set('authorId', authorId);
 
       const res = await fetch(`${API}/api/v1/art/arts?${params}`);
       const json = await res.json();

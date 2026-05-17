@@ -9,13 +9,14 @@ export class ArtService {
 
   // ── ARTWORKS ───────────────────────────────────────────────
 
-  async createArt(authorId: string, data: { title: string; description?: string; imageUrl: string; category: string; tags?: string; width?: number; height?: number }) {
+  async createArt(authorId: string, data: { title: string; description?: string; imageUrl: string; imageUrls?: string; category: string; tags?: string; width?: number; height?: number }) {
     return this.prisma.alphaArt.create({
       data: {
         authorId,
         title: data.title,
         description: data.description,
         imageUrl: data.imageUrl,
+        imageUrls: data.imageUrls,
         category: data.category,
         tags: data.tags,
         width: data.width,
@@ -49,11 +50,12 @@ export class ArtService {
     return this.prisma.alphaArt.delete({ where: { id: artId } });
   }
 
-  async getArts(query: { category?: string; search?: string; page?: number; limit?: number; requesterId?: string }) {
-    const { category, search, page = 1, limit = 40, requesterId } = query;
+  async getArts(query: { category?: string; search?: string; page?: number; limit?: number; requesterId?: string; authorId?: string }) {
+    const { category, search, page = 1, limit = 40, requesterId, authorId } = query;
     const skip = (page - 1) * limit;
 
     const where: any = {};
+    if (authorId) where.authorId = authorId;
     if (category && category !== 'Para Ti') where.category = category;
     if (search) {
       // Divide a frase em palavras-chave (ignorando palavras muito curtas)
@@ -88,7 +90,11 @@ export class ArtService {
     ]);
 
     return {
-      arts: arts.map(a => ({ ...a, liked: a.likes?.length > 0, likes: undefined, saved: a.saves?.length > 0, saves: undefined })),
+      arts: arts.map(a => {
+        let imageUrls: string[] | undefined;
+        if (a.imageUrls) { try { imageUrls = JSON.parse(a.imageUrls); } catch { imageUrls = undefined; } }
+        return { ...a, imageUrls, liked: a.likes?.length > 0, likes: undefined, saved: a.saves?.length > 0, saves: undefined };
+      }),
       total,
       pages: Math.ceil(total / limit),
     };
@@ -105,7 +111,9 @@ export class ArtService {
       },
     });
     if (!art) throw new NotFoundException();
-    return { ...art, liked: art.likes?.length > 0, likes: undefined, saved: art.saves?.length > 0, saves: undefined };
+    let imageUrls: string[] | undefined;
+    if (art.imageUrls) { try { imageUrls = JSON.parse(art.imageUrls); } catch { imageUrls = undefined; } }
+    return { ...art, imageUrls, liked: art.likes?.length > 0, likes: undefined, saved: art.saves?.length > 0, saves: undefined };
   }
 
   async likeArt(artId: string, userId: string) {

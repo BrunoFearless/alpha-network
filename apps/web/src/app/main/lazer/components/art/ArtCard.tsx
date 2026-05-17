@@ -11,11 +11,33 @@ interface Props {
 
 export function ArtCard({ art, onOpen, onSave }: Props) {
   const [isHovered, setIsHovered] = useState(false);
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const { likeArt, toggleSaveArt } = useArtStore();
   const { accessToken } = useAuthStore();
   
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const resolveUrl = (url: string) => url.startsWith('http') || url.startsWith('blob:') ? url : `${apiBase}${url}`;
+
+  // Parse imageUrls — supports both parsed array and raw JSON string
+  const allImages: string[] = (() => {
+    if (art.imageUrls && Array.isArray(art.imageUrls) && art.imageUrls.length > 0) {
+      return art.imageUrls;
+    }
+    return [art.imageUrl];
+  })();
+
+  const isCarousel = allImages.length > 1;
+  const currentImage = resolveUrl(allImages[carouselIndex]);
+
+  const goNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCarouselIndex(i => (i + 1) % allImages.length);
+  };
+
+  const goPrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCarouselIndex(i => (i - 1 + allImages.length) % allImages.length);
+  };
 
   return (
     <div 
@@ -29,16 +51,25 @@ export function ArtCard({ art, onOpen, onSave }: Props) {
         onClick={() => onOpen(art)}
       >
         <img 
-          src={resolveUrl(art.imageUrl)} 
+          src={currentImage} 
           alt={art.title}
-          className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
+          className="w-full h-auto object-cover transition-all duration-500 group-hover:scale-105"
           loading="lazy"
         />
 
+        {/* Carousel indicator (top-left) */}
+        {isCarousel && (
+          <div className="absolute top-3 left-3 flex items-center gap-1 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            <span className="text-[9px] font-black text-white">{allImages.length}</span>
+          </div>
+        )}
+
         {/* Overlay Controls */}
         <div 
-          className={`absolute inset-0 bg-black/20 transition-opacity duration-300 flex flex-col justify-between p-3 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 transition-opacity duration-300 flex flex-col justify-between p-3 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
         >
+          {/* Top row: Save + Collection */}
           <div className="flex justify-end gap-2">
             <button 
               onClick={(e) => { e.stopPropagation(); if (accessToken) toggleSaveArt(art.id, accessToken); }}
@@ -55,6 +86,25 @@ export function ArtCard({ art, onOpen, onSave }: Props) {
             </button>
           </div>
 
+          {/* Carousel arrows (middle sides) */}
+          {isCarousel && (
+            <>
+              <button
+                onClick={goPrev}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all hover:scale-110 active:scale-95 shadow-xl"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button
+                onClick={goNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all hover:scale-110 active:scale-95 shadow-xl"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            </>
+          )}
+
+          {/* Bottom row: Like + Share + Dots */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1">
                <button 
@@ -65,8 +115,24 @@ export function ArtCard({ art, onOpen, onSave }: Props) {
                </button>
             </div>
             
+            {/* Dots indicator */}
+            {isCarousel && (
+              <div className="flex gap-1 absolute bottom-3 left-1/2 -translate-x-1/2">
+                {allImages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={e => { e.stopPropagation(); setCarouselIndex(i); }}
+                    className={`rounded-full transition-all ${i === carouselIndex ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/50 hover:bg-white/80'}`}
+                  />
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center gap-1">
-              <button className="w-8 h-8 rounded-full bg-white/80 hover:bg-white text-black flex items-center justify-center transition-all hover:scale-110">
+              <button 
+                onClick={(e) => { e.stopPropagation(); window.open(resolveUrl(art.imageUrl), '_blank'); }}
+                className="w-8 h-8 rounded-full bg-white/80 hover:bg-white text-black flex items-center justify-center transition-all hover:scale-110"
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
               </button>
             </div>

@@ -20,8 +20,9 @@ export function UploadArtModal({ art, onClose }: Props) {
     description: '',
     category: 'Digital Art',
     tags: '',
-    image: null as File | null
   });
+  const [images, setImages] = useState<File[]>([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,14 +46,28 @@ export function UploadArtModal({ art, onClose }: Props) {
         description: art.description || '',
         category: art.category,
         tags: tagsStr,
-        image: null
       });
     }
   }, [art]);
 
+  const handleFiles = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files);
+    setImages(prev => {
+      const combined = [...prev, ...newFiles].slice(0, 10);
+      return combined;
+    });
+    setPreviewIndex(0);
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+    setPreviewIndex(0);
+  };
+
   const handleSubmit = async () => {
     if (!form.title || !accessToken) return;
-    if (!art && !form.image) return; // Need image for new uploads
+    if (!art && images.length === 0) return;
 
     setLoading(true);
     try {
@@ -64,14 +79,15 @@ export function UploadArtModal({ art, onClose }: Props) {
       const tagsArray = form.tags.split(',').map(t => t.trim()).filter(t => t !== '');
       fd.append('tags', JSON.stringify(tagsArray));
 
-      if (form.image) {
-        fd.append('image', form.image);
-      }
-
       let success = false;
       if (art) {
+        // Edit mode — only send first image if changed
+        if (images.length > 0) fd.append('image', images[0]);
         success = await updateArt(art.id, fd, accessToken);
       } else {
+        // New post — send all images under 'images' key
+        images.forEach(img => fd.append('images', img));
+
         const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
         const res = await fetch(`${apiBase}/api/v1/art/arts`, {
           method: 'POST',
@@ -95,6 +111,10 @@ export function UploadArtModal({ art, onClose }: Props) {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const resolveUrl = (url: string) => url.startsWith('http') || url.startsWith('blob:') ? url : `${apiBase}${url}`;
 
+  const currentPreview = images.length > 0
+    ? URL.createObjectURL(images[previewIndex])
+    : art?.imageUrl ? resolveUrl(art.imageUrl) : null;
+
   return createPortal(
     <div className="fixed inset-0 z-[1100] flex items-center justify-center p-8 animate-in fade-in duration-300" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-md" />
@@ -104,35 +124,91 @@ export function UploadArtModal({ art, onClose }: Props) {
         onClick={e => e.stopPropagation()}
       >
         {/* Left: Image Picker */}
-        <div className="w-full md:w-1/2 p-10 bg-white/5 flex flex-col items-center justify-center border-r border-white/5 relative group">
+        <div className="w-full md:w-1/2 p-10 bg-white/5 flex flex-col gap-4 border-r border-white/5 relative">
            <input 
              ref={fileInputRef} 
              type="file" 
              accept="image/*" 
+             multiple
              className="hidden" 
-             onChange={e => setForm(s => ({ ...s, image: e.target.files?.[0] || null }))} 
+             onChange={e => handleFiles(e.target.files)}
            />
            
-           {(form.image || art?.imageUrl) ? (
-             <div className="relative w-full h-full flex items-center justify-center">
-                <img src={form.image ? URL.createObjectURL(form.image) : resolveUrl(art!.imageUrl)} className="max-w-full max-h-full rounded-2xl shadow-2xl object-contain" alt="" />
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-4 right-4 px-6 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60"
-                >
-                  Alterar Imagem
-                </button>
-             </div>
-           ) : (
-             <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-full min-h-[300px] rounded-[2rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-white/5 transition-all group/picker"
-             >
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-3xl group-hover/picker:scale-110 transition-transform">🖼️</div>
-                <div className="text-center">
+           {/* Main Preview */}
+           <div
+             className="relative flex-1 min-h-[260px] rounded-2xl overflow-hidden bg-black/20 flex items-center justify-center group cursor-pointer"
+             onClick={() => !currentPreview && fileInputRef.current?.click()}
+           >
+             {currentPreview ? (
+               <>
+                 <img src={currentPreview} className="max-w-full max-h-[300px] object-contain rounded-2xl" alt="" />
+                 {/* Overlay navigation for multi-image */}
+                 {images.length > 1 && (
+                   <>
+                     <button
+                       onClick={e => { e.stopPropagation(); setPreviewIndex(i => (i - 1 + images.length) % images.length); }}
+                       className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all"
+                     >
+                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                     </button>
+                     <button
+                       onClick={e => { e.stopPropagation(); setPreviewIndex(i => (i + 1) % images.length); }}
+                       className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all"
+                     >
+                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                     </button>
+                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+                       {images.map((_, i) => (
+                         <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === previewIndex ? 'bg-white' : 'bg-white/40'}`} />
+                       ))}
+                     </div>
+                   </>
+                 )}
+                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all flex gap-2">
+                   <button
+                     onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                     className="px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black/80 transition-all"
+                   >
+                     + Adicionar
+                   </button>
+                 </div>
+               </>
+             ) : (
+               <div className="w-full h-full min-h-[260px] rounded-[2rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-4">
+                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-3xl">🖼️</div>
+                 <div className="text-center">
                    <p className="text-sm font-black text-white">Clica para carregar</p>
-                   <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">PNG, JPG, WEBP · Recomendado 1000x1500px</p>
-                </div>
+                   <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">Podes selecionar múltiplas imagens</p>
+                 </div>
+               </div>
+             )}
+           </div>
+
+           {/* Thumbnails Row */}
+           {images.length > 1 && (
+             <div className="flex gap-2 overflow-x-auto no-scrollbar">
+               {images.map((img, i) => (
+                 <div key={i} className="relative shrink-0 group/thumb">
+                   <img
+                     src={URL.createObjectURL(img)}
+                     className={`w-16 h-16 object-cover rounded-xl cursor-pointer transition-all border-2 ${i === previewIndex ? 'border-white' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                     onClick={() => setPreviewIndex(i)}
+                     alt=""
+                   />
+                   <button
+                     onClick={() => removeImage(i)}
+                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-all"
+                   >
+                     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                   </button>
+                 </div>
+               ))}
+               <button
+                 onClick={() => fileInputRef.current?.click()}
+                 className="w-16 h-16 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center text-white/40 hover:text-white hover:border-white/40 transition-all shrink-0 text-2xl"
+               >
+                 +
+               </button>
              </div>
            )}
         </div>
@@ -142,7 +218,9 @@ export function UploadArtModal({ art, onClose }: Props) {
            <div className="flex items-center justify-between">
               <div>
                  <h2 className="text-2xl font-black text-white tracking-tight">{art ? 'Editar Arte' : 'Publicar Arte'}</h2>
-                 <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mt-1">Alpha Art Studio</p>
+                 <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mt-1">
+                   {images.length > 1 ? `${images.length} imagens selecionadas` : 'Alpha Art Studio'}
+                 </p>
               </div>
               <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all">
                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -190,10 +268,10 @@ export function UploadArtModal({ art, onClose }: Props) {
 
            <button 
              onClick={handleSubmit}
-             disabled={loading || !form.title || (!art && !form.image)}
+             disabled={loading || !form.title || (!art && images.length === 0)}
              className="w-full py-5 rounded-3xl bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-[0.2em] mt-auto hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_10px_40px_rgba(220,38,38,0.3)]"
            >
-             {loading ? 'A processar...' : art ? '✦ Guardar Alterações' : '✦ Publicar Agora'}
+             {loading ? 'A processar...' : art ? '✦ Guardar Alterações' : `✦ Publicar ${images.length > 1 ? `(${images.length} imagens)` : 'Agora'}`}
            </button>
         </div>
       </div>

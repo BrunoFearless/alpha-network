@@ -954,6 +954,7 @@ model AlphaArt {
   title       String
   description String?
   imageUrl    String
+  imageUrls   String?              // JSON array with all images (including cover)
   width       Int?
   height      Int?
   category    String               @default("Geral")

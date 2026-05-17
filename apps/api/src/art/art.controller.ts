@@ -1,9 +1,9 @@
 import {
   Controller, Get, Post, Put, Delete, Param, Query, Body,
-  UseGuards, UseInterceptors, UploadedFile, BadRequestException,
+  UseGuards, UseInterceptors, UploadedFiles, UploadedFile, BadRequestException,
   HttpCode, HttpStatus,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ArtService } from './art.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -21,10 +21,10 @@ export class ArtController {
 
   @Post('arts')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FilesInterceptor('images', 10))
   async uploadArt(
     @CurrentUser() user: { id: string },
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
     @Body() body: {
       title: string;
       description?: string;
@@ -32,10 +32,12 @@ export class ArtController {
       tags?: string;
     },
   ) {
-    if (!file) throw new BadRequestException('Image file is required');
+    if (!files || files.length === 0) throw new BadRequestException('At least one image is required');
     if (!body.title) throw new BadRequestException('Title is required');
 
-    const imageUrl = this.artService.saveArtUpload(user.id, file);
+    // Save all files and build URL list
+    const imageUrls = files.map(f => this.artService.saveArtUpload(user.id, f));
+    const imageUrl = imageUrls[0]; // First image is the cover
 
     let tagsStr: string | undefined;
     if (body.tags) {
@@ -51,6 +53,7 @@ export class ArtController {
       title: body.title,
       description: body.description,
       imageUrl,
+      imageUrls: imageUrls.length > 1 ? JSON.stringify(imageUrls) : undefined,
       category: body.category || 'Geral',
       tags: tagsStr
     });
@@ -92,6 +95,17 @@ export class ArtController {
     return { success: true, data: art };
   }
 
+  @Delete('arts/:id')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async deleteArt(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    await this.artService.deleteArt(id, user.id);
+    return { success: true };
+  }
+
   @Get('arts')
   async getArts(
     @Query('category') category?: string,
@@ -99,6 +113,7 @@ export class ArtController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('userId') userId?: string,
+    @Query('authorId') authorId?: string,
   ) {
     const result = await this.artService.getArts({
       category,
@@ -106,6 +121,7 @@ export class ArtController {
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 30,
       requesterId: userId,
+      authorId,
     });
     return { success: true, data: result };
   }
@@ -148,13 +164,6 @@ export class ArtController {
   ) {
     const comment = await this.artService.addComment(id, user.id, body.content);
     return { success: true, data: comment };
-  }
-
-  @Delete('arts/:id')
-  @UseGuards(JwtAuthGuard)
-  async deleteArt(@Param('id') id: string, @CurrentUser() user: { id: string }) {
-    await this.artService.deleteArt(id, user.id);
-    return { success: true };
   }
 
   // ── COLLECTIONS ───────────────────────────────────────────

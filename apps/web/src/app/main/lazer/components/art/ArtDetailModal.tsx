@@ -2,6 +2,7 @@
 import { createPortal } from 'react-dom';
 import { Art, useArtStore } from '@/store/art.store';
 import { useAuthStore } from '@/store/auth.store';
+import { useLazerStore } from '@/store/lazer.store';
 import { useState, useEffect, useRef } from 'react';
 import { ArtCard } from './ArtCard';
 
@@ -10,29 +11,65 @@ interface Props {
   onClose: () => void;
   onSave: (art: Art) => void;
   onEdit?: (art: Art) => void;
+  onProfileClick?: (authorId: string, authorName: string) => void;
 }
 
-export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit }: Props) {
-  const { fetchArt, currentArt, arts, toggleSaveArt, likeArt } = useArtStore();
-  const art = currentArt && currentArt.id === initialArt.id ? currentArt : initialArt;
+export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onProfileClick }: Props) {
+  const { fetchArt, currentArt, arts, toggleSaveArt, likeArt, deleteArt } = useArtStore();
+  const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend, fetchFriends } = useLazerStore();
+  const [activeArt, setActiveArt] = useState<Art>(initialArt);
+  const [history, setHistory] = useState<Art[]>([]);
+  const art = currentArt && currentArt.id === activeArt.id ? currentArt : activeArt;
   const { user: authUser, accessToken } = useAuthStore();
   const [comment, setComment] = useState('');
   const [showMenu, setShowMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const dragStart = useRef({ x: 0, y: 0 });
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const resolveUrl = (url: string) => url.startsWith('http') || url.startsWith('blob:') ? url : `${apiBase}${url}`;
 
+  // Resolve all images for carousel
+  const allImages: string[] = (() => {
+    if (art.imageUrls && Array.isArray(art.imageUrls) && art.imageUrls.length > 0) return art.imageUrls;
+    return [art.imageUrl];
+  })();
+  const currentModalImage = resolveUrl(allImages[carouselIndex]);
+
   useEffect(() => {
-    fetchArt(art.id, authUser?.id);
+    setActiveArt(initialArt);
+    setHistory([]);
+    fetchFriends();
+  }, [initialArt]);
+
+  const handleBack = () => {
+    if (history.length === 0) return;
+    const prevArt = history[history.length - 1];
+    setHistory(prev => prev.slice(0, -1));
+    setActiveArt(prevArt);
+  };
+
+  useEffect(() => {
+    fetchArt(activeArt.id, authUser?.id);
+    setCarouselIndex(0);
     // Scroll to top when opening a new art
     const container = document.getElementById('art-detail-scroll');
     if (container) container.scrollTop = 0;
-  }, [art.id, authUser?.id]);
+  }, [activeArt.id, authUser?.id]);
+
+  const isOwn = art.authorId === authUser?.id;
+  const friendStatus = isFriend(art.authorId) ? 'friend' : hasSentRequest(art.authorId) ? 'sent' : 'none';
+
+  const handleFriendBtn = () => {
+    if (friendStatus === 'friend') removeFriend(art.authorId);
+    else if (friendStatus === 'sent') cancelFriendRequest(art.authorId);
+    else sendFriendRequest(art.authorId);
+  };
 
   if (typeof document === 'undefined') return null;
 
@@ -47,7 +84,19 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit }: Pro
         className="relative w-full max-w-5xl h-full max-h-[92vh] bg-white/[0.08] backdrop-blur-3xl rounded-[3rem] border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500 shadow-[0_32px_128px_rgba(0,0,0,0.6)] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header Fixo com botão de fechar */}
+        {/* Header Fixo com botões de fechar e voltar */}
+        {history.length > 0 && (
+          <div className="absolute top-6 left-6 z-[1100]">
+            <button
+              onClick={handleBack}
+              className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-black/60 transition-all hover:scale-105 active:scale-95 shadow-xl"
+              title="Voltar para a anterior"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+          </div>
+        )}
+
         <div className="absolute top-6 right-6 z-[1100]">
           <button onClick={onClose} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-black/60 transition-all hover:rotate-90">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
@@ -60,14 +109,42 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit }: Pro
           <div className="min-h-fit p-6 md:p-10">
             <div className="bg-white/5 rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col md:flex-row min-h-[500px]">
 
-              {/* Lado Esquerdo: Imagem */}
-              <div className="flex-1 bg-black/20 flex items-center justify-center p-4 min-h-[400px]">
+              {/* Lado Esquerdo: Imagem / Carousel */}
+              <div className="flex-1 bg-black/20 flex flex-col items-center justify-center p-4 min-h-[400px] relative">
                 <img
-                  src={resolveUrl(art.imageUrl)}
-                  className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl cursor-zoom-in transition-transform hover:scale-[1.02]"
+                  src={currentModalImage}
+                  className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl cursor-zoom-in transition-all duration-500 hover:scale-[1.02]"
                   alt={art.title}
                   onClick={() => setIsZoomed(true)}
                 />
+
+                {/* Carousel navigation arrows */}
+                {allImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setCarouselIndex(i => (i - 1 + allImages.length) % allImages.length)}
+                      className="absolute left-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all hover:scale-110 shadow-xl"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <button
+                      onClick={() => setCarouselIndex(i => (i + 1) % allImages.length)}
+                      className="absolute right-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all hover:scale-110 shadow-xl"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                    {/* Dot indicators */}
+                    <div className="flex gap-2 mt-4">
+                      {allImages.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setCarouselIndex(i)}
+                          className={`rounded-full transition-all ${i === carouselIndex ? 'w-5 h-2 bg-white' : 'w-2 h-2 bg-white/30 hover:bg-white/60'}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Lado Direito: Info */}
@@ -91,10 +168,46 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit }: Pro
                               <svg width="14" height="14" viewBox="0 0 24 24" fill={art.liked ? '#ef4444' : 'none'} stroke={art.liked ? '#ef4444' : 'currentColor'} strokeWidth="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
                               {art.liked ? 'Remover Interesse' : 'Marcar Interesse'}
                             </button>
-                            <button onClick={() => { setShowMenu(false); window.open(resolveUrl(art.imageUrl), '_blank'); }} className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-white/10 text-white transition-colors text-[10px] font-black uppercase tracking-widest">
+                            <button onClick={() => { setShowMenu(false); window.open(currentModalImage, '_blank'); }} className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-white/10 text-white transition-colors text-[10px] font-black uppercase tracking-widest">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                               Transferir
                             </button>
+                            {authUser?.id === art.authorId && (
+                              <>
+                                <div className="mx-4 my-1 h-px bg-white/10" />
+                                {confirmDelete ? (
+                                  <div className="px-4 py-3 flex flex-col gap-2">
+                                    <p className="text-[10px] font-black text-white/70 uppercase tracking-widest">Tens a certeza?</p>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={async () => {
+                                          if (!accessToken) return;
+                                          const ok = await deleteArt(art.id, accessToken);
+                                          if (ok) { setShowMenu(false); setConfirmDelete(false); onClose(); }
+                                        }}
+                                        className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                                      >
+                                        Eliminar
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmDelete(false)}
+                                        className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setConfirmDelete(true)}
+                                    className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-red-500/20 text-red-400 transition-colors text-[10px] font-black uppercase tracking-widest"
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                    Eliminar Arte
+                                  </button>
+                                )}
+                              </>
+                            )}
                           </div>
                         </>
                       )}
@@ -127,16 +240,40 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit }: Pro
                 </div>
 
                 <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
+                  <div
+                    onClick={() => {
+                      if (onProfileClick && art.authorId && art.author) {
+                        onProfileClick(art.authorId, art.author.profile?.displayName || art.author.profile?.username || 'Criador');
+                      }
+                    }}
+                    className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                  >
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 border border-white/10">
-                      {art.author?.profile?.avatarUrl && <img src={resolveUrl(art.author.profile.avatarUrl)} className="w-full h-full object-cover" alt="" />}
+                      {art.author?.profile?.avatarUrl ? (
+                        <img src={resolveUrl(art.author.profile.avatarUrl)} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <div className="w-full h-full bg-white/10 flex items-center justify-center text-white font-bold text-xs">{(art.author?.profile?.username || 'A')[0].toUpperCase()}</div>
+                      )}
                     </div>
                     <div>
                       <p className="text-sm font-black text-white">{art.author?.profile?.displayName || art.author?.profile?.username}</p>
                       <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Criador Digital</p>
                     </div>
                   </div>
-                  <button className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white text-black text-xs font-black uppercase tracking-widest transition-all">Seguir</button>
+                  {!isOwn && (
+                    <button
+                      onClick={handleFriendBtn}
+                      className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-xl border ${
+                        friendStatus === 'friend'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'
+                          : friendStatus === 'sent'
+                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30'
+                          : 'bg-white/10 hover:bg-white text-white hover:text-black border-white/20'
+                      }`}
+                    >
+                      {friendStatus === 'friend' ? 'Amigos ✓' : friendStatus === 'sent' ? 'Pendente' : 'Seguir'}
+                    </button>
+                  )}
                 </div>
 
                 <div className="mb-6">
@@ -181,8 +318,8 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit }: Pro
                     art={sim}
                     onOpen={(a) => {
                       // Switch art in current modal instead of opening new
-                      fetchArt(a.id, authUser?.id);
-                      document.getElementById('art-detail-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
+                      setHistory(prev => [...prev, activeArt]);
+                      setActiveArt(a);
                     }}
                     onSave={onSave}
                   />
@@ -217,7 +354,7 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit }: Pro
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-white/[0.03] rounded-full blur-[100px] pointer-events-none mix-blend-screen"></div>
 
           <img
-            src={resolveUrl(art.imageUrl)}
+            src={currentModalImage}
             className={`relative max-w-none drop-shadow-[0_0_100px_rgba(255,255,255,0.1)] ${scale === 1 ? 'rounded-2xl shadow-2xl transition-all duration-500 ease-out' : ''}`}
             style={{
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
@@ -257,7 +394,7 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit }: Pro
               <button onClick={(e) => { e.stopPropagation(); if (accessToken) likeArt(art.id, accessToken); }} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-xl border border-white/20 shadow-2xl hover:scale-110 active:scale-95">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill={art.liked ? '#ef4444' : 'none'} stroke={art.liked ? '#ef4444' : 'currentColor'} strokeWidth="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
               </button>
-              <button onClick={(e) => { e.stopPropagation(); window.open(resolveUrl(art.imageUrl), '_blank'); }} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-xl border border-white/20 shadow-2xl hover:scale-110 active:scale-95">
+              <button onClick={(e) => { e.stopPropagation(); window.open(currentModalImage, '_blank'); }} className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all backdrop-blur-xl border border-white/20 shadow-2xl hover:scale-110 active:scale-95">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
               </button>
             </div>

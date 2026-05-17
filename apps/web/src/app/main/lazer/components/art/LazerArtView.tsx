@@ -6,12 +6,14 @@ import { ArtCard } from './ArtCard';
 import { ArtDetailModal } from './ArtDetailModal';
 import { UploadArtModal } from './UploadArtModal';
 import { CollectionModal } from './CollectionModal';
+import { useLazerStore } from '@/store/lazer.store';
 
 const CATEGORIES = ['Para Ti', 'Design', 'Arquitetura', 'Ilustração', 'Fotografia', 'Digital Art', 'Natureza', 'Minimalismo', 'Culinária'];
 
 export function LazerArtView() {
   const { arts, savedArts, collections, isLoading, searchQuery, activeCategory, fetchArts, fetchSavedArts, fetchUserCollections, setActiveCategory, setSearchQuery } = useArtStore();
   const { user: authUser, accessToken } = useAuthStore();
+  const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend, fetchFriends } = useLazerStore();
   
   const [viewMode, setViewMode] = useState<'feed' | 'profile'>('feed');
   const [profileTab, setProfileTab] = useState<'collections' | 'saved'>('collections');
@@ -22,6 +24,28 @@ export function LazerArtView() {
   const [editingArt, setEditingArt] = useState<Art | null>(null);
   const [editingCollection, setEditingCollection] = useState<any>(null);
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [selectedAuthor, setSelectedAuthor] = useState<{ id: string; name: string } | null>(null);
+  const [authorProfile, setAuthorProfile] = useState<any>(null);
+
+  useEffect(() => {
+    fetchFriends();
+  }, []);
+
+  useEffect(() => {
+    if (selectedAuthor) {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      fetch(`${apiBaseUrl}/api/v1/users/id/${selectedAuthor.id}`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.success) {
+            setAuthorProfile(json.data);
+          }
+        })
+        .catch(err => console.error("Error fetching author profile:", err));
+    } else {
+      setAuthorProfile(null);
+    }
+  }, [selectedAuthor]);
 
   // Sincroniza a pesquisa local se for limpa por outro lado (ex: mudar de categoria)
   useEffect(() => {
@@ -31,9 +55,10 @@ export function LazerArtView() {
   useEffect(() => {
     if (viewMode === 'feed') {
       fetchArts({ 
-        category: activeCategory || undefined, 
+        category: selectedAuthor ? undefined : (activeCategory || undefined), 
         search: searchQuery || undefined,
-        requesterId: authUser?.id 
+        requesterId: authUser?.id,
+        authorId: selectedAuthor ? selectedAuthor.id : undefined
       });
     } else {
       if (authUser?.id) {
@@ -41,7 +66,7 @@ export function LazerArtView() {
         if (accessToken) fetchSavedArts(accessToken);
       }
     }
-  }, [viewMode, activeCategory, searchQuery, authUser?.id, accessToken]);
+  }, [viewMode, activeCategory, searchQuery, authUser?.id, accessToken, selectedAuthor]);
 
   useEffect(() => {
     if (selectedCollection && collections.length > 0) {
@@ -60,28 +85,41 @@ export function LazerArtView() {
       <header className="sticky top-0 z-[100] bg-white/[0.02] backdrop-blur-xl px-8 py-6 flex flex-col gap-6">
         <div className="flex items-center gap-6">
            <button 
-             onClick={() => { setViewMode('feed'); setSelectedCollection(null); }}
-             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${viewMode === 'feed' ? 'bg-white text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+             onClick={() => { setViewMode('feed'); setSelectedCollection(null); setSelectedAuthor(null); }}
+             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${viewMode === 'feed' && !selectedAuthor ? 'bg-white text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
              title="Feed Principal"
            >
              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
            </button>
 
-           <div className="relative flex-1 group">
-             <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-white/40 transition-colors" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-             <input 
-               type="text" 
-               placeholder="Pesquisar inspirações... (Prima Enter)"
-               value={localSearch}
-               onChange={(e) => setLocalSearch(e.target.value)}
-               onKeyDown={(e) => {
-                 if (e.key === 'Enter') {
-                   setSearchQuery(localSearch);
-                 }
-               }}
-               className="w-full h-12 pl-12 pr-6 rounded-full bg-white/5 border border-white/5 focus:bg-white/10 focus:border-white/20 text-white placeholder-white/20 text-sm transition-all focus:outline-none"
-             />
-           </div>
+           {selectedAuthor ? (
+             <div className="flex-1 flex items-center justify-start">
+               <button 
+                 onClick={() => setSelectedAuthor(null)}
+                 className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
+               >
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
+                 Voltar ao Feed
+               </button>
+             </div>
+           ) : (
+             <div className="relative flex-1 group">
+               <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-white/40 transition-colors" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+               <input 
+                 type="text" 
+                 placeholder="Pesquisar inspirações... (Prima Enter)"
+                 value={localSearch}
+                 onChange={(e) => setLocalSearch(e.target.value)}
+                 onKeyDown={(e) => {
+                   if (e.key === 'Enter') {
+                     setSelectedAuthor(null);
+                     setSearchQuery(localSearch);
+                   }
+                 }}
+                 className="w-full h-12 pl-12 pr-6 rounded-full bg-white/5 border border-white/5 focus:bg-white/10 focus:border-white/20 text-white placeholder-white/20 text-sm transition-all focus:outline-none"
+               />
+             </div>
+           )}
 
            <button 
              onClick={() => setShowUploadModal(true)}
@@ -104,13 +142,13 @@ export function LazerArtView() {
            </button>
         </div>
 
-        {viewMode === 'feed' && (
+        {viewMode === 'feed' && !selectedAuthor && (
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
             {CATEGORIES.map(cat => (
               <button 
                 key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === cat ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
+                onClick={() => { setSelectedAuthor(null); setActiveCategory(cat); }}
+                className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === cat && !selectedAuthor ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
               >
                 {cat}
               </button>
@@ -182,6 +220,94 @@ export function LazerArtView() {
         
         {viewMode === 'feed' ? (
           <>
+            {selectedAuthor && (
+              <div className="relative mb-10 overflow-hidden rounded-[2.5rem] bg-white/[0.02] border border-white/10 backdrop-blur-xl p-8 flex flex-col md:flex-row items-center md:items-end justify-between gap-6 animate-in slide-in-from-top-4 duration-500 shadow-2xl">
+                {/* Background Glass Shine / Color banner */}
+                <div 
+                  className="absolute inset-x-0 top-0 h-32 bg-cover bg-center opacity-30 pointer-events-none"
+                  style={{
+                    backgroundImage: authorProfile?.bannerUrl 
+                      ? `url(${resolveUrl(authorProfile.bannerUrl)})` 
+                      : `linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))`
+                  }}
+                />
+                
+                {/* Main Profile Info */}
+                <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end gap-6 text-center md:text-left mt-8 md:mt-0">
+                  {/* Big Avatar */}
+                  <div className="w-28 h-28 rounded-[2rem] overflow-hidden border-2 border-white/20 bg-white/10 shadow-xl shrink-0">
+                    {authorProfile?.avatarUrl ? (
+                      <img src={resolveUrl(authorProfile.avatarUrl)} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white text-3xl font-black bg-white/5">
+                        {(authorProfile?.displayName || authorProfile?.username || selectedAuthor.name || 'A')[0].toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Text details */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-col">
+                      <h1 className="text-2xl font-black text-white tracking-tight leading-none">
+                        {authorProfile?.displayName || selectedAuthor.name}
+                      </h1>
+                      <p className="text-xs font-bold text-white/30 tracking-widest uppercase mt-1">
+                        @{authorProfile?.username || 'criador'}
+                      </p>
+                    </div>
+                    
+                    {authorProfile?.bio && (
+                      <p className="text-xs text-white/60 font-medium max-w-md leading-relaxed mt-1">
+                        {authorProfile.bio}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center justify-center md:justify-start gap-4 mt-1 text-[10px] font-black uppercase tracking-widest text-white/40">
+                      <span className="text-white bg-white/5 px-3 py-1 rounded-full border border-white/10">{arts.length} Publicações</span>
+                      {authorProfile?.status && (
+                        <>
+                          <span>•</span>
+                          <span className="text-white/60">{authorProfile.status}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Friendship & Back Actions */}
+                <div className="relative z-10 flex items-center gap-3 shrink-0 self-center md:self-end">
+                  {/* Dynamic Friendship Button */}
+                  {authUser?.id !== selectedAuthor.id && (
+                    <button
+                      onClick={() => {
+                        const status = isFriend(selectedAuthor.id) ? 'friend' : hasSentRequest(selectedAuthor.id) ? 'sent' : 'none';
+                        if (status === 'friend') removeFriend(selectedAuthor.id);
+                        else if (status === 'sent') cancelFriendRequest(selectedAuthor.id);
+                        else sendFriendRequest(selectedAuthor.id);
+                      }}
+                      className={`px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-xl border ${
+                        isFriend(selectedAuthor.id)
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'
+                          : hasSentRequest(selectedAuthor.id)
+                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30'
+                          : 'bg-white text-black hover:bg-white/80 border-transparent'
+                      }`}
+                    >
+                      {isFriend(selectedAuthor.id) ? 'Amigos ✓' : hasSentRequest(selectedAuthor.id) ? 'Pendente' : 'Seguir'}
+                    </button>
+                  )}
+                  
+                  {/* Back button */}
+                  <button
+                    onClick={() => setSelectedAuthor(null)}
+                    className="px-6 py-3 rounded-full bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest border border-white/10 transition-all hover:scale-105 active:scale-95"
+                    title="Voltar ao Feed Principal"
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </div>
+            )}
             {isLoading && arts.length === 0 ? (
               <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4">
                  {Array.from({ length: 15 }).map((_, i) => (
@@ -290,6 +416,10 @@ export function LazerArtView() {
           onSave={setShowSaveModal} 
           onEdit={(art) => {
             setEditingArt(art);
+            setSelectedArt(null);
+          }}
+          onProfileClick={(authorId, authorName) => {
+            setSelectedAuthor({ id: authorId, name: authorName });
             setSelectedArt(null);
           }}
         />
