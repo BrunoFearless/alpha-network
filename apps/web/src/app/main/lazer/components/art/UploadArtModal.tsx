@@ -65,11 +65,14 @@ export function UploadArtModal({ art, onClose }: Props) {
     setPreviewIndex(0);
   };
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleSubmit = async () => {
     if (!form.title || !accessToken) return;
     if (!art && images.length === 0) return;
 
     setLoading(true);
+    setError(null);
     try {
       const fd = new FormData();
       fd.append('title', form.title);
@@ -84,6 +87,7 @@ export function UploadArtModal({ art, onClose }: Props) {
         // Edit mode — only send first image if changed
         if (images.length > 0) fd.append('image', images[0]);
         success = await updateArt(art.id, fd, accessToken);
+        if (!success) setError("Ocorreu um erro ao atualizar a arte.");
       } else {
         // New post — send all images under 'images' key
         images.forEach(img => fd.append('images', img));
@@ -95,14 +99,25 @@ export function UploadArtModal({ art, onClose }: Props) {
           body: fd
         });
         const json = await res.json();
-        success = json.success;
+        if (res.ok && json.success) {
+          success = true;
+        } else {
+          // Extract message whether it is a string or an array of strings (NestJS format)
+          let errMsg = json.message;
+          if (Array.isArray(errMsg)) errMsg = errMsg[0];
+          
+          setError(errMsg || "Publicação rejeitada: o conteúdo contém nudez, conteúdo sexual, discurso de ódio ou extremismo. Este tipo de conteúdo não é permitido na Alpha Art.");
+        }
       }
 
       if (success) {
         fetchArts();
         onClose();
       }
-    } catch (e) { console.error(e); }
+    } catch (e: any) { 
+      console.error(e); 
+      setError(e.message || "Publicação rejeitada: o conteúdo contém nudez, conteúdo sexual, discurso de ódio ou extremismo. Este tipo de conteúdo não é permitido na Alpha Art.");
+    }
     finally { setLoading(false); }
   };
 
@@ -228,6 +243,16 @@ export function UploadArtModal({ art, onClose }: Props) {
            </div>
 
            <div className="space-y-4">
+              {error && (
+                <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex gap-3 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="3"><path d="M12 8v4M12 16h.01M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z"/></svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-red-400 leading-relaxed">{error}</p>
+                  </div>
+                </div>
+              )}
               <input 
                 type="text" 
                 placeholder="Título da inspiração *"

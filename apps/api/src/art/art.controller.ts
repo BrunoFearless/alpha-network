@@ -4,13 +4,19 @@ import {
   HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ArtService } from './art.service';
+import { ContentModerationService } from './content-moderation.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('art')
 export class ArtController {
-  constructor(private readonly artService: ArtService) {}
+  constructor(
+    private readonly artService: ArtService,
+    private readonly moderation: ContentModerationService,
+  ) {}
 
   @Get('ping')
   async ping() {
@@ -35,9 +41,12 @@ export class ArtController {
     if (!files || files.length === 0) throw new BadRequestException('At least one image is required');
     if (!body.title) throw new BadRequestException('Title is required');
 
-    // Save all files and build URL list
-    const imageUrls = files.map(f => this.artService.saveArtUpload(user.id, f));
-    const imageUrl = imageUrls[0]; // First image is the cover
+    // ── STEP 1: Text moderation (before any file I/O) ─────────────────────
+    await this.moderation.enforce({
+      title: body.title,
+      description: body.description,
+      tags: body.tags,
+    });
 
     let tagsStr: string | undefined;
     if (body.tags) {
@@ -49,6 +58,28 @@ export class ArtController {
       }
     }
 
+    // ── STEP 2: Save files to disk ────────────────────────────────────────
+    const savedItems = files.map(f => this.artService.saveArtUpload(user.id, f));
+    // savedItems: [{ url, filePath }, ...]
+    const imageUrls = savedItems.map(s => s.url);
+    const filePaths = savedItems.map(s => s.filePath);
+    const imageUrl = imageUrls[0];
+
+    // ── STEP 3: Image moderation ──────────────────────────────────────────
+    const imageCheck = await this.moderation.check({
+      title: body.title,
+      imagePaths: filePaths,
+    });
+
+    if (!imageCheck.allowed) {
+      // Delete the saved files before rejecting
+      for (const fp of filePaths) {
+        try { if (fs.existsSync(fp)) fs.unlinkSync(fp); } catch {}
+      }
+      throw new BadRequestException(imageCheck.reason);
+    }
+
+    // ── STEP 4: Persist artwork ───────────────────────────────────────────
     const art = await this.artService.createArt(user.id, {
       title: body.title,
       description: body.description,
@@ -82,7 +113,8 @@ export class ArtController {
 
     let imageUrl: string | undefined;
     if (file) {
-      imageUrl = this.artService.saveArtUpload(user.id, file);
+      const saved = this.artService.saveArtUpload(user.id, file);
+      imageUrl = saved.url;
     }
 
     const art = await this.artService.updateArt(id, user.id, {
@@ -174,7 +206,7 @@ export class ArtController {
   async createCollection(
     @CurrentUser() user: { id: string },
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { title: string; description?: string; isPublic?: string; collaborators?: string },
+    @Body() body: { title: string; description?: string; isPublic?: string; collaborators?: string; parentId?: string; isGroup?: string },
   ) {
     if (!body.title) throw new BadRequestException('Title is required');
     let coverUrl: string | undefined;
@@ -187,6 +219,8 @@ export class ArtController {
       description: body.description,
       coverUrl,
       isPublic: body.isPublic === 'true',
+      parentId: body.parentId,
+      isGroup: body.isGroup === 'true',
     });
 
     if (body.collaborators) {
@@ -210,7 +244,7 @@ export class ArtController {
     @Param('id') id: string,
     @CurrentUser() user: { id: string },
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { title?: string; description?: string; isPublic?: string; removeCover?: string },
+    @Body() body: { title?: string; description?: string; isPublic?: string; removeCover?: string; parentId?: string; isGroup?: string },
   ) {
     let coverUrl: string | undefined | null;
     if (file) {
@@ -223,14 +257,19 @@ export class ArtController {
       title: body.title,
       description: body.description,
       isPublic: body.isPublic !== undefined ? body.isPublic === 'true' : undefined,
-      coverUrl
+      coverUrl,
+      parentId: body.parentId,
+      isGroup: body.isGroup !== undefined ? body.isGroup === 'true' : undefined,
     });
     return { success: true, data: collection };
   }
 
   @Get('collections/user/:userId')
-  async getUserCollections(@Param('userId') userId: string) {
-    const collections = await this.artService.getCollections(userId);
+  async getUserCollections(
+    @Param('userId') userId: string,
+    @Query('requesterId') requesterId?: string,
+  ) {
+    const collections = await this.artService.getCollections(userId, requesterId);
     return { success: true, data: collections };
   }
 

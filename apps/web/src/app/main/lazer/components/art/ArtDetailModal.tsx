@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useLazerStore } from '@/store/lazer.store';
 import { useState, useEffect, useRef } from 'react';
 import { ArtCard } from './ArtCard';
+import { useImageColor } from '@/hooks/useImageColor';
 
 interface Props {
   art: Art;
@@ -40,6 +41,7 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
     return [art.imageUrl];
   })();
   const currentModalImage = resolveUrl(allImages[carouselIndex]);
+  const dominantColor = useImageColor(currentModalImage);
 
   useEffect(() => {
     setActiveArt(initialArt);
@@ -78,10 +80,17 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
 
   return createPortal(
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-6 animate-in fade-in duration-300" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-md" />
+      <div 
+        className="absolute inset-0 backdrop-blur-md transition-colors duration-1000" 
+        style={{ backgroundColor: dominantColor ? `rgba(${dominantColor}, 0.15)` : 'rgba(0,0,0,0.5)' }}
+      />
 
       <div
-        className="relative w-full max-w-5xl h-full max-h-[92vh] bg-white/[0.08] backdrop-blur-3xl rounded-[3rem] border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500 shadow-[0_32px_128px_rgba(0,0,0,0.6)] flex flex-col"
+        style={dominantColor ? { 
+           boxShadow: `0 40px 150px rgba(${dominantColor}, 0.3), inset 0 0 80px rgba(${dominantColor}, 0.1)`,
+           borderColor: `rgba(${dominantColor}, 0.2)`
+        } : undefined}
+        className="relative w-full max-w-5xl h-full max-h-[92vh] bg-white/[0.06] backdrop-blur-3xl rounded-[3rem] border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500 shadow-[0_32px_128px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-1000"
         onClick={e => e.stopPropagation()}
       >
         {/* Header Fixo com botões de fechar e voltar */}

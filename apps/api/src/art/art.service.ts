@@ -175,13 +175,14 @@ export class ArtService {
     });
   }
 
-  saveArtUpload(userId: string, file: Express.Multer.File) {
+  saveArtUpload(userId: string, file: Express.Multer.File): { url: string; filePath: string } {
     const dir = path.join(process.cwd(), 'uploads', 'art');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     
     const fileName = `${userId}-${Date.now()}${path.extname(file.originalname)}`;
-    fs.writeFileSync(path.join(dir, fileName), file.buffer);
-    return `/uploads/art/${fileName}`;
+    const filePath = path.join(dir, fileName);
+    fs.writeFileSync(filePath, file.buffer);
+    return { url: `/uploads/art/${fileName}`, filePath };
   }
 
   // ── COLLECTIONS ───────────────────────────────────────────
@@ -195,7 +196,7 @@ export class ArtService {
     return `/uploads/art-collections/${fileName}`;
   }
 
-  async createCollection(authorId: string, data: { title: string; description?: string; isPublic: boolean; coverUrl?: string }) {
+  async createCollection(authorId: string, data: { title: string; description?: string; isPublic: boolean; coverUrl?: string; parentId?: string; isGroup?: boolean }) {
     return this.prisma.alphaArtCollection.create({
       data: {
         authorId,
@@ -203,11 +204,13 @@ export class ArtService {
         description: data.description,
         isPublic: data.isPublic,
         coverUrl: data.coverUrl,
+        parentId: data.parentId || null,
+        isGroup: data.isGroup ?? false,
       },
     });
   }
 
-  async updateCollection(id: string, userId: string, data: { title?: string; description?: string; isPublic?: boolean; coverUrl?: string | null }) {
+  async updateCollection(id: string, userId: string, data: { title?: string; description?: string; isPublic?: boolean; coverUrl?: string | null; parentId?: string | null; isGroup?: boolean }) {
     console.log(`[ArtService] updateCollection searching for ID: ${id}`);
     const col = await this.prisma.alphaArtCollection.findUnique({ where: { id } });
     if (!col) {
@@ -223,6 +226,8 @@ export class ArtService {
         description: data.description,
         isPublic: data.isPublic,
         coverUrl: data.coverUrl,
+        parentId: data.parentId !== undefined ? data.parentId : undefined,
+        isGroup: data.isGroup !== undefined ? data.isGroup : undefined,
       },
     });
   }
@@ -266,16 +271,48 @@ export class ArtService {
     return { success: true };
   }
 
-  async getCollections(userId: string) {
+  async getCollections(userId: string, requesterId?: string) {
+    // Normalize literal string 'undefined' or 'null' from query params
+    const normalizedRequesterId = (requesterId === 'undefined' || requesterId === 'null') ? undefined : requesterId;
+
+    const where: any = {
+      OR: [
+        { authorId: userId },
+        { collaborators: { some: { userId } } }
+      ]
+    };
+
+    // If the requester is not the owner of these collections, filter out private ones
+    if (userId !== normalizedRequesterId) {
+      where.AND = [
+        {
+          OR: [
+            { isPublic: true },
+            normalizedRequesterId ? { collaborators: { some: { userId: normalizedRequesterId } } } : undefined
+          ].filter(Boolean)
+        }
+      ];
+    }
+
     return this.prisma.alphaArtCollection.findMany({
-      where: {
-        OR: [
-          { authorId: userId },
-          { collaborators: { some: { userId } } }
-        ]
-      },
+      where,
       include: {
         _count: { select: { items: true } },
+        subgroups: {
+          include: {
+            _count: { select: { items: true } },
+            items: {
+              orderBy: { createdAt: 'desc' },
+              include: { 
+                art: { 
+                  include: { 
+                    author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } }
+                  } 
+                } 
+              }
+            }
+          }
+        },
         items: {
           orderBy: { createdAt: 'desc' },
           include: { 
@@ -299,6 +336,21 @@ export class ArtService {
         author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } },
         collaborators: {
           include: { user: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } } }
+        },
+        subgroups: {
+          include: {
+            _count: { select: { items: true } },
+            items: {
+              orderBy: { createdAt: 'desc' },
+              include: { 
+                art: { 
+                  include: { 
+                    author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } }
+                  } 
+                } 
+              }
+            }
+          }
         },
         items: {
           orderBy: { createdAt: 'desc' },

@@ -1005,11 +1005,15 @@ model AlphaArtCollection {
   description    String?
   coverUrl       String?
   isPublic       Boolean                          @default(true)
+  isGroup        Boolean                          @default(false)
   createdAt      DateTime                         @default(now())
   updatedAt      DateTime                         @updatedAt
   author         User                             @relation("AlphaArtCollectionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   items          AlphaArtCollectionItem[]
   collaborators  AlphaArtCollectionCollaborator[]
+  parentId       String?                          @map("parent_id")
+  parent         AlphaArtCollection?              @relation("AlphaArtCollectionParent", fields: [parentId], references: [id], onDelete: Cascade)
+  subgroups      AlphaArtCollection[]             @relation("AlphaArtCollectionParent")
 
   @@map("alpha_art_collections")
 }

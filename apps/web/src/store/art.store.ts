@@ -35,7 +35,10 @@ export interface ArtCollection {
   description?: string;
   coverUrl?: string;
   isPublic: boolean;
+  isGroup?: boolean;
   createdAt: string;
+  parentId?: string;
+  subgroups?: ArtCollection[];
   _count?: { items: number };
   items?: { art: { imageUrl: string } }[];
 }
@@ -56,7 +59,7 @@ interface ArtStore {
   fetchSavedArts: (token: string) => Promise<void>;
   likeArt: (artId: string, token: string) => Promise<void>;
   toggleSaveArt: (artId: string, token: string) => Promise<void>;
-  fetchUserCollections: (userId: string) => Promise<void>;
+  fetchUserCollections: (userId: string, requesterId?: string) => Promise<void>;
   createCollection: (fd: FormData, token: string) => Promise<boolean>;
   addArtToCollection: (artId: string, collectionId: string, token: string) => Promise<boolean>;
   addCollaborator: (collectionId: string, userId: string, token: string) => Promise<boolean>;
@@ -199,9 +202,10 @@ export const useArtStore = create<ArtStore>((set, get) => ({
     } catch (e) { console.error(e); }
   },
 
-  fetchUserCollections: async (userId) => {
+  fetchUserCollections: async (userId, requesterId) => {
     try {
-      const res = await fetch(`${API}/api/v1/art/collections/user/${userId}`);
+      const params = requesterId ? `?requesterId=${requesterId}` : '';
+      const res = await fetch(`${API}/api/v1/art/collections/user/${userId}${params}`);
       const json = await res.json();
       if (json.success) set({ collections: json.data });
     } catch (e) { console.error(e); }

@@ -8,15 +8,17 @@ import { useLazerStore } from '@/store/lazer.store';
 interface Props {
   art?: Art; // If present, we can save art to collections
   collection?: ArtCollection | any; // If present, we are editing this collection
+  parentId?: string; // Optional prop to preset and lock parentId
+  isGroup?: boolean; // Optional prop to specify if we are creating a group
   onClose: () => void;
 }
 
-export function CollectionModal({ art, collection, onClose }: Props) {
+export function CollectionModal({ art, collection, parentId, isGroup, onClose }: Props) {
   const { collections, fetchUserCollections, createCollection, updateCollection, addArtToCollection } = useArtStore();
   const { user: authUser, accessToken } = useAuthStore();
   const { friendProfiles, fetchFriends } = useLazerStore();
   
-  const [showCreate, setShowCreate] = useState(!!collection); // Auto show form if editing
+  const [showCreate, setShowCreate] = useState(!!collection || !art?.id); // Auto show form if editing
   const [savingId, setSavingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [removeCover, setRemoveCover] = useState(false);
@@ -27,6 +29,7 @@ export function CollectionModal({ art, collection, onClose }: Props) {
     description: '',
     cover: null as File | null,
     isPublic: true,
+    parentId: parentId === 'none' ? '' : (parentId || ''),
     collaborators: [] as any[]
   });
   
@@ -36,7 +39,7 @@ export function CollectionModal({ art, collection, onClose }: Props) {
 
   useEffect(() => {
     if (authUser?.id) {
-      fetchUserCollections(authUser.id);
+      fetchUserCollections(authUser.id, authUser.id); // pass own id as requesterId to see private folders
       fetchFriends();
     }
     if (collection) {
@@ -45,11 +48,17 @@ export function CollectionModal({ art, collection, onClose }: Props) {
         description: collection.description || '',
         cover: null,
         isPublic: collection.isPublic ?? true,
+        parentId: collection.parentId || (parentId === 'none' ? '' : (parentId || '')),
         collaborators: collection.collaborators?.map((c: any) => c.user?.profile ? { ...c.user.profile, id: c.userId } : null).filter(Boolean) || []
       });
       setRemoveCover(false);
+    } else {
+      setForm(s => ({
+        ...s,
+        parentId: parentId === 'none' ? '' : (parentId || '')
+      }));
     }
-  }, [authUser?.id, collection]);
+  }, [authUser?.id, collection, parentId]);
 
   const handleSaveArt = async (colId: string) => {
     if (!accessToken || !art?.id) return;
@@ -67,6 +76,7 @@ export function CollectionModal({ art, collection, onClose }: Props) {
       fd.append('title', form.title);
       fd.append('description', form.description);
       fd.append('isPublic', String(form.isPublic));
+      fd.append('isGroup', String(isGroup || collection?.isGroup || false));
       
       if (form.cover) {
         fd.append('cover', form.cover);
@@ -76,6 +86,10 @@ export function CollectionModal({ art, collection, onClose }: Props) {
       
       const collabIds = form.collaborators.map(c => c.id);
       if (collabIds.length > 0) fd.append('collaborators', JSON.stringify(collabIds));
+      
+      if (form.parentId) {
+        fd.append('parentId', form.parentId);
+      }
 
       let success = false;
       if (collection) {
@@ -85,7 +99,7 @@ export function CollectionModal({ art, collection, onClose }: Props) {
       }
 
       if (success) {
-        if (authUser?.id) await fetchUserCollections(authUser.id);
+        if (authUser?.id) await fetchUserCollections(authUser.id, authUser.id);
         
         // If we were saving an art and just created a new collection for it
         if (!collection && art?.id) {
@@ -124,6 +138,15 @@ export function CollectionModal({ art, collection, onClose }: Props) {
     !form.collaborators.find(c => c.id === f.id)
   );
 
+  const parentGroups = collections.filter(c => c.isGroup && !c.parentId && c.id !== collection?.id && c.authorId === authUser?.id);
+
+  const isOwnArt = art?.authorId === authUser?.id;
+  const saveOptions = collections.filter(col => {
+    if (col.isGroup) return false;
+    if (art && !isOwnArt && col.parentId) return false;
+    return col.authorId === authUser?.id; // Must belong to the current user
+  });
+
   return createPortal(
     <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
@@ -135,7 +158,11 @@ export function CollectionModal({ art, collection, onClose }: Props) {
         <header className="p-6 flex items-center justify-between z-10 flex-shrink-0">
            <div>
               <h2 className="text-lg font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                {collection ? 'Editar Coleção' : showCreate ? 'Nova Coleção' : 'Guardar em...'}
+                {collection ? (
+                  collection.parentId ? 'Editar Subgrupo' : (collection.isGroup ? 'Editar Grupo' : 'Editar Coleção')
+                ) : (
+                  (parentId && parentId !== 'none') ? 'Novo Subgrupo' : (isGroup ? 'Novo Grupo' : showCreate ? 'Nova Coleção' : 'Guardar em...')
+                )}
               </h2>
               <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mt-0.5">Alpha Art Curator</p>
            </div>
@@ -207,6 +234,36 @@ export function CollectionModal({ art, collection, onClose }: Props) {
                           <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Descrição</label>
                           <textarea placeholder="..." value={form.description} onChange={e => setForm(s => ({ ...s, description: e.target.value }))} className="w-full h-16 p-4 rounded-xl bg-white/10 border border-white/20 text-[11px] text-white focus:outline-none resize-none placeholder-white/20 focus:bg-white/20 shadow-inner" />
                        </div>
+                       {/* Public/Private toggle — always visible in create/edit form */}
+                       <div className="space-y-1.5">
+                         <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Visibilidade</label>
+                         <div className="flex gap-2">
+                           <button
+                             type="button"
+                             onClick={() => setForm(s => ({ ...s, isPublic: true }))}
+                             className={`flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 ${
+                               form.isPublic
+                                 ? 'bg-white text-black border-white shadow-[0_4px_16px_rgba(255,255,255,0.2)]'
+                                 : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'
+                             }`}
+                           >
+                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                             Pública
+                           </button>
+                           <button
+                             type="button"
+                             onClick={() => setForm(s => ({ ...s, isPublic: false }))}
+                             className={`flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 ${
+                               !form.isPublic
+                                 ? 'bg-white text-black border-white shadow-[0_4px_16px_rgba(255,255,255,0.2)]'
+                                 : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'
+                             }`}
+                           >
+                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                             Privada
+                           </button>
+                         </div>
+                       </div>
                        <div className="space-y-1.5 relative">
                           <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Convidar</label>
                           <input type="text" placeholder="Pesquisar..." value={friendSearch} onFocus={() => setShowFriendSuggestions(true)} onChange={e => setFriendSearch(e.target.value)} className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/10 border border-white/20 text-xs text-white focus:outline-none placeholder-white/20 focus:bg-white/20 shadow-inner" />
@@ -225,14 +282,14 @@ export function CollectionModal({ art, collection, onClose }: Props) {
                     <div className="flex gap-3 pt-2">
                       <button onClick={() => collection ? onClose() : setShowCreate(false)} className="flex-1 h-11 rounded-xl bg-white/10 text-white/60 text-[9px] font-black uppercase hover:bg-white/20 transition-all border border-white/20">Cancelar</button>
                       <button onClick={handleAction} disabled={loading || !form.title} className="flex-1 h-11 rounded-xl bg-white text-black text-[9px] font-black uppercase shadow-[0_12px_24px_rgba(255,255,255,0.2)] hover:scale-105 transition-all">
-                        {loading ? '...' : collection ? 'Guardar' : 'Criar'}
+                        {loading ? '...' : collection ? 'Guardar' : ((parentId && parentId !== 'none') ? 'Criar Subgrupo' : (isGroup ? 'Criar Grupo' : 'Criar Coleção'))}
                       </button>
                     </div>
                 </div>
              </div>
            ) : (
              <div className="px-6 pb-6 space-y-2 animate-in fade-in duration-500">
-                {collections.map(col => (
+                {saveOptions.map(col => (
                   <button 
                     key={col.id}
                     onClick={() => handleSaveArt(col.id)}
