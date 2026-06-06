@@ -6,6 +6,8 @@ import { useLazerStore } from '@/store/lazer.store';
 import { useState, useEffect, useRef } from 'react';
 import { ArtCard } from './ArtCard';
 import { useImageColor } from '@/hooks/useImageColor';
+import { useMusicStore } from '@/store/music.store';
+import { resolveUrl } from '@/lib/api';
 
 interface Props {
   art: Art;
@@ -16,6 +18,14 @@ interface Props {
 }
 
 export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onProfileClick }: Props) {
+  const [isExiting, setIsExiting] = useState(false);
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onClose();
+    }, 550);
+  };
+
   const { fetchArt, currentArt, arts, toggleSaveArt, likeArt, deleteArt } = useArtStore();
   const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend, fetchFriends } = useLazerStore();
   const [activeArt, setActiveArt] = useState<Art>(initialArt);
@@ -32,8 +42,6 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
   const [carouselIndex, setCarouselIndex] = useState(0);
   const dragStart = useRef({ x: 0, y: 0 });
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const resolveUrl = (url: string) => url.startsWith('http') || url.startsWith('blob:') ? url : `${apiBase}${url}`;
 
   // Resolve all images for carousel
   const allImages: string[] = (() => {
@@ -43,11 +51,54 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
   const currentModalImage = resolveUrl(allImages[carouselIndex]);
   const dominantColor = useImageColor(currentModalImage);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlayingLocally, setIsPlayingLocally] = useState(false);
+
+  const toggleLocalPlay = () => {
+    if (!audioRef.current) return;
+    if (isPlayingLocally) {
+      audioRef.current.pause();
+      setIsPlayingLocally(false);
+    } else {
+      audioRef.current.play().then(() => {
+        setIsPlayingLocally(true);
+      }).catch(err => console.error(err));
+    }
+  };
+
   useEffect(() => {
     setActiveArt(initialArt);
     setHistory([]);
     fetchFriends();
   }, [initialArt]);
+
+  useEffect(() => {
+    // If the global player is playing, pause it to prevent dual-audio
+    const globalState = useMusicStore.getState();
+    if (globalState.isPlaying) {
+      useMusicStore.setState({ isPlaying: false });
+    }
+
+    if (art.musicTrack) {
+      const audioUrl = resolveUrl(art.musicTrack.audioUrl);
+      const audio = new Audio(audioUrl);
+      audio.preload = "auto";
+      audio.loop = true;
+      audioRef.current = audio;
+      
+      audio.play().then(() => {
+        setIsPlayingLocally(true);
+      }).catch(err => {
+        console.log("Autoplay blocked by browser", err);
+      });
+
+      return () => {
+        audio.pause();
+        audioRef.current = null;
+        setIsPlayingLocally(false);
+      };
+    }
+  }, [art.id, art.musicTrack?.audioUrl]);
 
   const handleBack = () => {
     if (history.length === 0) return;
@@ -79,9 +130,9 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
   const similarArts = arts.filter(a => a.id !== art.id && a.category === art.category);
 
   return createPortal(
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-6 animate-in fade-in duration-300" onClick={onClose}>
+    <div className={`fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-6 ${isExiting ? 'premium-animate-backdrop-exit' : 'premium-animate-backdrop-enter'}`} onClick={handleClose}>
       <div 
-        className="absolute inset-0 backdrop-blur-md transition-colors duration-1000" 
+        className="absolute inset-0 transition-colors duration-1000" 
         style={{ backgroundColor: dominantColor ? `rgba(${dominantColor}, 0.15)` : 'rgba(0,0,0,0.5)' }}
       />
 
@@ -90,9 +141,54 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
            boxShadow: `0 40px 150px rgba(${dominantColor}, 0.3), inset 0 0 80px rgba(${dominantColor}, 0.1)`,
            borderColor: `rgba(${dominantColor}, 0.2)`
         } : undefined}
-        className="relative w-full max-w-5xl h-full max-h-[92vh] bg-white/[0.06] backdrop-blur-3xl rounded-[3rem] border border-white/20 overflow-hidden animate-in zoom-in-95 duration-500 shadow-[0_32px_128px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-1000"
+        className={`relative w-full max-w-5xl h-full max-h-[92vh] bg-white/[0.06] backdrop-blur-3xl rounded-[3rem] border border-white/20 overflow-hidden ${isExiting ? 'premium-animate-scale-exit' : 'premium-animate-scale-enter'} shadow-[0_32px_128px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-1000`}
         onClick={e => e.stopPropagation()}
       >
+        <style>{`
+          @keyframes premium-backdrop-fade-in {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(12px); }
+          }
+          @keyframes premium-backdrop-fade-out {
+            from { opacity: 1; backdrop-filter: blur(12px); }
+            to { opacity: 0; backdrop-filter: blur(0px); }
+          }
+
+          @keyframes premium-modal-scale-in {
+            from {
+              opacity: 0;
+              transform: translateY(28px) scale(0.965);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+          @keyframes premium-modal-scale-out {
+            from {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+            to {
+              opacity: 0;
+              transform: translateY(20px) scale(0.97);
+            }
+          }
+
+          .premium-animate-backdrop-enter {
+            animation: premium-backdrop-fade-in 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+          .premium-animate-backdrop-exit {
+            animation: premium-backdrop-fade-out 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+
+          .premium-animate-scale-enter {
+            animation: premium-modal-scale-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+          .premium-animate-scale-exit {
+            animation: premium-modal-scale-out 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+        `}</style>
         {/* Header Fixo com botões de fechar e voltar */}
         {history.length > 0 && (
           <div className="absolute top-6 left-6 z-[1100]">
@@ -107,7 +203,7 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
         )}
 
         <div className="absolute top-6 right-6 z-[1100]">
-          <button onClick={onClose} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-black/60 transition-all hover:rotate-90">
+          <button onClick={handleClose} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-black/60 transition-all hover:rotate-90">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
           </button>
         </div>
@@ -115,17 +211,48 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
         {/* Área de Scroll */}
         <div id="art-detail-scroll" className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
 
-          <div className="min-h-fit p-6 md:p-10">
-            <div className="bg-white/5 rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+          <div className="min-h-fit p-3 md:p-6 lg:p-10">
+            <div className="bg-white/5 rounded-[1.5rem] md:rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col md:flex-row min-h-[500px]">
 
               {/* Lado Esquerdo: Imagem / Carousel */}
-              <div className="flex-1 bg-black/20 flex flex-col items-center justify-center p-4 min-h-[400px] relative">
+              <div className="flex-1 bg-black/20 flex flex-col items-center justify-center p-3 md:p-4 min-h-[260px] md:min-h-[400px] relative">
                 <img
                   src={currentModalImage}
-                  className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl cursor-zoom-in transition-all duration-500 hover:scale-[1.02]"
+                  className="max-w-full max-h-[50vh] md:max-h-[70vh] object-contain rounded-xl md:rounded-2xl shadow-2xl cursor-zoom-in transition-all duration-500 hover:scale-[1.02]"
                   alt={art.title}
                   onClick={() => setIsZoomed(true)}
                 />
+
+                {/* Floating Track Indicator */}
+                {art.musicTrack && (
+                  <div 
+                    className="absolute bottom-6 left-6 px-4 py-2.5 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-500 hover:bg-black/80 transition-all cursor-pointer shadow-lg z-[10]" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLocalPlay();
+                    }}
+                  >
+                    <div className="relative w-5 h-5 flex items-center justify-center">
+                      {isPlayingLocally ? (
+                        <div className="flex items-end gap-[2px] w-4 h-3">
+                          <div className="w-[3px] bg-red-500 rounded-full animate-bounce h-3" style={{ animationDuration: '0.6s' }}></div>
+                          <div className="w-[3px] bg-red-500 rounded-full animate-bounce h-4" style={{ animationDuration: '0.8s' }}></div>
+                          <div className="w-[3px] bg-red-500 rounded-full animate-bounce h-2" style={{ animationDuration: '0.5s' }}></div>
+                        </div>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-white">
+                          <path d="M9 18V5l12-2v13" />
+                          <circle cx="6" cy="18" r="3" />
+                          <circle cx="18" cy="16" r="3" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <p className="text-[10px] font-black text-white leading-none uppercase tracking-widest">{art.musicTrack.title}</p>
+                      <p className="text-[8px] font-bold text-white/50 leading-none mt-1">{art.musicTrack.artist}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Carousel navigation arrows */}
                 {allImages.length > 1 && (
@@ -157,7 +284,7 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
               </div>
 
               {/* Lado Direito: Info */}
-              <div className="w-full md:w-[400px] flex flex-col p-8 border-l border-white/5 bg-white/[0.02]">
+              <div className="w-full md:w-[400px] flex flex-col p-5 md:p-8 border-t md:border-t-0 md:border-l border-white/5 bg-white/[0.02]">
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex gap-3">
                     <div className="relative">
@@ -192,7 +319,7 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
                                         onClick={async () => {
                                           if (!accessToken) return;
                                           const ok = await deleteArt(art.id, accessToken);
-                                          if (ok) { setShowMenu(false); setConfirmDelete(false); onClose(); }
+                                          if (ok) { setShowMenu(false); setConfirmDelete(false); handleClose(); }
                                         }}
                                         className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[10px] font-black uppercase tracking-widest transition-all"
                                       >
@@ -234,7 +361,7 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => { if (accessToken) toggleSaveArt(art.id, accessToken); }}
-                      className={`px-8 py-3 rounded-full font-black text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-xl ${art.saved ? 'bg-black text-white border border-white/20' : 'bg-red-600 hover:bg-red-700 text-white'}`}
+                      className={`px-5 md:px-8 py-2.5 md:py-3 rounded-full font-black text-xs md:text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-xl ${art.saved ? 'bg-black text-white border border-white/20' : 'bg-red-600 hover:bg-red-700 text-white'}`}
                     >
                       {art.saved ? 'Guardado' : 'Guardar'}
                     </button>
@@ -312,7 +439,7 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
           </div>
 
           {/* SECÇÃO 2: MAIS COMO ISTO (Infinite Scroll Style) */}
-          <div className="p-10 pt-0">
+          <div className="p-4 md:p-10 pt-0">
             <div className="flex items-center gap-4 mb-8">
               <div className="h-px flex-1 bg-white/5"></div>
               <h2 className="text-sm font-black text-white uppercase tracking-[0.3em]">Mais como isto</h2>
@@ -320,7 +447,7 @@ export function ArtDetailModal({ art: initialArt, onClose, onSave, onEdit, onPro
             </div>
 
             {similarArts.length > 0 ? (
-              <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
+              <div className="columns-2 md:columns-3 lg:columns-4 gap-3 md:gap-4">
                 {similarArts.map(sim => (
                   <ArtCard
                     key={sim.id}

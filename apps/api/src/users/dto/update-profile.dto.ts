@@ -39,4 +39,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   lazerData?: any;
+
+  @IsOptional()
+  ambientSettings?: any;
 }

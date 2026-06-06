@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
-import { ThemeBg } from '../profile/ThemeBg';
 import { useLazerStore } from '@/store/lazer.store';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -44,7 +43,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
   const textPrimary = isLight ? 'text-black' : 'text-white';
   const textSecondary = isLight ? 'text-black/60' : 'text-white/60';
   const cardBg = isLight ? 'glass-panel-light' : 'glass-panel-dark';
-  const borderCol = 'transparent';
+  const borderCol = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
 
   useEffect(() => {
     fetchFriends();
@@ -110,7 +109,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
   const renderList = search.trim() ? searchResults : (activeTab === 'Amigos' ? friendList : activeTab === 'Sugestões' ? nonFriends : pendingReceived);
 
   // Modern Premium Friend Card (Similar to Explore Creators)
-  const FriendCard = ({ uid, profileParam, avatarUrl, bio }: { uid: string; profileParam?: any; avatarUrl?: string; bio?: string }) => {
+  const FriendCard = ({ uid, profileParam, avatarUrl, bio, isList }: { uid: string; profileParam?: any; avatarUrl?: string; bio?: string; isList?: boolean }) => {
     const p = profileParam || {};
     const nameStr = p.displayName || p.username || 'User';
     const fStatus = isFriend(uid) ? 'friend' : hasSentRequest(uid) ? 'sent' : 'none';
@@ -119,8 +118,24 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
     const isVideo = p.bannerUrl && (p.bannerUrl.includes('.mp4') || p.bannerUrl.includes('.webm'));
 
     return (
-      <div className={`relative rounded-[32px] overflow-hidden cursor-pointer group min-h-[300px] flex flex-col ${cardBg}`}
-        onClick={() => onProfileClick?.(uid)}>
+      <>
+        {/* Mobile List View */}
+        {isList && (
+          <div className="flex md:hidden relative items-center gap-3 p-3 rounded-[20px] cursor-pointer group w-full border-[1.5px] border-white/5" style={{ background: isLight ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)' }} onClick={() => onProfileClick?.(uid)}>
+            <Avatar src={avatarUrl || p.avatarUrl} name={nameStr} className="w-12 h-12 rounded-[14px] border-[1.5px] shrink-0" style={{ borderColor: c }} />
+            <div className="flex-1 min-w-0 flex flex-col">
+              <DisplayName profile={p} fallbackName={nameStr} className={`font-black text-[14px] truncate max-w-full ${textPrimary}`} />
+              <p className={`text-[11px] font-bold ${textSecondary}`}>@{p.username || 'user'}</p>
+            </div>
+            <button className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white transition-transform" style={{ background: c }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+            </button>
+          </div>
+        )}
+
+        {/* Normal Grid View (always visible on desktop, conditionally on mobile) */}
+        <div className={`${isList ? 'hidden md:flex' : 'flex'} relative rounded-[20px] sm:rounded-[32px] overflow-hidden cursor-pointer group min-h-[240px] sm:min-h-[300px] flex-col ${cardBg} w-full`}
+          onClick={() => onProfileClick?.(uid)}>
 
         {/* Deep Full Background Image or Video */}
         <div className="absolute inset-0 transition-transform duration-1000 ease-out group-hover:scale-110">
@@ -137,30 +152,30 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
         <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 20%, rgba(0,0,0,0.9) 100%)` }} />
 
         {/* Content Rendered Over Image */}
-        <div className="relative p-6 flex flex-col items-center text-center h-full pt-8 flex-1">
-          <Avatar src={avatarUrl || p.avatarUrl} name={nameStr} className="w-[88px] h-[88px] rounded-[28px]  mb-4 border-[2.5px] group-hover:scale-105 transition-transform" style={{ borderColor: c }} />
-          <DisplayName profile={p} fallbackName={nameStr} className={`font-black text-[18px] truncate max-w-full text-white`} style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }} />
-          <p className={`text-[12px] font-bold mt-1 text-white/70  tracking-wide`}>@{p.username || 'user'}</p>
+        <div className="relative p-3 sm:p-6 flex flex-col items-center text-center h-full pt-4 sm:pt-8 flex-1">
+          <Avatar src={avatarUrl || p.avatarUrl} name={nameStr} className="w-[56px] h-[56px] sm:w-[88px] sm:h-[88px] rounded-[20px] sm:rounded-[28px] mb-2 sm:mb-4 border-[2px] sm:border-[2.5px] group-hover:scale-105 transition-transform shrink-0" style={{ borderColor: c }} />
+          <DisplayName profile={p} fallbackName={nameStr} className={`font-black text-[13px] sm:text-[18px] truncate max-w-full text-white`} style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }} />
+          <p className={`text-[10px] sm:text-[12px] font-bold mt-0.5 sm:mt-1 text-white/70 tracking-wide`}>@{p.username || 'user'}</p>
 
-          {bio && <p className={`text-[12px] font-semibold leading-relaxed line-clamp-2 mt-4 text-white/95  px-1`}>{bio}</p>}
+          {bio && <p className={`text-[11px] sm:text-[12px] font-semibold leading-relaxed line-clamp-2 mt-3 sm:mt-4 text-white/95 px-1`}>{bio}</p>}
 
-          <div className="mt-4 flex flex-wrap justify-center gap-1.5 w-full">
+          <div className="mt-2 sm:mt-4 flex flex-wrap justify-center gap-1 sm:gap-1.5 w-full">
             {p.tags && p.tags.split(',').slice(0, 3).map((tag: string, i: number) => (
-              <span key={`tag-${i}`} className="text-[9.5px] uppercase font-black tracking-widest px-2.5 py-1 rounded-md bg-black/50 text-white border" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>{tag.trim()}</span>
+              <span key={`tag-${i}`} className="hidden sm:inline-block text-[9.5px] uppercase font-black tracking-widest px-2.5 py-1 rounded-md bg-black/50 text-white border" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>{tag.trim()}</span>
             ))}
             {p.status && (
-              <span className="text-[9.5px] uppercase font-black tracking-widest px-2.5 py-1 rounded-md bg-white/20 text-white backblur-md flex items-center gap-1"><i>•</i> {p.status}</span>
+              <span className="hidden sm:flex text-[9.5px] uppercase font-black tracking-widest px-2.5 py-1 rounded-md bg-white/20 text-white backblur-md items-center gap-1"><i>•</i> {p.status}</span>
             )}
           </div>
 
-          <div className="mt-auto pt-6 w-full shrink-0 flex flex-col gap-2">
+          <div className="mt-auto pt-3 sm:pt-6 w-full shrink-0 flex flex-col gap-2">
             {isPendingRecv ? (
-              <div className="flex gap-2 w-full">
+              <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 w-full">
                 <button onClick={e => { e.stopPropagation(); acceptFriendRequest(isPendingRecv.id, isPendingRecv.fromUserId); }}
-                  className="flex-1 py-3 rounded-full font-black text-white hover:scale-105 transition-transform  border-none text-[11px] uppercase tracking-widest"
+                  className="flex-1 py-2 sm:py-3 rounded-full font-black text-white hover:scale-105 transition-transform border-none text-[9px] sm:text-[11px] uppercase tracking-widest"
                   style={{ background: c }}>Aceitar</button>
                 <button onClick={e => { e.stopPropagation(); rejectFriendRequest(isPendingRecv.id); }}
-                  className="flex-1 py-3 rounded-full font-black text-white hover:bg-red-500 hover:border-red-500 transition-colors border-[1.5px] text-[11px] uppercase tracking-widest bg-black/20 backblur-md"
+                  className="flex-1 py-2 sm:py-3 rounded-full font-black text-white hover:bg-red-500 hover:border-red-500 transition-colors border-[1.5px] text-[9px] sm:text-[11px] uppercase tracking-widest bg-black/20 backblur-md"
                   style={{ borderColor: 'rgba(255,255,255,0.2)' }}>Recusar</button>
               </div>
             ) : (
@@ -171,7 +186,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
                   else if (fStatus === 'sent') cancelFriendRequest(uid);
                   else sendFriendRequest(uid);
                 }}
-                className="w-full py-3 rounded-full text-[11px] font-black uppercase tracking-widest border-[1.5px] transition-all hover:scale-[1.02] active:scale-95  backblur-md"
+                className="w-full py-2 sm:py-3 rounded-full text-[9px] sm:text-[11px] font-black uppercase tracking-widest border-[1.5px] transition-all hover:scale-[1.02] active:scale-95 backblur-md"
                 style={{
                   background: fStatus === 'friend' ? 'rgba(255,255,255,0.1)' : fStatus === 'sent' ? 'rgba(249,115,22,0.8)' : c,
                   borderColor: fStatus === 'friend' ? 'rgba(255,255,255,0.2)' : fStatus === 'sent' ? '#f97316' : c,
@@ -182,24 +197,24 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
             )}
           </div>
         </div>
-      </div>
+        </div>
+      </>
     );
   };
 
   return (
-    <div className="fixed top-0 right-0 bottom-0 left-[120px] z-[160] flex flex-col font-['Nunito',sans-serif]" style={{ isolation: 'isolate' }}>
-      <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode} /></div>
+    <div className="w-full h-[calc(100dvh)] md:h-[calc(100vh-40px)] flex flex-col overflow-hidden font-['Nunito',sans-serif] animate-in fade-in duration-500">
+      <div className={`flex-1 border-0 md:border-[1.5px] rounded-none md:rounded-[3rem] flex flex-col overflow-hidden relative z-10 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} min-h-0`} style={{ borderColor: borderCol }}>
 
-      {/* Explorer/Network Header */}
-      <div className={`flex items-center justify-between px-5 sm:px-8 py-4 shrink-0 border-b backblur-2xl ${cardBg}`}
+      <div className="flex items-center justify-center md:justify-between px-5 sm:px-8 py-4 shrink-0 border-b"
         style={{ borderColor: borderCol }}>
         <button onClick={onClose}
-          className={`flex items-center gap-2 text-sm font-bold bg-transparent border-none cursor-pointer hover:opacity-60 transition-opacity ${textPrimary}`}>
+          className={`hidden md:flex items-center gap-2 text-sm font-bold bg-transparent border-none cursor-pointer hover:opacity-60 transition-opacity ${textPrimary}`}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
           Voltar
         </button>
         <span className="text-sm font-extrabold tracking-widest uppercase" style={{ color: c }}>Rede Interativa</span>
-        <div className="w-20" />
+        <div className="hidden md:block w-20" />
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -280,7 +295,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
                   <button key={tab} onClick={() => setActiveTab(tab)}
                     className="relative px-7 py-3 rounded-full text-[14px] font-black tracking-wide border-none cursor-pointer transition-all shrink-0 "
                     style={{
-                      background: activeTab === tab ? c : cardBg,
+                      background: activeTab === tab ? c : (isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'),
                       boxShadow: activeTab === tab ? `0 8px 24px ${c}50` : '0 2px 10px rgba(0,0,0,0.05)',
                       color: activeTab === tab ? '#fff' : (isLight ? '#333' : '#eee'),
                       border: `1.5px solid ${activeTab === tab ? 'transparent' : borderCol}`
@@ -311,12 +326,12 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
                 <p className={`text-[15px] font-bold ${textSecondary} opacity-60`}>A galáxia está um bocado vazia por aqui.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-20">
+              <div className={`grid mb-20 ${activeTab === 'Amigos' ? 'grid-cols-1 sm:grid-cols-2 gap-3' : 'grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-5'}`}>
                 {search.trim()
-                  ? renderList.map((u: any) => <FriendCard key={u.id} uid={u.id} profileParam={u.profile} avatarUrl={u.avatar} bio={u.bio} />)
+                  ? renderList.map((u: any) => <FriendCard key={u.id} uid={u.id} profileParam={u.profile} avatarUrl={u.avatar} bio={u.bio} isList={activeTab === 'Amigos'} />)
                   : activeTab === 'Pedidos'
-                    ? renderList.map((req: any) => <FriendCard key={req.fromUserId} uid={req.fromUserId} profileParam={req.fromUser?.profile} bio={req.fromUser?.profile?.bio} />)
-                    : renderList.map((u: any) => <FriendCard key={u.id} uid={u.id} profileParam={u.profile} avatarUrl={u.avatar} bio={u.bio} />)
+                    ? renderList.map((req: any) => <FriendCard key={req.fromUserId} uid={req.fromUserId} profileParam={req.fromUser?.profile} bio={req.fromUser?.profile?.bio} isList={false} />)
+                    : renderList.map((u: any) => <FriendCard key={u.id} uid={u.id} profileParam={u.profile} avatarUrl={u.avatar} bio={u.bio} isList={activeTab === 'Amigos'} />)
                 }
               </div>
             )}
@@ -392,6 +407,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
 
           </aside>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -361,6 +361,22 @@ export default function CommunityPage() {
         .step-enter { animation: stepSlide 0.2s cubic-bezier(.4,0,.2,1) both; }
         input:focus, textarea:focus { border-color: ${ACCENT} !important; box-shadow: 0 0 0 2px rgba(165,230,0,0.15) !important; outline: none !important; }
         button { font-family: inherit; }
+        @media (max-width: 600px) {
+          .community-header-title { font-size: 14px !important; }
+          .community-header-badge { display: none !important; }
+          .community-header-btn { padding: 6px 10px !important; font-size: 12px !important; }
+          .community-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .community-content { padding: 20px 14px 60px !important; }
+          .community-empty-icon { width: 80px !important; height: 80px !important; font-size: 36px !important; }
+          .community-empty-title { font-size: 20px !important; }
+          .community-empty-btns { flex-direction: column !important; gap: 10px !important; }
+          .community-empty-btn { width: 100% !important; justify-content: center; }
+          .modal-inner { max-width: 100% !important; border-radius: 20px 20px 0 0 !important; margin-top: auto !important; }
+          .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+        }
+        @media (min-width: 601px) and (max-width: 900px) {
+          .community-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
       `}</style>
 
       {/* ── HEADER ── */}
@@ -368,7 +384,7 @@ export default function CommunityPage() {
         position: 'sticky', top: 0, zIndex: 20,
         background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(20px)',
         borderBottom: `1px solid ${BORDER}`,
-        padding: '0 24px', height: 56,
+        padding: '0 16px', height: 56,
         display: 'flex', alignItems: 'center', gap: 14,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -378,9 +394,9 @@ export default function CommunityPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 16, boxShadow: `0 0 12px rgba(165,230,0,0.4)`,
           }}>🌐</div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: TEXT_BRIGHT }}>Comunidade</span>
+          <span className="community-header-title" style={{ fontSize: 16, fontWeight: 700, color: TEXT_BRIGHT }}>Comunidade</span>
           {!loading && servers.length > 0 && (
-            <span style={{
+            <span className="community-header-badge" style={{
               fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
               background: 'rgba(255,255,255,0.08)', borderRadius: 20,
               padding: '2px 10px',
@@ -388,33 +404,33 @@ export default function CommunityPage() {
           )}
         </div>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button onClick={() => setShowJoin(true)} style={{
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+          <button className="community-header-btn" onClick={() => setShowJoin(true)} style={{
             background: 'rgba(255,255,255,0.07)', border: `1px solid ${BORDER}`,
-            borderRadius: 10, padding: '7px 16px', fontSize: 13, fontWeight: 600,
-            color: TEXT_NORMAL, cursor: 'pointer', transition: 'all 0.15s',
+            borderRadius: 10, padding: '7px 14px', fontSize: 13, fontWeight: 600,
+            color: TEXT_NORMAL, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap',
           }}
             onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.12)'; (e.currentTarget as any).style.color = TEXT_BRIGHT; }}
             onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as any).style.color = TEXT_NORMAL; }}
           >
-            Entrar com convite
+            Entrar
           </button>
-          <button onClick={openCreate} style={{
+          <button className="community-header-btn" onClick={openCreate} style={{
             background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`,
-            border: 'none', borderRadius: 10, padding: '7px 18px',
+            border: 'none', borderRadius: 10, padding: '7px 16px',
             fontSize: 13, fontWeight: 700, color: '#000', cursor: 'pointer',
-            transition: 'all 0.2s', boxShadow: `0 4px 16px rgba(165,230,0,0.25)`,
+            transition: 'all 0.2s', boxShadow: `0 4px 16px rgba(165,230,0,0.25)`, whiteSpace: 'nowrap',
           }}
             onMouseEnter={e => { (e.currentTarget as any).style.transform = 'translateY(-1px)'; (e.currentTarget as any).style.boxShadow = '0 8px 24px rgba(165,230,0,0.4)'; }}
             onMouseLeave={e => { (e.currentTarget as any).style.transform = 'translateY(0)'; (e.currentTarget as any).style.boxShadow = '0 4px 16px rgba(165,230,0,0.25)'; }}
           >
-            + Criar servidor
+            + Criar
           </button>
         </div>
       </div>
 
       {/* ── CONTENT ── */}
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px 80px' }}>
+      <div className="community-content" style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px 80px' }}>
 
         {/* Loading */}
         {loading && (
@@ -432,7 +448,7 @@ export default function CommunityPage() {
         {/* Empty state */}
         {!loading && servers.length === 0 && (
           <div style={{ textAlign: 'center', paddingTop: 80, animation: 'fadeUp 0.5s ease' }}>
-            <div style={{
+            <div className="community-empty-icon" style={{
               width: 120, height: 120, borderRadius: '50%',
               background: 'radial-gradient(circle, rgba(165,230,0,0.15) 0%, transparent 70%)',
               border: `2px dashed rgba(165,230,0,0.3)`,
@@ -440,28 +456,28 @@ export default function CommunityPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 52, animation: 'float 3s ease-in-out infinite',
             }}>🌐</div>
-            <h2 style={{ margin: '0 0 12px', fontSize: 28, fontWeight: 800, color: TEXT_BRIGHT }}>
+            <h2 className="community-empty-title" style={{ margin: '0 0 12px', fontSize: 28, fontWeight: 800, color: TEXT_BRIGHT }}>
               Sem servidores ainda
             </h2>
             <p style={{ color: TEXT_MUTED, fontSize: 16, marginBottom: 36, maxWidth: 360, margin: '0 auto 36px', lineHeight: 1.6 }}>
               Cria o teu servidor e começa a tua comunidade, ou entra num com um código de convite.
             </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button onClick={() => setShowJoin(true)} style={{
+            <div className="community-empty-btns" style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button className="community-empty-btn" onClick={() => setShowJoin(true)} style={{
                 background: 'rgba(255,255,255,0.07)', border: `1px solid ${BORDER}`,
                 borderRadius: 12, padding: '12px 24px', fontSize: 14, fontWeight: 600,
-                color: TEXT_NORMAL, cursor: 'pointer', transition: 'all 0.2s',
+                color: TEXT_NORMAL, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8
               }}
                 onMouseEnter={e => (e.currentTarget as any).style.background = 'rgba(255,255,255,0.12)'}
                 onMouseLeave={e => (e.currentTarget as any).style.background = 'rgba(255,255,255,0.07)'}
               >
                 🔗 Entrar com convite
               </button>
-              <button onClick={openCreate} style={{
+              <button className="community-empty-btn" onClick={openCreate} style={{
                 background: `linear-gradient(135deg, ${ACCENT}, #7BC800)`,
                 border: 'none', borderRadius: 12, padding: '12px 28px',
                 fontSize: 14, fontWeight: 700, color: '#000', cursor: 'pointer',
-                boxShadow: '0 4px 20px rgba(165,230,0,0.3)', transition: 'all 0.2s',
+                boxShadow: '0 4px 20px rgba(165,230,0,0.3)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8
               }}
                 onMouseEnter={e => { (e.currentTarget as any).style.transform = 'translateY(-2px)'; (e.currentTarget as any).style.boxShadow = '0 8px 28px rgba(165,230,0,0.5)'; }}
                 onMouseLeave={e => { (e.currentTarget as any).style.transform = 'translateY(0)'; (e.currentTarget as any).style.boxShadow = '0 4px 20px rgba(165,230,0,0.3)'; }}
@@ -481,7 +497,7 @@ export default function CommunityPage() {
               </p>
               <div style={{ flex: 1, height: 1, background: BORDER }} />
             </div>
-            <div style={{
+            <div className="community-grid" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
               gap: 16,

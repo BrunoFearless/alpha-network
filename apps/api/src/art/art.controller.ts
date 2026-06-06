@@ -36,6 +36,7 @@ export class ArtController {
       description?: string;
       category?: string;
       tags?: string;
+      musicTrackId?: string;
     },
   ) {
     if (!files || files.length === 0) throw new BadRequestException('At least one image is required');
@@ -73,8 +74,12 @@ export class ArtController {
 
     if (!imageCheck.allowed) {
       // Delete the saved files before rejecting
+      const basePath = path.normalize(path.join(process.cwd(), 'uploads', 'art'));
       for (const fp of filePaths) {
-        try { if (fs.existsSync(fp)) fs.unlinkSync(fp); } catch {}
+        try { 
+          const fullPath = path.normalize(fp);
+          if (fullPath.startsWith(basePath) && fs.existsSync(fullPath)) fs.unlinkSync(fullPath); 
+        } catch {}
       }
       throw new BadRequestException(imageCheck.reason);
     }
@@ -86,7 +91,8 @@ export class ArtController {
       imageUrl,
       imageUrls: imageUrls.length > 1 ? JSON.stringify(imageUrls) : undefined,
       category: body.category || 'Geral',
-      tags: tagsStr
+      tags: tagsStr,
+      musicTrackId: body.musicTrackId,
     });
 
     return { success: true, data: art };
@@ -99,7 +105,7 @@ export class ArtController {
     @Param('id') id: string,
     @CurrentUser() user: { id: string },
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { title?: string; description?: string; category?: string; tags?: string },
+    @Body() body: { title?: string; description?: string; category?: string; tags?: string; musicTrackId?: string },
   ) {
     let tagsStr: string | undefined;
     if (body.tags) {
@@ -122,7 +128,8 @@ export class ArtController {
       description: body.description,
       category: body.category,
       tags: tagsStr,
-      imageUrl
+      imageUrl,
+      musicTrackId: body.musicTrackId,
     });
     return { success: true, data: art };
   }
@@ -264,6 +271,30 @@ export class ArtController {
     return { success: true, data: collection };
   }
 
+  @Put('folder/:id/viewmode')
+  @UseGuards(JwtAuthGuard)
+  async updateCollectionViewMode(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+    @Body() body: { viewMode: string },
+  ) {
+    if (!body.viewMode) throw new BadRequestException('viewMode is required');
+    const collection = await this.artService.updateCollectionViewMode(id, user.id, body.viewMode);
+    return { success: true, data: collection };
+  }
+
+  @Put('folder/:id/layout')
+  @UseGuards(JwtAuthGuard)
+  async updateCollectionLayout(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+    @Body() body: { layout: { artId: string; positionX: number; positionY: number; width?: number; height?: number; zIndex?: number }[] },
+  ) {
+    if (!body.layout || !Array.isArray(body.layout)) throw new BadRequestException('layout array is required');
+    await this.artService.updateCollectionLayout(id, user.id, body.layout);
+    return { success: true };
+  }
+
   @Get('collections/user/:userId')
   async getUserCollections(
     @Param('userId') userId: string,
@@ -321,5 +352,15 @@ export class ArtController {
   ) {
     await this.artService.removeCollaborator(id, user.id, targetUserId);
     return { success: true };
+  }
+
+  @Post('folder/:id/fork')
+  @UseGuards(JwtAuthGuard)
+  async forkCollection(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    const fork = await this.artService.forkCollection(id, user.id);
+    return { success: true, data: fork };
   }
 }

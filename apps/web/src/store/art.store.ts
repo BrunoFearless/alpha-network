@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Track } from './music.store';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -17,6 +18,8 @@ export interface Art {
   saved?: boolean;
   likesCount: number;
   commentsCount: number;
+  musicTrackId?: string;
+  musicTrack?: Track;
   createdAt: string;
   author?: {
     id: string;
@@ -36,11 +39,25 @@ export interface ArtCollection {
   coverUrl?: string;
   isPublic: boolean;
   isGroup?: boolean;
+  viewMode?: 'grid' | 'canvas';
   createdAt: string;
   parentId?: string;
   subgroups?: ArtCollection[];
+  forkedFromId?: string;
+  forkedFrom?: ArtCollection;
   _count?: { items: number };
-  items?: { art: { imageUrl: string } }[];
+  items?: { 
+    id: string;
+    collectionId: string;
+    artId: string;
+    positionX?: number;
+    positionY?: number;
+    width?: number;
+    height?: number;
+    zIndex?: number;
+    createdAt: string;
+    art: Art; 
+  }[];
 }
 
 interface ArtStore {
@@ -67,6 +84,9 @@ interface ArtStore {
   updateArt: (id: string, formData: FormData | any, token: string) => Promise<boolean>;
   deleteArt: (id: string, token: string) => Promise<boolean>;
   updateCollection: (id: string, formData: FormData, token: string) => Promise<boolean>;
+  updateCollectionViewMode: (collectionId: string, viewMode: 'grid' | 'canvas', token: string) => Promise<boolean>;
+  updateCollectionLayout: (collectionId: string, layout: { artId: string; positionX: number; positionY: number; width?: number; height?: number; zIndex?: number }[], token: string) => Promise<boolean>;
+  forkCollection: (collectionId: string, token: string) => Promise<ArtCollection | null>;
   setActiveCategory: (cat: string) => void;
   setSearchQuery: (q: string) => void;
   setCurrentArt: (art: Art | null) => void;
@@ -288,5 +308,88 @@ export const useArtStore = create<ArtStore>((set, get) => ({
       });
       return res.ok;
     } catch (e) { return false; }
+  },
+
+  updateCollectionViewMode: async (collectionId, viewMode, token) => {
+    try {
+      const res = await fetch(`${API}/api/v1/art/folder/${collectionId}/viewmode`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ viewMode }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        set(state => ({
+          collections: state.collections.map(c => c.id === collectionId ? { ...c, viewMode } : c)
+        }));
+        return true;
+      }
+      return false;
+    } catch { return false; }
+  },
+
+  updateCollectionLayout: async (collectionId, layout, token) => {
+    // Optimistic Update: update local state immediately
+    const updateLocalLayout = (c: ArtCollection) => {
+      if (c.id !== collectionId) return c;
+      const updatedItems = c.items?.map(item => {
+        const layoutItem = layout.find(l => l.artId === item.artId);
+        if (!layoutItem) return item;
+        return {
+          ...item,
+          positionX: layoutItem.positionX,
+          positionY: layoutItem.positionY,
+          width: layoutItem.width,
+          height: layoutItem.height,
+          zIndex: layoutItem.zIndex,
+        };
+      });
+      return { ...c, items: updatedItems };
+    };
+
+    set(state => ({
+      collections: state.collections.map(updateLocalLayout)
+    }));
+
+    try {
+      const res = await fetch(`${API}/api/v1/art/folder/${collectionId}/layout`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ layout }),
+      });
+      const json = await res.json();
+      return json.success;
+    } catch {
+      return false;
+    }
+  },
+
+  forkCollection: async (collectionId, token) => {
+    try {
+      const res = await fetch(`${API}/api/v1/art/folder/${collectionId}/fork`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        const newCol = json.data;
+        set(state => ({
+          collections: [newCol, ...state.collections]
+        }));
+        return newCol;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 }));

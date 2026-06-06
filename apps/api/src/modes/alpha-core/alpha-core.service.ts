@@ -9,7 +9,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { HumanizerService } from './humanizer.service';
 import Groq from 'groq-sdk';
 
 // ── Action definitions ─────────────────────────────────────────────────────
@@ -177,7 +176,6 @@ export class AlphaCoreService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly humanizer: HumanizerService,
   ) {
     this.groq = new Groq({
       apiKey: process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY, // fallback if user forgot
@@ -281,15 +279,7 @@ export class AlphaCoreService {
 
     const lastUserMsg = messages[messages.length - 1]?.content || '';
 
-    // ── 0. Humanization: Silence & Pressure Check (Pre-LLM) ──────────────────
-    if (this.humanizer.shouldUseSilence(lastUserMsg)) {
-      yield { type: 'text', text: this.humanizer.humanize('', lastUserMsg) };
-      return;
-    }
-    if (this.humanizer.detectPressure(lastUserMsg)) {
-      yield { type: 'text', text: this.humanizer.humanize('', lastUserMsg) };
-      return;
-    }
+
 
     try {
       const stream = await this.groq.chat.completions.create(params) as any;
@@ -407,7 +397,6 @@ export class AlphaCoreService {
   // ── Permissions ─────────────────────────────────────────────────────────
 
   async getPermissions(userId: string): Promise<PermissionMap> {
-    // @ts-ignore
     const perms = await this.prisma.alphaCorePermission.findUnique({
       where: { userId },
     });
@@ -437,7 +426,6 @@ export class AlphaCoreService {
     userId: string,
     permissions: Partial<PermissionMap>,
   ) {
-    // @ts-ignore
     return this.prisma.alphaCorePermission.upsert({
       where: { userId },
       create: { userId, ...permissions },
@@ -455,7 +443,6 @@ export class AlphaCoreService {
         canDeletePosts: false,
         canManageFriends: false,
         canEditTheme: false,
-        // @ts-ignore
         canEditAI: false,
       },
       update: {
@@ -464,7 +451,6 @@ export class AlphaCoreService {
         canDeletePosts: false,
         canManageFriends: false,
         canEditTheme: false,
-        // @ts-ignore
         canEditAI: false,
         updatedAt: new Date(),
       },

@@ -9,7 +9,7 @@ export class ArtService {
 
   // ── ARTWORKS ───────────────────────────────────────────────
 
-  async createArt(authorId: string, data: { title: string; description?: string; imageUrl: string; imageUrls?: string; category: string; tags?: string; width?: number; height?: number }) {
+  async createArt(authorId: string, data: { title: string; description?: string; imageUrl: string; imageUrls?: string; category: string; tags?: string; width?: number; height?: number; musicTrackId?: string }) {
     return this.prisma.alphaArt.create({
       data: {
         authorId,
@@ -21,11 +21,12 @@ export class ArtService {
         tags: data.tags,
         width: data.width,
         height: data.height,
+        musicTrackId: data.musicTrackId,
       },
     });
   }
 
-  async updateArt(artId: string, userId: string, data: { title?: string; description?: string; category?: string; tags?: string; imageUrl?: string }) {
+  async updateArt(artId: string, userId: string, data: { title?: string; description?: string; category?: string; tags?: string; imageUrl?: string; musicTrackId?: string }) {
     const art = await this.prisma.alphaArt.findUnique({ where: { id: artId } });
     if (!art) throw new NotFoundException('Art not found');
     if (art.authorId !== userId) throw new ForbiddenException();
@@ -38,6 +39,7 @@ export class ArtService {
         category: data.category,
         tags: data.tags,
         imageUrl: data.imageUrl,
+        musicTrackId: data.musicTrackId,
       },
     });
   }
@@ -84,6 +86,7 @@ export class ArtService {
           _count: { select: { likes: true, comments: true } },
           likes: requesterId ? { where: { userId: requesterId } } : false,
           saves: requesterId ? { where: { userId: requesterId } } : false,
+          musicTrack: true,
         },
       }),
       this.prisma.alphaArt.count({ where }),
@@ -108,6 +111,7 @@ export class ArtService {
         _count: { select: { likes: true, comments: true } },
         likes: userId ? { where: { userId } } : false,
         saves: userId ? { where: { userId } } : false,
+        musicTrack: true,
       },
     });
     if (!art) throw new NotFoundException();
@@ -176,11 +180,15 @@ export class ArtService {
   }
 
   saveArtUpload(userId: string, file: Express.Multer.File): { url: string; filePath: string } {
-    const dir = path.join(process.cwd(), 'uploads', 'art');
+    const dir = path.normalize(path.join(process.cwd(), 'uploads', 'art'));
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     
-    const fileName = `${userId}-${Date.now()}${path.extname(file.originalname)}`;
-    const filePath = path.join(dir, fileName);
+    const ext = path.extname(file.originalname).replace(/[^a-zA-Z0-9.]/g, '');
+    const fileName = `${userId}-${Date.now()}${ext}`;
+    const filePath = path.normalize(path.join(dir, fileName));
+    
+    if (!filePath.startsWith(dir)) throw new BadRequestException('Invalid file path');
+    
     fs.writeFileSync(filePath, file.buffer);
     return { url: `/uploads/art/${fileName}`, filePath };
   }
@@ -188,11 +196,16 @@ export class ArtService {
   // ── COLLECTIONS ───────────────────────────────────────────
 
   saveCollectionCoverUpload(userId: string, file: Express.Multer.File) {
-    const dir = path.join(process.cwd(), 'uploads', 'art-collections');
+    const dir = path.normalize(path.join(process.cwd(), 'uploads', 'art-collections'));
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     
-    const fileName = `${userId}-${Date.now()}${path.extname(file.originalname)}`;
-    fs.writeFileSync(path.join(dir, fileName), file.buffer);
+    const ext = path.extname(file.originalname).replace(/[^a-zA-Z0-9.]/g, '');
+    const fileName = `${userId}-${Date.now()}${ext}`;
+    const filePath = path.normalize(path.join(dir, fileName));
+    
+    if (!filePath.startsWith(dir)) throw new BadRequestException('Invalid file path');
+    
+    fs.writeFileSync(filePath, file.buffer);
     return `/uploads/art-collections/${fileName}`;
   }
 
@@ -230,6 +243,58 @@ export class ArtService {
         isGroup: data.isGroup !== undefined ? data.isGroup : undefined,
       },
     });
+  }
+
+  async updateCollectionViewMode(id: string, userId: string, viewMode: string) {
+    const col = await this.prisma.alphaArtCollection.findUnique({ 
+      where: { id },
+      include: { collaborators: true }
+    });
+    if (!col) throw new NotFoundException('Collection not found');
+    
+    const isOwner = col.authorId === userId;
+    const isCollab = col.collaborators.some(c => c.userId === userId);
+    if (!isOwner && !isCollab) throw new ForbiddenException();
+
+    return this.prisma.alphaArtCollection.update({
+      where: { id },
+      data: { viewMode },
+    });
+  }
+
+  async updateCollectionLayout(id: string, userId: string, layout: { artId: string; positionX: number; positionY: number; width?: number; height?: number; zIndex?: number }[]) {
+    console.log(`[ArtService] updateCollectionLayout for collection ID: ${id}, user: ${userId}, items count: ${layout.length}`);
+    const col = await this.prisma.alphaArtCollection.findUnique({ 
+      where: { id },
+      include: { collaborators: true }
+    });
+    if (!col) throw new NotFoundException('Collection not found');
+
+    const isOwner = col.authorId === userId;
+    const isCollab = col.collaborators.some(c => c.userId === userId);
+    if (!isOwner && !isCollab) throw new ForbiddenException();
+
+    try {
+      const updates = layout.map(item => 
+        this.prisma.alphaArtCollectionItem.update({
+          where: { collectionId_artId: { collectionId: id, artId: item.artId } },
+          data: {
+            positionX: item.positionX,
+            positionY: item.positionY,
+            width: item.width !== undefined ? item.width : undefined,
+            height: item.height !== undefined ? item.height : undefined,
+            zIndex: item.zIndex !== undefined ? item.zIndex : undefined,
+          }
+        })
+      );
+
+      await this.prisma.$transaction(updates);
+      console.log(`[ArtService] updateCollectionLayout SUCCEEDED for collection: ${id}`);
+      return { success: true };
+    } catch (err: any) {
+      console.error(`[ArtService] updateCollectionLayout FAILED for collection: ${id}. Error:`, err);
+      throw err;
+    }
   }
 
   async addArtToCollection(collectionId: string, artId: string, userId: string) {
@@ -323,7 +388,8 @@ export class ArtService {
             } 
           }
         },
-        author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } }
+        author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } },
+        forkedFrom: { include: { author: { select: { id: true, profile: { select: { username: true, displayName: true } } } } } }
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -334,6 +400,7 @@ export class ArtService {
       where: { id },
       include: {
         author: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } },
+        forkedFrom: { include: { author: { select: { id: true, profile: { select: { username: true, displayName: true } } } } } },
         collaborators: {
           include: { user: { select: { id: true, profile: { select: { username: true, avatarUrl: true, displayName: true } } } } }
         },
@@ -390,5 +457,84 @@ export class ArtService {
       where: { collectionId, userId: targetUserId }
     });
     return { success: true };
+  }
+
+  async forkCollection(collectionId: string, userId: string) {
+    const sourceCol = await this.prisma.alphaArtCollection.findUnique({
+      where: { id: collectionId },
+      include: {
+        items: true,
+        collaborators: true,
+        subgroups: {
+          include: {
+            items: true,
+          },
+        },
+      },
+    });
+
+    if (!sourceCol) throw new NotFoundException('Collection not found');
+
+    const isPublic = sourceCol.isPublic;
+    const isOwner = sourceCol.authorId === userId;
+    const isCollab = sourceCol.collaborators.some(c => c.userId === userId);
+
+    if (!isPublic && !isOwner && !isCollab) {
+      throw new ForbiddenException('Cannot fork private collection');
+    }
+
+    const newCollection = await this.cloneCollectionTree(sourceCol.id, userId, null);
+    
+    return this.getCollection(newCollection.id);
+  }
+
+  private async cloneCollectionTree(sourceColId: string, targetUserId: string, parentId: string | null): Promise<any> {
+    const source = await this.prisma.alphaArtCollection.findUnique({
+      where: { id: sourceColId },
+      include: {
+        items: true,
+        subgroups: true,
+      },
+    });
+
+    if (!source) return null;
+
+    const clonedCol = await this.prisma.alphaArtCollection.create({
+      data: {
+        authorId: targetUserId,
+        title: source.title,
+        description: source.description,
+        coverUrl: source.coverUrl,
+        isPublic: source.isPublic,
+        isGroup: false,
+        viewMode: source.viewMode,
+        parentId: parentId,
+        forkedFromId: source.id,
+      },
+    });
+
+    if (source.items && source.items.length > 0) {
+      const itemsToCreate = source.items.map(item => ({
+        collectionId: clonedCol.id,
+        artId: item.artId,
+        positionX: item.positionX,
+        positionY: item.positionY,
+        width: item.width,
+        height: item.height,
+        zIndex: item.zIndex,
+      }));
+
+      await this.prisma.alphaArtCollectionItem.createMany({
+        data: itemsToCreate,
+      });
+    }
+
+    if (source.subgroups && source.subgroups.length > 0) {
+      for (const sub of source.subgroups) {
+        await this.cloneCollectionTree(sub.id, targetUserId, clonedCol.id);
+      }
+    }
+
+    return clonedCol;
   }
 }

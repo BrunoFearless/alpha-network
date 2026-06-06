@@ -7,6 +7,7 @@ import { useAlphaCore } from '@/components/alpha-core/useAlphaCore';
 import { MessageContent } from '@/components/alpha-core/AlphaCoreChat';
 import { useAlphaCoreStore } from '@/store/useAlphaCoreStore';
 import { EmojiRenderer, getAnimatedUrl, ALL_ANIMATED_EMOJIS } from '@/components/ui/EmojiRenderer';
+import { resolveUrl } from '@/lib/api';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IconMessage = ({ size = 20, color = 'currentColor' }) => (
@@ -199,7 +200,7 @@ function ChatSettings({ contact, onBack, themeColor, themeMode }: { contact: Con
             <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: isLight ? '#f1f5f9' : '#18181b' }}>
               {contact.isAI
                 ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${themeColor}20` }}><IconSparkles size={40} color={themeColor}/></div>
-                : <img src={contact.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                : <img src={resolveUrl(contact.avatar)} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
               }
             </div>
           </div>
@@ -307,7 +308,7 @@ function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string
         <div style={{ position: 'relative' }}>
           <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: `${themeColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {personalAI?.avatarUrl 
-              ? <img src={personalAI.avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <img src={resolveUrl(personalAI.avatarUrl)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : <IconSparkles size={22} color={themeColor}/>
             }
           </div>
@@ -330,7 +331,10 @@ function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string
               fontSize: 14, 
               boxShadow: '0 2px 12px rgba(0,0,0,0.07)', 
               border: msg.role === 'user' ? `1.5px solid ${userColor}` : `1px solid ${borderCol}`, 
-              maxWidth: '85%' 
+              maxWidth: '85%',
+              wordBreak: 'break-word',
+              overflowWrap: 'anywhere',
+              boxSizing: 'border-box'
             }}>
               <MessageContent content={msg.content} />
               <div style={{ fontSize: 10, opacity: 0.6, marginTop: 5, textAlign: msg.role === 'user' ? 'right' : 'left' }}>
@@ -343,7 +347,18 @@ function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string
         ))}
         {isStreaming && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '100%' }}>
-            <div style={{ padding: '10px 14px', borderRadius: '18px 18px 18px 4px', background: isLight ? 'white' : 'rgba(255,255,255,0.08)', color: tp, fontSize: 14, border: `1px solid ${borderCol}`, maxWidth: '85%' }}>
+            <div style={{ 
+              padding: '10px 14px', 
+              borderRadius: '18px 18px 18px 4px', 
+              background: isLight ? 'white' : 'rgba(255,255,255,0.08)', 
+              color: tp, 
+              fontSize: 14, 
+              border: `1px solid ${borderCol}`, 
+              maxWidth: '85%',
+              wordBreak: 'break-word',
+              overflowWrap: 'anywhere',
+              boxSizing: 'border-box'
+            }}>
               <MessageContent content={streamingContent} isStreaming />
             </div>
           </div>
@@ -365,7 +380,7 @@ function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string
   );
 }
 
-export default function MessagesModule({ themeColor: propThemeColor, themeMode }: { themeColor?: string; themeMode?: 'light' | 'dark' } = {}) {
+export default function MessagesModule({ themeColor: propThemeColor, themeMode, onMobileViewChange }: { themeColor?: string; themeMode?: 'light' | 'dark'; onMobileViewChange?: (mode: 'list' | 'chat') => void } = {}) {
   const { user: authUser } = useAuthStore();
   const computedThemeMode = themeMode || (authUser?.profile as any)?.lazerData?.themeMode || 'dark';
   const isLight = computedThemeMode === 'light';
@@ -398,7 +413,13 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode }
   const [showFullGallery, setShowFullGallery] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [mobileViewMode, setMobileViewModeRaw] = useState<'list' | 'chat'>('list');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const setMobileViewMode = useCallback((mode: 'list' | 'chat') => {
+    setMobileViewModeRaw(mode);
+    onMobileViewChange?.(mode);
+  }, [onMobileViewChange]);
 
   const handleFileClick = () => fileInputRef.current?.click();
 
@@ -580,7 +601,7 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode }
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', fontFamily: "'Nunito', sans-serif" }}>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', fontFamily: "'Nunito', sans-serif", position: 'relative' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
@@ -593,45 +614,152 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode }
         .contact-item:hover { background: rgba(99,102,241,0.06) !important; }
         .send-btn:hover { transform: scale(1.06) !important; filter: brightness(1.08); }
         .send-btn:active { transform: scale(0.95) !important; }
+        @media (max-width: 767px) {
+          .msg-list-panel { width: 100% !important; border-right: none !important; }
+          .msg-chat-panel { position: absolute !important; inset: 0 !important; z-index: 10; }
+          .msg-list-panel.hidden-mobile { display: none !important; }
+          .msg-chat-panel.hidden-mobile { display: none !important; }
+          .msg-back-btn { display: flex !important; }
+        }
       `}</style>
 
       {/* LEFT — Contact list */}
-      <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', background: glassBg, backdropFilter: 'blur(32px)', borderRight: `1px solid ${borderCol}` }}>
-        <div style={{ padding: '24px 20px 16px' }}>
+      <div className={`msg-list-panel${mobileViewMode === 'chat' ? ' hidden-mobile' : ''}`} style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'transparent', borderRight: `1px solid ${borderCol}` }}>
+        {/* Header */}
+        <div style={{ padding: '18px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 18, fontWeight: 900, color: tp }}>Mensagens</span>
+          <button style={{ width: 34, height: 34, borderRadius: 10, border: `1.5px solid ${accentBorder}`, background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ts }}>
+            <IconPlus size={16}/>
+          </button>
+        </div>
+        {/* Search */}
+        <div style={{ padding: '0 16px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 14, background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)', border: `1.5px solid ${accentBorder}` }}>
             <IconSearch size={15} color={isLight ? "#94a3b8" : "#666"}/>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Procurar conversas..." style={{ flex: 1, background: 'none', border: 'none', fontSize: 13, color: tp, fontFamily: 'inherit' }}/>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Procurar conversas..." style={{ flex: 1, background: 'none', border: 'none', fontSize: 13, color: tp, fontFamily: 'inherit', outline: 'none' }}/>
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px 16px' }}>
+        {/* ── Alpha Pulses – horizontal scroll ── */}
+        {!search.trim() && (
+          <div style={{ padding: '4px 0 12px', overflow: 'hidden' }}>
+            <div style={{ padding: '0 16px 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: themeColor, boxShadow: `0 0 8px ${themeColor}` }}/>
+              <span style={{ fontSize: 10, fontWeight: 900, color: ts, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Alpha Pulses</span>
+            </div>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '4px 16px 8px', scrollbarWidth: 'none' }}>
+              <style>{`.alpha-pulses::-webkit-scrollbar { display: none; }`}</style>
+              <div className="alpha-pulses" style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none' }}>
+
+                {/* Alpha Nova – always first */}
+                <button
+                  onClick={() => { setActiveConversation('alpha-assistant'); setMobileViewMode('chat'); }}
+                  style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  <div style={{ position: 'relative', width: 56, height: 56 }}>
+                    {/* Rotating gradient ring */}
+                    <div style={{
+                      position: 'absolute', inset: -3, borderRadius: '50%',
+                      background: `conic-gradient(${themeColor}, #a78bfa, #06b6d4, ${themeColor})`,
+                      animation: 'spin 4s linear infinite',
+                    }}/>
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                    <div style={{ position: 'absolute', inset: 2, borderRadius: '50%', background: isLight ? '#fff' : '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      <div style={{ width: '100%', height: '100%', background: `${themeColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <IconSparkles size={22} color={themeColor}/>
+                      </div>
+                    </div>
+                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: 14, height: 14, borderRadius: '50%', background: '#a78bfa', border: `2px solid ${isLight ? '#fff' : '#111'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 7, color: 'white' }}>✦</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: tp, maxWidth: 58, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Alpha Nova</span>
+                </button>
+
+                {/* Top-active conversations */}
+                {mappedContacts
+                  .filter(c => c.id !== 'alpha-assistant' && c.lastMessage && c.lastMessage !== 'Ainda sem mensagens')
+                  .slice(0, 8)
+                  .map((c, idx) => {
+                    const hue = idx * 47;
+                    const ringColor = c.unread ? '#ef4444' : `hsl(${hue}, 70%, 60%)`;
+                    const dashArray = 138; // circumference of r=22 circle
+                    const progress = Math.min(100, 40 + (c.unread ?? 0) * 15);
+                    const dashOffset = dashArray - (dashArray * progress) / 100;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => { setActiveConversation(c.id); setShowSettings(false); setMobileViewMode('chat'); }}
+                        style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        <div style={{ position: 'relative', width: 56, height: 56 }}>
+                          {/* SVG progress ring */}
+                          <svg width="56" height="56" style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
+                            <circle cx="28" cy="28" r="25" fill="none" stroke={isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'} strokeWidth="2"/>
+                            <circle cx="28" cy="28" r="25" fill="none" stroke={ringColor} strokeWidth="2.5"
+                              strokeDasharray={`${2 * Math.PI * 25}`}
+                              strokeDashoffset={`${2 * Math.PI * 25 * (1 - progress / 100)}`}
+                              strokeLinecap="round"
+                              style={{ filter: `drop-shadow(0 0 4px ${ringColor})`, transition: 'stroke-dashoffset 1s ease' }}
+                            />
+                          </svg>
+                          {/* Avatar */}
+                          <div style={{ position: 'absolute', inset: 4, borderRadius: '50%', overflow: 'hidden', background: isLight ? '#e5e7eb' : '#27272a' }}>
+                            <img src={resolveUrl(c.avatar)} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          </div>
+                          {/* Unread badge */}
+                          {(c.unread ?? 0) > 0 && (
+                            <div style={{ position: 'absolute', top: 0, right: 0, minWidth: 16, height: 16, borderRadius: 8, background: '#ef4444', color: 'white', fontSize: 9, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', border: `2px solid ${isLight ? '#fff' : '#111'}` }}>
+                              {c.unread}
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: tp, maxWidth: 58, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {c.name.split(' ')[0]}
+                        </span>
+                      </button>
+                    );
+                  })
+                }
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Conversation List */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px 100px' }}>
           {filteredContacts.map(c => (
-            <div key={c.id} className="contact-item" onClick={() => { setActiveConversation(c.id); setShowSettings(false); }} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 12px', borderRadius: 14, cursor: 'pointer', marginBottom: 2, background: activeConversationId === c.id ? (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)') : 'transparent', borderLeft: activeConversationId === c.id ? `3px solid ${themeColor}` : '3px solid transparent' }}>
+            <div key={c.id} className="contact-item" onClick={() => { setActiveConversation(c.id); setShowSettings(false); setMobileViewMode('chat'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 16, cursor: 'pointer', marginBottom: 2, background: activeConversationId === c.id ? (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)') : 'transparent', borderLeft: activeConversationId === c.id ? `3px solid ${themeColor}` : '3px solid transparent' }}>
               <div style={{ position: 'relative', flexShrink: 0 }}>
-                <div style={{ width: 46, height: 46, borderRadius: '50%', background: isLight ? '#e5e7eb' : '#27272a', overflow: 'hidden', border: activeConversationId === c.id ? `2px solid ${themeColor}` : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 50, height: 50, borderRadius: '50%', background: isLight ? '#e5e7eb' : '#27272a', overflow: 'hidden', border: activeConversationId === c.id ? `2px solid ${themeColor}` : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {c.isAI 
                     ? (c.avatar 
-                        ? <img src={c.avatar} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                        ? <img src={resolveUrl(c.avatar)} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${themeColor}20` }}><IconSparkles size={24} color={themeColor}/></div>
                       )
-                    : <img src={c.avatar} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                    : <img src={resolveUrl(c.avatar)} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
                   }
                 </div>
                 <div style={{ position: 'absolute', bottom: 1, right: 1, width: 11, height: 11, borderRadius: '50%', background: STATUS_CONFIG[c.status]?.color || '#ccc', border: '2px solid white' }}/>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: tp, display: 'flex', alignItems: 'center', gap: 4 }}>{c.name} {c.icon}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: tp }}>{c.name} {c.icon}</span>
                   <span style={{ fontSize: 11, color: ts }}>{c.lastTime}</span>
                 </div>
                 <span style={{ fontSize: 12.5, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{c.lastMessage}</span>
               </div>
+              {(c.unread ?? 0) > 0 && (
+                <div style={{ minWidth: 20, height: 20, borderRadius: 10, background: themeColor, color: 'white', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>{c.unread}</div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
       {/* CENTER — Chat area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+      <div className={`msg-chat-panel${mobileViewMode === 'list' ? ' hidden-mobile' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', background: isLight ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.15)' }}>
         {!contact ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ marginBottom: 20, color: themeColor, opacity: 0.8 }}><IconMessage size={64}/></div>
@@ -639,15 +767,27 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode }
             <p style={{ color: ts }}>As tuas mensagens aparecerão aqui em tempo real.</p>
           </div>
         ) : activeConversationId === 'alpha-assistant' ? (
-          <AlphaChatView themeColor="#a78bfa" themeMode={computedThemeMode} authUser={authUser} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ height: 56, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', borderBottom: `1px solid ${borderCol}` }}>
+              <button className="msg-back-btn" onClick={() => setMobileViewMode('list')} style={{ display: 'none', width: 36, height: 36, borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'center', color: tp, flexShrink: 0 }}>
+                <IconChevronLeft size={22}/>
+              </button>
+              <span style={{ fontSize: 15, fontWeight: 800, color: tp }}>Alpha Nova</span>
+            </div>
+            <AlphaChatView themeColor="#a78bfa" themeMode={computedThemeMode} authUser={authUser} />
+          </div>
         ) : showSettings ? (
           <ChatSettings contact={contact} onBack={() => setShowSettings(false)} themeColor={themeColor} themeMode={computedThemeMode}/>
         ) : (
           <>
-            <div style={{ padding: '0 24px', height: 68, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, borderBottom: `1px solid ${borderCol}`, background: glassBg, backdropFilter: 'blur(20px)' }}>
+            <div style={{ padding: '0 16px 0 10px', height: 68, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${borderCol}`, background: 'transparent' }}>
+              {/* Mobile back button */}
+              <button className="msg-back-btn" onClick={() => setMobileViewMode('list')} style={{ display: 'none', width: 36, height: 36, borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'center', color: tp, flexShrink: 0 }}>
+                <IconChevronLeft size={22}/>
+              </button>
               <div style={{ position: 'relative' }}>
                 <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: isLight ? '#f1f5f9' : '#27272a' }}>
-                  {contact.isAI ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${themeColor}20` }}><IconSparkles size={22} color={themeColor}/></div> : <img src={contact.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>}
+                  {contact.isAI ? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${themeColor}20` }}><IconSparkles size={22} color={themeColor}/></div> : <img src={resolveUrl(contact.avatar)} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>}
                 </div>
                 <div style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: '50%', background: STATUS_CONFIG[contact.status]?.color || '#ccc', border: '2px solid white' }}/>
               </div>
@@ -691,7 +831,20 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode }
                           </div>
                         </div>
                       )}
-                      <div style={{ padding: '10px 14px', borderRadius: msg.from === 'me' ? '18px 18px 4px 18px' : '18px 18px 18px 4px', background: msg.from === 'me' ? `linear-gradient(135deg, ${themeColor}dd 0%, ${themeColor} 100%)` : isLight ? 'white' : 'rgba(255,255,255,0.08)', color: msg.from === 'me' ? 'white' : tp, fontSize: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: msg.from === 'me' ? `1.5px solid ${themeColor}` : `1px solid ${borderCol}`, position: 'relative', maxWidth: '85%' }}>
+                      <div style={{ 
+                        padding: '10px 14px', 
+                        borderRadius: msg.from === 'me' ? '18px 18px 4px 18px' : '18px 18px 18px 4px', 
+                        background: msg.from === 'me' ? `linear-gradient(135deg, ${themeColor}dd 0%, ${themeColor} 100%)` : isLight ? 'white' : 'rgba(255,255,255,0.08)', 
+                        color: msg.from === 'me' ? 'white' : tp, 
+                        fontSize: 14, 
+                        boxShadow: '0 2px 12px rgba(0,0,0,0.07)', 
+                        border: msg.from === 'me' ? `1.5px solid ${themeColor}` : `1px solid ${borderCol}`, 
+                        position: 'relative', 
+                        maxWidth: '85%',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'anywhere',
+                        boxSizing: 'border-box'
+                      }}>
                         {msg.isPinned && <div style={{ position: 'absolute', top: -8, right: -8, background: themeColor, borderRadius: '50%', padding: 4, display: 'flex', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}><IconPin size={10} color="white"/></div>}
                         {msg.imageUrl && (
                           isImage(msg.imageUrl) ? (
@@ -735,7 +888,7 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode }
               <div ref={messagesEndRef}/>
             </div>
 
-            <div style={{ padding: '14px 24px 20px', borderTop: `1px solid ${borderCol}`, background: glassBg, backdropFilter: 'blur(20px)' }}>
+            <div style={{ padding: '14px 24px 20px', borderTop: `1px solid ${borderCol}`, background: 'transparent' }}>
               {pendingFile && (
                 <div style={{ padding: 12, marginBottom: 12, borderRadius: 16, background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 12, border: `1px solid ${borderCol}` }}>
                   <div style={{ width: 60, height: 60, borderRadius: 10, overflow: 'hidden', position: 'relative', background: isLight ? '#eee' : '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -776,9 +929,9 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode }
         )}
       </div>
 
-      {/* RIGHT — Contact info */}
+      {/* RIGHT — Contact info (Desktop only) */}
       {!showSettings && contact && (
-        <div style={{ width: 264, flexShrink: 0, background: glassBg, backdropFilter: 'blur(24px)', borderLeft: `1px solid ${borderCol}`, overflowY: 'auto', padding: '28px 18px' }}>
+        <div className="hidden lg:block" style={{ width: 264, flexShrink: 0, background: 'transparent', borderLeft: `1px solid ${borderCol}`, overflowY: 'auto', padding: '28px 18px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
             <div style={{ width: 84, height: 84, borderRadius: '50%', border: `3px solid ${themeColor}`, overflow: 'hidden', background: isLight ? '#e5e7eb' : '#27272a', marginBottom: 14 }}>
               {contact.isAI 

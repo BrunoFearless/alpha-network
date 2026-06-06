@@ -4,12 +4,13 @@ import React from 'react';
 import { LazerUserProfile } from './types';
 import { useState, useRef, useEffect } from 'react';
 import { AlphaAIProfileModal } from '@/components/alpha-core/AlphaAIProfileModal';
-import { ThemeBg } from './ThemeBg';
 import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
 import { useLazerStore } from '@/store/lazer.store';
-import { uploadUserPersona } from '@/lib/api';
+import { uploadUserPersona, resolveUrl } from '@/lib/api';
 import { useMusicStore } from '@/store/music.store';
+
+const t = (s: string) => s;
 
 interface ProfileViewProps {
   user: LazerUserProfile;
@@ -17,9 +18,10 @@ interface ProfileViewProps {
   onEdit?: () => void;
   onPostClick?: (postId: string) => void;
   viewingUserId?: string;
+  onChatClick?: (userId: string) => void;
 }
 
-export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId }: ProfileViewProps) {
+export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId, onChatClick }: ProfileViewProps) {
   const [showAiModal, setShowAiModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'chronicles' | 'media' | 'about' | 'music'>('chronicles');
   const [localPersonaUrl, setLocalPersonaUrl] = useState<string | null>(null);
@@ -45,7 +47,8 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
     }).catch(() => {});
   }, [activeTab, user]);
 
-  const displayPersona = localPersonaUrl || user.foregroundUrl || (user as any).personaUrl;
+  const rawPersona = localPersonaUrl || user.foregroundUrl || (user as any).personaUrl;
+  const displayPersona = rawPersona ? resolveUrl(rawPersona) : null;
 
   const handlePersonaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -73,31 +76,28 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
   const cardBg = isLight ? 'glass-panel-light' : 'glass-panel-dark';
 
   return (
-    <div className="w-full h-full max-h-[calc(100vh-40px)] flex flex-col overflow-hidden pl-0 pr-4 py-4 lg:-ml-12 lg:pr-8 font-['Nunito',sans-serif]">
-
-      {/* Background Glows */}
-      <ThemeBg color={c} mode={mode} bgImageUrl={user.bgImageUrl} />
-
-      {/* Main Glass Foreground (Limite Fixo) */}
-      <div className={`flex-1 border-[1.5px] rounded-[3rem] flex flex-row overflow-hidden relative animate-in fade-in duration-700 z-10 ${cardBg} min-h-0`}
+    <div className="w-full h-auto lg:h-full lg:max-h-[675px] max-w-[1200px] flex flex-col overflow-visible lg:overflow-hidden pl-0 pr-0 py-0 lg:ml-0 lg:pr-0 font-['Nunito',sans-serif]">
+      {/* Main Glass Foreground */}
+      <div className={`flex-1 border-0 md:border-[1.5px] rounded-none md:rounded-[3rem] block lg:flex overflow-visible lg:overflow-hidden relative animate-in fade-in duration-700 z-10 ${cardBg} min-h-0`}
         style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
 
-        {/* IDENTITY SECTION (Com Scroll Interno) */}
+        {/* IDENTITY SECTION */}
         {activeTab !== 'about' && (
-          <aside className="w-full lg:w-[350px] h-full border-r border-white/5 flex flex-col overflow-y-auto no-scrollbar relative z-20 shrink-0">
+          <aside className="w-full lg:w-[350px] h-auto lg:h-full border-b lg:border-b-0 lg:border-r border-white/5 block lg:flex lg:flex-col overflow-visible lg:overflow-y-auto no-scrollbar relative z-20 shrink-0">
 
           {/* Top Decorative Banner Area */}
           <div className="h-32 w-full shrink-0 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${c}30, ${c}05)` }}>
             {user.bannerUrl && (() => {
-              const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(user.bannerUrl!) || user.bannerUrl!.includes('video');
+              const finalUrl = resolveUrl(user.bannerUrl!);
+              const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(finalUrl) || finalUrl.includes('video');
               return isVideo ? (
                 <video
-                  src={user.bannerUrl!}
+                  src={finalUrl}
                   className="w-full h-full object-cover opacity-40"
                   autoPlay muted loop playsInline
                 />
               ) : (
-                <img src={user.bannerUrl!} className="w-full h-full object-cover opacity-40" alt="" />
+                <img src={finalUrl} className="w-full h-full object-cover opacity-40" alt="" />
               );
             })()}
           </div>
@@ -158,18 +158,36 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
 
             {/* Primary Actions */}
             <div className="mt-10 w-full flex flex-row gap-2.5 px-6 shrink-0">
-              <button
-                onClick={() => !isOwnProfile && isFriend && !isFriend(user.userId) && sendFriendRequest(user.userId)}
-                className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white shadow-lg shadow-purple-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                style={{ background: isFriend && isFriend(user.userId) ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg, ${c}, ${c}cc)` }}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
-                {isFriend && isFriend(user.userId) ? 'entrelaçados' : 'Criar laço'}
-              </button>
-              <button className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white border border-white/10 bg-white/5 hover:bg-white/10 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                Chat
-              </button>
+              {isOwnProfile ? (
+                onEdit && (
+                  <button
+                    onClick={onEdit}
+                    className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    style={{ background: `linear-gradient(135deg, ${c}, ${c}cc)` }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    {t('Editar Perfil')}
+                  </button>
+                )
+              ) : (
+                <>
+                  <button
+                    onClick={() => isFriend && !isFriend(user.userId) && sendFriendRequest(user.userId)}
+                    className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white shadow-lg shadow-purple-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    style={{ background: isFriend && isFriend(user.userId) ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg, ${c}, ${c}cc)` }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+                    {isFriend && isFriend(user.userId) ? 'entrelaçados' : 'Criar laço'}
+                  </button>
+                  <button
+                    onClick={() => onChatClick && user.userId && onChatClick(user.userId)}
+                    className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white border border-white/10 bg-white/5 hover:bg-white/10 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                    Chat
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Quick Actions (Icons) */}
@@ -201,7 +219,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
 
             {/* Favorite Tropes Section */}
             <div className="mt-4 w-full shrink-0 mb-4">
-              <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-4 text-center">Favorite Tropes</p>
+              <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-4 text-center">{t('Favorite Tropes')}</p>
               <div className="flex justify-center gap-3 flex-wrap">
                 {(user.relics || ["💖", "☁️", "✨"]).map((trope, i) => (
                   <div key={i} className={`w-12 h-12 rounded-full border border-white/5 flex items-center justify-center text-lg hover:scale-110 transition-all cursor-help`}
@@ -221,8 +239,8 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.303c-.215.353-.675.467-1.025.253-2.822-1.725-6.375-2.113-10.562-1.156-.403.093-.812-.16-.906-.563-.094-.403.16-.812.563-.906 4.584-1.047 8.513-.6 11.675 1.334.35.215.464.675.255 1.038zm1.464-3.26c-.272.44-.847.58-1.287.308-3.228-1.983-8.148-2.557-11.957-1.398-.497.15-1.023-.13-1.173-.627-.15-.497.13-1.023.627-1.173 4.356-1.32 9.778-.68 13.483 1.6 0.44.27 0.58.847 0.308 1.29zm.126-3.41c-3.87-2.3-10.25-2.512-13.98-1.383-.593.18-1.22-.158-1.4-.75-.18-.593.158-1.22.75-1.4 4.28-1.3 11.33-1.04 15.8 1.61.534.317.71 1 .39 1.535-.32.536-1.012.712-1.56.388z" /></svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-black uppercase text-white/20 tracking-widest mb-0.5">Spotify Active</p>
-                <p className="text-xs font-bold text-white truncate">Sparkle - Your Name OST</p>
+                <p className="text-[9px] font-black uppercase text-white/20 tracking-widest mb-0.5">{t('Spotify Active')}</p>
+                <p className="text-xs font-bold text-white truncate">{t('Sparkle - Your Name OST')}</p>
               </div>
             </div>
 
@@ -231,11 +249,11 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
         )}
 
         {/* RIGHT AREA */}
-        <div className="flex-1 flex flex-col min-w-0 relative">
+        <div className="w-full lg:w-auto lg:flex-1 block lg:flex lg:flex-col min-w-0 relative h-auto lg:h-full overflow-visible lg:overflow-hidden shrink-0 lg:shrink pb-20 lg:pb-0">
 
           {/* Header & Tabs */}
-          <header className="px-10 pt-10 pb-0 flex items-center justify-between border-b border-white/5 shrink-0">
-            <nav className="flex gap-10">
+          <header className="px-6 lg:px-10 pt-6 lg:pt-10 pb-0 flex flex-col lg:flex-row lg:items-center justify-between border-b border-white/5 shrink-0 overflow-x-auto no-scrollbar">
+            <nav className="flex gap-6 lg:gap-10 w-max lg:w-auto">
               {[
                 { id: 'posts', label: 'Postagens' },
                 { id: 'chronicles', label: 'Crônicas' },
@@ -259,19 +277,10 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 </button>
               ))}
             </nav>
-
-            {onEdit && (
-              <button
-                onClick={onEdit}
-                className="mb-4 px-6 py-2.5 bg-white/5 backdrop-blur-xl rounded-2xl text-white font-black text-[9px] uppercase tracking-[0.2em] border border-white/10 hover:bg-white/10 transition-all cursor-pointer shadow-2xl"
-              >
-                Editar Perfil
-              </button>
-            )}
           </header>
 
           {/* Main Content Scroll Area */}
-          <main className={`flex-1 overflow-y-auto no-scrollbar relative ${activeTab === 'about' ? 'p-0' : 'p-10'}`}>
+          <main className={`flex-1 overflow-visible lg:overflow-y-auto no-scrollbar relative ${activeTab === 'about' ? 'p-0' : 'p-6 lg:p-10'}`}>
             
             {/* CHRONICLES VIEW */}
             {activeTab === 'chronicles' && (
@@ -293,12 +302,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                                 
                                 {/* Media Renderer */}
                                 {(() => {
-                                  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                                  const resolveUrl = (url: string) => {
-                                    if (!url) return '';
-                                    if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
-                                    return `${apiBase}${url}`;
-                                  };
+
                                   const isVideo = (url: string) => 
                                     /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
                                   const media = item.img;
@@ -328,7 +332,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                                   const visible = mediaArr.slice(0, 4);
                                   const extra = mediaArr.length - 4;
                                   return (
-                                    <div className={`absolute inset-0 grid gap-0.5 ${visible.length === 2 ? 'grid-cols-2' : visible.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                                    <div className="absolute inset-0 grid gap-0.5 grid-cols-2">
                                       {visible.map((url, mi) => (
                                         <div key={mi} className={`relative overflow-hidden ${visible.length === 3 && mi === 0 ? 'row-span-2' : ''}`}>
                                           {isVideo(url) ? (
@@ -396,7 +400,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                       </svg>
                     </div>
-                    <p className="text-xs font-black uppercase tracking-[0.4em] text-white/40">Nenhuma crónica ainda</p>
+                    <p className="text-xs font-black uppercase tracking-[0.4em] text-white/40">{t('Nenhuma crónica ainda')}</p>
                   </div>
                 )}
 
@@ -406,12 +410,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
             {activeTab === 'media' && (
               <div className="p-8 animate-in fade-in zoom-in-95 duration-1000">
                 {(() => {
-                  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                  const resolveUrl = (url: string) => {
-                    if (!url) return '';
-                    if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
-                    return `${apiBase}${url}`;
-                  };
+
                   const isVid = (url: string) => /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
 
                   const allMedia = userPosts.flatMap(p => {
@@ -431,7 +430,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                   if (allMedia.length === 0) {
                     return (
                       <div className="text-center py-20 opacity-30">
-                        <p className="text-xs font-black uppercase tracking-[0.3em]">Nenhuma mídia encontrada</p>
+                        <p className="text-xs font-black uppercase tracking-[0.3em]">{t('Nenhuma mídia encontrada')}</p>
                       </div>
                     );
                   }
@@ -460,7 +459,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                                  <div className="w-6 h-6 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
                                  </div>
-                                 <span className="text-[10px] font-black text-white tracking-widest uppercase">Ver Post</span>
+                                 <span className="text-[10px] font-black text-white tracking-widest uppercase">{t('Ver Post')}</span>
                                </div>
                             </div>
                           </div>
@@ -486,7 +485,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                   ))
                 ) : (
                   <div className="text-center py-20 opacity-30">
-                    <p className="text-xs font-black uppercase tracking-[0.3em]">Nenhuma postagem recente</p>
+                    <p className="text-xs font-black uppercase tracking-[0.3em]">{t('Nenhuma postagem recente')}</p>
                   </div>
                 )}
                 
@@ -507,33 +506,32 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                 <div className="flex gap-4 mb-8">
                   <div className="flex-1 bg-white/5 border border-white/10 rounded-[2rem] p-5 flex flex-col items-center justify-center">
                     <span className="text-3xl font-black text-white">{profileTracks.length}</span>
-                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Faixas Publicadas</span>
+                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">{t('Faixas Publicadas')}</span>
                   </div>
                   <div className="flex-1 bg-white/5 border border-white/10 rounded-[2rem] p-5 flex flex-col items-center justify-center">
                     <span className="text-3xl font-black text-white">{totalPlays.toLocaleString()}</span>
-                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Total de Plays</span>
+                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">{t('Total de Plays')}</span>
                   </div>
                   {totalCollabs > 0 && (
                     <div className="flex-1 bg-white/5 border border-white/10 rounded-[2rem] p-5 flex flex-col items-center justify-center">
                       <span className="text-3xl font-black text-white">{totalCollabs}</span>
-                      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">Colaborações</span>
+                      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold mt-1">{t('Colaborações')}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Tracks Section */}
                 <div className="mb-8">
-                  <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-4">Discografia · {profileTracks.length} faixas</p>
+                  <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-4">{t('Discografia · ')}{profileTracks.length} {t('faixas')}</p>
                   {profileTracks.length === 0 ? (
                     <div className="flex flex-col items-center py-12 gap-3 text-white/20">
                       <span className="text-5xl">🎵</span>
-                      <p className="text-xs font-bold">Ainda nenhuma música publicada.</p>
+                      <p className="text-xs font-bold">{t('Ainda nenhuma música publicada.')}</p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-1">
                       {profileTracks.map((track: any, i: number) => {
-                        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                        const resolveUrl = (url: string) => url?.startsWith('http') ? url : `${apiBase}${url}`;
+
                         return (
                           <div key={track.id}
                             className="group flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-all"
@@ -560,7 +558,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                             </div>
                             <div className="flex flex-col items-end mr-4">
                               <span className="text-xs font-black text-white">{track.plays?.toLocaleString() || 0}</span>
-                              <span className="text-[8px] uppercase tracking-widest text-white/20 font-bold">Plays</span>
+                              <span className="text-[8px] uppercase tracking-widest text-white/20 font-bold">{t('Plays')}</span>
                             </div>
                             {track.genre && <span className="text-[9px] font-black uppercase tracking-widest text-white/20 px-2 py-1 rounded-full bg-white/5">{track.genre}</span>}
                             <span className="text-xs text-white/20 font-black ml-2">{Math.floor(track.duration/60)}:{String(track.duration%60).padStart(2,'0')}</span>
@@ -573,16 +571,16 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
 
                 {/* Playlists Section */}
                 <div>
-                  <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-4">Playlists · {profilePlaylists.length}</p>
+                  <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] mb-4">{t('Playlists · ')}{profilePlaylists.length}</p>
                   {profilePlaylists.length === 0 ? (
                     <div className="flex flex-col items-center py-8 gap-3 text-white/20">
                       <span className="text-4xl">📂</span>
-                      <p className="text-xs font-bold">Sem playlists públicas.</p>
+                      <p className="text-xs font-bold">{t('Sem playlists públicas.')}</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {profilePlaylists.map((pl: any) => {
-                        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
                         const coverSrc = pl.coverUrl || pl.tracks?.[0]?.track?.coverUrl;
                         return (
                           <div 
@@ -597,7 +595,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                           >
                             <div className="w-full aspect-square rounded-[1.5rem] bg-gradient-to-br from-white/10 to-white/5 mb-3 overflow-hidden flex items-center justify-center">
                               {coverSrc ? (
-                                <img src={coverSrc.startsWith('http') ? coverSrc : `${apiBase}${coverSrc}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                                <img src={resolveUrl(coverSrc)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
                               ) : (
                                 <div className="text-4xl opacity-20">🎵</div>
                               )}
@@ -639,12 +637,12 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                   {/* Date & Status (Top Left) */}
                   <div className="absolute top-10 left-10 md:top-14 md:left-14 flex items-center gap-4 animate-in slide-in-from-top-10 duration-1000 delay-200">
                     <div className="bg-white/10 backdrop-blur-xl border border-white/20 text-white px-5 py-3 rounded-t-2xl rounded-br-2xl rounded-bl-md shadow-2xl transform -rotate-3 hover:rotate-0 transition-transform pointer-events-auto cursor-default">
-                      <p className="text-[9px] font-black uppercase tracking-widest opacity-50 mb-0.5">Data Estelar</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest opacity-50 mb-0.5">{t('Data Estelar')}</p>
                       <p className="text-sm font-black">{new Date().toLocaleDateString('pt-PT', { month: 'long', day: 'numeric' }).toUpperCase()}</p>
                     </div>
                     <div className="flex flex-col">
-                       <span className="text-[9px] font-black text-white/50 tracking-[0.2em] uppercase">Sinal</span>
-                       <span className="text-xs font-black text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.6)]">ATIVO</span>
+                       <span className="text-[9px] font-black text-white/50 tracking-[0.2em] uppercase">{t('Sinal')}</span>
+                       <span className="text-xs font-black text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.6)]">{t('ATIVO')}</span>
                     </div>
                   </div>
 
@@ -663,7 +661,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                            </div>
                          </div>
                       </div>
-                      <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-[0.2em] mb-1">A tocar agora</p>
+                      <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-[0.2em] mb-1">{t('A tocar agora')}</p>
                       <p className="text-xs md:text-sm font-bold text-white truncate drop-shadow-md">{user.listening || 'Vibe Alpha'}</p>
                       
                       <div className="flex items-center justify-between mt-3 px-1">
@@ -774,7 +772,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                   <div className="absolute top-1/3 right-6 md:right-16 z-30 max-w-[240px] md:max-w-[280px] animate-in slide-in-from-right-10 duration-1000 delay-400">
                     <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 text-white p-5 md:p-6 rounded-[2rem] rounded-bl-sm shadow-2xl transform rotate-2 hover:rotate-0 transition-transform pointer-events-auto cursor-default">
                       <div className="flex justify-between items-center mb-3">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-white/50">Conexão</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-white/50">{t('Conexão')}</p>
                         <div className="px-2 py-0.5 rounded-full bg-white/10 text-[8px] font-black tracking-widest text-white/80">PT</div>
                       </div>
                       <p className="text-sm font-bold leading-relaxed">
@@ -797,7 +795,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                              <div className="w-full h-full rounded-[1.5rem] overflow-hidden relative group/polaroid">
                                <img src={img.startsWith('http') || img.startsWith('data:') ? img : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${img}`} className="w-full h-full object-cover" alt="" />
                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/polaroid:opacity-100 transition-opacity flex items-end justify-center pb-4">
-                                  <span className="text-[10px] font-black uppercase text-white tracking-[0.2em]">Ver Publicação</span>
+                                  <span className="text-[10px] font-black uppercase text-white tracking-[0.2em]">{t('Ver Publicação')}</span>
                                </div>
                              </div>
                            </div>
@@ -871,13 +869,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
  */
 function ProfilePostCard({ post, themeColor, isLight, onPostClick }: { post: any, themeColor: string, isLight: boolean, onPostClick?: (id: string) => void }) {
   const isVideo = (url: string) => /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  
-  const resolveUrl = (url: string) => {
-    if (!url) return '';
-    if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
-    return `${apiBase}${url}`;
-  };
+
 
   const media = (() => {
     let raw = post.imageUrl;

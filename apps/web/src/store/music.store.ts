@@ -45,6 +45,7 @@ interface MusicState {
   duration: number; // seconds
   shuffle: boolean;
   repeat: 'none' | 'one' | 'all';
+  showPlayerModal: boolean;
 
   // Library
   tracks: Track[];
@@ -64,6 +65,7 @@ interface MusicState {
   setProgress: (s: number) => void;
   toggleShuffle: () => void;
   cycleRepeat: () => void;
+  setShowPlayerModal: (show: boolean) => void;
 
   // Actions - API
   fetchTracks: (search?: string, genre?: string) => Promise<void>;
@@ -94,6 +96,7 @@ export const useMusicStore = create<MusicState>((set, get) => ({
   duration: 0,
   shuffle: false,
   repeat: 'none',
+  showPlayerModal: false,
   tracks: [],
   likedTracks: [],
   playlists: [],
@@ -149,6 +152,7 @@ export const useMusicStore = create<MusicState>((set, get) => ({
     const next = order[(order.indexOf(s.repeat) + 1) % order.length];
     return { repeat: next };
   }),
+  setShowPlayerModal: (show) => set({ showPlayerModal: show }),
 
   fetchTracks: async (search, genre) => {
     set({ isLoading: true });

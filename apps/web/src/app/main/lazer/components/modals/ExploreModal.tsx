@@ -430,11 +430,11 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
   const displayTopRanks = rankedUsers.slice(0, 5);
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center pl-[110px] pr-8 py-8 font-['Nunito',sans-serif]">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-0 pb-20 md:pl-[110px] md:pr-8 md:py-8 font-['Nunito',sans-serif]">
       <div className="absolute inset-0 -z-10 bg-black/40 backdrop-blur-[10px]" onClick={onClose} />
 
       {/* Main Glass Panel */}
-      <div className={`w-full h-full max-w-[1700px] max-h-[920px] rounded-[48px] flex overflow-hidden glass-panel-dark border-white/5 relative shadow-2xl animate-in zoom-in-95 duration-500`}>
+      <div className={`w-full h-full max-w-[1700px] max-h-[920px] rounded-none md:rounded-[48px] flex overflow-hidden ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} border-0 md:border-white/5 relative shadow-2xl animate-in zoom-in-95 duration-500`}>
         <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode} /></div>
 
         {/* ── COLUMN 2: MAIN CONTENT (Glassified) ── */}

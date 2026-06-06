@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useMusicStore, Track } from '@/store/music.store';
 import { useAuthStore } from '@/store/auth.store';
+import { resolveUrl } from '@/lib/api';
 
 const GENRES = ['Todos', 'Lo-fi', 'Hip-Hop', 'Electronic', 'Rock', 'Pop', 'Indie', 'Classical', 'R&B', 'Jazz'];
 
@@ -36,8 +37,6 @@ function fmtTime(s: number) {
 function TrackRow({ track, index, onPlay, isActive }: { track: Track; index: number; onPlay: () => void; isActive: boolean }) {
   const { likeTrack } = useMusicStore();
   const { accessToken } = useAuthStore();
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const resolveUrl = (url: string) => url.startsWith('http') || url.startsWith('blob:') ? url : `${apiBase}${url}`;
 
   return (
     <div
@@ -107,6 +106,7 @@ export function LazerMusicView() {
 
   const [activeSection, setActiveSection] = useState<'discover' | 'liked' | 'playlists' | 'upload' | 'radio'>('discover');
   const [selectedPlaylist, setSelectedPlaylist] = useState<any | null>(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -207,24 +207,22 @@ export function LazerMusicView() {
   };
 
   const displayTracks = activeSection === 'liked' ? likedTracks : tracks;
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const resolveUrl = (url: string) => url.startsWith('http') || url.startsWith('blob:') ? url : `${apiBase}${url}`;
 
   return (
-    <div className="w-full h-full flex overflow-hidden font-['Nunito',sans-serif] rounded-[4rem]">
+    <div className="w-full h-full flex overflow-hidden font-['Nunito',sans-serif] rounded-none md:rounded-[4rem] relative">
+
+      {/* Mobile Overlay */}
+      {showMobileMenu && (
+        <div className="fixed inset-0 bg-black/60 z-[90] md:hidden backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
+      )}
 
       {/* ── LEFT SIDEBAR ── */}
-      <aside className="w-64 shrink-0 h-full flex flex-col gap-2 p-4 border-r border-white/5">
+      <aside className={`w-64 shrink-0 h-full flex flex-col gap-2 p-4 border-r border-white/5 bg-black/70 md:bg-transparent backdrop-blur-3xl md:backdrop-blur-none absolute md:relative z-[100] transition-transform duration-300 ${showMobileMenu ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
 
-        <div className="mb-4">
-          <h2 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-4 px-2">Alpha Music</h2>
-          
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 text-white font-black text-xs uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 focus:outline-none mb-2"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Publicar Música
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-2">Alpha Music</h2>
+          <button className="md:hidden p-2 text-white/50" onClick={() => setShowMobileMenu(false)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
         <div className="flex flex-col gap-1">
@@ -238,6 +236,7 @@ export function LazerMusicView() {
               key={item.id}
               onClick={() => {
                 handleSectionChange(item.id as any);
+                setShowMobileMenu(false);
                 if (item.id === 'radio') {
                   const { fetchRadio, activeGenre } = useMusicStore.getState();
                   fetchRadio(activeGenre || undefined);
@@ -262,6 +261,7 @@ export function LazerMusicView() {
                 onClick={() => {
                   setSelectedPlaylist(pl);
                   setActiveSection('playlists');
+                  setShowMobileMenu(false);
                 }}
                 className="flex items-center gap-2 px-2 py-1.5 text-xs text-white/40 hover:text-white/70 truncate transition-colors rounded-lg hover:bg-white/5 focus:outline-none group/pl"
               >
@@ -291,20 +291,31 @@ export function LazerMusicView() {
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto no-scrollbar">
 
         {/* Header */}
-        <div className="px-8 pt-8 pb-4 shrink-0">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="px-4 md:px-8 pt-6 pb-4 shrink-0">
+          <div className="flex items-center gap-3 mb-6">
+            <button className="md:hidden p-2 bg-white/5 rounded-xl border border-white/10 text-white" onClick={() => setShowMobileMenu(true)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
             <div className="relative flex-1">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
               <input
                 type="text"
-                placeholder="Pesquisar músicas, artistas..."
+                placeholder="Pesquisar..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-white text-sm placeholder-white/20 focus:outline-none focus:border-white/20 focus:bg-white/10 transition-all"
               />
             </div>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 text-white font-black text-xs uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 focus:outline-none shrink-0"
+              title="Publicar Música"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span className="hidden md:inline">Publicar</span>
+            </button>
           </div>
 
           {/* Genre Filters */}
@@ -327,7 +338,7 @@ export function LazerMusicView() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 px-8 pb-32">
+        <div className="flex-1 px-4 md:px-8 pb-28 md:pb-32">
           {!selectedPlaylist ? (
             <>
               {activeSection === 'discover' && (
@@ -402,7 +413,7 @@ export function LazerMusicView() {
                       <p className="text-sm font-bold opacity-40">Ainda não criaste nenhuma playlist.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                       {myPlaylists.map(pl => (
                         <div 
                           key={pl.id} 
@@ -473,7 +484,7 @@ export function LazerMusicView() {
             /* ── PLAYLIST DETAIL VIEW (VISION PRO STYLE) ── */
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                {/* Hero Banner */}
-               <div className="relative w-full h-80 rounded-[4rem] overflow-hidden mb-10 border border-white/5">
+               <div className="relative w-full h-48 md:h-80 rounded-[2rem] md:rounded-[4rem] overflow-hidden mb-6 md:mb-10 border border-white/5">
                   <img 
                     src={resolveUrl(selectedPlaylist.coverUrl || selectedPlaylist.tracks?.[0]?.track?.coverUrl)} 
                     className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110"
@@ -481,8 +492,8 @@ export function LazerMusicView() {
                   />
                   <div className="absolute inset-0 bg-white/5 backdrop-blur-3xl" />
                   
-                  <div className="absolute inset-0 flex items-end p-10 gap-10">
-                    <div className="w-48 h-48 rounded-[2.5rem] bg-gradient-to-br from-white/10 to-white/5 border border-white/10 overflow-hidden shrink-0 shadow-2xl flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-end p-5 md:p-10 gap-4 md:gap-10">
+                    <div className="w-24 h-24 md:w-48 md:h-48 rounded-[1.5rem] md:rounded-[2.5rem] bg-gradient-to-br from-white/10 to-white/5 border border-white/10 overflow-hidden shrink-0 shadow-2xl flex items-center justify-center">
                       {(selectedPlaylist.coverUrl || selectedPlaylist.tracks?.[0]?.track?.coverUrl) ? (
                         <img src={resolveUrl(selectedPlaylist.coverUrl || selectedPlaylist.tracks?.[0]?.track?.coverUrl)} className="w-full h-full object-cover" alt="" />
                       ) : (
@@ -501,8 +512,8 @@ export function LazerMusicView() {
                              )}
                           </span>
                       </div>
-                      <h1 className="text-6xl font-black text-white tracking-tighter mb-4 leading-none drop-shadow-2xl">{selectedPlaylist.title}</h1>
-                      <p className="text-white/60 text-sm max-w-xl font-medium mb-6 line-clamp-2 drop-shadow-lg">{selectedPlaylist.description || 'Uma curadoria exclusiva na Alpha Music.'}</p>
+                      <h1 className="text-3xl md:text-6xl font-black text-white tracking-tighter mb-2 md:mb-4 leading-none drop-shadow-2xl">{selectedPlaylist.title}</h1>
+                      <p className="text-white/60 text-xs md:text-sm max-w-xl font-medium mb-4 md:mb-6 line-clamp-2 drop-shadow-lg">{selectedPlaylist.description || 'Uma curadoria exclusiva na Alpha Music.'}</p>
                       
                       <div className="flex items-center gap-4">
                         <button 

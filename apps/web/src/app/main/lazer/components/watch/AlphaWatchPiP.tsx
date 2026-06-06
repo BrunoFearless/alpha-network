@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWatchStore } from '@/store/watch.store';
+import { resolveUrl } from '@/lib/api';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -77,7 +78,7 @@ export function AlphaWatchPiP({ onExpand }: Props) {
 
   if (!pipVideo) return null;
 
-  const resolveUrl = (url: string) => url?.startsWith('http') ? url : `${API}${url}`;
+
   const isVertical = pipVideo.format === 'vertical';
 
   return (

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Art, useArtStore } from '@/store/art.store';
 import { useAuthStore } from '@/store/auth.store';
+import { resolveUrl } from '@/lib/api';
 
 interface Props {
   art: Art;
@@ -15,8 +16,6 @@ export function ArtCard({ art, onOpen, onSave }: Props) {
   const { likeArt, toggleSaveArt } = useArtStore();
   const { accessToken } = useAuthStore();
   
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const resolveUrl = (url: string) => url.startsWith('http') || url.startsWith('blob:') ? url : `${apiBase}${url}`;
 
   // Parse imageUrls — supports both parsed array and raw JSON string
   const allImages: string[] = (() => {
@@ -41,19 +40,19 @@ export function ArtCard({ art, onOpen, onSave }: Props) {
 
   return (
     <div 
-      className="break-inside-avoid mb-4 group relative"
+      className="break-inside-avoid mb-4 group relative premium-animate-fade"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image Container */}
       <div 
-        className="relative rounded-2xl overflow-hidden bg-white/5 cursor-zoom-in transition-transform duration-500 hover:brightness-95 shadow-lg"
+        className="relative rounded-2xl overflow-hidden bg-white/5 cursor-zoom-in transition-all duration-500 ease-out hover:scale-[1.03] hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] border border-white/10 hover:border-white/20 premium-card-glint shadow-lg"
         onClick={() => onOpen(art)}
       >
         <img 
           src={currentImage} 
           alt={art.title}
-          className="w-full h-auto object-cover transition-all duration-500 group-hover:scale-105"
+          className="w-full h-auto object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           loading="lazy"
         />
 
@@ -70,20 +69,32 @@ export function ArtCard({ art, onOpen, onSave }: Props) {
           className={`absolute inset-0 transition-opacity duration-300 flex flex-col justify-between p-3 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
         >
           {/* Top row: Save + Collection */}
-          <div className="flex justify-end gap-2">
-            <button 
-              onClick={(e) => { e.stopPropagation(); if (accessToken) toggleSaveArt(art.id, accessToken); }}
-              className={`px-4 py-2.5 rounded-full font-black text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-xl ${art.saved ? 'bg-black text-white border border-white/20' : 'bg-red-600 hover:bg-red-700 text-white'}`}
-            >
-              {art.saved ? 'Guardado' : 'Guardar'}
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); onSave(art); }}
-              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 backdrop-blur-md shadow-xl border border-white/10"
-              title="Organizar em Coleção"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
-            </button>
+          <div className="flex justify-between items-center w-full gap-2 z-10">
+            {art.musicTrack ? (
+              <div className="flex items-center justify-center w-10 h-10 bg-black/60 backdrop-blur-md rounded-full border border-white/20 text-white shadow-[0_0_15px_rgba(239,68,68,0.25)] hover:scale-105 active:scale-95 transition-all" title={`Música: ${art.musicTrack.title}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-pulse" style={{ animationDuration: '2s' }}>
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+              </div>
+            ) : <div />}
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={(e) => { e.stopPropagation(); if (accessToken) toggleSaveArt(art.id, accessToken); }}
+                className={`px-4 py-2.5 rounded-full font-black text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-xl ${art.saved ? 'bg-black text-white border border-white/20' : 'bg-red-600 hover:bg-red-700 text-white'}`}
+              >
+                {art.saved ? 'Guardado' : 'Guardar'}
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onSave(art); }}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 backdrop-blur-md shadow-xl border border-white/10"
+                title="Organizar em Coleção"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+              </button>
+            </div>
           </div>
 
           {/* Carousel arrows (middle sides) */}

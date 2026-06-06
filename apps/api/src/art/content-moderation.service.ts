@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as fs from 'fs';
 import * as FormDataLib from 'form-data';
+import axios from 'axios';
 
 // ── WORD LISTS ────────────────────────────────────────────────────────────────
 // Comprehensive multilingual blocked terms (PT / EN / ES)
@@ -152,20 +153,11 @@ function checkText(text: string): TextCheckResult {
     for (const term of list) {
       const normalizedTerm = normalizeForMatching(term);
       
-      // If the term contains a space, it's a multi-word phrase, so we check if the padded phrase is present
-      // If it's a single word, we check with boundaries to avoid false positives on parts of legitimate words
-      const isMultiWord = normalizedTerm.includes(' ');
-      
-      if (isMultiWord) {
-         if (paddedNormalized.includes(` ${normalizedTerm} `)) {
-           return { flagged: true, category, matchedTerm: term };
-         }
-      } else {
-         // Boundary check for single words to avoid blocking "bissexual" when searching for "sexo"
-         const regex = new RegExp(`\\b${normalizedTerm}\\b`, 'i');
-         if (regex.test(normalized)) {
-           return { flagged: true, category, matchedTerm: term };
-         }
+      // Ao adicionar espaços ao redor do texto normalizado e do termo a verificar,
+      // garantimos correspondência exata de palavras/frases e evitamos falsos positivos
+      // de forma segura e imune a vulnerabilidades de ReDoS.
+      if (paddedNormalized.includes(` ${normalizedTerm} `)) {
+        return { flagged: true, category, matchedTerm: term };
       }
     }
   }
@@ -183,8 +175,6 @@ interface ImageCheckResult {
   score?: number;
   skipped?: boolean;
 }
-
-import axios from 'axios';
 
 async function checkImage(filePath: string): Promise<ImageCheckResult> {
   const apiUser = process.env.SIGHTENGINE_API_USER;

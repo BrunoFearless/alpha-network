@@ -7,6 +7,7 @@ import { LazerUserProfile } from '../profile/types';
 import { ThemeBg } from '../profile/ThemeBg';
 import { useLazerStore } from '@/store/lazer.store';
 import { useAuthStore } from '@/store/auth.store';
+import { resolveUrl } from '@/lib/api';
 import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
 import { EmojiPicker } from '@/components/community/EmojiPicker';
 import { TropesModal } from '../modals/TropesModal';
@@ -1460,9 +1461,6 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
           position: relative;
           border-radius: 24px;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 
-            inset 1px 1px 0px rgba(255, 255, 255, 0.6),
-            inset -1px 0px 0px rgba(255, 255, 255, 0.05) !important;
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .glass-card:hover {
@@ -1477,7 +1475,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         borderCol={borderCol} cardBg={cardBg} onProfileClick={onProfileClick}
         initialIndex={initialMediaIndex} />
 
-      <div className={`h-[92vh] w-full font-['Nunito',sans-serif] relative rounded-[32px] flex flex-col overflow-hidden ${cardBg}`} style={{ borderColor: borderCol }}>
+      <div className={`h-[92vh] w-full font-['Nunito',sans-serif] relative rounded-none md:rounded-[32px] flex flex-col overflow-hidden ${cardBg}`} style={{ borderColor: borderCol }}>
         {showTropesModal && (
           <TropesModal
             c={c}
@@ -1488,13 +1486,13 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         )}
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar">
-          <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] xl:grid-cols-[260px_1fr_300px] gap-6 items-start">
+          <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-[210px_1fr_210px] xl:grid-cols-[240px_1fr_280px] gap-6 items-start">
 
             {/* Left sidebar */}
             <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
               <div className={`rounded-3xl overflow-hidden glass-card border-[1.5px] backdrop-blur-xl ${cardBg}`} style={{ borderColor: borderCol }}>
-                <div className="h-[100px] relative overflow-hidden" style={{ backgroundImage: user?.bannerUrl ? `url('${user.bannerUrl}')` : `linear-gradient(135deg, ${c}80, ${c}20)`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                  {user?.bannerUrl?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={user.bannerUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover z-0" />}
+                <div className="h-[100px] relative overflow-hidden" style={{ backgroundImage: user?.bannerUrl ? `url('${resolveUrl(user.bannerUrl)}')` : `linear-gradient(135deg, ${c}80, ${c}20)`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                  {user?.bannerUrl?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={resolveUrl(user.bannerUrl)} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover z-0" />}
                 </div>
                 <div className="px-4 pb-4 relative text-center flex flex-col items-center">
                   <div className={`mt-[-42px] mb-2 w-[84px] h-[84px] rounded-full border-[3px] overflow-hidden shrink-0  ${cardBg}`} style={{ borderColor: borderCol }}>

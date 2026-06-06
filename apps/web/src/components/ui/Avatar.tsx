@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { resolveUrl } from '@/lib/api';
 
 interface AvatarProps {
   src?: string | null;
@@ -34,7 +35,8 @@ export function Avatar({ src: rawSrc, name, size = 'md', className, style, play 
   const src = useMemo(() => {
     if (!rawSrc || rawSrc === 'null' || rawSrc === 'undefined') return null;
 
-    let url = String(rawSrc);
+    let url = resolveUrl(String(rawSrc));
+
     if (!url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:')) {
       const path = url.startsWith('/') ? url : `/${url}`;
       url = `${API_BASE}${path}`;

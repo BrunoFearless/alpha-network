@@ -29,12 +29,14 @@ function getGreeting() {
 }
 
 // ─── DraggableWidget ───────────────────────────────────────────────────────────────
-function DraggableWidget({ defaultPos, onPosChange, children, style, zIndex }: {
+function DraggableWidget({ defaultPos, onPosChange, children, style, className, zIndex, isEditable = false }: {
   defaultPos: { x: number; y: number };
   onPosChange: (pos: { x: number; y: number }) => void;
   children: React.ReactNode;
   style?: React.CSSProperties;
+  className?: string;
   zIndex?: number;
+  isEditable?: boolean;
 }) {
   // Usar ref para posição live — evita stale closure no onPointerUp
   const livePos = useRef(defaultPos);
@@ -44,6 +46,7 @@ function DraggableWidget({ defaultPos, onPosChange, children, style, zIndex }: {
   const dragState = useRef({ active: false, sx: 0, sy: 0, px: 0, py: 0 });
 
   const onPointerDown = (e: React.PointerEvent) => {
+    if (!isEditable) return;
     // Só arrasta com botão esquerdo e não em inputs/buttons
     if (e.button !== 0) return;
     const tag = (e.target as HTMLElement).tagName;
@@ -78,6 +81,7 @@ function DraggableWidget({ defaultPos, onPosChange, children, style, zIndex }: {
 
   return (
     <div
+      className={className}
       style={{
         position: 'absolute',
         left: `${renderPos.x}%`,
@@ -553,6 +557,7 @@ export default function AmbientePage() {
   const [mounted, setMounted] = useState(false);
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [widgetHubOpen, setWidgetHubOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [settings, setSettings] = useState<AmbientSettings>(DEFAULT_SETTINGS);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -648,6 +653,31 @@ export default function AmbientePage() {
         @keyframes dockIn { from{opacity:0;transform:translateY(30px) scale(0.7)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes glow { 0%,100%{text-shadow:0 0 40px ${accent}66} 50%{text-shadow:0 0 80px ${accent}cc,0 0 120px ${accent}44} }
         @keyframes mesh { 0%{background-position:0% 0%} 50%{background-position:100% 100%} 100%{background-position:0% 0%} }
+        @media (max-width: 768px) {
+          .foreground-widget {
+            left: 0 !important;
+            top: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+          }
+          .foreground-content {
+            width: 100vw !important;
+            height: 100vh !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            box-shadow: none !important;
+          }
+          .foreground-img {
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+          }
+        }
       `}</style>
 
       {/* Background */}
@@ -655,12 +685,13 @@ export default function AmbientePage() {
 
       {/* Foreground Layer (Personagem/Objeto) */}
       {mounted && settings.foregroundUrl && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
+          className="foreground-widget"
           defaultPos={settings.widgetPositions?.foreground || { x: 50, y: 50 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), foreground: pos } }))}
           zIndex={1} // Fica por trás dos vidros (zIndex: 10), mas à frente do background (zIndex: 0)
         >
-          <div style={{ 
+          <div className="foreground-content" style={{ 
             ...glass, 
             padding: settings.foregroundPadding ?? 20, 
             display: 'flex', 
@@ -671,7 +702,7 @@ export default function AmbientePage() {
             height: 'fit-content',
             transition: 'padding 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
-            <img src={settings.foregroundUrl} alt="Foreground" 
+            <img src={settings.foregroundUrl} alt="Foreground" className="foreground-img"
               style={{ 
                 maxHeight: '85vh', 
                 maxWidth: '85vw', 
@@ -688,7 +719,7 @@ export default function AmbientePage() {
 
       {/* Clock + Calendário — arrastável */}
       {mounted && settings.showClock !== false && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.clock || { x: 1.5, y: 2.5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), clock: pos } }))}
         >
@@ -698,7 +729,7 @@ export default function AmbientePage() {
 
       {/* User Card — arrastável */}
       {mounted && settings.showUserCard !== false && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.userCard || { x: 84, y: 2.5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), userCard: pos } }))}
         >
@@ -708,7 +739,7 @@ export default function AmbientePage() {
 
       {/* Music Player — arrastável */}
       {mounted && settings.showMusicPlayer !== false && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.musicPlayer || { x: 84, y: 70 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), musicPlayer: pos } }))}
         >
@@ -718,7 +749,7 @@ export default function AmbientePage() {
 
       {/* Calendar Grid — arrastável */}
       {mounted && settings.showCalendarGrid !== false && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.calendarGrid || { x: 1.5, y: 20 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), calendarGrid: pos } }))}
         >
@@ -728,7 +759,7 @@ export default function AmbientePage() {
 
       {/* Textos personalizados — arrastáveis */}
       {(settings.customTexts || []).map((t: CustomText) => (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           key={t.id}
           defaultPos={{ x: t.x, y: t.y }}
           onPosChange={pos => {
@@ -742,6 +773,17 @@ export default function AmbientePage() {
           </div>
         </DraggableWidget>
       ))}
+
+      {/* Edit Layout button (bottom-right) */}
+      <button
+        onClick={() => setIsEditMode(!isEditMode)}
+        style={{position:'absolute',bottom:144,right:20,zIndex:20,width:44,height:44,borderRadius:14,background:isEditMode ? `${accent}` : 'rgba(255,255,255,0.03)',backdropFilter:'blur(32px)',WebkitBackdropFilter:'blur(32px)',border:'1px solid rgba(255,255,255,0.15)',color:isEditMode ? '#fff' : 'rgba(255,255,255,0.7)',fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.2s',boxShadow:isEditMode ? `0 4px 24px ${accent}66, inset 0 1px 0 rgba(255,255,255,0.3)` : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'}}
+        onMouseEnter={e=>{if(!isEditMode){(e.currentTarget as HTMLElement).style.background=`${accent}25`;(e.currentTarget as HTMLElement).style.borderColor=`${accent}80`;(e.currentTarget as HTMLElement).style.color='#fff';(e.currentTarget as HTMLElement).style.boxShadow=`0 4px 24px ${accent}44, inset 0 1px 0 rgba(255,255,255,0.15)`;}}}
+        onMouseLeave={e=>{if(!isEditMode){(e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.03)';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,0.15)';(e.currentTarget as HTMLElement).style.color='rgba(255,255,255,0.7)';(e.currentTarget as HTMLElement).style.boxShadow='0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)';}}}
+        title={isEditMode ? "Desativar Edição" : "Editar Layout (Arrastar)"}
+      >
+        {isEditMode ? '🔓' : '🔒'}
+      </button>
 
       {/* Edit button (bottom-right) */}
       <button
@@ -767,7 +809,7 @@ export default function AmbientePage() {
 
       {/* Centro: saudação + nome + stats — arrastável */}
       {mounted && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.greeting || { x: 30, y: 36 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), greeting: pos } }))}
         >
@@ -794,7 +836,7 @@ export default function AmbientePage() {
 
       {/* Weather Widget */}
       {mounted && settings.showWeather !== false && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.weather || { x: 45, y: 5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), weather: pos } }))}
         >
@@ -804,7 +846,7 @@ export default function AmbientePage() {
 
       {/* Focus Timer */}
       {mounted && settings.showTimer !== false && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.timer || { x: 65, y: 5 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), timer: pos } }))}
         >
@@ -814,7 +856,7 @@ export default function AmbientePage() {
 
       {/* Quick Notes */}
       {mounted && settings.showNotes !== false && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.notes || { x: 65, y: 20 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), notes: pos } }))}
         >
@@ -824,7 +866,7 @@ export default function AmbientePage() {
 
       {/* Quick Links */}
       {mounted && settings.showLinks !== false && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.links || { x: 45, y: 20 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), links: pos } }))}
         >
@@ -834,7 +876,7 @@ export default function AmbientePage() {
 
       {/* Alpha Pet */}
       {mounted && settings.showPet !== false && (
-        <DraggableWidget
+        <DraggableWidget isEditable={isEditMode}
           defaultPos={settings.widgetPositions?.pet || { x: 84, y: 50 }}
           onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), pet: pos } }))}
         >
@@ -843,7 +885,7 @@ export default function AmbientePage() {
       )}
 
       {/* Dock — sempre arrastável em qualquer layout */}
-      <DraggableWidget
+      <DraggableWidget isEditable={isEditMode}
         defaultPos={settings.widgetPositions?.dock || { x: 20, y: 87 }}
         onPosChange={pos => setSettings(s => ({ ...s, widgetPositions: { ...(s.widgetPositions || DEFAULT_SETTINGS.widgetPositions), dock: pos } }))}
       >

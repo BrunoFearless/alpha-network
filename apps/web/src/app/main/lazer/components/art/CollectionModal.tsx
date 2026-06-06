@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { Art, ArtCollection, useArtStore } from '@/store/art.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useLazerStore } from '@/store/lazer.store';
+import { resolveUrl } from '@/lib/api';
 
 interface Props {
   art?: Art; // If present, we can save art to collections
@@ -14,6 +15,14 @@ interface Props {
 }
 
 export function CollectionModal({ art, collection, parentId, isGroup, onClose }: Props) {
+  const [isExiting, setIsExiting] = useState(false);
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onClose();
+    }, 550);
+  };
+
   const { collections, fetchUserCollections, createCollection, updateCollection, addArtToCollection } = useArtStore();
   const { user: authUser, accessToken } = useAuthStore();
   const { friendProfiles, fetchFriends } = useLazerStore();
@@ -35,6 +44,7 @@ export function CollectionModal({ art, collection, parentId, isGroup, onClose }:
   
   const [friendSearch, setFriendSearch] = useState('');
   const [showFriendSuggestions, setShowFriendSuggestions] = useState(false);
+  const [showParentDropdown, setShowParentDropdown] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,7 +74,7 @@ export function CollectionModal({ art, collection, parentId, isGroup, onClose }:
     if (!accessToken || !art?.id) return;
     setSavingId(colId);
     const success = await addArtToCollection(art.id, colId, accessToken);
-    if (success) onClose();
+    if (success) handleClose();
     setSavingId(null);
   };
 
@@ -107,7 +117,7 @@ export function CollectionModal({ art, collection, parentId, isGroup, onClose }:
           if (latest) await handleSaveArt(latest.id);
         }
         
-        onClose();
+        handleClose();
       }
     } catch (e) {
       console.error(e);
@@ -129,8 +139,6 @@ export function CollectionModal({ art, collection, parentId, isGroup, onClose }:
 
   if (typeof document === 'undefined') return null;
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const resolveUrl = (url: string) => url.startsWith('http') || url.startsWith('blob:') ? url : `${apiBase}${url}`;
 
   const filteredFriends = friendProfiles.filter(f => 
     (f.name?.toLowerCase().includes(friendSearch.toLowerCase()) || 
@@ -139,6 +147,7 @@ export function CollectionModal({ art, collection, parentId, isGroup, onClose }:
   );
 
   const parentGroups = collections.filter(c => c.isGroup && !c.parentId && c.id !== collection?.id && c.authorId === authUser?.id);
+  const isSubgroup = (parentId && parentId !== 'none') || (collection && !!collection.parentId);
 
   const isOwnArt = art?.authorId === authUser?.id;
   const saveOptions = collections.filter(col => {
@@ -148,13 +157,58 @@ export function CollectionModal({ art, collection, parentId, isGroup, onClose }:
   });
 
   return createPortal(
-    <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
+    <div className={`fixed inset-0 z-[1200] flex items-center justify-center p-4 md:p-8 ${isExiting ? 'premium-animate-backdrop-exit' : 'premium-animate-backdrop-enter'}`} onClick={handleClose}>
+      <div className="absolute inset-0 bg-black/50" />
       
       <div 
-        className={`relative w-full ${showCreate ? 'max-w-3xl h-fit' : 'max-w-md h-[600px]'} bg-gradient-to-br from-white/[0.18] via-white/[0.06] to-white/[0.03] backdrop-blur-3xl rounded-[2.5rem] overflow-hidden flex flex-col animate-in zoom-in-95 duration-500 shadow-[0_40px_80px_rgba(0,0,0,0.5),inset_0_2px_12px_rgba(255,255,255,0.25)] border-t-[1.5px] border-l-[1.5px] border-white/40 border-b border-r border-white/10 transition-all`}
+        className={`relative w-full ${showCreate ? 'max-w-3xl h-fit' : 'max-w-md h-[600px]'} bg-gradient-to-br from-white/[0.18] via-white/[0.06] to-white/[0.03] backdrop-blur-3xl rounded-[2.5rem] overflow-hidden flex flex-col ${isExiting ? 'premium-animate-scale-exit' : 'premium-animate-scale-enter'} shadow-[0_40px_80px_rgba(0,0,0,0.5),inset_0_2px_12px_rgba(255,255,255,0.25)] border-t-[1.5px] border-l-[1.5px] border-white/40 border-b border-r border-white/10 transition-all`}
         onClick={e => e.stopPropagation()}
       >
+        <style>{`
+          @keyframes premium-backdrop-fade-in {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(12px); }
+          }
+          @keyframes premium-backdrop-fade-out {
+            from { opacity: 1; backdrop-filter: blur(12px); }
+            to { opacity: 0; backdrop-filter: blur(0px); }
+          }
+
+          @keyframes premium-modal-scale-in {
+            from {
+              opacity: 0;
+              transform: translateY(28px) scale(0.965);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+          @keyframes premium-modal-scale-out {
+            from {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+            to {
+              opacity: 0;
+              transform: translateY(20px) scale(0.97);
+            }
+          }
+
+          .premium-animate-backdrop-enter {
+            animation: premium-backdrop-fade-in 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+          .premium-animate-backdrop-exit {
+            animation: premium-backdrop-fade-out 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+
+          .premium-animate-scale-enter {
+            animation: premium-modal-scale-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+          .premium-animate-scale-exit {
+            animation: premium-modal-scale-out 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+        `}</style>
         <header className="p-6 flex items-center justify-between z-10 flex-shrink-0">
            <div>
               <h2 className="text-lg font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
@@ -166,7 +220,7 @@ export function CollectionModal({ art, collection, parentId, isGroup, onClose }:
               </h2>
               <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mt-0.5">Alpha Art Curator</p>
            </div>
-           <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all border border-white/20 shadow-lg">
+           <button onClick={handleClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all border border-white/20 shadow-lg">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M18 6 6 18M6 6l12 12"/></svg>
            </button>
         </header>
@@ -234,36 +288,110 @@ export function CollectionModal({ art, collection, parentId, isGroup, onClose }:
                           <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Descrição</label>
                           <textarea placeholder="..." value={form.description} onChange={e => setForm(s => ({ ...s, description: e.target.value }))} className="w-full h-16 p-4 rounded-xl bg-white/10 border border-white/20 text-[11px] text-white focus:outline-none resize-none placeholder-white/20 focus:bg-white/20 shadow-inner" />
                        </div>
-                       {/* Public/Private toggle — always visible in create/edit form */}
-                       <div className="space-y-1.5">
-                         <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Visibilidade</label>
-                         <div className="flex gap-2">
-                           <button
-                             type="button"
-                             onClick={() => setForm(s => ({ ...s, isPublic: true }))}
-                             className={`flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 ${
-                               form.isPublic
-                                 ? 'bg-white text-black border-white shadow-[0_4px_16px_rgba(255,255,255,0.2)]'
-                                 : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'
-                             }`}
-                           >
-                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                             Pública
-                           </button>
-                           <button
-                             type="button"
-                             onClick={() => setForm(s => ({ ...s, isPublic: false }))}
-                             className={`flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 ${
-                               !form.isPublic
-                                 ? 'bg-white text-black border-white shadow-[0_4px_16px_rgba(255,255,255,0.2)]'
-                                 : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'
-                             }`}
-                           >
-                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                             Privada
-                           </button>
-                         </div>
-                       </div>
+                        {isSubgroup ? (
+                          <div className="space-y-1.5 relative">
+                            <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Grupo Pai</label>
+                            
+                            {/* Dropdown Toggle Button */}
+                            <button
+                              type="button"
+                              onClick={() => setShowParentDropdown(!showParentDropdown)}
+                              className="w-full h-11 px-5 rounded-xl bg-white/10 border border-white/20 text-xs text-white focus:outline-none focus:bg-white/20 shadow-inner flex items-center justify-between transition-all"
+                            >
+                              <span>
+                                {parentGroups.find(pg => pg.id === form.parentId)?.title || 'Sem Grupo Pai'}
+                              </span>
+                              <svg 
+                                width="12" 
+                                height="12" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                strokeWidth="3"
+                                className={`transition-transform duration-300 ${showParentDropdown ? 'rotate-180' : ''}`}
+                              >
+                                <path d="m6 9 6 6 6-6"/>
+                              </svg>
+                            </button>
+
+                            {/* Floating Options Dropdown Menu */}
+                            {showParentDropdown && (
+                              <>
+                                {/* Invisible Backdrop to catch clicks outside dropdown */}
+                                <div 
+                                  className="fixed inset-0 z-[140] bg-transparent" 
+                                  onClick={() => setShowParentDropdown(false)} 
+                                />
+                                
+                                <div className="absolute top-full left-0 right-0 mt-2 p-1.5 bg-neutral-900/95 backdrop-blur-3xl rounded-xl border border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.6)] z-[150] max-h-48 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setForm(s => ({ ...s, parentId: '' }));
+                                      setShowParentDropdown(false);
+                                    }}
+                                    className={`w-full text-left px-4 py-2.5 rounded-lg text-xs transition-all ${
+                                      !form.parentId 
+                                        ? 'bg-white/10 text-white font-bold' 
+                                        : 'text-white/60 hover:bg-white/5 hover:text-white'
+                                    }`}
+                                  >
+                                    Sem Grupo Pai
+                                  </button>
+                                  
+                                  {parentGroups.map(pg => (
+                                    <button
+                                      key={pg.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setForm(s => ({ ...s, parentId: pg.id }));
+                                        setShowParentDropdown(false);
+                                      }}
+                                      className={`w-full text-left px-4 py-2.5 rounded-lg text-xs transition-all flex items-center justify-between ${
+                                        form.parentId === pg.id 
+                                          ? 'bg-white/10 text-white font-bold' 
+                                          : 'text-white/60 hover:bg-white/5 hover:text-white'
+                                      }`}
+                                    >
+                                      <span>{pg.title}</span>
+                                      {form.parentId === pg.id && <span className="text-[10px] text-white">✓</span>}
+                                    </button>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Visibilidade</label>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setForm(s => ({ ...s, isPublic: true }))}
+                                className={`flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 ${
+                                  form.isPublic
+                                    ? 'bg-white text-black border-white shadow-[0_4px_16px_rgba(255,255,255,0.2)]'
+                                    : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'
+                                }`}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                Pública
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setForm(s => ({ ...s, isPublic: false }))}
+                                className={`flex-1 h-11 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-2 ${
+                                  !form.isPublic
+                                    ? 'bg-white text-black border-white shadow-[0_4px_16px_rgba(255,255,255,0.2)]'
+                                    : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'
+                                }`}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                Privada
+                              </button>
+                            </div>
+                          </div>
+                        )}
                        <div className="space-y-1.5 relative">
                           <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Convidar</label>
                           <input type="text" placeholder="Pesquisar..." value={friendSearch} onFocus={() => setShowFriendSuggestions(true)} onChange={e => setFriendSearch(e.target.value)} className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/10 border border-white/20 text-xs text-white focus:outline-none placeholder-white/20 focus:bg-white/20 shadow-inner" />
@@ -280,7 +408,7 @@ export function CollectionModal({ art, collection, parentId, isGroup, onClose }:
                        </div>
                     </div>
                     <div className="flex gap-3 pt-2">
-                      <button onClick={() => collection ? onClose() : setShowCreate(false)} className="flex-1 h-11 rounded-xl bg-white/10 text-white/60 text-[9px] font-black uppercase hover:bg-white/20 transition-all border border-white/20">Cancelar</button>
+                      <button onClick={() => collection ? handleClose() : setShowCreate(false)} className="flex-1 h-11 rounded-xl bg-white/10 text-white/60 text-[9px] font-black uppercase hover:bg-white/20 transition-all border border-white/20">Cancelar</button>
                       <button onClick={handleAction} disabled={loading || !form.title} className="flex-1 h-11 rounded-xl bg-white text-black text-[9px] font-black uppercase shadow-[0_12px_24px_rgba(255,255,255,0.2)] hover:scale-105 transition-all">
                         {loading ? '...' : collection ? 'Guardar' : ((parentId && parentId !== 'none') ? 'Criar Subgrupo' : (isGroup ? 'Criar Grupo' : 'Criar Coleção'))}
                       </button>

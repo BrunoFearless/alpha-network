@@ -93,10 +93,10 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
         </div>
 
         {/* Body */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 flex-col-reverse lg:flex-row overflow-hidden">
           
           {/* Left Panel */}
-          <div className="flex-1 overflow-y-auto p-7 relative custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-4 lg:p-7 relative custom-scrollbar">
 
             {/* TAB: PERFIL */}
             {tab === "perfil" && (
@@ -455,13 +455,13 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
           </div>
 
           {/* Right Panel (Live Preview) */}
-          <div className="w-[280px] shrink-0 border-l border-white/5 flex flex-col bg-white/[0.02]">
+          <div className="w-full h-[180px] lg:h-auto lg:w-[260px] shrink-0 border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col bg-white/[0.02]">
             <div className="p-4 py-3.5 border-b border-white/5 shrink-0">
               <p className="m-0 text-[11px] font-bold uppercase tracking-widest text-gray-500">Pré-visualização</p>
             </div>
             <div className="flex-1 overflow-y-auto p-4 relative custom-scrollbar">
               
-              <div className={`rounded-[2rem] overflow-hidden border-[1.5px] relative pb-4 glass-card backblur-2xl ${form.themeMode === 'light' ? 'bg-white/30' : 'bg-black/20'}`} style={{ borderColor: `${accentColor}20` }}>
+              <div className={`rounded-[2rem] overflow-hidden border-[1.5px] relative pb-4 glass-card backblur-2xl transform scale-[0.6] lg:scale-100 origin-top w-[166%] lg:w-full -ml-[33%] lg:ml-0 ${form.themeMode === 'light' ? 'bg-white/30' : 'bg-black/20'}`} style={{ borderColor: `${accentColor}20` }}>
                 <ThemeBg color={accentColor} mode={form.themeMode} />
                 
                 <div 

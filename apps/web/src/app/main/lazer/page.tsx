@@ -1,7 +1,8 @@
 'use client';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { useLazerStore } from '@/store/lazer.store';
+import { useChatStore } from '@/store/chat.store';
 import { LazerProfileView } from './components/profile/LazerProfileView';
 import { LazerProfileEditor } from './components/profile/LazerProfileEditor';
 import { DEMO_USER, LazerUserProfile } from './components/profile/types';
@@ -21,6 +22,7 @@ import { AlphaMusicPlayer } from './components/music/AlphaMusicPlayer';
 import { LazerWatchView } from './components/watch/LazerWatchView';
 import { AlphaWatchPiP } from './components/watch/AlphaWatchPiP';
 import { LazerArtView } from './components/art/LazerArtView';
+import { resolveUrl } from '@/lib/api';
 
 type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community' | 'messages' | 'music' | 'watch' | 'art';
 
@@ -36,6 +38,7 @@ export default function LazerPage() {
   // Track when notifications were last "seen" — stops pulsing when panel is open
   const [notifsSeen, setNotifsSeen] = useState(false);
   const [communityId, setCommunityId] = useState<string | null>(null);
+  const [messagesMobileView, setMessagesMobileView] = useState<'list' | 'chat'>('list');
 
   const navigateToCommunity = (id?: string) => {
     setCommunityId(id || null);
@@ -97,6 +100,23 @@ export default function LazerPage() {
     }
   }, [activeView, viewingUser?.id, authUser?.id]);
 
+  // Reset mobile messages view when leaving messages
+  useEffect(() => {
+    if (activeView !== 'messages') {
+      setMessagesMobileView('list');
+    }
+  }, [activeView]);
+
+  // Scroll to top whenever the view changes
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: 'instant' });
+    }
+    // Also reset window scroll just in case
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeView]);
+
   const navigateToProfile = async (userId: string) => {
     if (userId === authUser?.id) {
       setViewingUser(null);
@@ -119,6 +139,14 @@ export default function LazerPage() {
   const navigateToPost = (postId: string) => {
     setAutoOpenPostId(postId);
     setActiveView('feed');
+  };
+
+  const startPrivateChat = async (userId: string) => {
+    const { startConversation } = useChatStore.getState();
+    const conversationId = await startConversation(userId);
+    if (conversationId) {
+      setActiveView('messages');
+    }
   };
 
   const myProfileData = useMemo<LazerUserProfile>(() => {
@@ -296,21 +324,24 @@ export default function LazerPage() {
   const isOwnProfile = !viewingUser;
 
   return (
-    <div className="w-full min-h-screen relative flex">
-      <ThemeBg color={c} mode={themeMode} />
-      {/* Sidebar Vertical (Estrutura) */}
+    <div className={`w-full relative flex bg-[#09090b] ${activeView === 'messages' ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`} style={{ overscrollBehavior: 'none' }}>
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <ThemeBg color={c} mode={themeMode} />
+      </div>
+      {/* Sidebar (Estrutura) */}
       <LazerSidebar
         activeView={activeView}
         setActiveView={setActiveView}
         themeColor={c}
         alphaStatus={alphaStatus}
         onAlphaClick={openChat}
-        userAvatar={authUser?.profile?.avatarUrl}
+        userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
         userName={authUser?.profile?.displayName || authUser?.profile?.username}
+        hideMobileNav={activeView === 'messages' && messagesMobileView === 'chat'}
       />
 
       {/* Main Content Area com margem para a sidebar */}
-      <div className="flex-1 ml-[50px] p-6 animate-in fade-in duration-300 relative">
+      <div ref={contentRef} className={`flex-1 ml-0 md:ml-[50px] animate-in fade-in duration-300 relative w-full max-w-[100vw] ${activeView === 'messages' ? 'overflow-hidden h-[100dvh] p-0' : 'overflow-y-auto overflow-x-hidden p-0 sm:p-2 md:p-6 pb-24 md:pb-6'}`} style={{ overscrollBehavior: 'none' }}>
         {activeView === 'feed' && (
           <LazerHomeView
             user={myProfileData}
@@ -325,7 +356,8 @@ export default function LazerPage() {
             isOwnProfile={isOwnProfile}
             onEdit={isOwnProfile ? () => setIsEditing(true) : undefined}
             viewingUserId={viewingUser?.id}
-            onPostClick={navigateToPost} />
+            onPostClick={navigateToPost}
+            onChatClick={startPrivateChat} />
         )}
 
         {/* Full-screen modals */}
@@ -350,20 +382,21 @@ export default function LazerPage() {
         )}
         {activeView === 'messages' && (
           <MessagesModal onClose={() => setActiveView('feed')}
-            themeColor={c} themeMode={themeMode} />
+            themeColor={c} themeMode={themeMode}
+            onMobileViewChange={setMessagesMobileView} />
         )}
         {activeView === 'music' && (
-          <div className="w-full h-[calc(100vh-40px)] glass-panel-dark border border-white/[0.06] rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
+          <div className="w-full h-[100dvh] md:h-[calc(100vh-40px)] glass-panel-dark border-0 md:border md:border-white/[0.06] rounded-none md:rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
             <LazerMusicView />
           </div>
         )}
         {activeView === 'watch' && (
-          <div className="w-full h-[calc(100vh-40px)] glass-panel-dark border border-white/[0.06] rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
+          <div className="w-full h-[100dvh] md:h-[calc(100vh-40px)] glass-panel-dark border-0 md:border md:border-white/[0.06] rounded-none md:rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
             <LazerWatchView />
           </div>
         )}
         {activeView === 'art' && (
-          <div className="w-full max-w-[1050px] mx-auto h-[calc(100vh-40px)] glass-panel-dark border border-white/[0.06] rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
+          <div className="w-full max-w-[1050px] mx-auto h-[100dvh] md:h-[calc(100vh-40px)] glass-panel-dark border-0 md:border md:border-white/[0.06] rounded-none md:rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
             <LazerArtView />
           </div>
         )}

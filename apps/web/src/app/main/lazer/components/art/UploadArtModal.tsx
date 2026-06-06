@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Art, useArtStore } from '@/store/art.store';
 import { useAuthStore } from '@/store/auth.store';
+import { useMusicStore } from '@/store/music.store';
+import { resolveUrl } from '@/lib/api';
 
 interface Props {
   art?: Art; // If present, we are in Edit Mode
@@ -12,17 +14,51 @@ interface Props {
 const CATEGORIES = ['Design', 'Arquitetura', 'Ilustração', 'Fotografia', 'Digital Art', 'Natureza', 'Minimalismo', 'Culinária'];
 
 export function UploadArtModal({ art, onClose }: Props) {
+  const [isExiting, setIsExiting] = useState(false);
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onClose();
+    }, 550);
+  };
+
   const { accessToken } = useAuthStore();
   const { fetchArts, updateArt } = useArtStore();
+  const { tracks, fetchTracks } = useMusicStore();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     title: '',
     description: '',
     category: 'Digital Art',
     tags: '',
+    musicTrackId: '',
   });
   const [images, setImages] = useState<File[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
+  
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showMusicDropdown, setShowMusicDropdown] = useState(false);
+  const categoryRef = useRef<HTMLDivElement>(null);
+  const musicRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchTracks();
+  }, [fetchTracks]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+      if (musicRef.current && !musicRef.current.contains(event.target as Node)) {
+        setShowMusicDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,6 +82,7 @@ export function UploadArtModal({ art, onClose }: Props) {
         description: art.description || '',
         category: art.category,
         tags: tagsStr,
+        musicTrackId: art.musicTrackId || '',
       });
     }
   }, [art]);
@@ -78,6 +115,9 @@ export function UploadArtModal({ art, onClose }: Props) {
       fd.append('title', form.title);
       fd.append('description', form.description);
       fd.append('category', form.category);
+      if (form.musicTrackId) {
+         fd.append('musicTrackId', form.musicTrackId);
+      }
       
       const tagsArray = form.tags.split(',').map(t => t.trim()).filter(t => t !== '');
       fd.append('tags', JSON.stringify(tagsArray));
@@ -112,7 +152,7 @@ export function UploadArtModal({ art, onClose }: Props) {
 
       if (success) {
         fetchArts();
-        onClose();
+        handleClose();
       }
     } catch (e: any) { 
       console.error(e); 
@@ -123,21 +163,64 @@ export function UploadArtModal({ art, onClose }: Props) {
 
   if (typeof document === 'undefined') return null;
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const resolveUrl = (url: string) => url.startsWith('http') || url.startsWith('blob:') ? url : `${apiBase}${url}`;
 
   const currentPreview = images.length > 0
     ? URL.createObjectURL(images[previewIndex])
     : art?.imageUrl ? resolveUrl(art.imageUrl) : null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-8 animate-in fade-in duration-300" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-md" />
+    <div className={`fixed inset-0 z-[1100] flex items-center justify-center p-8 ${isExiting ? 'premium-animate-backdrop-exit' : 'premium-animate-backdrop-enter'}`} onClick={handleClose}>
+      <div className="absolute inset-0 bg-black/40" />
       
       <div 
-        className="relative w-full max-w-4xl bg-gradient-to-br from-white/[0.12] via-white/[0.04] to-transparent backdrop-blur-3xl rounded-[3rem] border-t-[1.5px] border-l-[1.5px] border-white/40 border-b border-r border-white/10 overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-500 shadow-[0_40px_100px_rgba(0,0,0,0.7),inset_0_2px_15px_rgba(255,255,255,0.2)]"
+        className={`relative w-full max-w-4xl bg-gradient-to-br from-white/[0.12] via-white/[0.04] to-transparent backdrop-blur-3xl rounded-[3rem] border-t-[1.5px] border-l-[1.5px] border-white/40 border-b border-r border-white/10 overflow-hidden flex flex-col md:flex-row ${isExiting ? 'premium-animate-scale-exit' : 'premium-animate-scale-enter'} shadow-[0_40px_100px_rgba(0,0,0,0.7),inset_0_2px_15px_rgba(255,255,255,0.2)]`}
         onClick={e => e.stopPropagation()}
       >
+        <style>{`
+          @keyframes premium-backdrop-fade-in {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(12px); }
+          }
+          @keyframes premium-backdrop-fade-out {
+            from { opacity: 1; backdrop-filter: blur(12px); }
+            to { opacity: 0; backdrop-filter: blur(0px); }
+          }
+
+          @keyframes premium-modal-scale-in {
+            from {
+              opacity: 0;
+              transform: translateY(28px) scale(0.965);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+          @keyframes premium-modal-scale-out {
+            from {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+            to {
+              opacity: 0;
+              transform: translateY(20px) scale(0.97);
+            }
+          }
+
+          .premium-animate-backdrop-enter {
+            animation: premium-backdrop-fade-in 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+          .premium-animate-backdrop-exit {
+            animation: premium-backdrop-fade-out 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+
+          .premium-animate-scale-enter {
+            animation: premium-modal-scale-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+          .premium-animate-scale-exit {
+            animation: premium-modal-scale-out 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+        `}</style>
         {/* Left: Image Picker */}
         <div className="w-full md:w-1/2 p-10 bg-white/5 flex flex-col gap-4 border-r border-white/5 relative">
            <input 
@@ -237,7 +320,7 @@ export function UploadArtModal({ art, onClose }: Props) {
                    {images.length > 1 ? `${images.length} imagens selecionadas` : 'Alpha Art Studio'}
                  </p>
               </div>
-              <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all">
+              <button onClick={handleClose} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all">
                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6 6 18M6 6l12 12"/></svg>
               </button>
            </div>
@@ -268,15 +351,34 @@ export function UploadArtModal({ art, onClose }: Props) {
               />
               
               <div className="grid grid-cols-2 gap-4">
-                 <div className="flex flex-col gap-2">
+                 <div className="flex flex-col gap-2 relative" ref={categoryRef}>
                     <label className="text-[10px] font-black text-white/20 uppercase tracking-widest ml-2">Categoria</label>
-                    <select 
-                      value={form.category}
-                      onChange={e => setForm(s => ({ ...s, category: e.target.value }))}
-                      className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none appearance-none cursor-pointer hover:bg-white/10 transition-all"
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                      className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-xs text-white flex items-center justify-between hover:bg-white/10 transition-all text-left"
                     >
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                      <span>{form.category}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={`transition-transform duration-300 ${showCategoryDropdown ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    
+                    {showCategoryDropdown && (
+                      <div className="absolute top-[105%] left-0 right-0 p-1 bg-neutral-950/90 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl z-[150] max-h-48 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200">
+                        {CATEGORIES.map(cat => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => {
+                              setForm(s => ({ ...s, category: cat }));
+                              setShowCategoryDropdown(false);
+                            }}
+                            className={`w-full px-4 py-2.5 rounded-xl text-left text-xs transition-all ${form.category === cat ? 'bg-white text-black font-black' : 'text-white/60 hover:bg-white/10 hover:text-white'}`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                  </div>
                  <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-white/20 uppercase tracking-widest ml-2">Tags</label>
@@ -288,6 +390,59 @@ export function UploadArtModal({ art, onClose }: Props) {
                       className="w-full h-12 px-6 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-white/20 focus:outline-none focus:border-white/20 transition-all"
                     />
                  </div>
+              </div>
+
+              <div className="flex flex-col gap-2 relative" ref={musicRef}>
+                 <label className="text-[10px] font-black text-white/20 uppercase tracking-widest ml-2">Trilha Sonora do Mood (Opcional)</label>
+                 <button
+                    type="button"
+                    onClick={() => setShowMusicDropdown(!showMusicDropdown)}
+                    className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-xs text-white flex items-center justify-between hover:bg-white/10 transition-all text-left"
+                  >
+                    <span className="truncate">
+                      {form.musicTrackId ? (
+                        <span className="flex items-center gap-1.5 truncate">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                          {tracks.find(t => t.id === form.musicTrackId)?.title} — {tracks.find(t => t.id === form.musicTrackId)?.artist}
+                        </span>
+                      ) : (
+                        'Nenhuma música (Silencioso)'
+                      )}
+                    </span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={`transition-transform duration-300 ${showMusicDropdown ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+
+                  {showMusicDropdown && (
+                    <div className="absolute top-[105%] left-0 right-0 p-1 bg-neutral-950/90 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl z-[150] max-h-48 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm(s => ({ ...s, musicTrackId: '' }));
+                          setShowMusicDropdown(false);
+                        }}
+                        className={`w-full px-4 py-2.5 rounded-xl text-left text-xs transition-all ${form.musicTrackId === '' ? 'bg-white text-black font-black' : 'text-white/60 hover:bg-white/10 hover:text-white'}`}
+                      >
+                        Nenhuma música (Silencioso)
+                      </button>
+                      {tracks.map(t => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setForm(s => ({ ...s, musicTrackId: t.id }));
+                            setShowMusicDropdown(false);
+                          }}
+                          className={`w-full px-4 py-2.5 rounded-xl text-left text-xs transition-all flex flex-col gap-0.5 ${form.musicTrackId === t.id ? 'bg-white text-black font-black' : 'text-white/60 hover:bg-white/10 hover:text-white'}`}
+                        >
+                          <span className="font-bold truncate flex items-center gap-1.5">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                            {t.title}
+                          </span>
+                          <span className={`text-[9px] ${form.musicTrackId === t.id ? 'text-black/50' : 'text-white/40'}`}>{t.artist}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
               </div>
            </div>
 

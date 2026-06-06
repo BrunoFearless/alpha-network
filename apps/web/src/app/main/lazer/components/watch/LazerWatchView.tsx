@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useWatchStore, Video } from '@/store/watch.store';
 import { useAuthStore } from '@/store/auth.store';
 import { AlphaVideoPlayer } from '@/app/main/lazer/components/watch/AlphaVideoPlayer';
+import { resolveUrl } from '@/lib/api';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -39,15 +40,14 @@ function timeAgo(dateStr: string) {
 
 // ── Video Card ───────────────────────────────────────────────────────────────
 
-function VideoCard({ video, onPlay }: { video: Video; onPlay: () => void }) {
-  const resolveUrl = (url: string) => url?.startsWith('http') ? url : `${API}${url}`;
+function VideoCard({ video, onPlay, index = 0 }: { video: Video; onPlay: () => void; index?: number }) {
   const isVertical = video.format === 'vertical';
 
   return (
     <div
       onClick={onPlay}
-      className={`group relative cursor-pointer rounded-[2rem] overflow-hidden bg-white/[0.04] border border-white/[0.06] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_32px_rgba(168,85,247,0.15)] ${isVertical ? 'row-span-2' : ''
-        }`}
+      className={`group relative cursor-pointer rounded-[2rem] overflow-hidden bg-white/[0.04] border border-white/[0.06] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_32px_rgba(168,85,247,0.15)] animate-in fade-in zoom-in-95 slide-in-from-bottom-4 fill-mode-both ${isVertical ? 'row-span-2' : ''}`}
+      style={{ animationDuration: '600ms', animationDelay: `${index * 50}ms` }}
     >
       {/* Thumbnail */}
       <div className={`relative overflow-hidden ${isVertical ? 'aspect-[9/16]' : 'aspect-video'}`}>
@@ -122,6 +122,20 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   });
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const categoryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleUpload = async () => {
     if (!state.videoFile || !state.title || !accessToken) return;
@@ -157,7 +171,7 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
       {/* Modal card — pure glassmorphism, no solid bg */}
       <div
-        className="relative w-full max-w-lg rounded-[2.5rem] border border-white/20 animate-in zoom-in-95 duration-300 overflow-hidden"
+        className="relative w-full max-w-lg rounded-[2.5rem] border border-white/20 animate-in fade-in zoom-in-[0.95] slide-in-from-bottom-8 duration-500 overflow-hidden shadow-2xl"
         style={{
           background: 'rgba(255,255,255,0.06)',
           backdropFilter: 'blur(48px) saturate(160%)',
@@ -234,16 +248,36 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
               className={`${glassInput} resize-none`}
             />
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-center w-full">
               {/* Category */}
-              <select
-                value={state.category}
-                onChange={e => setState(s => ({ ...s, category: e.target.value }))}
-                className="flex-1 px-4 py-3 bg-transparent border border-white/15 rounded-2xl text-white text-sm focus:outline-none focus:border-white/35 transition-all"
-                style={{ appearance: 'auto', colorScheme: 'dark' }}
-              >
-                {CATEGORIES.filter(c => c !== 'Para Ti').map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <div className="flex-1 relative" ref={categoryRef}>
+                 <button
+                   type="button"
+                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                   className="w-full h-[52px] px-5 bg-transparent border border-white/15 rounded-2xl text-white text-sm flex items-center justify-between hover:bg-white/[0.04] focus:outline-none transition-all text-left"
+                 >
+                   <span>{state.category}</span>
+                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`transition-transform duration-300 ${showCategoryDropdown ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6"/></svg>
+                 </button>
+
+                 {showCategoryDropdown && (
+                   <div className="absolute top-[105%] left-0 right-0 p-1.5 bg-neutral-950/95 backdrop-blur-2xl rounded-2xl border border-white/15 shadow-2xl z-[150] max-h-48 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200">
+                     {CATEGORIES.filter(c => c !== 'Para Ti').map(c => (
+                       <button
+                         key={c}
+                         type="button"
+                         onClick={() => {
+                           setState(s => ({ ...s, category: c }));
+                           setShowCategoryDropdown(false);
+                         }}
+                         className={`w-full px-4 py-2.5 rounded-xl text-left text-xs transition-all ${state.category === c ? 'bg-white text-black font-black' : 'text-white/60 hover:bg-white/10 hover:text-white'}`}
+                       >
+                         {c}
+                       </button>
+                     ))}
+                   </div>
+                 )}
+              </div>
 
               {/* Format toggle */}
               <div className="flex rounded-2xl overflow-hidden border border-white/15">
@@ -299,6 +333,20 @@ function EditModal({ video, onClose, onSuccess }: { video: Video; onClose: () =>
     category: video.category || 'Geral',
     tags: video.tags ? video.tags.join(', ') : '',
   });
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const categoryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleSave = async () => {
     if (!state.title || !accessToken) return;
@@ -370,16 +418,36 @@ function EditModal({ video, onClose, onSuccess }: { video: Video; onClose: () =>
               className={`${glassInput} resize-none`}
             />
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-center w-full">
               {/* Category */}
-              <select
-                value={state.category}
-                onChange={e => setState(s => ({ ...s, category: e.target.value }))}
-                className="flex-1 px-4 py-3 bg-transparent border border-white/15 rounded-2xl text-white text-sm focus:outline-none focus:border-white/35 transition-all"
-                style={{ appearance: 'auto', colorScheme: 'dark' }}
-              >
-                {CATEGORIES.filter(c => c !== 'Para Ti').map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <div className="flex-1 relative" ref={categoryRef}>
+                 <button
+                   type="button"
+                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                   className="w-full h-[52px] px-5 bg-transparent border border-white/15 rounded-2xl text-white text-sm flex items-center justify-between hover:bg-white/[0.04] focus:outline-none transition-all text-left"
+                 >
+                   <span>{state.category}</span>
+                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`transition-transform duration-300 ${showCategoryDropdown ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6"/></svg>
+                 </button>
+
+                 {showCategoryDropdown && (
+                   <div className="absolute top-[105%] left-0 right-0 p-1.5 bg-neutral-950/95 backdrop-blur-2xl rounded-2xl border border-white/15 shadow-2xl z-[150] max-h-48 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200">
+                     {CATEGORIES.filter(c => c !== 'Para Ti').map(c => (
+                       <button
+                         key={c}
+                         type="button"
+                         onClick={() => {
+                           setState(s => ({ ...s, category: c }));
+                           setShowCategoryDropdown(false);
+                         }}
+                         className={`w-full px-4 py-2.5 rounded-xl text-left text-xs transition-all ${state.category === c ? 'bg-white text-black font-black' : 'text-white/60 hover:bg-white/10 hover:text-white'}`}
+                       >
+                         {c}
+                       </button>
+                     ))}
+                   </div>
+                 )}
+              </div>
             </div>
 
             {/* Tags */}
@@ -454,20 +522,33 @@ export function LazerWatchView() {
         <div className="flex-1 flex flex-col h-full overflow-hidden">
 
           {/* Top Bar */}
-          <div className="flex items-center gap-4 px-5 pt-8 pb-5 shrink-0">
-            {/* Logo */}
-            <div className="flex items-center gap-3 mr-2 shrink-0">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+          <div className="flex flex-col md:flex-row items-center gap-4 px-4 pt-6 pb-4 md:px-5 md:pt-8 md:pb-5 shrink-0">
+            {/* Logo & Mobile Upload */}
+            <div className="flex items-center justify-between w-full md:w-auto md:mr-2">
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                </div>
+                <div>
+                  <p className="text-base font-black text-white leading-none">Alpha Watch</p>
+                  <p className="text-[9px] text-white/30 uppercase tracking-widest">Vídeo Premium</p>
+                </div>
               </div>
-              <div>
-                <p className="text-base font-black text-white leading-none">Alpha Watch</p>
-                <p className="text-[9px] text-white/30 uppercase tracking-widest">Vídeo Premium</p>
-              </div>
+              
+              {/* Mobile Upload */}
+              {accessToken && (
+                <button
+                  onClick={() => setShowUpload(true)}
+                  className="md:hidden shrink-0 flex items-center justify-center w-10 h-10 rounded-2xl border border-purple-400/30 text-white transition-all hover:bg-purple-500/20 active:scale-95"
+                  style={{ background: 'rgba(168,85,247,0.12)', backdropFilter: 'blur(12px)' }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                </button>
+              )}
             </div>
 
-            {/* Search — pure glass, no dark bg */}
-            <div className="flex-1 relative">
+            {/* Search */}
+            <div className="flex-1 relative w-full">
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
@@ -481,11 +562,11 @@ export function LazerWatchView() {
               />
             </div>
 
-            {/* Upload */}
+            {/* Desktop Upload */}
             {accessToken && (
               <button
                 onClick={() => setShowUpload(true)}
-                className="shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl border border-purple-400/30 text-white font-black text-xs uppercase tracking-widest transition-all hover:border-purple-400/50 hover:scale-105 active:scale-95"
+                className="hidden md:flex shrink-0 items-center gap-2 px-5 py-3 rounded-2xl border border-purple-400/30 text-white font-black text-xs uppercase tracking-widest transition-all hover:border-purple-400/50 hover:scale-105 active:scale-95"
                 style={{ background: 'rgba(168,85,247,0.12)', backdropFilter: 'blur(12px)' }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
@@ -495,7 +576,7 @@ export function LazerWatchView() {
           </div>
 
           {/* Categories */}
-          <div className="flex gap-2 px-5 pb-5 overflow-x-auto no-scrollbar shrink-0">
+          <div className="flex gap-2 px-4 md:px-5 pb-5 overflow-x-auto no-scrollbar shrink-0">
             {CATEGORIES.map(cat => (
               <button
                 key={cat}
@@ -512,7 +593,7 @@ export function LazerWatchView() {
           </div>
 
           {/* Video Grid */}
-          <div className="flex-1 overflow-y-auto px-5 pb-8">
+          <div className="flex-1 overflow-y-auto px-4 md:px-5 pb-8">
             {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {Array.from({ length: 12 }).map((_, i) => (
@@ -537,8 +618,8 @@ export function LazerWatchView() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-min">
-                {videos.map(video => (
-                  <VideoCard key={video.id} video={video} onPlay={() => setCurrentVideo(video)} />
+                {videos.map((video, i) => (
+                  <VideoCard key={video.id} video={video} onPlay={() => setCurrentVideo(video)} index={i} />
                 ))}
               </div>
             )}

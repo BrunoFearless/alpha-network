@@ -6,6 +6,44 @@ function getToken(): string | null {
   return useAuthStore.getState().accessToken ?? null;
 }
 
+export function resolveUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  let fixed = String(url).replace(/\\/g, '/');
+  if (fixed.startsWith('uploads/')) {
+    fixed = '/' + fixed;
+  }
+  if (fixed.startsWith('/')) {
+    return `${BASE}${fixed}`;
+  }
+  if (fixed.includes('localhost:3001')) {
+    fixed = fixed.replace(/http:\/\/localhost:3001/g, BASE);
+  }
+  if (fixed.includes('localhost:3000')) {
+    fixed = fixed.replace(/http:\/\/localhost:3000/g, BASE);
+  }
+  if (fixed.includes('192.168.43.224:3001') && BASE !== 'http://192.168.43.224:3001') {
+    fixed = fixed.replace(/http:\/\/192.168.43.224:3001/g, BASE);
+  }
+  return fixed;
+}
+
+function fixUrls(obj: any): any {
+  if (typeof obj === 'string') {
+    return resolveUrl(obj);
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(fixUrls);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const newObj: any = {};
+    for (const key in obj) {
+      newObj[key] = fixUrls(obj[key]);
+    }
+    return newObj;
+  }
+  return obj;
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = getToken();
   const res = await fetch(`${BASE}/api/v1${path}`, {
@@ -19,7 +57,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message ?? `Erro ${res.status}`);
-  return data.data ?? data;
+  return fixUrls(data.data ?? data);
 }
 
 async function requestForm<T>(method: string, path: string, form: FormData): Promise<T> {
@@ -34,7 +72,7 @@ async function requestForm<T>(method: string, path: string, form: FormData): Pro
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message ?? `Erro ${res.status}`);
-  return data.data ?? data;
+  return fixUrls(data.data ?? data);
 }
 
 export const api = {

@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LazerController } from './lazer.controller';
 import { LazerService } from './lazer.service';
+import { SpotifyService } from './spotify.service';
+import { DiscoverService } from './discover.service';
+import { ProxyService } from './proxy.service';
 
 describe('LazerController', () => {
   // Tipado como `any` para o TypeScript não tentar validar os métodos
@@ -19,6 +22,50 @@ describe('LazerController', () => {
     findComments:      jest.fn(),
     updateComment:     jest.fn(),
     softDeleteComment: jest.fn(),
+    getAllTropes:      jest.fn(),
+    getTrendingTropes: jest.fn(),
+    createTrope:       jest.fn(),
+    getWatchingNow:    jest.fn(),
+    createCheckIn:     jest.fn(),
+    getUserPosts:      jest.fn(),
+    pinPost:           jest.fn(),
+    deletePost:        jest.fn(),
+    deleteComment:     jest.fn(),
+    getComments:       jest.fn(),
+    searchYouTube:     jest.fn(),
+    getChannelVideos:  jest.fn(),
+    getNotifications:  jest.fn(),
+    markNotificationRead: jest.fn(),
+  };
+
+  const spotifyServiceMock = {
+    getAuthUrl: jest.fn(),
+    handleCallback: jest.fn(),
+    getCurrentlyPlaying: jest.fn(),
+  };
+
+  const discoverServiceMock = {
+    getTrendingAnime: jest.fn(),
+    getTrendingMangas: jest.fn(),
+    getTrendingGames: jest.fn(),
+    getCinemaContent: jest.fn(),
+    getWikipediaArticle: jest.fn(),
+    searchUniversal: jest.fn(),
+    searchSerperWeb: jest.fn(),
+    getDetail: jest.fn(),
+    getRedditTrends: jest.fn(),
+    getAestheticGallery: jest.fn(),
+    getTagSuggestions: jest.fn(),
+    searchMangaDex: jest.fn(),
+    getMangaChapters: jest.fn(),
+    getChapterPages: jest.fn(),
+  };
+
+  const proxyServiceMock = {
+    streamProxy: jest.fn(),
+    extractArticle: jest.fn(),
+    proxyImage: jest.fn(),
+    extractVideo: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -30,6 +77,18 @@ describe('LazerController', () => {
         {
           provide:  LazerService,
           useValue: lazerServiceMock,
+        },
+        {
+          provide:  SpotifyService,
+          useValue: spotifyServiceMock,
+        },
+        {
+          provide:  DiscoverService,
+          useValue: discoverServiceMock,
+        },
+        {
+          provide:  ProxyService,
+          useValue: proxyServiceMock,
         },
       ],
     }).compile();

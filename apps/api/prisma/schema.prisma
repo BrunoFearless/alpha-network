@@ -89,6 +89,7 @@ model Profile {
   spotifyEnabled      Boolean  @default(false)
   spotifyRefreshToken String?
   youtubeChannelId    String?
+  ambientSettings     Json?
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("profiles")
@@ -764,6 +765,7 @@ model LazerTrack {
   playlists   LazerPlaylistTrack[]
   collaborations LazerTrackCollaboration[]
   playLogs    LazerTrackPlay[]
+  alphaArts   AlphaArt[]
 
   @@map("lazer_tracks")
 }
@@ -960,10 +962,12 @@ model AlphaArt {
   category    String               @default("Geral")
   tags        String?              // JSON array
   isPublic    Boolean              @default(true)
+  musicTrackId String?
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
   deletedAt   DateTime?
   author      User                 @relation("AlphaArtAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  musicTrack  LazerTrack?          @relation(fields: [musicTrackId], references: [id], onDelete: SetNull)
   likes       AlphaArtLike[]
   comments    AlphaArtComment[]
   collections AlphaArtCollectionItem[]
@@ -1006,6 +1010,7 @@ model AlphaArtCollection {
   coverUrl       String?
   isPublic       Boolean                          @default(true)
   isGroup        Boolean                          @default(false)
+  viewMode       String                           @default("grid")
   createdAt      DateTime                         @default(now())
   updatedAt      DateTime                         @updatedAt
   author         User                             @relation("AlphaArtCollectionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
@@ -1014,6 +1019,9 @@ model AlphaArtCollection {
   parentId       String?                          @map("parent_id")
   parent         AlphaArtCollection?              @relation("AlphaArtCollectionParent", fields: [parentId], references: [id], onDelete: Cascade)
   subgroups      AlphaArtCollection[]             @relation("AlphaArtCollectionParent")
+  forkedFromId   String?                          @map("forked_from_id")
+  forkedFrom     AlphaArtCollection?              @relation("AlphaArtCollectionForks", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks          AlphaArtCollection[]             @relation("AlphaArtCollectionForks")
 
   @@map("alpha_art_collections")
 }
@@ -1035,6 +1043,11 @@ model AlphaArtCollectionItem {
   id           String             @id @default(uuid())
   collectionId String
   artId        String
+  positionX    Float?
+  positionY    Float?
+  width        Float?
+  height       Float?
+  zIndex       Int?
   createdAt    DateTime           @default(now())
   collection   AlphaArtCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   art          AlphaArt           @relation(fields: [artId], references: [id], onDelete: Cascade)

@@ -52,8 +52,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-alpha-bg flex flex-col">
       {!hideNavbar && <Navbar user={user} onLogout={logout} />}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Desktop: sidebar oculto até hover no canto esquerdo; mobile: sempre visível */}
-        <div className="group relative flex-shrink-0 w-56 max-md:w-56 md:w-0 md:self-stretch min-h-0">
+        {/* Desktop: sidebar oculto até hover no canto esquerdo; mobile: sempre visível (excepto em Lazer) */}
+        <div className={`group relative flex-shrink-0 md:w-0 md:self-stretch min-h-0 ${isLazerMode ? 'hidden md:block' : 'w-56 max-md:w-56'}`}>
           <div className="hidden md:block absolute inset-y-0 left-0 w-5 z-[100] bg-transparent" aria-hidden />
           <div
             className={[

@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/store/auth.store';
+import { resolveUrl } from '@/lib/api';
 
 export function hex2rgb(hex?: string) {
   if (!hex || !hex.startsWith('#')) return [232, 121, 249]; // default pink
@@ -23,7 +24,7 @@ interface ThemeBgProps {
 export function ThemeBg({ color, mode, bgImageUrl }: ThemeBgProps) {
   const { user } = useAuthStore() as any;
   const storeBg = user?.profile?.lazerData?.bgImageUrl;
-  const finalBg = bgImageUrl !== undefined ? bgImageUrl : storeBg;
+  const finalBg = resolveUrl(bgImageUrl !== undefined ? bgImageUrl : storeBg);
 
   const [r, g, b] = hex2rgb(color);
   const isLight = mode === 'light';
@@ -35,7 +36,7 @@ export function ThemeBg({ color, mode, bgImageUrl }: ThemeBgProps) {
         return isVideo ? (
           <video src={finalBg} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <img src={finalBg} alt="Background" className="absolute inset-0 w-full h-full object-cover" />
+          <img src={finalBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
         );
       })() : (
         <div className={`absolute inset-0 ${isLight ? 'bg-gray-50' : 'bg-[#09090b]'}`} />

@@ -48,6 +48,7 @@ interface ChatState {
   editMessage: (messageId: string, content: string) => void;
   togglePin: (messageId: string) => void;
   toggleReaction: (messageId: string, emoji: string) => void;
+  startConversation: (participantId: string) => Promise<string | null>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -253,5 +254,44 @@ export const useChatStore = create<ChatState>((set, get) => ({
         conversations: [updatedConv, ...otherConvs], // Move to top
       };
     });
+  },
+
+  startConversation: async (participantId: string) => {
+    const { accessToken } = useAuthStore.getState();
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/chat/conversations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ participantIds: [participantId] }),
+      });
+      if (res.ok) {
+        const { data } = await res.json();
+        // Add the conversation to the store if not already present, set it active
+        set(state => {
+          const exists = state.conversations.some(c => c.id === data.id);
+          if (!exists) {
+            return {
+              conversations: [{ ...data, sharedMedia: [] }, ...state.conversations],
+              activeConversationId: data.id,
+            };
+          }
+          return {
+            activeConversationId: data.id,
+          };
+        });
+
+        // Fetch messages and join room
+        get().setActiveConversation(data.id);
+        return data.id;
+      }
+    } catch (e) {
+      console.error('startConversation error', e);
+    }
+    return null;
   },
 }));

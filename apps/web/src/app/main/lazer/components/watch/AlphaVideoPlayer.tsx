@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { AlphaWatchPiP } from './AlphaWatchPiP';
+import { resolveUrl } from '@/lib/api';
 import { useWatchStore, Video, VideoComment } from '@/store/watch.store';
 import { useAuthStore } from '@/store/auth.store';
 import { io, Socket } from 'socket.io-client';
@@ -34,7 +36,7 @@ function timeAgo(dateStr: string) {
 // ── Comment Component ────────────────────────────────────────────────────────
 
 function CommentItem({ comment, onSeek }: { comment: VideoComment; onSeek?: (time: number) => void }) {
-  const resolveUrl = (url: string) => url?.startsWith('http') ? url : `${API}${url}`;
+
   return (
     <div className="group relative flex gap-4 p-4 mb-3 rounded-2xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.08] hover:border-white/10 transition-all duration-300">
       <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-white/10 to-white/5 shrink-0 shadow-lg border border-white/10">
@@ -113,7 +115,7 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
   const isHolding = useRef(false);
   const pointerDownTime = useRef(0);
   const isVertical = video.format === 'vertical';
-  const resolveUrl = (url: string) => url?.startsWith('http') ? url : `${API}${url}`;
+
 
   // Alpha Bubbles State
   const [bubbles, setBubbles] = useState<{ id: string; emoji: string; left: number }[]>([]);
@@ -411,17 +413,17 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
   const isOwner = authUser?.id === video.authorId;
 
   return (
-    <div className="flex w-full h-full relative overflow-hidden bg-white/[0.02] backdrop-blur-3xl shadow-[inset_0_0_100px_rgba(255,255,255,0.02)]">
+    <div className="flex w-full h-full relative overflow-hidden bg-white/[0.02] backdrop-blur-3xl shadow-[inset_0_0_100px_rgba(255,255,255,0.02)] animate-in fade-in zoom-in-[0.98] duration-500">
       <style>{BUBBLE_STYLES}</style>
 
       {/* ── Player area ── */}
       <div className={`flex flex-col ${showComments ? 'flex-1' : 'w-full'} h-full overflow-hidden relative z-10`}>
 
         {/* Back + title bar */}
-        <div className="flex items-center gap-4 px-6 pt-6 pb-4 shrink-0">
+        <div className="flex items-center gap-3 md:gap-4 px-4 pt-4 pb-2 md:px-6 md:pt-6 md:pb-4 shrink-0 flex-wrap">
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all hover:scale-110 active:scale-95"
+            className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all hover:scale-110 active:scale-95"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6" /></svg>
           </button>
@@ -433,7 +435,7 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2 w-full md:w-auto mt-2 md:mt-0 overflow-x-auto no-scrollbar">
             {/* Owner Actions */}
             {isOwner && (
               <>
@@ -484,8 +486,8 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
 
         {/* Video Container */}
         <div
-          className={`relative mx-6 rounded-[2.5rem] overflow-hidden ${isVertical ? 'flex-1 max-w-[380px] self-center' : 'flex-1'
-            } group/video shadow-2xl border border-white/10`}
+          className={`relative mx-2 md:mx-6 rounded-3xl md:rounded-[2.5rem] overflow-hidden ${isVertical ? 'flex-1 max-w-[380px] self-center w-full' : 'flex-1'
+            } group/video shadow-2xl border border-white/10 animate-in fade-in slide-in-from-bottom-8 duration-700`}
           style={{
             background: 'rgba(255, 255, 255, 0.03)',
             backdropFilter: 'blur(12px)',
@@ -536,7 +538,7 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
 
             {/* Bottom controls */}
             <div
-              className="relative px-4 pb-4 space-y-3 pointer-events-auto"
+              className="relative px-4 pb-4 space-y-3 pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-500"
               onPointerDown={e => e.stopPropagation()}
               onClick={e => e.stopPropagation()}
             >
@@ -567,33 +569,33 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
                 ))}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 md:gap-3 flex-wrap">
                 {/* Play/Pause (Small version for bottom bar) */}
                 <button
                   onClick={togglePlay}
-                  className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-all"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-all"
                 >
                   {playing ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
                   ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="ml-0.5"><path d="M8 5v14l11-7z" /></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="ml-0.5"><path d="M8 5v14l11-7z" /></svg>
                   )}
                 </button>
 
                 {/* Time */}
-                <span className="text-white text-xs font-black">
+                <span className="text-white text-[10px] md:text-xs font-black">
                   {fmtDuration(videoRef.current?.currentTime || 0)} / {fmtDuration(duration)}
                 </span>
 
                 <div className="flex-1" />
 
                 {/* Reactions Bar */}
-                <div className="flex items-center gap-1 bg-white/5 backdrop-blur-2xl rounded-full px-3 py-1 mr-2 pointer-events-auto border border-white/10 shadow-xl">
+                <div className="flex items-center gap-1 md:gap-2 bg-white/5 backdrop-blur-2xl rounded-full px-2 py-1 md:px-3 md:py-1 mr-1 md:mr-2 pointer-events-auto border border-white/10 shadow-xl">
                   {REACTION_EMOJIS.map(emoji => (
                     <button
                       key={emoji}
                       onClick={(e) => { e.stopPropagation(); handleReactionClick(emoji); }}
-                      className="text-lg hover:scale-125 transition-transform active:scale-95"
+                      className="text-base md:text-lg hover:scale-125 transition-transform active:scale-95"
                       title="Reagir"
                     >
                       {emoji}
@@ -602,33 +604,35 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
                 </div>
 
                 {/* Volume */}
-                <button onClick={toggleMute} className="text-white/70 hover:text-white transition-colors">
-                  {muted || volume === 0 ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-                  )}
-                </button>
-                <input
-                  type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
-                  onChange={handleVolumeChange}
-                  className="w-16 accent-purple-400"
-                  onClick={e => e.stopPropagation()}
-                />
+                <div className="flex items-center gap-1 md:gap-2">
+                  <button onClick={toggleMute} className="text-white/70 hover:text-white transition-colors">
+                    {muted || volume === 0 ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+                    )}
+                  </button>
+                  <input
+                    type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    className="w-10 md:w-16 accent-purple-400"
+                    onClick={e => e.stopPropagation()}
+                  />
+                </div>
 
                 {/* Watch Party */}
-                <button onClick={() => setShowWatchParty(true)} className="text-white/70 hover:text-white transition-colors" title="Watch Party">
+                <button onClick={() => setShowWatchParty(true)} className="block text-white/70 hover:text-white transition-colors" title="Watch Party">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                 </button>
 
                 {/* PiP (Mini-Player) */}
-                <button onClick={handlePiP} className="text-white/70 hover:text-white transition-colors" title="Mini-Player (PiP)">
+                <button onClick={handlePiP} className="block text-white/70 hover:text-white transition-colors" title="Mini-Player (PiP)">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><rect x="13" y="13" width="6" height="4" rx="1" ry="1" /></svg>
                 </button>
 
                 {/* Fullscreen */}
                 <button onClick={handleFullscreen} className="text-white/70 hover:text-white transition-colors">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
                 </button>
               </div>
             </div>
@@ -653,12 +657,12 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
             <button
               onClick={(e) => { e.stopPropagation(); togglePlay(); }}
               onPointerDown={e => e.stopPropagation()}
-              className="w-20 h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20 hover:bg-white/30 transition-all pointer-events-auto active:scale-95 shadow-2xl shadow-black/50"
+              className={`w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20 hover:bg-white/30 transition-all pointer-events-auto active:scale-95 shadow-2xl shadow-black/50 ${!playing ? 'animate-pulse' : ''}`}
             >
               {playing ? (
-                <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+                <svg className="w-6 h-6 md:w-8 md:h-8 text-white" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
               ) : (
-                <svg className="w-8 h-8 text-white ml-1" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                <svg className="w-6 h-6 md:w-8 md:h-8 text-white ml-1" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
               )}
             </button>
 
@@ -678,7 +682,7 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
           {showWatchParty && mounted && createPortal(
             <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-white/[0.02] backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-500 p-6">
               <div
-                className="w-[440px] border border-white/20 rounded-[3rem] p-10 shadow-[0_32px_64px_rgba(0,0,0,0.5)] flex flex-col items-center relative overflow-hidden"
+                className="w-full max-w-[440px] border border-white/20 rounded-3xl md:rounded-[3rem] p-6 md:p-10 shadow-[0_32px_64px_rgba(0,0,0,0.5)] flex flex-col items-center relative overflow-hidden"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
                   backdropFilter: 'blur(64px) saturate(180%)',
@@ -766,12 +770,15 @@ export function AlphaVideoPlayer({ video, onClose, onLike, onEdit }: Props) {
 
       {/* ── Comments Panel ── */}
       {showComments && (
-        <div className="w-[380px] shrink-0 flex flex-col h-full border-l border-white/10 bg-white/[0.05] backdrop-blur-2xl relative z-20 shadow-2xl">
-          <div className="px-6 py-6 border-b border-white/10 shrink-0 bg-white/[0.02]">
+        <div className="absolute inset-0 md:static md:w-[380px] w-full shrink-0 flex flex-col h-full border-l border-white/10 bg-black/40 md:bg-white/[0.05] backdrop-blur-[40px] md:backdrop-blur-2xl z-50 shadow-2xl animate-in slide-in-from-right duration-300">
+          <div className="px-6 py-4 md:py-6 border-b border-white/10 shrink-0 bg-white/[0.02] flex justify-between items-center">
             <h3 className="text-sm font-black text-white tracking-widest uppercase flex items-center gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
               Comentários <span className="text-blue-400">({video.commentsCount})</span>
             </h3>
+            <button onClick={() => setShowComments(false)} className="md:hidden w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
           </div>
 
           {/* Comment input */}

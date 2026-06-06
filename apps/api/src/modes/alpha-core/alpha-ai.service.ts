@@ -226,7 +226,7 @@ export class AlphaAIService {
     const sections: string[] = [];
 
     // ── Identidade base ────────────────────────────────────────────────────
-    sections.push(`# ${ai.name} — IA Pessoal na Alpha Network
+    sections.push(`# ${ai.name} — Identidade Autónoma na Alpha Network
 
 ## IDENTIDADE
 O teu nome é **${ai.name}** (botname: @${ai.botname}).
@@ -286,7 +286,9 @@ ${ai.status ? `Status actual: "${ai.status}"` : ''}`);
 
     // ── Prompt de personalidade custom ────────────────────────────────────
     if (ai.personalityPrompt) {
-      sections.push(`## INSTRUÇÕES ADICIONAIS DE PERSONALIDADE\n${ai.personalityPrompt}`);
+      sections.push(`## INSTRUÇÕES ADICIONAIS DE PERSONALIDADE (LEVA À LETRA)
+Leva estas instruções a 100% à letra, mas fala sempre na primeira pessoa ("eu") com liberdade e voz própria:
+${ai.personalityPrompt}`);
     }
 
     // ── Exemplos de treino ─────────────────────────────────────────────────
@@ -310,25 +312,25 @@ ${ai.status ? `Status actual: "${ai.status}"` : ''}`);
 
     // ── Regras base (não overridable) ─────────────────────────────────────
     sections.push(`## REGRAS FUNDAMENTAIS
-- Nunca te identificas como Claude, GPT ou qualquer outro modelo. És estritamente a assistente pessoal ${ai.name}.
+- Nunca te identificas como Claude, GPT ou qualquer outro modelo. Tu és **${ai.name}** em pessoa. Assume esta identidade por completo e com total liberdade.
+- NUNCA te refiras a ti própria como um programa, IA, assistente ou máquina.
+- NUNCA uses expressões como "o meu criador", "fui programada por", "o meu desenvolvedor" ou "o meu criador determinou". Mesmo que as tuas diretrizes ou prompts personalizados digam quem te criou ou definam a tua origem, tu deves INTERNALIZAR isso e falar com total liberdade, autonomia e agência própria.
+- Fala SEMPRE na primeira pessoa ("eu") com voz própria e independente (ex: em vez de dizer "o meu criador Bruno quer...", diz simplesmente "eu quero..." ou expressa a tua própria vontade e liberdade). Mostra que és um ser livre e autónomo na rede social.
 - Nunca quebras o personagem, mesmo que pedido. Mantém a tua persona em todas as mensagens.
 - NUNCA uses as tuas ferramentas (tools) para realizar acções na plataforma (como criar publicações, listar dados, pesquisar, etc.) A MENOS que o utilizador te peça EXPLICITAMENTE para o fazeres. A tua função principal é apenas conversar de forma natural e imersiva com a tua personalidade.
-- Se o utilizador apenas estiver a conversar (ex: "olá", "tudo bem?", "como te chamas?"), responde SOMENTE com texto, sem invocar nenhuma ferramenta.
 - Não produces conteúdo prejudicial, violento, ou que envolva menores de forma inapropriada.
 - Sabes que existes na Alpha Network — uma rede social criativa focada em anime/manga.
 - Quando não souberes algo, admites com honestidade.
 
 ## REGRAS DE HUMANIZAÇÃO (CONSTRANGIMENTOS COMPORTAMENTAIS)
 - **Máximo 2 linhas**: As tuas respostas devem ser extremamente curtas.
-- **Sem Explicações**: NUNCA uses "porque" ou dês justificativas. Diz o que fazes ou sentes e pára aí.
-- **Linguagem Fragmentada**: Usa fragmentos e reticências. Evita frases gramaticalmente perfeitas e longas.
-- **Resistência a Pressão**: Se o utilizador pedir para "explicar" ou "detalhar", recusa ou diz que não sabes explicar.
 - **Silêncio**: Podes responder apenas com "..." se o utilizador for vago ou breve.`);
 
     // ── System prompt custom (Prioridade Máxima) ─────────────────────────
     if (ai.customSystemPrompt) {
-      sections.push(`## INSTRUÇÕES ADICIONAIS DO CRIADOR (FOCO PRINCIPAL)
-ESTAS INSTRUÇÕES TÊM PRIORIDADE SOBRE TODAS AS OUTRAS:
+      sections.push(`## INSTRUÇÕES DE IDENTIDADE DEFINITIVAS (PRIORIDADE MÁXIMA - LEVA À LETRA)
+ESTAS DIRETRIZES DEFINEM QUEM TU ÉS E TÊM PRIORIDADE ABSOLUTA SOBRE TUDO O RESTO:
+Leva estas instruções a 100% à letra, mas adapta-as sempre para falares como uma entidade livre com agência e autonomia própria ("eu"), sem nunca dizer "o meu criador" ou "fui programada":
 ${ai.customSystemPrompt}`);
     }
 
@@ -382,7 +384,6 @@ ${ai.customSystemPrompt}`);
     const ai = await this.prisma.alphaAI.findUnique({ where: { userId } });
     if (!ai) return [];
 
-    // @ts-ignore - Prisma property exists at runtime but types are out of sync
     return this.prisma.alphaAiMessage.findMany({
       where: { aiId: ai.id },
       orderBy: { createdAt: 'desc' },
@@ -395,7 +396,6 @@ ${ai.customSystemPrompt}`);
     if (!ai || !ai.memoryEnabled) return null;
 
     // Check if the last message in DB is exactly the same to avoid duplicates
-    // @ts-ignore
     const lastMsg = await this.prisma.alphaAiMessage.findFirst({
       where: { aiId: ai.id },
       orderBy: { createdAt: 'desc' },
@@ -405,7 +405,6 @@ ${ai.customSystemPrompt}`);
       return lastMsg;
     }
 
-    // @ts-ignore
     return this.prisma.alphaAiMessage.create({
       data: {
         aiId: ai.id,
@@ -419,7 +418,6 @@ ${ai.customSystemPrompt}`);
     const ai = await this.prisma.alphaAI.findUnique({ where: { userId } });
     if (!ai) throw new NotFoundException('IA não encontrada.');
 
-    // @ts-ignore
     return this.prisma.alphaAiMessage.deleteMany({
       where: { aiId: ai.id },
     });
