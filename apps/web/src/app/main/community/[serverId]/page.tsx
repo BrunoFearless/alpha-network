@@ -15,6 +15,7 @@ import { EmojiPicker, useEmojiPickerPopup } from '@/components/community/EmojiPi
 const ACCENT = '#A5E600';
 const ACCENT_DIM = 'rgba(165,230,0,0.15)';
 const ACCENT_MED = 'rgba(165,230,0,0.25)';
+const BORDER_ACCENT = 'rgba(165,230,0,0.3)';
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
 const BG_DARKEST = '#000000ff';

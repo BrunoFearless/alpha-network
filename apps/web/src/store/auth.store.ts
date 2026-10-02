@@ -169,12 +169,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         credentials: 'include',
         headers:     { Authorization: `Bearer ${newToken}` },
       });
-      if (!meRes.ok) return false;
+      if (!meRes.ok) {
+        set({ user: null, accessToken: null, isAuthenticated: false });
+        return false;
+      }
       const me = await meRes.json();
 
       set({ user: me.data, accessToken: newToken, isAuthenticated: true });
       return true;
     } catch {
+      set({ user: null, accessToken: null, isAuthenticated: false });
       return false;
     }
   },

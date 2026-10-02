@@ -14,37 +14,39 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
   
-  // Setup uploads directory with full diagnostics
+  // Setup uploads directories with full diagnostics
   const uploadsPath = join(process.cwd(), 'uploads');
-  const botsPath = join(uploadsPath, 'bots');
+  const uploadSubdirs = [
+    'bots',
+    'chat',
+    'art',
+    'art-collections',
+    'music',
+    'videos',
+    'thumbnails',
+    'users',
+    'community',
+    'avatars',
+  ];
   
   console.log(`\n📁 Setup de Uploads:`);
   console.log(`   Working Dir: ${process.cwd()}`);
   console.log(`   Uploads Dir: ${uploadsPath}`);
-  console.log(`   Bots Dir: ${botsPath}`);
   
-  // Create base uploads directory
   try {
     if (!existsSync(uploadsPath)) {
       mkdirSync(uploadsPath, { recursive: true });
       console.log(`   ✓ Created ${uploadsPath}`);
-    } else {
-      console.log(`   ✓ Uploads directory exists`);
+    }
+    for (const sub of uploadSubdirs) {
+      const subPath = join(uploadsPath, sub);
+      if (!existsSync(subPath)) {
+        mkdirSync(subPath, { recursive: true });
+        console.log(`   ✓ Created ${subPath}`);
+      }
     }
   } catch (e) {
-    console.error(`   ✗ Error creating uploads dir:`, e.message);
-  }
-
-  // Create bots subdirectory
-  try {
-    if (!existsSync(botsPath)) {
-      mkdirSync(botsPath, { recursive: true });
-      console.log(`   ✓ Created ${botsPath}`);
-    } else {
-      console.log(`   ✓ Bots directory exists`);
-    }
-  } catch (e) {
-    console.error(`   ✗ Error creating bots dir:`, e.message);
+    console.error(`   ✗ Error creating uploads dirs:`, e.message);
   }
   
   // Configure static file serving with CORS headers
@@ -80,7 +82,8 @@ async function bootstrap() {
 
   const port = process.env.API_PORT || 3001;
   await app.listen(port, '0.0.0.0');
-  console.log(`\n✦ A Alpha Network está rodando, acesse o link✦\n  http://localhost:${port}/auth/login`);
+  console.log(`\n✦ A Alpha Network API está rodando: http://localhost:${port}/api/v1`);
+  console.log(`✦ Frontend Web disponível em: http://localhost:3000/auth/login\n`);
 }
 
 bootstrap();

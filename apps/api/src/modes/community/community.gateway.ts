@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { CommunityService } from './community.service';
 import { BotsService } from '../bots/bots.service';
 
-@WebSocketGateway({ namespace: '/community', cors: { origin: ['http://localhost:3000', process.env.FRONTEND_URL].filter(Boolean), credentials: true } })
+@WebSocketGateway({ namespace: '/community', cors: { origin: true, credentials: true } })
 export class CommunityGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   constructor(private readonly jwt: JwtService, private readonly config: ConfigService, private readonly svc: CommunityService, private readonly bots: BotsService) {}

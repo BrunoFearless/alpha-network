@@ -78,8 +78,10 @@ export class ArtController {
       for (const fp of filePaths) {
         try { 
           const fullPath = path.normalize(fp);
-          if (fullPath.startsWith(basePath) && fs.existsSync(fullPath)) fs.unlinkSync(fullPath); 
-        } catch {}
+          if (fullPath.startsWith(basePath) && fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+        } catch {
+          // ignore unlink error
+        }
       }
       throw new BadRequestException(imageCheck.reason);
     }

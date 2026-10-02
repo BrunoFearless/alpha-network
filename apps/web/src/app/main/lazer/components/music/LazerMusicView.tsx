@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useMusicStore, Track } from '@/store/music.store';
 import { useAuthStore } from '@/store/auth.store';
-import { resolveUrl } from '@/lib/api';
+import { resolveUrl, apiBase } from '@/lib/api';
 
 const GENRES = ['Todos', 'Lo-fi', 'Hip-Hop', 'Electronic', 'Rock', 'Pop', 'Indie', 'Classical', 'R&B', 'Jazz'];
 
@@ -190,7 +190,6 @@ export function LazerMusicView() {
         if (collabs.length > 0) fd.append('collaborators', JSON.stringify(collabs));
       }
 
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const res = await fetch(`${apiBase}/api/v1/music/tracks`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` },

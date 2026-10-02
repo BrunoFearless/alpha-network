@@ -1,9 +1,9 @@
 
 export class Comments {
-    id:        String
-    postId:    String
-    authorId:  String
-    content:   String
+    id:        string
+    postId:    string
+    authorId:  string
+    content:   string
     createdAt: Date  
     deletedAt: Date
     post: any

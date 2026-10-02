@@ -7,6 +7,7 @@ import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
 import { ThemeBg, luminance } from './ThemeBg';
 import { LazerUserProfile } from './types';
 import { useLazerStore } from '@/store/lazer.store';
+import { apiBase } from '@/lib/api';
 
 const BANNER_PRESETS = [
   { color:"#0d0e10", label:"Void"     },
@@ -142,7 +143,7 @@ export function LazerProfileEditor({ user, onClose, onSave }: LazerProfileEditor
                       </p>
                     </div>
                     <a 
-                      href={`http://localhost:3001/api/v1/lazer/spotify/auth?userId=${form.userId}`}
+                      href={`${apiBase}/api/v1/lazer/spotify/auth?userId=${form.userId}`}
                       className="mt-2 inline-block rounded-lg px-6 py-2.5 text-[12px] font-bold text-white cursor-pointer transition-transform hover:scale-105 active:scale-95  no-underline"
                       style={{ backgroundColor: '#1db954' }}
                     >

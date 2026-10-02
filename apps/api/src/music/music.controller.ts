@@ -37,10 +37,14 @@ export class MusicController {
     }
 
     let parsedLyrics: any;
-    try { if (body.lyrics) parsedLyrics = JSON.parse(body.lyrics); } catch(e) {}
+    try { if (body.lyrics) parsedLyrics = JSON.parse(body.lyrics); } catch (e) {
+      // ignore invalid lyrics json
+    }
     
     let parsedCollaborators: string[] = [];
-    try { if (body.collaborators) parsedCollaborators = JSON.parse(body.collaborators); } catch(e) {}
+    try { if (body.collaborators) parsedCollaborators = JSON.parse(body.collaborators); } catch (e) {
+      // ignore invalid collaborators json
+    }
 
     const track = await this.musicService.createTrack(user.id, {
       title: body.title,

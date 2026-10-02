@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { Readable } from 'stream';
+import { JSDOM } from 'jsdom';
+import { Readability } from '@mozilla/readability';
 
 // Universal domain sanitizer - converts any bad AnimeFire TLD to .cv
 function sanitizeDomain(url: string): string {
@@ -88,7 +90,7 @@ export class ProxyService {
       // ─ Binary/Media Piping ──────────────────────────────────────
       const body = response.body;
       if (body) {
-        // @ts-ignore - Readable.fromWeb is available in modern Node.js
+        // @ts-expect-error - Readable.fromWeb is available in modern Node.js
         const nodeStream = Readable.fromWeb(body);
         nodeStream.pipe(res);
         return;
@@ -172,8 +174,6 @@ export class ProxyService {
       }
 
       const rawHtml = await response.text();
-      const { JSDOM } = require('jsdom');
-      const { Readability } = require('@mozilla/readability');
 
       const doc = new JSDOM(rawHtml, { url: targetUrl });
       const reader = new Readability(doc.window.document);
@@ -198,7 +198,9 @@ export class ProxyService {
                 const absoluteUrl = new URL(src, targetUrl).href;
                 const proxyUrl = `/api/v1/lazer/proxy/image?url=${encodeURIComponent(absoluteUrl)}&referer=${encodeURIComponent(targetUrl)}`;
                 if (!images.includes(proxyUrl)) images.push(proxyUrl);
-             } catch {}
+             } catch {
+                // ignore invalid image url
+             }
           });
        });
 
@@ -256,13 +258,15 @@ export class ProxyService {
                }
              });
              const searchHtml = await searchRes.text();
-             const { JSDOM } = require('jsdom');
              const searchDoc = new JSDOM(searchHtml).window.document;
              const firstResult = searchDoc.querySelector('.video-block a, .article-anime a');
              if (firstResult) {
-                foundUrl = new URL(firstResult.getAttribute('href'), baseHost).href;
+                const href = firstResult.getAttribute('href');
+                if (href) foundUrl = new URL(href, baseHost).href;
              }
-          } catch {}
+          } catch {
+             // ignore native search failure
+          }
           if (foundUrl) targetUrl = foundUrl;
           else return { success: false, error: 'Nenhum resultado encontrado nas fontes nativas.' };
        }
@@ -282,7 +286,6 @@ export class ProxyService {
        if (!response.ok) throw new Error(`Status ${response.status}`);
        
        const rawHtml = await response.text();
-       const { JSDOM } = require('jsdom');
        const doc = new JSDOM(rawHtml, { url: targetUrl });
 
        let videoUrl = '';

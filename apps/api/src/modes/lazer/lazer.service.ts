@@ -50,14 +50,14 @@ export class LazerService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createPost(dto: any, userId: string) {
-    let tropeConnections: { id: string }[] = [];
+    const tropeConnections: { id: string }[] = [];
 
     if (dto.tropeNames && dto.tropeNames.length > 0) {
-      for (let name of dto.tropeNames) {
-        let cleanName = name.replace('#', '').trim();
+      for (const name of dto.tropeNames) {
+        const cleanName = name.replace('#', '').trim();
         if (!cleanName) continue;
         
-        let trope = await this.prisma.lazerTrope.findUnique({ where: { name: cleanName } });
+        const trope = await this.prisma.lazerTrope.findUnique({ where: { name: cleanName } });
         if (trope) {
           tropeConnections.push({ id: trope.id });
         }
@@ -121,11 +121,11 @@ export class LazerService {
 
     if (dto.tropeNames) {
       tropeConnections = [];
-      for (let name of dto.tropeNames) {
-        let cleanName = name.replace('#', '').trim();
+      for (const name of dto.tropeNames) {
+        const cleanName = name.replace('#', '').trim();
         if (!cleanName) continue;
         
-        let trope = await this.prisma.lazerTrope.findUnique({ where: { name: cleanName } });
+        const trope = await this.prisma.lazerTrope.findUnique({ where: { name: cleanName } });
         if (trope) {
           tropeConnections.push({ id: trope.id });
         }

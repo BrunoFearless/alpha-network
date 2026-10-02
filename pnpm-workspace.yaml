@@ -5,6 +5,9 @@ allowBuilds:
   '@nestjs/core': false
   '@prisma/client': false
   '@prisma/engines': false
+  '@tensorflow/tfjs-node': false
+  core-js: false
+  ffmpeg-static: false
   msgpackr-extract: true
   prisma: false
   unrs-resolver: true

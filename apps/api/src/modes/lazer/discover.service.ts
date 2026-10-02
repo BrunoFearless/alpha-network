@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { JSDOM } from 'jsdom';
 
 @Injectable()
 export class DiscoverService {
@@ -653,7 +654,9 @@ export class DiscoverService {
         let faviconUrl: string | null = null;
         try {
            faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${new URL(link).hostname}`;
-        } catch {}
+        } catch {
+           // fallback if url is invalid
+        }
 
         return {
           id: link,
@@ -794,7 +797,9 @@ export class DiscoverService {
       try {
          const nativeSearch = await this.searchNativeSources(query);
          nativeSearch.forEach(item => results.unshift(item)); // Coloca no topo
-      } catch {}
+      } catch {
+         // ignore native search failure
+      }
 
       // 5. Niches (Anime, Manga, Games)
       if (animeRes?.data) animeRes.data.forEach((i: any) => results.push({ id: i.mal_id.toString(), type: 'anime', title: i.title, imageUrl: i.images?.jpg?.image_url, source: 'Jikan' }));
@@ -819,8 +824,6 @@ export class DiscoverService {
   private async searchNativeSources(query: string) {
     const results: any[] = [];
     try {
-       const { JSDOM } = require('jsdom');
-       
        // Paralelizar busca em múltiplas fontes
        const [fireHtml, tubeHtml] = await Promise.all([
           fetch(`https://animefire.cv/pesquisar/${encodeURIComponent(query)}`).then(r => r.text()).catch(() => ''),

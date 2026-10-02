@@ -1,6 +1,7 @@
 import { useAuthStore } from '@/store/auth.store';
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+export const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const BASE = apiBase;
 
 function getToken(): string | null {
   return useAuthStore.getState().accessToken ?? null;
@@ -44,6 +45,23 @@ function fixUrls(obj: any): any {
   return obj;
 }
 
+async function parseResponse(res: Response): Promise<any> {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    try {
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const text = await res.text();
+    return { error: { message: text || `Erro ${res.status}` } };
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = getToken();
   const res = await fetch(`${BASE}/api/v1${path}`, {
@@ -55,9 +73,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  const data = await res.json();
+  const data = await parseResponse(res);
   if (!res.ok) throw new Error(data?.error?.message ?? `Erro ${res.status}`);
-  return fixUrls(data.data ?? data);
+  return fixUrls(data?.data ?? data);
 }
 
 async function requestForm<T>(method: string, path: string, form: FormData): Promise<T> {
@@ -70,9 +88,9 @@ async function requestForm<T>(method: string, path: string, form: FormData): Pro
     },
     body: form,
   });
-  const data = await res.json();
+  const data = await parseResponse(res);
   if (!res.ok) throw new Error(data?.error?.message ?? `Erro ${res.status}`);
-  return fixUrls(data.data ?? data);
+  return fixUrls(data?.data ?? data);
 }
 
 export const api = {

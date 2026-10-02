@@ -30,11 +30,7 @@ const IconEdit = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="non
 const IconPin = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 10.5C5 7 8.134 4 12 4s7 3 7 6.5c0 2-1.2 3.8-3 5l-4 2.5-4-2.5c-1.8-1.2-3-3-3-5z" /><circle cx="12" cy="10" r="2" /></svg>;
 const IconUnpin = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" y1="2" x2="22" y2="22" /><line x1="12" y1="17" x2="12" y2="22" /><path d="M7.3 7.3A7 7 0 0 0 5 10.5c0 2 1.2 3.8 3 5l.5.3" /></svg>;
 
-const resolveLazerMediaUrl = (url?: string) => {
-  if (!url) return '';
-  if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
-  return `http://localhost:3001${url}`;
-};
+const resolveLazerMediaUrl = (url?: string) => resolveUrl(url);
 const IconTrash = ({ size = 15 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>;
 const IconEyeOff = ({ size = 15 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>;
 const IconReply = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>;

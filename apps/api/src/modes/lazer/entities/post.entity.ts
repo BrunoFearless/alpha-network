@@ -1,9 +1,9 @@
 export class Post {
 
-    id: String    
-  authorId: String
-  content:  String
-  imageUrl:  String
+    id: string    
+  authorId: string
+  content:  string
+  imageUrl:  string
   createdAt: Date  
   updatedAt:Date  
   deletedAt: Date
