@@ -273,7 +273,7 @@ function ChatSettings({ contact, onBack, themeColor, themeMode }: { contact: Con
 }
 
 // ─── Alpha Chat View ───────────────────────────────────────────────────────────
-function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string; themeMode: 'light' | 'dark'; authUser: any }) {
+function AlphaChatView({ themeColor, themeMode, authUser, onBack }: { themeColor: string; themeMode: 'light' | 'dark'; authUser: any; onBack?: () => void }) {
   const {
     messages, isStreaming, streamingContent, sendMessage, 
     personalAI, isLoadingHistory, confirmAction, rejectAction
@@ -282,14 +282,19 @@ function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string
   });
 
   const [input, setInput] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   const isLight = themeMode === 'light';
   const tp = isLight ? '#1e1b4b' : '#ffffff';
   const ts = isLight ? '#94a3b8' : '#94a3b8';
   const borderCol = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTo({
+        top: chatScrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   }, [messages, streamingContent]);
 
   const handleSend = (e?: React.FormEvent) => {
@@ -304,7 +309,12 @@ function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '0 24px', height: 68, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, borderBottom: `1px solid ${borderCol}`, background: 'transparent' }}>
+      <div style={{ padding: '0 20px', height: 68, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 14, borderBottom: `1px solid ${borderCol}`, background: 'transparent' }}>
+        {onBack && (
+          <button className="msg-back-btn" onClick={onBack} style={{ display: 'none', width: 36, height: 36, borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'center', color: tp, flexShrink: 0 }}>
+            <IconChevronLeft size={22}/>
+          </button>
+        )}
         <div style={{ position: 'relative' }}>
           <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: `${themeColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {personalAI?.avatarUrl 
@@ -320,7 +330,7 @@ function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div ref={chatScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {messages.map((msg) => (
           <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '100%' }}>
             <div style={{ 
@@ -363,7 +373,6 @@ function AlphaChatView({ themeColor, themeMode, authUser }: { themeColor: string
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       <div style={{ padding: '14px 24px 20px', borderTop: `1px solid ${borderCol}` }}>
@@ -412,7 +421,7 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode, 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showFullGallery, setShowFullGallery] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const [mobileViewMode, setMobileViewModeRaw] = useState<'list' | 'chat'>('list');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -554,7 +563,12 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode, 
   );
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesScrollRef.current) {
+      messagesScrollRef.current.scrollTo({
+        top: messagesScrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   }, [chatMessages]);
 
   const getImageUrl = (url: string) => {
@@ -767,15 +781,7 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode, 
             <p style={{ color: ts }}>As tuas mensagens aparecerão aqui em tempo real.</p>
           </div>
         ) : activeConversationId === 'alpha-assistant' ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ height: 56, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', borderBottom: `1px solid ${borderCol}` }}>
-              <button className="msg-back-btn" onClick={() => setMobileViewMode('list')} style={{ display: 'none', width: 36, height: 36, borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'center', color: tp, flexShrink: 0 }}>
-                <IconChevronLeft size={22}/>
-              </button>
-              <span style={{ fontSize: 15, fontWeight: 800, color: tp }}>Alpha Nova</span>
-            </div>
-            <AlphaChatView themeColor="#a78bfa" themeMode={computedThemeMode} authUser={authUser} />
-          </div>
+          <AlphaChatView themeColor="#a78bfa" themeMode={computedThemeMode} authUser={authUser} onBack={() => setMobileViewMode('list')} />
         ) : showSettings ? (
           <ChatSettings contact={contact} onBack={() => setShowSettings(false)} themeColor={themeColor} themeMode={computedThemeMode}/>
         ) : (
@@ -802,7 +808,7 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode, 
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 10px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div ref={messagesScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 10px', display: 'flex', flexDirection: 'column', gap: 20 }}>
               {groupedMessages.map((group, gIdx) => (
                 <div key={gIdx} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '10px 0' }}>
@@ -885,7 +891,6 @@ export default function MessagesModule({ themeColor: propThemeColor, themeMode, 
                   ))}
                 </div>
               ))}
-              <div ref={messagesEndRef}/>
             </div>
 
             <div style={{ padding: '14px 24px 20px', borderTop: `1px solid ${borderCol}`, background: 'transparent' }}>

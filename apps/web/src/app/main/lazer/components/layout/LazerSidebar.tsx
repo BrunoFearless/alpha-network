@@ -95,7 +95,7 @@ export function LazerSidebar({
     <>
       {/* ─────────────────── DESKTOP SIDEBAR (≥ md) ─────────────────── */}
       <aside 
-        className="hidden md:flex fixed left-10 inset-y-0 my-auto h-fit z-[200] flex-col items-center gap-4 px-3 py-6 rounded-[35px] transition-all duration-500 glass-panel-dark min-w-[76px]"
+        className="hidden md:flex fixed left-1 lg:left-2 inset-y-0 my-auto h-fit z-[200] flex-col items-center gap-4 px-2.5 py-6 rounded-[35px] transition-all duration-500 glass-panel-dark min-w-[72px]"
       >
         <button
           onClick={() => setActiveView('profile')}

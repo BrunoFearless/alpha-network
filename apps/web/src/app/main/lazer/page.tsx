@@ -17,6 +17,7 @@ import { useAlphaCoreStore } from '@/store/useAlphaCoreStore';
 import { AlphaCoreAvatar } from '@/components/alpha-core/AlphaCoreAvatar';
 import AlphaCoreChat from '@/components/alpha-core/AlphaCoreChat';
 import { LazerSidebar } from './components/layout/LazerSidebar';
+import { LazerShell } from './components/layout/LazerShell';
 import { LazerMusicView } from './components/music/LazerMusicView';
 import { AlphaMusicPlayer } from './components/music/AlphaMusicPlayer';
 import { LazerWatchView } from './components/watch/LazerWatchView';
@@ -324,7 +325,7 @@ export default function LazerPage() {
   const isOwnProfile = !viewingUser;
 
   return (
-    <div className={`w-full relative flex bg-[#09090b] ${activeView === 'messages' ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`} style={{ overscrollBehavior: 'none' }}>
+    <div className="w-full relative flex bg-[#09090b] h-[100dvh] overflow-hidden" style={{ overscrollBehavior: 'none' }}>
       <div className="fixed inset-0 pointer-events-none z-0">
         <ThemeBg color={c} mode={themeMode} />
       </div>
@@ -341,7 +342,7 @@ export default function LazerPage() {
       />
 
       {/* Main Content Area com margem para a sidebar */}
-      <div ref={contentRef} className={`flex-1 ml-0 md:ml-[50px] animate-in fade-in duration-300 relative w-full max-w-[100vw] ${activeView === 'messages' ? 'overflow-hidden h-[100dvh] p-0' : 'overflow-y-auto overflow-x-hidden p-0 sm:p-2 md:p-6 pb-24 md:pb-6'}`} style={{ overscrollBehavior: 'none' }}>
+      <div ref={contentRef} className="flex-1 animate-in fade-in duration-300 relative w-full h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 lg:py-5 lg:pr-5 pb-20 md:pb-5 flex flex-col" style={{ overscrollBehavior: 'none', marginLeft: 82 }}>
         {activeView === 'feed' && (
           <LazerHomeView
             user={myProfileData}
@@ -386,19 +387,19 @@ export default function LazerPage() {
             onMobileViewChange={setMessagesMobileView} />
         )}
         {activeView === 'music' && (
-          <div className="w-full h-[100dvh] md:h-[calc(100vh-40px)] glass-panel-dark border-0 md:border md:border-white/[0.06] rounded-none md:rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
+          <LazerShell variant="full" themeMode={themeMode}>
             <LazerMusicView />
-          </div>
+          </LazerShell>
         )}
         {activeView === 'watch' && (
-          <div className="w-full h-[100dvh] md:h-[calc(100vh-40px)] glass-panel-dark border-0 md:border md:border-white/[0.06] rounded-none md:rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
+          <LazerShell variant="full" themeMode={themeMode}>
             <LazerWatchView />
-          </div>
+          </LazerShell>
         )}
         {activeView === 'art' && (
-          <div className="w-full max-w-[1050px] mx-auto h-[100dvh] md:h-[calc(100vh-40px)] glass-panel-dark border-0 md:border md:border-white/[0.06] rounded-none md:rounded-[3rem] overflow-hidden animate-in fade-in duration-500">
+          <LazerShell variant="full" themeMode={themeMode} maxWidth="1050px">
             <LazerArtView />
-          </div>
+          </LazerShell>
         )}
 
         {isEditing && (

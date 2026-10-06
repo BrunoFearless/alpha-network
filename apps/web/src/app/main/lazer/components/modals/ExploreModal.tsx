@@ -11,6 +11,7 @@ import { YoutubeEmbed } from '@/components/ui/YoutubeEmbed';
 import { DiscoverDetailModal } from './DiscoverDetailModal';
 import { WikiModal } from './WikiModal';
 import { AlphaReaderModal } from './AlphaReaderModal';
+import { LazerShell } from '../layout/LazerShell';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const CATEGORIES = [
@@ -430,14 +431,12 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
   const displayTopRanks = rankedUsers.slice(0, 5);
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-0 pb-20 md:pl-[110px] md:pr-8 md:py-8 font-['Nunito',sans-serif]">
-      <div className="absolute inset-0 -z-10 bg-black/40 backdrop-blur-[10px]" onClick={onClose} />
-
-      {/* Main Glass Panel */}
-      <div className={`w-full h-full max-w-[1700px] max-h-[920px] rounded-none md:rounded-[48px] flex overflow-hidden ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} border-0 md:border-white/5 relative shadow-2xl animate-in zoom-in-95 duration-500`}>
+    <>
+      <LazerShell variant="full" themeMode={themeMode}>
         <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode} /></div>
 
-        {/* ── COLUMN 2: MAIN CONTENT (Glassified) ── */}
+        <div className="flex w-full h-full overflow-hidden">
+          {/* ── COLUMN 2: MAIN CONTENT (Glassified) ── */}
         <main className="flex-1 flex flex-col min-w-0 relative glass-panel-dark border-y-0 border-x-0 overflow-hidden">
           <header className="p-10 pb-6 flex flex-col gap-8">
             <div className="flex items-center gap-8">
@@ -742,6 +741,7 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
           </div>
         </aside>
       </div>
+    </LazerShell>
 
       {/* Secondary Modals Layer */}
       {activeDetail && (
@@ -766,6 +766,6 @@ export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunity
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

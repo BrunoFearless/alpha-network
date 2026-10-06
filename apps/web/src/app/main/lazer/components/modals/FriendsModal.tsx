@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
+import { LazerShell } from '../layout/LazerShell';
 import { useLazerStore } from '@/store/lazer.store';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -203,8 +204,7 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
   };
 
   return (
-    <div className="w-full h-[calc(100dvh)] md:h-[calc(100vh-40px)] flex flex-col overflow-hidden font-['Nunito',sans-serif] animate-in fade-in duration-500">
-      <div className={`flex-1 border-0 md:border-[1.5px] rounded-none md:rounded-[3rem] flex flex-col overflow-hidden relative z-10 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} min-h-0`} style={{ borderColor: borderCol }}>
+    <LazerShell variant="full" themeMode={themeMode}>
 
       <div className="flex items-center justify-center md:justify-between px-5 sm:px-8 py-4 shrink-0 border-b"
         style={{ borderColor: borderCol }}>
@@ -406,9 +406,8 @@ export function FriendsModal({ onClose, onProfileClick, themeColor: c, themeMode
             </div>
 
           </aside>
+          </div>
         </div>
-      </div>
-      </div>
-    </div>
+    </LazerShell>
   );
 }

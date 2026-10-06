@@ -6,12 +6,14 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { usePathname } from 'next/navigation';
 import { Spinner } from '@/components/ui';
 import { useAuthStore } from '@/store/auth.store';
+import { useTokenHeartbeat } from '@/hooks/useTokenHeartbeat';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isAuthenticated, refresh, logout } = useAuthStore();
   const [ready, setReady] = useState(false);
+  useTokenHeartbeat();
   const called = useRef(false);
 
   useEffect(() => {

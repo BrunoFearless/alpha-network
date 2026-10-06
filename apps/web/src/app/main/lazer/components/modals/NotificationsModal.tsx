@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
+import { LazerShell } from '../layout/LazerShell';
 import { useLazerStore } from '@/store/lazer.store';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -100,11 +101,9 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
     .slice(0, 4);
 
   return (
-    <div className="w-full h-[calc(100dvh)] md:h-[calc(100vh-40px)] flex flex-col overflow-hidden font-['Nunito',sans-serif] animate-in fade-in duration-500">
-      <div className={`flex-1 border-0 md:border-[1.5px] rounded-none md:rounded-[3rem] flex flex-col overflow-hidden relative z-10 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} min-h-0`}
-        style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-        <div className="flex-1 overflow-y-auto w-full">
-          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_340px] gap-8 items-start relative z-10">
+    <LazerShell variant="full" themeMode={themeMode}>
+      <div className="flex-1 overflow-y-auto w-full">
+        <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_340px] gap-8 items-start relative z-10">
             <aside className="hidden lg:flex flex-col gap-6 sticky top-6">
               {authUser?.profile && (
                 <div className={`rounded-[32px] overflow-hidden border-[1.5px] ${cardBg}`} style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
@@ -313,7 +312,6 @@ export function NotificationsModal({ onClose, onPostClick, onProfileClick, theme
 
           </div>
         </div>
-      </div>
-    </div>
+    </LazerShell>
   );
 }

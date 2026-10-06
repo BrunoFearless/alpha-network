@@ -1471,7 +1471,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         borderCol={borderCol} cardBg={cardBg} onProfileClick={onProfileClick}
         initialIndex={initialMediaIndex} />
 
-      <div className={`h-[92vh] w-full font-['Nunito',sans-serif] relative rounded-none md:rounded-[32px] flex flex-col overflow-hidden ${cardBg}`} style={{ borderColor: borderCol }}>
+      <div className={`h-full w-full font-['Nunito',sans-serif] relative rounded-none md:rounded-[3rem] border-0 md:border md:border-white/[0.08] flex flex-col overflow-hidden ${cardBg} shadow-2xl`}>
         {showTropesModal && (
           <TropesModal
             c={c}
@@ -1482,7 +1482,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         )}
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar">
-          <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-[210px_1fr_210px] xl:grid-cols-[240px_1fr_280px] gap-6 items-start">
+          <div className="max-w-[1440px] ml-0 grid grid-cols-1 lg:grid-cols-[210px_1fr_210px] xl:grid-cols-[240px_1fr_280px] gap-6 items-start">
 
             {/* Left sidebar */}
             <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
