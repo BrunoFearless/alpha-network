@@ -325,7 +325,7 @@ export default function LazerPage() {
   const isOwnProfile = !viewingUser;
 
   return (
-    <div className="w-full relative flex bg-[#09090b] h-[100dvh] overflow-hidden" style={{ overscrollBehavior: 'none' }}>
+    <div className="w-full relative flex bg-[#09090b] h-[100dvh] overflow-hidden md:pl-1 lg:pl-2 md:gap-[2px]" style={{ overscrollBehavior: 'none' }}>
       <div className="fixed inset-0 pointer-events-none z-0">
         <ThemeBg color={c} mode={themeMode} />
       </div>
@@ -342,7 +342,7 @@ export default function LazerPage() {
       />
 
       {/* Main Content Area */}
-      <div ref={contentRef} className="flex-1 animate-in fade-in duration-300 relative h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 md:pl-[2px] lg:py-5 lg:pr-5 lg:pl-[2px] pb-20 md:pb-4 lg:pb-5 flex flex-col" style={{ overscrollBehavior: 'none' }}>
+      <div ref={contentRef} className="flex-1 animate-in fade-in duration-300 relative h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 md:pl-0 lg:py-5 lg:pr-5 lg:pl-0 pb-20 md:pb-4 lg:pb-5 flex flex-col" style={{ overscrollBehavior: 'none' }}>
         {activeView === 'feed' && (
           <LazerHomeView
             user={myProfileData}
