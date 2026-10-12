@@ -341,8 +341,8 @@ export default function LazerPage() {
         hideMobileNav={activeView === 'messages' && messagesMobileView === 'chat'}
       />
 
-      {/* Main Content Area com margem para a sidebar */}
-      <div ref={contentRef} className="flex-1 animate-in fade-in duration-300 relative w-full h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 lg:py-5 lg:pr-5 pb-20 md:pb-5 flex flex-col" style={{ overscrollBehavior: 'none', marginLeft: 82 }}>
+      {/* Main Content Area */}
+      <div ref={contentRef} className="flex-1 animate-in fade-in duration-300 relative h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 md:pl-[2px] lg:py-5 lg:pr-5 lg:pl-[2px] pb-20 md:pb-4 lg:pb-5 flex flex-col" style={{ overscrollBehavior: 'none' }}>
         {activeView === 'feed' && (
           <LazerHomeView
             user={myProfileData}

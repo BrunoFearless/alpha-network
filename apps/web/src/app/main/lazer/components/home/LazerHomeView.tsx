@@ -1481,8 +1481,8 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
           />
         )}
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar">
-          <div className="max-w-[1440px] ml-0 grid grid-cols-1 lg:grid-cols-[210px_1fr_210px] xl:grid-cols-[240px_1fr_280px] gap-6 items-start">
+        <div className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 custom-scrollbar">
+          <div className="w-full grid grid-cols-1 lg:grid-cols-[210px_1fr_210px] xl:grid-cols-[240px_1fr_280px] gap-6 items-start">
 
             {/* Left sidebar */}
             <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
