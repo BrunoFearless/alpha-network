@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AlphaCoreAvatar } from '@/components/alpha-core/AlphaCoreAvatar';
 import { useMusicStore } from '@/store/music.store';
 import { resolveUrl } from '@/lib/api';
+import { LiquidGlassContainer } from '@/components/ui/LiquidGlass';
 
 interface SidebarProps {
   activeView: string;
@@ -33,19 +34,79 @@ export function LazerSidebar({
 
 
   const navItems = [
-    { id: 'feed', label: 'Início', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
-    { id: 'explore', label: 'Explorar', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> },
-    { id: 'music', label: 'Alpha Music', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> },
-    { id: 'watch', label: 'Alpha Watch', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 10l4.553-2.277A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg> },
-    { id: 'art', label: 'Alpha Art', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
-    { id: 'messages', label: 'Mensagens', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
-    { id: 'notifications', label: 'Notificações', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
-    { id: 'friends', label: 'Amigos', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
-    { id: 'community', label: 'Comunidade', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/><circle cx="12" cy="5" r="1"/></svg> },
+    { id: 'feed', label: 'Início', color: themeColor, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+    { id: 'explore', label: 'Explorar', color: '#06b6d4', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> },
+    { id: 'music', label: 'Alpha Music', color: '#ec4899', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> },
+    { id: 'watch', label: 'Alpha Watch', color: '#f97316', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 10l4.553-2.277A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg> },
+    { id: 'art', label: 'Alpha Art', color: '#a855f7', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
+    { id: 'messages', label: 'Mensagens', color: '#3b82f6', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+    { id: 'notifications', label: 'Notificações', color: '#eab308', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
+    { id: 'friends', label: 'Amigos', color: '#10b981', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+    { id: 'community', label: 'Comunidade', color: '#6366f1', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/><circle cx="12" cy="5" r="1"/></svg> },
   ];
 
   const primaryIds = ['feed', 'friends', 'messages', 'notifications'];
   const mobileSecondaryItems = navItems.filter(i => !primaryIds.includes(i.id));
+  const activeNavIndex = navItems.findIndex(i => i.id === activeView);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragY, setDragY] = useState<number | null>(null);
+  const [dragHoverIndex, setDragHoverIndex] = useState<number | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const isDraggingRef = useRef(false);
+  const lastHapticIndex = useRef<number | null>(null);
+
+  const updateDrag = (clientY: number) => {
+    if (!navRef.current) return;
+    const rect = navRef.current.getBoundingClientRect();
+    const relY = clientY - rect.top - 24; // center of 48px pill
+    const maxIndex = navItems.length - 1;
+    const clampedY = Math.max(0, Math.min(maxIndex * 60, relY));
+    const closestIndex = Math.min(maxIndex, Math.max(0, Math.round(clampedY / 60)));
+
+    setDragY(clampedY);
+    setDragHoverIndex(closestIndex);
+
+    // Haptic tick when sliding over each icon
+    if (closestIndex !== lastHapticIndex.current) {
+      lastHapticIndex.current = closestIndex;
+      if (typeof window !== 'undefined' && window.navigator?.vibrate) {
+        window.navigator.vibrate(8);
+      }
+    }
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch { /* ignore */ }
+    updateDrag(e.clientY);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLElement>) => {
+    if (isDraggingRef.current) {
+      updateDrag(e.clientY);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch { /* ignore */ }
+
+    if (dragHoverIndex !== null && navItems[dragHoverIndex]) {
+      setActiveView(navItems[dragHoverIndex].id);
+    }
+    setDragY(null);
+    setDragHoverIndex(null);
+    lastHapticIndex.current = null;
+  };
 
   // Lógica Long Press
   const handleAlphaTouchStart = () => {
@@ -118,27 +179,99 @@ export function LazerSidebar({
 
         <div className="w-8 h-px bg-white/10 my-1" />
 
-        <nav className="flex flex-col items-center gap-3 w-full">
-          {navItems.map((item) => {
-            const isActive = activeView === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveView(item.id)}
-                className="w-12 h-12 rounded-[18px] flex items-center justify-center text-xl cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none"
+        {(() => {
+          const currentHoverItem = navItems[isDragging ? (dragHoverIndex ?? activeNavIndex) : activeNavIndex];
+          const reflectedColor = currentHoverItem?.color || themeColor;
+
+          return (
+            <nav
+              ref={navRef}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              className="flex flex-col items-center gap-3 w-full relative select-none cursor-grab active:cursor-grabbing"
+              style={{ touchAction: 'none' }}
+            >
+              {/* ── 1. Nav Item Buttons (Layer z-10) ── */}
+              {navItems.map((item, idx) => {
+                const isActive = activeView === item.id;
+                const isHoveredByBubble = (isDragging && dragHoverIndex === idx) || (!isDragging && isActive);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveView(item.id);
+                    }}
+                    className="relative z-10 w-12 h-12 flex items-center justify-center cursor-pointer focus:outline-none bg-transparent hover:bg-transparent active:bg-transparent transition-transform duration-200 active:scale-90"
+                    style={{
+                      background: 'transparent',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      boxShadow: 'none',
+                    }}
+                    title={item.label}
+                  >
+                    {/* ── Botão 100% Transparente (o destaque e reflexo pertencem exclusivamente à bolha Liquid Glass) ── */}
+                    <div
+                      className="w-[38px] h-[38px] flex items-center justify-center transition-all duration-300 pointer-events-none bg-transparent"
+                      style={{
+                        background: 'transparent',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        boxShadow: 'none',
+                        color: isActive || isHoveredByBubble ? '#ffffff' : 'rgba(255, 255, 255, 0.55)',
+                      }}
+                    >
+                      <div
+                        className="transition-all duration-200"
+                        style={{
+                          transform: isHoveredByBubble ? 'scale(1.18)' : 'scale(1)',
+                          filter: isHoveredByBubble ? `drop-shadow(0 0 10px ${item.color || themeColor}80)` : 'none',
+                        }}
+                      >
+                        {item.icon}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {/* ── 2. Sliding Liquid Glass Water Bubble Indicator (Layer z-30 pointer-events-none) ── */}
+              <div
+                className="absolute top-0 left-1/2 w-[54px] h-[54px] pointer-events-none z-30"
                 style={{
-                  background: isActive ? `${themeColor}20` : 'rgba(255, 255, 255, 0.05)',
-                  color: isActive ? themeColor : 'rgba(255, 255, 255, 0.6)',
-                  border: isActive ? `1.5px solid ${themeColor}60` : '1px solid rgba(255,255,255,0.05)',
-                  boxShadow: isActive ? `0 0 15px ${themeColor}30` : 'none'
+                  left: '50%',
+                  transform: `translate(-50%, ${
+                    (isDragging && dragY !== null
+                      ? dragY
+                      : (activeNavIndex !== -1 ? activeNavIndex * 60 : 0)) - 3
+                  }px) ${isDragging ? 'scale(0.94, 1.16)' : 'scale(1)'}`,
+                  opacity: (isDragging || activeNavIndex !== -1) ? 1 : 0,
+                  transition: isDragging
+                    ? 'transform 0.04s linear, scale 0.15s ease'
+                    : 'transform 0.45s cubic-bezier(0.18, 1.35, 0.35, 1), scale 0.35s cubic-bezier(0.18, 1.35, 0.35, 1), opacity 0.25s ease',
                 }}
-                title={item.label}
               >
-                {item.icon}
-              </button>
-            );
-          })}
-        </nav>
+                <LiquidGlassContainer
+                  width={54}
+                  height={54}
+                  borderRadius={24}
+                  innerShadowColor="rgba(255, 255, 255, 0.92)"
+                  innerShadowBlur={14}
+                  innerShadowSpread={-3}
+                  glassTintColor="#ffffff"
+                  glassTintOpacity={0}
+                  frostBlurRadius={0.5}
+                  noiseFrequency={0.012}
+                  noiseStrength={65}
+                  reflectedColor={reflectedColor}
+                />
+              </div>
+            </nav>
+          );
+        })()}
 
         <div className="w-8 h-px bg-white/10 my-1" />
 
