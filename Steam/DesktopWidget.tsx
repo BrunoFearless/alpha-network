@@ -179,7 +179,7 @@ export default function DesktopWidget({
             objectFit: "cover",
             filter: "brightness(0.75) saturate(1.2)",
           }}
-        />
+        >
 
         {/* Character image (center) */}
         <img

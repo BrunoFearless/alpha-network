@@ -100,20 +100,42 @@ html {
 
 .glass-panel-light {
   position: relative;
-  background: rgba(255, 255, 255, 0.05) !important;
-  backdrop-filter: blur(10px) saturate(250%) brightness(1.02) !important;
-  -webkit-backdrop-filter: blur(10px) saturate(250%) brightness(1.02) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(8px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25);
   overflow: hidden;
 }
 
 .glass-panel-dark {
   position: relative;
   background: rgba(255, 255, 255, 0.02) !important;
-  backdrop-filter: blur(10px) saturate(200%) brightness(0.95) !important;
-  -webkit-backdrop-filter: blur(10px) saturate(200%) brightness(0.95) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   overflow: hidden;
+}
+
+/* ─── LIQUID GLASS TOKENS & UTILITIES (TRANSPARENTE COM PEQUENO DESFOQUE / ÁGUA CRISTALINA) ─── */
+.liquid-glass-border {
+  background: rgba(255, 255, 255, 0.02) !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-top: 1.2px solid rgba(255, 255, 255, 0.42) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+}
+
+.liquid-glass-shell {
+  position: relative;
+  background: transparent !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.48) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
 }
 
 .glass-card {
@@ -121,14 +143,20 @@ html {
   border-radius: 24px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: rgba(255, 255, 255, 0.03) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-top: 1.2px solid rgba(255, 255, 255, 0.38) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
 }
 
 .glass-card:hover {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  border-top-color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow: none !important;
 }
 
 /* ─── MODAL GLASS (Alto Desfoque para Separação) ─── */

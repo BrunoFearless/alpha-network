@@ -520,7 +520,7 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
   const tropesList = rawPost?.tropes || post.tropes || [];
 
   return (
-    <div className={`glass-card rounded-3xl border-[1.5px] backblur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-500 hover:shadow-[0_8px_48px_rgba(0,0,0,0.2)] overflow-hidden ${cardBg}`} style={{ borderColor: isPinned ? c : borderCol }}>
+    <div className="glass-card rounded-3xl transition-all duration-500 overflow-hidden" style={isPinned ? { borderColor: c } : undefined}>
       <div className="glass-shine-effect" />
       {isPinned && (
         <div className="flex items-center gap-1.5 px-5 pt-3 pb-0 text-[11px] font-bold tracking-wide" style={{ color: c }}>
@@ -822,7 +822,7 @@ function TrendingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
   const { trendingTropes } = useLazerStore();
 
   return (
-    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
       <div className="flex items-center gap-2 mb-3">
         <IconFlame />
         <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Trending Tropes</h3>
@@ -878,7 +878,7 @@ function WatchingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
   };
 
   return (
-    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
       <div className="flex items-center gap-2 mb-3">
         <IconTv />
         <div className="flex-1">
@@ -965,7 +965,7 @@ function WatchingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
 
 function HotDiscussionsWidget({ c, isLight, textPrimary, textSecondary, borderCol, cardBg, onDiscussionClick }: any) {
   return (
-    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
       <div className="flex items-center gap-2 mb-3">
         <IconMessageSquare />
         <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Hot Discussions</h3>
@@ -1002,7 +1002,7 @@ function ActiveNowWidget({ c, isLight, textPrimary, textSecondary, borderCol, ca
     .slice(0, 5);
 
   return (
-    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
       <div className="flex items-center gap-2 mb-3">
         <IconUsers />
         <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Ativos agora</h3>
@@ -1039,7 +1039,7 @@ function MyCommunities({ c, isLight, textPrimary, textSecondary, borderCol, card
   const { myCommunities } = useLazerStore();
 
   return (
-    <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
       <button className="flex items-center gap-2 mb-3 w-full bg-transparent border-none cursor-pointer hover:opacity-70 transition-opacity p-0" onClick={() => onCommunityClick?.()}>
         <IconHash />
         <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary} flex-1 text-left`}>Minhas Communities</h3>
@@ -1350,7 +1350,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
   const isLight = user?.themeMode === 'light';
   const c = user?.themeColor || '#e879f9';
   const cardBg = isLight ? 'glass-panel-light' : 'glass-panel-dark';
-  const borderCol = 'transparent';
+  const borderCol = 'rgba(255, 255, 255, 0.12)';
   const textPrimary = isLight ? 'text-[#111]' : 'text-[#fff]';
   const textSecondary = isLight ? 'text-[#666]' : 'text-[#888]';
 
@@ -1453,16 +1453,6 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         }
         .animate-heart-burst { animation: heart-burst 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .animate-glow-pulse { animation: glow-pulse 3s infinite ease-in-out; }
-        .glass-card { 
-          position: relative;
-          border-radius: 24px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .glass-card:hover {
-          transform: translateY(-2px);
-          background: rgba(255, 255, 255, 0.05);
-        }
       `}</style>
       <PostDetailModal
         selectedPostId={selectedPostId} setSelectedPostId={setSelectedPostId}
@@ -1471,7 +1461,9 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         borderCol={borderCol} cardBg={cardBg} onProfileClick={onProfileClick}
         initialIndex={initialMediaIndex} />
 
-      <div className={`h-full w-full font-['Nunito',sans-serif] relative rounded-none md:rounded-[3rem] border-0 md:border md:border-white/[0.08] flex flex-col overflow-hidden ${cardBg} shadow-2xl`}>
+      <div className="h-full w-full font-['Nunito',sans-serif] relative rounded-none md:rounded-[3rem] border-0 md:border liquid-glass-shell flex flex-col overflow-hidden transition-all duration-300">
+        {/* Crista de luz especular no topo do arco Liquid Glass */}
+        <div className="hidden md:block absolute top-0 left-[6%] right-[6%] h-[1.5px] rounded-full pointer-events-none bg-gradient-to-r from-transparent via-white/50 to-transparent blur-[0.3px] z-30" />
         {showTropesModal && (
           <TropesModal
             c={c}
@@ -1486,7 +1478,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
 
             {/* Left sidebar */}
             <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
-              <div className={`rounded-3xl overflow-hidden glass-card border-[1.5px] backdrop-blur-xl ${cardBg}`} style={{ borderColor: borderCol }}>
+              <div className="rounded-3xl overflow-hidden glass-card">
                 <div className="h-[100px] relative overflow-hidden" style={{ backgroundImage: user?.bannerUrl ? `url('${resolveUrl(user.bannerUrl)}')` : `linear-gradient(135deg, ${c}80, ${c}20)`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                   {user?.bannerUrl?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={resolveUrl(user.bannerUrl)} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover z-0" />}
                 </div>
@@ -1514,7 +1506,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
             {/* Center feed */}
             <main className="flex flex-col gap-5 w-full">
               {/* Tabs */}
-              <div className={`flex gap-4 border-b-[1.5px] border-x-[1.5px] border-t-0 sm:border-[1.5px] pt-1 px-4 sm:px-6 rounded-b-3xl sm:rounded-3xl overflow-x-auto backblur-xl mb-1 ${cardBg}`} style={{ borderColor: borderCol }}>
+              <div className="flex gap-4 pt-1 px-4 sm:px-6 rounded-b-3xl sm:rounded-3xl overflow-x-auto mb-1 liquid-glass-border">
                 {TABS.map(tab => (
                   <button key={tab} onClick={() => { setActiveTab(tab); setActiveTag(null); }}
                     className="py-3 px-1 mt-1 bg-transparent border-none cursor-pointer text-sm whitespace-nowrap transition-all"
@@ -1531,7 +1523,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
               </div>
 
               {/* Composer */}
-              <div className={`rounded-3xl p-4 sm:p-5 glass-card border-[1.5px] backdrop-blur-xl ${cardBg}`} style={{ borderColor: borderCol }}>
+              <div className="rounded-3xl p-4 sm:p-5 glass-card">
                 <div className="flex gap-3 items-start">
                   <Avatar src={myProfile?.avatarUrl} name={myProfile?.displayName || myProfile?.username || 'U'} className="w-[42px] h-[42px] rounded-full shrink-0" />
                   <div className="flex-1">
@@ -1638,7 +1630,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
 
             {/* Right sidebar */}
             <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
-              <div className={`rounded-3xl border-[1.5px] backblur-xl p-4 ${cardBg}`} style={{ borderColor: borderCol }}>
+              <div className="rounded-3xl p-4 glass-card">
                 <div className="flex items-center gap-2 mb-4">
                   <IconFlame />
                   <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Em Alta</h3>

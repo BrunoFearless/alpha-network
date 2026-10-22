@@ -138,7 +138,6 @@ export const LiquidGlassBase = forwardRef<HTMLElement, LiquidGlassBaseProps>(({
               inset 1.5px 0 2.5px 0 rgba(255, 255, 255, 0.35),
               inset -1.5px 0 2.5px 0 rgba(255, 255, 255, 0.35),
               inset 0 0 ${innerShadowBlur}px ${innerShadowSpread}px ${innerShadowColor},
-              0 6px 20px -3px rgba(0, 0, 0, 0.4),
               0 0 12px 1px ${reflectedColor ? `${reflectedColor}40` : 'rgba(255, 255, 255, 0.2)'}
             `,
           }}
