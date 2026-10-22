@@ -108,6 +108,130 @@ export function LazerSidebar({
     lastHapticIndex.current = null;
   };
 
+  // ─── Mobile Sliding Liquid Glass State & Drag ───
+  const [mobileBubbleX, setMobileBubbleX] = useState<number | null>(null);
+  const [isMobileDragging, setIsMobileDragging] = useState(false);
+  const [mobileDragX, setMobileDragX] = useState<number | null>(null);
+  const [mobileDragHoverId, setMobileDragHoverId] = useState<string | null>(null);
+  const mobileDockRef = useRef<HTMLDivElement>(null);
+  const mobileItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const isMobileDraggingRef = useRef(false);
+  const lastMobileHapticId = useRef<string | null>(null);
+  const mobileDragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const hasMovedSignificantly = useRef(false);
+
+  const updateMobileBubblePosition = React.useCallback(() => {
+    const targetId = isMobileDragging ? (mobileDragHoverId || activeView) : activeView;
+    if (!targetId || !primaryIds.includes(targetId)) {
+      setMobileBubbleX(null);
+      return;
+    }
+    const btn = mobileItemRefs.current[targetId];
+    if (btn && mobileDockRef.current) {
+      const dockRect = mobileDockRef.current.getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+      const centerX = btnRect.left - dockRect.left + btnRect.width / 2;
+      setMobileBubbleX(centerX);
+    }
+  }, [activeView, isMobileDragging, mobileDragHoverId]);
+
+  useEffect(() => {
+    updateMobileBubblePosition();
+    window.addEventListener('resize', updateMobileBubblePosition);
+    return () => window.removeEventListener('resize', updateMobileBubblePosition);
+  }, [updateMobileBubblePosition]);
+
+  useEffect(() => {
+    const timer = setTimeout(updateMobileBubblePosition, 40);
+    return () => clearTimeout(timer);
+  }, [activeView, updateMobileBubblePosition]);
+
+  const updateMobileDrag = (clientX: number) => {
+    if (!mobileDockRef.current) return;
+    const dockRect = mobileDockRef.current.getBoundingClientRect();
+    const relX = clientX - dockRect.left;
+    const clampedX = Math.max(24, Math.min(dockRect.width - 24, relX));
+    setMobileDragX(clampedX);
+
+    // Encontrar o botão primário mais próximo
+    let closestId: string | null = null;
+    let minDistance = Infinity;
+
+    for (const id of primaryIds) {
+      const btn = mobileItemRefs.current[id];
+      if (btn) {
+        const btnRect = btn.getBoundingClientRect();
+        const btnCenterX = btnRect.left - dockRect.left + btnRect.width / 2;
+        const dist = Math.abs(clampedX - btnCenterX);
+        if (dist < minDistance && dist < 48) {
+          minDistance = dist;
+          closestId = id;
+        }
+      }
+    }
+
+    setMobileDragHoverId(closestId);
+
+    if (closestId && closestId !== lastMobileHapticId.current) {
+      lastMobileHapticId.current = closestId;
+      if (typeof window !== 'undefined' && window.navigator?.vibrate) {
+        window.navigator.vibrate(8);
+      }
+    }
+  };
+
+  const handleMobilePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    const target = e.target as HTMLElement;
+    if (target.closest('.alpha-center-btn')) return;
+
+    mobileDragStartPos.current = { x: e.clientX, y: e.clientY };
+    hasMovedSignificantly.current = false;
+    isMobileDraggingRef.current = true;
+    setIsMobileDragging(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch { /* ignore */ }
+    updateMobileDrag(e.clientX);
+  };
+
+  const handleMobilePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isMobileDraggingRef.current) {
+      if (mobileDragStartPos.current) {
+        const dx = Math.abs(e.clientX - mobileDragStartPos.current.x);
+        if (dx > 6) {
+          hasMovedSignificantly.current = true;
+        }
+      }
+      updateMobileDrag(e.clientX);
+    }
+  };
+
+  const handleMobilePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobileDraggingRef.current) return;
+    isMobileDraggingRef.current = false;
+    setIsMobileDragging(false);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch { /* ignore */ }
+
+    // Obter o ID do botão clicado directamente ou o botão sobre o qual o utilizador arrastou
+    const target = e.target as HTMLElement;
+    const clickedNavId = target?.closest('[data-nav-id]')?.getAttribute('data-nav-id');
+    const finalId = hasMovedSignificantly.current ? (mobileDragHoverId || clickedNavId) : (clickedNavId || mobileDragHoverId);
+
+    if (finalId) {
+      setActiveView(finalId);
+      setShowMobileMenu(false);
+    }
+
+    setMobileDragX(null);
+    setMobileDragHoverId(null);
+    lastMobileHapticId.current = null;
+    mobileDragStartPos.current = null;
+    hasMovedSignificantly.current = false;
+  };
+
   // Lógica Long Press
   const handleAlphaTouchStart = () => {
     longPressTimer.current = setTimeout(() => {
@@ -138,16 +262,45 @@ export function LazerSidebar({
     const item = navItems.find(i => i.id === id);
     if (!item) return null;
     const isActive = activeView === item.id;
+    const isHoveredByBubble = (isMobileDragging && mobileDragHoverId === id) || (!isMobileDragging && isActive);
     return (
       <button
-        onClick={() => { setActiveView(item.id); setShowMobileMenu(false); }}
-        className="w-12 h-12 flex flex-col items-center justify-center gap-1 rounded-2xl transition-all"
-        style={{ color: isActive ? themeColor : 'rgba(255,255,255,0.4)' }}
+        ref={el => { mobileItemRefs.current[id] = el; }}
+        data-nav-id={id}
+        onClick={(e) => {
+          e.stopPropagation();
+          setActiveView(item.id);
+          setShowMobileMenu(false);
+        }}
+        className="relative z-10 w-12 h-12 flex items-center justify-center cursor-pointer focus:outline-none bg-transparent hover:bg-transparent active:bg-transparent transition-transform duration-200 active:scale-90"
+        style={{
+          background: 'transparent',
+          backgroundColor: 'transparent',
+          border: 'none',
+          boxShadow: 'none',
+        }}
+        title={item.label}
       >
-        <div className="text-xl transition-transform" style={{ transform: isActive ? 'scale(1.15)' : 'scale(1)' }}>
-          {item.icon}
+        <div
+          className="w-[38px] h-[38px] flex items-center justify-center transition-all duration-300 pointer-events-none bg-transparent"
+          style={{
+            background: 'transparent',
+            backgroundColor: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
+            color: isActive || isHoveredByBubble ? '#ffffff' : 'rgba(255, 255, 255, 0.55)',
+          }}
+        >
+          <div
+            className="transition-all duration-200 text-xl"
+            style={{
+              transform: isHoveredByBubble ? 'scale(1.18)' : 'scale(1)',
+              filter: isHoveredByBubble ? `drop-shadow(0 0 10px ${item.color || themeColor}80)` : 'none',
+            }}
+          >
+            {item.icon}
+          </div>
         </div>
-        {isActive && <div className="w-1 h-1 rounded-full mt-0.5" style={{ background: themeColor }} />}
       </button>
     );
   };
@@ -289,16 +442,30 @@ export function LazerSidebar({
       {!hideMobileNav && (
       <div className="flex md:hidden fixed bottom-5 left-0 right-0 z-[250] flex-col items-center justify-end pointer-events-none">
         
-        {/* Gaveta secundária (Glassmorphism) activada via Long Press */}
+        {/* Gaveta secundária (Liquid Glass) activada via Long Press */}
         {showMobileMenu && (
-          <div className="pointer-events-auto mb-4 p-4 rounded-[2.5rem] glass-panel-dark border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-wrap justify-center gap-4 animate-in slide-in-from-bottom-8 fade-in duration-300 backblur-2xl w-[90%] max-w-[400px]">
+          <div className="relative pointer-events-auto mb-4 p-4 rounded-[2.5rem] flex flex-wrap justify-center gap-4 animate-in slide-in-from-bottom-8 fade-in duration-300 w-[90%] max-w-[400px]">
+            <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none z-0">
+              <LiquidGlassContainer
+                borderRadius={40}
+                innerShadowColor="rgba(255, 255, 255, 0.92)"
+                innerShadowBlur={14}
+                innerShadowSpread={-2}
+                glassTintColor="#ffffff"
+                glassTintOpacity={4}
+                frostBlurRadius={8}
+                noiseFrequency={0.012}
+                noiseStrength={40}
+                reflectedColor={themeColor}
+              />
+            </div>
             {mobileSecondaryItems.map(item => {
               const isActive = activeView === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => { setActiveView(item.id); setShowMobileMenu(false); }}
-                  className="flex flex-col items-center gap-2 cursor-pointer focus:outline-none w-16"
+                  className="relative z-10 flex flex-col items-center gap-2 cursor-pointer focus:outline-none w-16"
                 >
                   <div className="w-12 h-12 rounded-[18px] flex items-center justify-center text-xl transition-all shadow-lg"
                     style={{
@@ -315,7 +482,7 @@ export function LazerSidebar({
             
             <button
                onClick={() => { setActiveView('profile'); setShowMobileMenu(false); }}
-               className="flex flex-col items-center gap-2 cursor-pointer focus:outline-none w-16"
+               className="relative z-10 flex flex-col items-center gap-2 cursor-pointer focus:outline-none w-16"
             >
                <div className="w-12 h-12 min-w-[48px] min-h-[48px] shrink-0 aspect-square rounded-[18px] flex items-center justify-center text-xl transition-all bg-white/10 text-white overflow-hidden border border-white/10">
                  {userAvatar ? (() => {
@@ -335,16 +502,28 @@ export function LazerSidebar({
         {/* Barra de Navegação Principal */}
         <div className="pointer-events-auto w-[90%] max-w-[400px]">
           {isExtended && currentTrack ? (
-            /* ── EXTENDED PLAYER ── */
+            /* ── EXTENDED PLAYER EM LIQUID GLASS ── */
             <div 
-              className="rounded-[3rem] bg-[#111]/90 backdrop-blur-3xl border border-white/20 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex items-center justify-between gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300 relative overflow-hidden cursor-pointer"
+              className="relative rounded-[3rem] p-2 flex items-center justify-between gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300 overflow-hidden cursor-pointer"
               onClick={() => { setShowPlayerModal(true); setIsExtended(false); }}
             >
-              {/* Background gradient hint */}
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 pointer-events-none" />
+              <div className="absolute inset-0 rounded-[3rem] overflow-hidden pointer-events-none z-0">
+                <LiquidGlassContainer
+                  borderRadius={48}
+                  innerShadowColor="rgba(255, 255, 255, 0.92)"
+                  innerShadowBlur={16}
+                  innerShadowSpread={-2}
+                  glassTintColor="#ffffff"
+                  glassTintOpacity={4}
+                  frostBlurRadius={8}
+                  noiseFrequency={0.012}
+                  noiseStrength={40}
+                  reflectedColor={themeColor}
+                />
+              </div>
 
               {/* Cover & Title */}
-              <div className="flex items-center gap-3 min-w-0 pl-2">
+              <div className="flex items-center gap-3 min-w-0 pl-2 relative z-10">
                 <div className={`w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 shrink-0 ${isPlaying ? 'animate-spin-slow' : ''}`} style={{ animationDuration: '4s' }}>
                   {currentTrack.coverUrl ? (
                     <img src={resolveUrl(currentTrack.coverUrl)} className="w-full h-full object-cover" alt="" />
@@ -381,53 +560,121 @@ export function LazerSidebar({
               </div>
             </div>
           ) : (
-            /* ── NORMAL BOTTOM NAV ── */
-            <div className="rounded-[3rem] bg-[#111]/85 backdrop-blur-2xl border border-white/10 flex items-center justify-center gap-1 sm:gap-3 px-2 sm:px-4 py-2 shadow-[0_15px_50px_rgba(0,0,0,0.8)] animate-in fade-in duration-300">
-              
-              {renderMobilePrimary('feed')}
-              {renderMobilePrimary('friends')}
+            /* ── NORMAL BOTTOM NAV EM LIQUID GLASS COM BOLHA DESLIZANTE ── */
+            <div className="relative w-full">
+              {(() => {
+                const currentHoverItem = navItems.find(
+                  i => i.id === (isMobileDragging ? (mobileDragHoverId || activeView) : activeView)
+                );
+                const reflectedColor = currentHoverItem?.color || themeColor;
+                const targetX = isMobileDragging && mobileDragX !== null ? mobileDragX : mobileBubbleX;
+                const isVisible = targetX !== null && (isMobileDragging || primaryIds.includes(activeView));
 
-              {/* ALPHA CORE CENTER BUTTON (Action Button Estilo Nativo / Mini Player) */}
-              <div className="relative mx-1 sm:mx-2 -mt-10">
-                <div className="absolute inset-0 rounded-full blur-xl opacity-50" style={{ background: themeColor }} />
-                <button
-                  onMouseDown={handleAlphaTouchStart}
-                  onMouseUp={handleAlphaTouchEnd}
-                  onMouseLeave={handleAlphaTouchEnd}
-                  onTouchStart={handleAlphaTouchStart}
-                  onTouchEnd={handleAlphaTouchEnd}
-                  onClick={handleAlphaClick}
-                  className={`relative w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-10 overflow-hidden border-4 border-[#09090b] ${currentTrack && isPlaying ? 'animate-pulse' : ''}`}
-                  style={{ 
-                    background: showMobileMenu ? '#ef4444' : (currentTrack ? '#000' : themeColor), 
-                    transition: 'background 0.3s ease, transform 0.2s ease' 
-                  }}
-                >
-                  {showMobileMenu ? (
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                  ) : currentTrack ? (
-                    /* Mini-Player Visual (Spinning Vinyl or EQ) */
-                    <div className="w-full h-full relative">
-                      {currentTrack.coverUrl && (
-                        <img src={resolveUrl(currentTrack.coverUrl)} className={`absolute inset-0 w-full h-full object-cover ${isPlaying ? 'animate-spin-slow' : ''}`} style={{ animationDuration: '4s' }} alt="" />
-                      )}
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <div className="flex items-center gap-0.5">
-                           <div className={`w-1 bg-white rounded-full ${isPlaying ? 'animate-[bounce_1s_infinite]' : 'h-1'}`} style={{ height: isPlaying ? '12px' : '4px' }} />
-                           <div className={`w-1 bg-white rounded-full ${isPlaying ? 'animate-[bounce_1s_infinite_0.2s]' : 'h-1'}`} style={{ height: isPlaying ? '16px' : '4px' }} />
-                           <div className={`w-1 bg-white rounded-full ${isPlaying ? 'animate-[bounce_1s_infinite_0.4s]' : 'h-1'}`} style={{ height: isPlaying ? '10px' : '4px' }} />
-                        </div>
-                      </div>
+                return (
+                  <>
+                    {/* ── Cápsula Principal em Liquid Glass (Fundo da Barra) ── */}
+                    <div className="absolute inset-0 rounded-[3rem] overflow-hidden pointer-events-none z-0">
+                      <LiquidGlassContainer
+                        borderRadius={48}
+                        innerShadowColor="rgba(255, 255, 255, 0.92)"
+                        innerShadowBlur={16}
+                        innerShadowSpread={-2}
+                        glassTintColor="#ffffff"
+                        glassTintOpacity={3}
+                        frostBlurRadius={8}
+                        noiseFrequency={0.012}
+                        noiseStrength={40}
+                        reflectedColor={reflectedColor}
+                      />
                     </div>
-                  ) : (
-                    <AlphaCoreAvatar size={48} state={alphaStatus} themeColor="#fff" />
-                  )}
-                </button>
-              </div>
 
-              {renderMobilePrimary('messages')}
-              {renderMobilePrimary('notifications')}
+                    <div
+                      ref={mobileDockRef}
+                      onPointerDown={handleMobilePointerDown}
+                      onPointerMove={handleMobilePointerMove}
+                      onPointerUp={handleMobilePointerUp}
+                      onPointerCancel={handleMobilePointerUp}
+                      className="relative rounded-[3rem] flex items-center justify-between gap-1 sm:gap-3 px-3 sm:px-4 py-2 select-none cursor-grab active:cursor-grabbing overflow-visible z-10"
+                      style={{ touchAction: 'none' }}
+                    >
+                      {/* ── 1. Indicador Deslizante de Bolha de Água Liquid Glass no Mobile (Layer z-10) ── */}
+                      <div
+                        className="absolute top-1/2 w-[52px] h-[52px] pointer-events-none z-10"
+                        style={{
+                          left: `${targetX ?? 0}px`,
+                          top: '50%',
+                          transform: `translate(-50%, -50%) ${isMobileDragging ? 'scale(1.16, 0.92)' : 'scale(1)'}`,
+                          opacity: isVisible ? 1 : 0,
+                          transition: isMobileDragging
+                            ? 'transform 0.04s linear, scale 0.15s ease'
+                            : 'left 0.45s cubic-bezier(0.18, 1.35, 0.35, 1), transform 0.45s cubic-bezier(0.18, 1.35, 0.35, 1), scale 0.35s cubic-bezier(0.18, 1.35, 0.35, 1), opacity 0.25s ease',
+                        }}
+                      >
+                        <LiquidGlassContainer
+                          width={52}
+                          height={52}
+                          borderRadius={22}
+                          innerShadowColor="rgba(255, 255, 255, 0.95)"
+                          innerShadowBlur={14}
+                          innerShadowSpread={-3}
+                          glassTintColor="#ffffff"
+                          glassTintOpacity={0}
+                          frostBlurRadius={0.5}
+                          noiseFrequency={0.012}
+                          noiseStrength={65}
+                          reflectedColor={reflectedColor}
+                        />
+                      </div>
 
+                      {renderMobilePrimary('feed')}
+                      {renderMobilePrimary('friends')}
+
+                      {/* ALPHA CORE CENTER BUTTON (Action Button Estilo Nativo / Mini Player) */}
+                      <div
+                        className="alpha-center-btn relative mx-1 sm:mx-2 -mt-10 z-20"
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        <div className="absolute inset-0 rounded-full blur-xl opacity-50" style={{ background: themeColor }} />
+                        <button
+                          onMouseDown={handleAlphaTouchStart}
+                          onMouseUp={handleAlphaTouchEnd}
+                          onMouseLeave={handleAlphaTouchEnd}
+                          onTouchStart={handleAlphaTouchStart}
+                          onTouchEnd={handleAlphaTouchEnd}
+                          onClick={handleAlphaClick}
+                          className={`relative w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-10 overflow-hidden border-4 border-[#09090b] ${currentTrack && isPlaying ? 'animate-pulse' : ''}`}
+                          style={{ 
+                            background: showMobileMenu ? '#ef4444' : (currentTrack ? '#000' : themeColor), 
+                            transition: 'background 0.3s ease, transform 0.2s ease' 
+                          }}
+                        >
+                          {showMobileMenu ? (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                          ) : currentTrack ? (
+                            <div className="w-full h-full relative">
+                              {currentTrack.coverUrl && (
+                                <img src={resolveUrl(currentTrack.coverUrl)} className={`absolute inset-0 w-full h-full object-cover ${isPlaying ? 'animate-spin-slow' : ''}`} style={{ animationDuration: '4s' }} alt="" />
+                              )}
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <div className="flex items-center gap-0.5">
+                                   <div className={`w-1 bg-white rounded-full ${isPlaying ? 'animate-[bounce_1s_infinite]' : 'h-1'}`} style={{ height: isPlaying ? '12px' : '4px' }} />
+                                   <div className={`w-1 bg-white rounded-full ${isPlaying ? 'animate-[bounce_1s_infinite_0.2s]' : 'h-1'}`} style={{ height: isPlaying ? '16px' : '4px' }} />
+                                   <div className={`w-1 bg-white rounded-full ${isPlaying ? 'animate-[bounce_1s_infinite_0.4s]' : 'h-1'}`} style={{ height: isPlaying ? '10px' : '4px' }} />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <AlphaCoreAvatar size={48} state={alphaStatus} themeColor="#fff" />
+                          )}
+                        </button>
+                      </div>
+
+                      {renderMobilePrimary('messages')}
+                      {renderMobilePrimary('notifications')}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
