@@ -9,6 +9,7 @@ import { DisplayName } from '@/components/ui/DisplayName';
 import { useLazerStore } from '@/store/lazer.store';
 import { uploadUserPersona, resolveUrl } from '@/lib/api';
 import { useMusicStore } from '@/store/music.store';
+import { AestheticCaptureModal } from '../modals/AestheticCaptureModal';
 
 const t = (s: string) => s;
 
@@ -23,6 +24,7 @@ interface ProfileViewProps {
 
 export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId, onChatClick }: ProfileViewProps) {
   const [showAiModal, setShowAiModal] = useState(false);
+  const [showCaptureModal, setShowCaptureModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'chronicles' | 'media' | 'about' | 'music'>('chronicles');
   const [localPersonaUrl, setLocalPersonaUrl] = useState<string | null>(null);
   const [uploadingPersona, setUploadingPersona] = useState(false);
@@ -159,21 +161,34 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
             {/* Primary Actions */}
             <div className="mt-10 w-full flex flex-row gap-2.5 px-6 shrink-0">
               {isOwnProfile ? (
-                onEdit && (
+                <div className="flex gap-2 w-full">
+                  {onEdit && (
+                    <button
+                      onClick={onEdit}
+                      className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      style={{ background: `linear-gradient(135deg, ${c}, ${c}cc)` }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      {t('Editar Perfil')}
+                    </button>
+                  )}
                   <button
-                    onClick={onEdit}
-                    className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                    style={{ background: `linear-gradient(135deg, ${c}, ${c}cc)` }}
+                    onClick={() => setShowCaptureModal(true)}
+                    className="px-3.5 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white border border-white/10 bg-white/5 hover:bg-white/10 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Gerar captura elegante do perfil para Stories ou Status"
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    {t('Editar Perfil')}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    <span>Status</span>
                   </button>
-                )
+                </div>
               ) : (
-                <>
+                <div className="flex gap-2 w-full">
                   <button
                     onClick={() => isFriend && !isFriend(user.userId) && sendFriendRequest(user.userId)}
-                    className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white shadow-lg shadow-purple-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white shadow-lg shadow-purple-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     style={{ background: isFriend && isFriend(user.userId) ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg, ${c}, ${c}cc)` }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
@@ -181,12 +196,22 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                   </button>
                   <button
                     onClick={() => onChatClick && user.userId && onChatClick(user.userId)}
-                    className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white border border-white/10 bg-white/5 hover:bg-white/10 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.1em] text-white border border-white/10 bg-white/5 hover:bg-white/10 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                     Chat
                   </button>
-                </>
+                  <button
+                    onClick={() => setShowCaptureModal(true)}
+                    className="p-2.5 rounded-xl text-white border border-white/10 bg-white/5 hover:bg-white/10 hover:scale-[1.05] active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                    title="Capturar perfil para Status ou Stories"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -850,6 +875,16 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
           isOwner={isOwnProfile}
         />
       )}
+
+      <AestheticCaptureModal
+        isOpen={showCaptureModal}
+        onClose={() => setShowCaptureModal(false)}
+        mode="profile"
+        profile={user}
+        isOwnProfile={isOwnProfile}
+        themeColor={c}
+        isLight={isLight}
+      />
 
       <style jsx>{`
         @keyframes bounce-slow {

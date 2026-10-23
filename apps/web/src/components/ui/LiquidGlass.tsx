@@ -129,16 +129,16 @@ export const LiquidGlassBase = forwardRef<HTMLElement, LiquidGlassBaseProps>(({
           className="absolute inset-0 z-0 pointer-events-none"
           style={{
             borderRadius: 'inherit',
-            border: '1.2px solid rgba(255, 255, 255, 0.75)',
-            borderTopColor: 'rgba(255, 255, 255, 0.98)',
-            borderBottomColor: reflectedColor ? `${reflectedColor}cc` : 'rgba(255, 255, 255, 0.45)',
+            border: '1px solid rgba(255, 255, 255, 0.22)',
+            borderTopColor: 'rgba(255, 255, 255, 0.45)',
+            borderBottomColor: reflectedColor ? `${reflectedColor}80` : 'rgba(255, 255, 255, 0.12)',
             boxShadow: `
-              inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.95),
-              inset 0 -1.5px 3px 0 rgba(255, 255, 255, 0.45),
-              inset 1.5px 0 2.5px 0 rgba(255, 255, 255, 0.35),
-              inset -1.5px 0 2.5px 0 rgba(255, 255, 255, 0.35),
+              inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.40),
+              inset 0 -1px 2px 0 rgba(255, 255, 255, 0.15),
+              inset 1px 0 1.5px 0 rgba(255, 255, 255, 0.15),
+              inset -1px 0 1.5px 0 rgba(255, 255, 255, 0.15),
               inset 0 0 ${innerShadowBlur}px ${innerShadowSpread}px ${innerShadowColor},
-              0 0 12px 1px ${reflectedColor ? `${reflectedColor}40` : 'rgba(255, 255, 255, 0.2)'}
+              0 0 12px 1px ${reflectedColor ? `${reflectedColor}30` : 'rgba(255, 255, 255, 0.08)'}
             `,
           }}
         />
@@ -148,16 +148,16 @@ export const LiquidGlassBase = forwardRef<HTMLElement, LiquidGlassBaseProps>(({
           className="absolute inset-0 z-0 pointer-events-none"
           style={{
             borderRadius: 'inherit',
-            background: `linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 32%, transparent 65%)`,
+            background: `linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 30%, transparent 65%)`,
           }}
         />
 
         {/* ── 5. Crista Especular no Topo (Specular Light Arc) ── */}
         <div
-          className="absolute top-[2.5px] left-[18%] right-[18%] h-[5px] rounded-full pointer-events-none"
+          className="absolute top-[1.5px] left-[15%] right-[15%] h-[2px] rounded-full pointer-events-none"
           style={{
-            background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.95) 50%, transparent 100%)',
-            filter: 'blur(0.4px)',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%)',
+            filter: 'blur(0.5px)',
           }}
         />
 

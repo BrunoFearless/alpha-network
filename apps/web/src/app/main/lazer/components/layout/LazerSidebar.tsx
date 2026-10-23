@@ -411,14 +411,14 @@ export function LazerSidebar({
                   width={54}
                   height={54}
                   borderRadius={24}
-                  innerShadowColor="rgba(255, 255, 255, 0.92)"
-                  innerShadowBlur={14}
-                  innerShadowSpread={-3}
+                  innerShadowColor="rgba(255, 255, 255, 0.42)"
+                  innerShadowBlur={12}
+                  innerShadowSpread={-2}
                   glassTintColor="#ffffff"
                   glassTintOpacity={0}
                   frostBlurRadius={0.5}
                   noiseFrequency={0.012}
-                  noiseStrength={65}
+                  noiseStrength={45}
                   reflectedColor={reflectedColor}
                 />
               </div>
@@ -448,14 +448,14 @@ export function LazerSidebar({
             <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none z-0">
               <LiquidGlassContainer
                 borderRadius={40}
-                innerShadowColor="rgba(255, 255, 255, 0.92)"
+                innerShadowColor="rgba(255, 255, 255, 0.35)"
                 innerShadowBlur={14}
                 innerShadowSpread={-2}
                 glassTintColor="#ffffff"
                 glassTintOpacity={4}
                 frostBlurRadius={8}
                 noiseFrequency={0.012}
-                noiseStrength={40}
+                noiseStrength={35}
                 reflectedColor={themeColor}
               />
             </div>
@@ -510,14 +510,14 @@ export function LazerSidebar({
               <div className="absolute inset-0 rounded-[3rem] overflow-hidden pointer-events-none z-0">
                 <LiquidGlassContainer
                   borderRadius={48}
-                  innerShadowColor="rgba(255, 255, 255, 0.92)"
-                  innerShadowBlur={16}
+                  innerShadowColor="rgba(255, 255, 255, 0.35)"
+                  innerShadowBlur={14}
                   innerShadowSpread={-2}
                   glassTintColor="#ffffff"
                   glassTintOpacity={4}
                   frostBlurRadius={8}
                   noiseFrequency={0.012}
-                  noiseStrength={40}
+                  noiseStrength={35}
                   reflectedColor={themeColor}
                 />
               </div>
@@ -576,14 +576,14 @@ export function LazerSidebar({
                     <div className="absolute inset-0 rounded-[3rem] overflow-hidden pointer-events-none z-0">
                       <LiquidGlassContainer
                         borderRadius={48}
-                        innerShadowColor="rgba(255, 255, 255, 0.92)"
-                        innerShadowBlur={16}
+                        innerShadowColor="rgba(255, 255, 255, 0.35)"
+                        innerShadowBlur={14}
                         innerShadowSpread={-2}
                         glassTintColor="#ffffff"
                         glassTintOpacity={3}
                         frostBlurRadius={8}
                         noiseFrequency={0.012}
-                        noiseStrength={40}
+                        noiseStrength={35}
                         reflectedColor={reflectedColor}
                       />
                     </div>
@@ -614,14 +614,14 @@ export function LazerSidebar({
                           width={52}
                           height={52}
                           borderRadius={22}
-                          innerShadowColor="rgba(255, 255, 255, 0.95)"
-                          innerShadowBlur={14}
-                          innerShadowSpread={-3}
+                          innerShadowColor="rgba(255, 255, 255, 0.42)"
+                          innerShadowBlur={12}
+                          innerShadowSpread={-2}
                           glassTintColor="#ffffff"
                           glassTintOpacity={0}
                           frostBlurRadius={0.5}
                           noiseFrequency={0.012}
-                          noiseStrength={65}
+                          noiseStrength={45}
                           reflectedColor={reflectedColor}
                         />
                       </div>

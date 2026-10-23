@@ -12,6 +12,7 @@
   "dependencies": {
     "@xyflow/react": "^12.10.2",
     "clsx": "^2.1.0",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^1.14.0",
     "next": "^14.1.0",
     "react": "^18.2.0",

@@ -7,13 +7,29 @@ import { LazerUserProfile } from '../profile/types';
 import { ThemeBg } from '../profile/ThemeBg';
 import { useLazerStore } from '@/store/lazer.store';
 import { useAuthStore } from '@/store/auth.store';
+import { useMusicStore, Track } from '@/store/music.store';
 import { resolveUrl } from '@/lib/api';
 import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
 import { EmojiPicker } from '@/components/community/EmojiPicker';
 import { TropesModal } from '../modals/TropesModal';
+import { AdvancedPostModal } from '../modals/AdvancedPostModal';
+import { AestheticCaptureModal } from '../modals/AestheticCaptureModal';
 import { YoutubeEmbed, extractYoutubeId } from '@/components/ui/YoutubeEmbed';
+import { MangaBurstCanvas, ElementalPicker, ElementalType, ELEMENTAL_REACTIONS } from '@/components/ui/MangaBurstVFX';
+import { PostFrameRenderer, parsePostMetadata } from './PostFrameStyles';
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
+const IconMusicNote = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+  </svg>
+);
+const IconMangaQuote = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 21c3 0 7-1 7-8V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2 0 4-1 6-1 6z" />
+    <path d="M15 21c3 0 7-1 7-8V5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2 0 4-1 6-1 6z" />
+  </svg>
+);
 const IconComment = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
 const IconRepost = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></svg>;
 const IconHeart = ({ filled, size = 16 }: { filled?: boolean; size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>;
@@ -60,6 +76,12 @@ const IconVolume = ({ level }: { level: number }) => (
   </svg>
 );
 const IconExpand = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></svg>;
+const IconCamera = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <circle cx="12" cy="13" r="4" />
+  </svg>
+);
 
 // ─── Modern Video Player ──────────────────────────────────────────────────────
 function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = true, accentColor = '#7c4dff', showControlsEnabled = true, initialMuted = true }: any) {
@@ -274,7 +296,7 @@ const PREMIUM_FONTS = [
   { id: 'elegant', label: 'Elegant', family: "'Libre Baskerville', serif" },
 ];
 
-const PREMIUM_COLORS_LIST = [
+const PREMIUM_COLORS = [
   { id: 'L-green', value: '#A5E600', label: 'Green' },
   { id: 'pink', value: '#ff9ef0', label: 'Neon' },
   { id: 'gold', value: '#ffeb3b', label: 'Gold' },
@@ -282,25 +304,125 @@ const PREMIUM_COLORS_LIST = [
   { id: 'green', value: '#86efac', label: 'Green' },
   { id: 'orange', value: '#ffb07c', label: 'Flame' },
   { id: 'red', value: "#ef4444", label: 'Red' },
-
 ];
 
-function formatContent(content: string, postTitleFont?: string | null, postTitleColor?: string | null, isLight?: boolean) {
-  if (!content) return null;
-  const lines = content.split('\n');
-  const title = lines[0];
-  const body = lines.slice(1).join('\n');
-  const fontData = PREMIUM_FONTS.find(f => f.id === postTitleFont) || PREMIUM_FONTS[0];
-  const titleCol = postTitleColor || (isLight ? '#000000' : '#ffffff');
+const MANGA_QUOTE_KANJI = [
+  { kanji: '覚醒', label: 'Despertar', color: '#f59e0b' },
+  { kanji: '運命', label: 'Destino', color: '#ec4899' },
+  { kanji: '魂', label: 'Alma', color: '#06b6d4' },
+  { kanji: '絆', label: 'Laços', color: '#10b981' },
+  { kanji: '伝説', label: 'Lenda', color: '#a855f7' },
+  { kanji: '限界突破', label: 'Limite', color: '#ef4444' },
+  { kanji: '覇気', label: 'Haki', color: '#6366f1' },
+  { kanji: '無敵', label: 'Invencível', color: '#eab308' },
+  { kanji: '闇', label: 'Trevas', color: '#64748b' },
+  { kanji: '希望', label: 'Esperança', color: '#38bdf8' },
+];
+
+// parsePostMetadata is imported from PostFrameStyles.tsx
+
+function PostBgmBadge({ bgm, accentColor, isLight }: { bgm: { id: string; title: string; artist: string }; accentColor: string; isLight: boolean }) {
+  const { currentTrack, isPlaying, playTrack, togglePlay, tracks } = useMusicStore();
+  const isThisPlaying = isPlaying && currentTrack?.id === bgm.id;
+
+  const handlePlayToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentTrack?.id === bgm.id) {
+      togglePlay();
+    } else {
+      const existing = tracks.find(t => t.id === bgm.id);
+      if (existing) {
+        playTrack(existing);
+      } else {
+        playTrack({
+          id: bgm.id,
+          title: bgm.title,
+          artist: bgm.artist,
+          duration: 180,
+          audioUrl: '',
+          plays: 0,
+          liked: false,
+          likesCount: 0,
+          authorId: '',
+        });
+      }
+    }
+  };
+
   return (
-    <div className="flex flex-col">
-      <div className="font-black text-[24px] xl:text-[28px] leading-[1.05] tracking-tight uppercase mb-2" style={{ fontFamily: fontData.family, color: titleCol }}>
-        <EmojiRenderer content={title} emojiSize={28} />
+    <div
+      onClick={handlePlayToggle}
+      className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full border cursor-pointer select-none transition-all duration-300 hover:scale-[1.03] active:scale-95 group mb-3 backdrop-blur-md"
+      style={{
+        background: isThisPlaying ? `${accentColor}20` : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
+        borderColor: isThisPlaying ? `${accentColor}70` : (isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'),
+        boxShadow: isThisPlaying ? `0 4px 20px ${accentColor}30` : 'none',
+      }}
+    >
+      {/* Vinyl record spinning */}
+      <div
+        className={`w-6 h-6 rounded-full bg-neutral-900 border border-white/20 flex items-center justify-center shrink-0 shadow-inner ${isThisPlaying ? 'animate-spin' : ''}`}
+        style={{ animationDuration: '3s' }}
+      >
+        <div className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
       </div>
-      {body && <div className={`text-[14px] leading-relaxed whitespace-pre-wrap ${isLight ? 'text-black font-medium' : 'text-white/70'}`}><EmojiRenderer content={body} emojiSize={20} /></div>}
+
+      {/* Track details */}
+      <div className="flex flex-col min-w-0 pr-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-black truncate max-w-[140px] md:max-w-[200px]" style={{ color: isThisPlaying ? accentColor : undefined }}>
+            {bgm.title}
+          </span>
+          <span className="text-[9px] font-bold opacity-50 uppercase tracking-widest truncate max-w-[90px]">
+            {bgm.artist}
+          </span>
+        </div>
+      </div>
+
+      {/* Soundwave equalizer */}
+      <div className="flex items-end gap-[2px] h-3 px-1">
+        <span
+          className="w-[2px] rounded-full transition-all"
+          style={{
+            height: isThisPlaying ? '100%' : '30%',
+            background: accentColor,
+            animation: isThisPlaying ? 'bgm-bar-1 0.6s infinite ease-in-out alternate' : 'none',
+          }}
+        />
+        <span
+          className="w-[2px] rounded-full transition-all"
+          style={{
+            height: isThisPlaying ? '60%' : '40%',
+            background: accentColor,
+            animation: isThisPlaying ? 'bgm-bar-2 0.7s infinite ease-in-out alternate' : 'none',
+          }}
+        />
+        <span
+          className="w-[2px] rounded-full transition-all"
+          style={{
+            height: isThisPlaying ? '90%' : '25%',
+            background: accentColor,
+            animation: isThisPlaying ? 'bgm-bar-3 0.5s infinite ease-in-out alternate' : 'none',
+          }}
+        />
+      </div>
+
+      {/* Play/Pause icon button */}
+      <div
+        className="w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0 transition-transform group-hover:scale-110 shadow-sm"
+        style={{ background: accentColor }}
+      >
+        {isThisPlaying ? (
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+        ) : (
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" className="translate-x-[0.5px]"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+        )}
+      </div>
     </div>
   );
 }
+
+// formatContent replaced by PostFrameRenderer (imported from PostFrameStyles.tsx)
 
 // ─── Helper: get author info from post ───────────────────────────────────────
 function getAuthorInfo(post: any, authUser: any, myProfile: any) {
@@ -459,23 +581,23 @@ function CommentItem({
 }
 
 // ─── Post Card ────────────────────────────────────────────────────────────────
-function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfile, isLight, c, textPrimary, textSecondary, cardBg, borderCol, setSelectedPostId, setInitialMediaIndex }: {
+function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfile, isLight, c, textPrimary, textSecondary, cardBg, borderCol, setSelectedPostId, setInitialMediaIndex, onEditPost, onCapturePost }: {
   post: any; isOwner: boolean; openModal: (focus?: boolean) => void; onProfileClick?: (userId: string) => void;
   authUser: any; myProfile: any; isLight: boolean; c: string; textPrimary: string; textSecondary: string; cardBg: string; borderCol: string;
   setSelectedPostId: (id: string | null) => void; setInitialMediaIndex: (idx: number) => void;
+  onEditPost?: (post: any) => void;
+  onCapturePost?: (post: any) => void;
 }) {
-  const { deletePost, editPost, pinPost, fetchComments, addComment, comments, feedPosts, toggleReaction } = useLazerStore();
+  const { deletePost, pinPost, fetchComments, addComment, comments, feedPosts, toggleReaction } = useLazerStore();
   const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend } = useLazerStore();
 
   const rawPost = feedPosts.find(p => p.id === post.id);
   const isPinned = rawPost?.isPinned ?? false;
   const isLiked = rawPost?.isLiked ?? false;
 
+  const { cleanContent, frameStyle, watermark, watermarkAnim, bgm } = useMemo(() => parsePostMetadata(post.content), [post.content]);
+
   const [menuOpen, setMenuOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editContent, setEditContent] = useState(post.content);
-  const [editFont, setEditFont] = useState(rawPost?.titleFont || 'default');
-  const [editColor, setEditColor] = useState(rawPost?.titleColor || '');
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -484,6 +606,41 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const commentRef = useRef<HTMLInputElement>(null);
   const postComments = comments[post.id] || [];
+
+  const [burstEvent, setBurstEvent] = useState<{ x: number; y: number; type: ElementalType; timestamp: number } | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [lastTouchTime, setLastTouchTime] = useState(0);
+
+  const triggerBurst = useCallback((x: number, y: number, type?: ElementalType) => {
+    const types: ElementalType[] = ['fire', 'lightning', 'sakura', 'slash', 'cosmic', 'heart'];
+    const chosenType = type || types[Math.floor(Math.random() * types.length)];
+    setBurstEvent({
+      x,
+      y,
+      type: chosenType,
+      timestamp: Date.now(),
+    });
+    if (!isLiked) toggleReaction(post.id);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate?.([15, 30, 20]);
+    }
+  }, [isLiked, post.id, toggleReaction]);
+
+  const handleMediaDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerBurst(e.clientX, e.clientY);
+  };
+
+  const handleMediaTouchEnd = (e: React.TouchEvent) => {
+    const now = Date.now();
+    if (now - lastTouchTime < 320) {
+      const touch = e.changedTouches[0];
+      if (touch) {
+        triggerBurst(touch.clientX, touch.clientY);
+      }
+    }
+    setLastTouchTime(now);
+  };
 
   // Get author info from the post's embedded data
   const authorInfo = getAuthorInfo(rawPost || post, authUser, myProfile);
@@ -502,11 +659,6 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
     setSubmitting(false);
   };
 
-  const handleSaveEdit = async () => {
-    await editPost(post.id, editContent, undefined, undefined, editFont !== 'default' ? editFont : undefined, editColor || undefined);
-    setEditing(false);
-  };
-
   const handleFriendBtn = () => {
     if (friendStatus === 'friend') removeFriend(post.authorId);
     else if (friendStatus === 'sent') cancelFriendRequest(post.authorId);
@@ -514,14 +666,15 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
   };
 
   const menuBg = isLight ? 'rgba(255,255,255,0.95)' : 'rgba(10,10,18,0.97)';
-  const PREMIUM_COLORS = [...PREMIUM_COLORS_LIST, { id: 'dynamic', value: isLight ? '#000' : '#fff', label: isLight ? 'Black' : 'Pure' }];
+  const postCardColors = [...PREMIUM_COLORS, { id: 'dynamic', value: isLight ? '#000' : '#fff', label: isLight ? 'Black' : 'Pure' }];
 
   // Ensure rawPost is typed correctly if possible, or default to any.
   const tropesList = rawPost?.tropes || post.tropes || [];
 
   return (
-    <div className="glass-card rounded-3xl transition-all duration-500 overflow-hidden" style={isPinned ? { borderColor: c } : undefined}>
+    <div className="glass-card rounded-3xl transition-all duration-500 overflow-hidden relative" style={isPinned ? { borderColor: c } : undefined}>
       <div className="glass-shine-effect" />
+      <MangaBurstCanvas burstEvent={burstEvent} />
       {isPinned && (
         <div className="flex items-center gap-1.5 px-5 pt-3 pb-0 text-[11px] font-bold tracking-wide" style={{ color: c }}>
           <IconPin /> Publicação fixada
@@ -563,8 +716,13 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
                   <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
                   <div className="absolute right-0 top-10 z-40 w-[200px] rounded-2xl overflow-hidden border-[1.5px] py-1"
                     style={{ background: menuBg, borderColor: borderCol, boxShadow: `0 20px 60px rgba(0,0,0,0.35)` }}>
+                    <button onClick={() => { onCapturePost?.(rawPost || post); setMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-semibold bg-transparent border-none cursor-pointer hover:bg-black/5"
+                      style={{ color: isLight ? '#333' : '#ddd' }}>
+                      <IconCamera size={15} /> Capturar para Status
+                    </button>
                     {isOwner && <>
-                      <button onClick={() => { setEditing(true); setMenuOpen(false); }}
+                      <button onClick={() => { onEditPost?.(rawPost || post); setMenuOpen(false); }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-semibold bg-transparent border-none cursor-pointer hover:bg-black/5"
                         style={{ color: isLight ? '#333' : '#ddd' }}><IconEdit /> Editar</button>
                       <button onClick={async () => { await pinPost(post.id); setMenuOpen(false); }}
@@ -588,51 +746,40 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
         </div>
 
         {/* Content */}
-        <div onClick={() => !editing && openModal(false)} className="cursor-pointer select-none">
-          {editing ? (
-            <div className="mb-3" onClick={e => e.stopPropagation()}>
-              <textarea className={`w-full border rounded-xl px-3 py-2 text-sm bg-transparent resize-none outline-none ${textPrimary}`}
-                style={{ borderColor: borderCol }} value={editContent} onChange={e => setEditContent(e.target.value)} rows={3} autoFocus />
-              <div className="flex items-center gap-3 mt-2">
-                <select value={editFont} onChange={e => setEditFont(e.target.value)} className="text-xs px-2 py-1 rounded-lg border bg-transparent" style={{ borderColor: borderCol }}>
-                  {PREMIUM_FONTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                </select>
-                <div className="flex gap-1.5">
-                  {PREMIUM_COLORS.map(col => (
-                    <button key={col.id} onClick={() => setEditColor(editColor === col.value ? '' : col.value)}
-                      className="w-4 h-4 rounded-full border-none cursor-pointer transition-all hover:scale-125"
-                      style={{ background: col.value, outline: editColor === col.value ? '2px solid #fff' : 'none' }} />
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-2 mt-3 justify-end">
-                <button onClick={() => setEditing(false)} className={`text-xs px-4 py-1.5 rounded-full border bg-transparent cursor-pointer ${textSecondary}`} style={{ borderColor: borderCol }}>Cancelar</button>
-                <button onClick={handleSaveEdit} className="text-xs px-4 py-1.5 rounded-full text-black border-none cursor-pointer font-bold" style={{ background: c }}>Guardar</button>
-              </div>
+        <div onClick={() => openModal(false)} className="cursor-pointer select-none w-full min-w-0 break-words">
+          {bgm && <PostBgmBadge bgm={bgm} accentColor={c} isLight={isLight} />}
+          <div className="mb-3 w-full min-w-0 break-words">
+            <PostFrameRenderer
+              content={cleanContent}
+              frameStyle={frameStyle}
+              watermark={watermark}
+              watermarkAnim={watermarkAnim}
+              postTitleFont={rawPost?.titleFont}
+              postTitleColor={rawPost?.titleColor}
+              isLight={isLight}
+              themeColor={c}
+              fontsList={PREMIUM_FONTS}
+              collapsible={true}
+            />
+          </div>
+          {tropesList.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {tropesList.map((trope: any) => (
+                <span key={trope.id} className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md"
+                  style={{ background: `${c}15`, color: c, border: `1px solid ${c}40` }}>
+                  {trope.iconEmoji} #{trope.name}
+                </span>
+              ))}
             </div>
-          ) : (
-            <>
-              <div className="mb-3">{formatContent(post.content, rawPost?.titleFont, rawPost?.titleColor, isLight)}</div>
-              {tropesList.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {tropesList.map((trope: any) => (
-                    <span key={trope.id} className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md"
-                      style={{ background: `${c}15`, color: c, border: `1px solid ${c}40` }}>
-                      {trope.iconEmoji} #{trope.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </>
           )}
           {/* YouTube Embed Detection */}
-          {!editing && (() => {
-            const ytId = extractYoutubeId(post.content || '');
+          {(() => {
+            const ytId = extractYoutubeId(cleanContent || post.content || '');
             if (!ytId) return null;
             return <div className="mb-3" onClick={e => e.stopPropagation()}><YoutubeEmbed videoId={ytId} accentColor={c} /></div>;
           })()}
-          {/* Media Rendering */}
-          {!editing && (() => {
+          {/* Media Rendering with Dynamic Ambilight */}
+          {(() => {
             const imageUrl = rawPost?.imageUrl || post.imageUrl;
             if (!imageUrl) return null;
             let media: string[] = [];
@@ -649,39 +796,87 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
             const isVid = (url?: string) => url ? (url.match(/\.(mp4|webm|mov|ogg)(\?|$)/i) || url.startsWith('data:video')) : false;
 
             if (media.length === 1) {
+              const mediaUrl = resolveLazerMediaUrl(media[0]);
               return (
-                <div className="flex justify-center mb-4">
+                <div
+                  className="relative group/ambilight flex justify-center mb-4 cursor-pointer"
+                  onDoubleClick={handleMediaDoubleClick}
+                  onTouchEnd={handleMediaTouchEnd}
+                >
+                  {/* Dynamic Ambilight Back-Glow */}
+                  {isVid(media[0]) ? (
+                    <div
+                      className="absolute -inset-2.5 rounded-[28px] opacity-40 group-hover/ambilight:opacity-75 transition-all duration-700 pointer-events-none -z-10 blur-2xl"
+                      style={{
+                        background: `radial-gradient(ellipse at center, ${c}80 0%, ${c}30 50%, transparent 80%)`,
+                        filter: 'blur(32px) saturate(200%)',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="absolute -inset-3 rounded-[28px] opacity-45 group-hover/ambilight:opacity-85 transition-all duration-700 pointer-events-none -z-10 scale-[0.97] group-hover/ambilight:scale-100"
+                      style={{
+                        backgroundImage: `url('${mediaUrl}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        filter: 'blur(36px) saturate(220%)',
+                      }}
+                    />
+                  )}
+
                   {isVid(media[0]) ? (
                     <ModernVideoPlayer
-                      src={resolveLazerMediaUrl(media[0])}
+                      src={mediaUrl}
                       accentColor={c}
                       onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(0); }}
-                      className="w-full max-h-[350px] rounded-[20px] border border-white/10 "
+                      className="w-full max-h-[350px] rounded-[20px] border border-white/10 relative z-10"
                       showControlsEnabled={false}
                       initialMuted={true}
                     />
                   ) : (
                     <img
                       onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(0); }}
-                      src={resolveLazerMediaUrl(media[0])} alt="post" className="w-full max-h-[350px] object-contain block rounded-[20px] border border-white/10  cursor-pointer" />
+                      src={mediaUrl}
+                      alt="post"
+                      className="w-full max-h-[350px] object-contain block rounded-[20px] border border-white/10 relative z-10 cursor-pointer transition-transform duration-300 group-hover/ambilight:scale-[1.01]"
+                    />
                   )}
                 </div>
               );
             }
 
             return (
-              <div className="flex gap-2.5 overflow-x-auto pb-4 mb-2 custom-scrollbar snap-x snap-mandatory">
-                {media.map((m, idx) => (
-                  <div key={idx}
-                    onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(idx); }}
-                    className="h-[180px] shrink-0 snap-start rounded-2xl overflow-hidden border border-white/5 bg-black/20  transition-transform hover:scale-[1.02] cursor-pointer">
-                    {isVid(m) ? (
-                      <ModernVideoPlayer src={resolveLazerMediaUrl(m)} accentColor={c} className="h-full w-auto" onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(idx); }} showControlsEnabled={false} initialMuted={true} />
-                    ) : (
-                      <img src={resolveLazerMediaUrl(m)} alt={`media-${idx}`} className="h-full w-auto object-contain block" />
-                    )}
-                  </div>
-                ))}
+              <div className="relative group/carousel mb-2">
+                {/* Carousel Ambilight Glow */}
+                <div
+                  className="absolute -inset-2 rounded-2xl opacity-30 group-hover/carousel:opacity-60 transition-opacity duration-500 pointer-events-none -z-10 blur-xl"
+                  style={{
+                    backgroundImage: `url('${resolveLazerMediaUrl(media[0])}')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'blur(28px) saturate(180%)',
+                  }}
+                />
+                <div className="flex gap-2.5 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory relative z-10">
+                  {media.map((m, idx) => {
+                    const mUrl = resolveLazerMediaUrl(m);
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(idx); }}
+                        onDoubleClick={handleMediaDoubleClick}
+                        onTouchEnd={handleMediaTouchEnd}
+                        className="h-[180px] shrink-0 snap-start rounded-2xl overflow-hidden border border-white/10 bg-black/30 transition-transform hover:scale-[1.03] cursor-pointer"
+                      >
+                        {isVid(m) ? (
+                          <ModernVideoPlayer src={mUrl} accentColor={c} className="h-full w-auto" onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(idx); }} showControlsEnabled={false} initialMuted={true} />
+                        ) : (
+                          <img src={mUrl} alt={`media-${idx}`} className="h-full w-auto object-contain block" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })()}
@@ -689,12 +884,50 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
 
         {/* Actions */}
         <div className="flex items-center justify-between xl:justify-start xl:gap-8 pt-2.5 border-t-[1.5px]" style={{ borderColor: borderCol }}>
-          <button onClick={() => toggleReaction(post.id)}
-            className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer text-[13px] transition-all hover:scale-110 ${isLiked ? 'animate-heart-burst' : ''}`}
-            style={{ color: isLiked ? c : (isLight ? '#9e9e9e' : '#888'), fontWeight: isLiked ? 700 : 400 }}>
-            <span className="transition-transform active:scale-125"><IconHeart filled={isLiked} /></span>
-            {rawPost?._count?.reactions || 0}
-          </button>
+          <div className="relative flex items-center">
+            <button
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setBurstEvent({
+                  x: rect.left + rect.width / 2,
+                  y: rect.top + rect.height / 2,
+                  type: 'heart',
+                  timestamp: Date.now(),
+                });
+                toggleReaction(post.id);
+                if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                  navigator.vibrate?.([15, 30, 15]);
+                }
+              }}
+              className={`flex items-center gap-1.5 bg-transparent border-none cursor-pointer text-[13px] transition-all hover:scale-110 ${isLiked ? 'animate-heart-burst' : ''}`}
+              style={{ color: isLiked ? c : (isLight ? '#9e9e9e' : '#888'), fontWeight: isLiked ? 700 : 400 }}
+            >
+              <span className="transition-transform active:scale-125"><IconHeart filled={isLiked} /></span>
+              {rawPost?._count?.reactions || 0}
+            </button>
+
+            {/* Elemental Burst VFX Trigger */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setPickerOpen(!pickerOpen);
+              }}
+              className="ml-1.5 w-6 h-6 rounded-full flex items-center justify-center bg-transparent border-none cursor-pointer opacity-40 hover:opacity-100 transition-all hover:scale-125 active:scale-95"
+              title="Reação Elemental (Katon, Chidori, Sakura, Slash...)"
+            >
+              <span className="text-[12px]">✨</span>
+            </button>
+
+            {/* Floating Elemental Picker */}
+            <ElementalPicker
+              isOpen={pickerOpen}
+              onClose={() => setPickerOpen(false)}
+              themeColor={c}
+              onSelect={(type) => {
+                triggerBurst(window.innerWidth / 2, window.innerHeight / 2, type);
+              }}
+            />
+          </div>
           <button onClick={handleToggleComments}
             className="flex items-center gap-1.5 bg-transparent border-none cursor-pointer text-[13px] transition-all hover:opacity-80"
             style={{ color: showComments ? c : (isLight ? '#9e9e9e' : '#888'), fontWeight: showComments ? 600 : 400 }}>
@@ -1078,7 +1311,7 @@ function MyCommunities({ c, isLight, textPrimary, textSecondary, borderCol, card
     </div>
   );
 }
-function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, isLight, c, cardBg, borderCol, textPrimary, textSecondary, authUser, myProfile, initialIndex = 0 }: any) {
+function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, isLight, c, cardBg, borderCol, textPrimary, textSecondary, authUser, myProfile, initialIndex = 0, onEditPost, onCapturePost }: any) {
   const { feedPosts, comments, fetchComments, addComment, toggleReaction } = useLazerStore();
   const [currentMediaIndex, setCurrentMediaIndex] = useState(initialIndex);
   const [modalCommentText, setModalCommentText] = useState('');
@@ -1142,31 +1375,62 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex flex-col lg:flex-row bg-[#020204] animate-in fade-in duration-500 overflow-y-auto lg:overflow-hidden h-screen w-screen border-none custom-scrollbar">
-      {/* Dynamic Ambient Glow (Aura) */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 opacity-30">
-        <div className="absolute inset-[-10%] blur-[100px] saturate-[2.5] brightness-125 animate-pulse duration-[10s]">
-          {isVideo(allMedia[currentMediaIndex]) ? (
-            <video src={resolveLazerMediaUrl(allMedia[currentMediaIndex])} muted loop autoPlay className="w-full h-full object-cover" />
-          ) : (
-            <img src={resolveLazerMediaUrl(allMedia[currentMediaIndex])} className="w-full h-full object-cover" />
-          )}
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-5 md:p-8 animate-in fade-in duration-300"
+      style={{ background: 'rgba(4, 4, 12, 0.30)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)' }}
+      onClick={() => setSelectedPostId(null)}
+    >
+      {/* Ambient glow that bleeds behind the modal from the media */}
+      {allMedia.length > 0 && (
+        <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden opacity-25">
+          <div className="absolute inset-[-15%] blur-[120px] saturate-[3] brightness-110">
+            {isVideo(allMedia[currentMediaIndex]) ? (
+              <video src={resolveLazerMediaUrl(allMedia[currentMediaIndex])} muted loop autoPlay className="w-full h-full object-cover" />
+            ) : (
+              <img src={resolveLazerMediaUrl(allMedia[currentMediaIndex])} className="w-full h-full object-cover" />
+            )}
+          </div>
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-[#020204] via-transparent to-[#020204] opacity-80" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#020204] via-transparent to-[#020204] opacity-80" />
-      </div>
+      )}
 
-      {/* Main Immersive Area (Full Screen on Mobile, Left on Desktop) */}
-      <div className="w-full lg:flex-1 h-screen lg:h-full relative flex flex-col items-center justify-center bg-transparent overflow-hidden shrink-0 border-b lg:border-b-0 lg:border-r border-white/5">
-        <div className="w-full h-full flex items-center justify-center p-0">
+      {/* Liquid Glass Modal Shell */}
+      <div
+        className="w-full max-w-6xl h-[92vh] max-h-[900px] rounded-[2.5rem] flex flex-col lg:flex-row overflow-hidden relative shadow-2xl animate-in zoom-in-95 duration-300"
+        style={{
+          background: isLight ? 'rgba(255, 255, 255, 0.28)' : 'rgba(10, 10, 20, 0.22)',
+          backdropFilter: 'blur(60px) saturate(220%) brightness(1.12)',
+          WebkitBackdropFilter: 'blur(60px) saturate(220%) brightness(1.12)',
+          border: isLight ? '1.5px solid rgba(255, 255, 255, 0.85)' : '1px solid rgba(255, 255, 255, 0.16)',
+          borderTop: isLight ? '2px solid rgba(255, 255, 255, 1)' : '1.5px solid rgba(255, 255, 255, 0.38)',
+          borderBottom: isLight ? '1px solid rgba(0, 0, 0, 0.05)' : '1px solid rgba(255, 255, 255, 0.05)',
+          boxShadow: isLight
+            ? '0 32px 72px -12px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1), inset 0 0 0 1px rgba(255,255,255,0.55)'
+            : `0 32px 72px -12px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 80px -8px ${c}25`,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Specular ridge highlight */}
+        <div className="absolute top-0 left-12 right-12 h-[1.5px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none z-30 rounded-full" />
+
+        {/* Subtle corner glow using accent color */}
+        <div className="absolute top-0 left-0 w-48 h-48 pointer-events-none -z-0 rounded-tl-[2.5rem] opacity-20"
+          style={{ background: `radial-gradient(circle at 0% 0%, ${c}, transparent 70%)` }} />
+        <div className="absolute bottom-0 right-0 w-48 h-48 pointer-events-none -z-0 rounded-br-[2.5rem] opacity-15"
+          style={{ background: `radial-gradient(circle at 100% 100%, ${c}, transparent 70%)` }} />
+
+        {/* ── Left Panel: Media OR Post Content ─────────────────────────────── */}
+        <div className="lg:flex-1 relative flex flex-col items-center justify-center overflow-hidden border-b lg:border-b-0 lg:border-r shrink-0 min-h-[45vh] lg:min-h-0"
+          style={{ borderColor: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.08)' }}>
+
           {allMedia.length > 0 ? (
-            <div className="w-full h-full flex items-center justify-center animate-in zoom-in-95 duration-500">
+            /* ── Media viewer ── */
+            <div className="w-full h-full flex items-center justify-center animate-in zoom-in-[0.97] duration-500 p-5">
               {isVideo(allMedia[currentMediaIndex]) ? (
                 <ModernVideoPlayer
                   key={allMedia[currentMediaIndex]}
                   src={resolveLazerMediaUrl(allMedia[currentMediaIndex])}
                   accentColor={c}
-                  className="w-full h-full shadow-[0_50px_150px_rgba(0,0,0,1)]"
+                  className="w-full h-full max-h-[500px] lg:max-h-full rounded-2xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.5)]"
                   showControlsEnabled={true}
                   initialMuted={false}
                 />
@@ -1175,137 +1439,315 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
                   key={allMedia[currentMediaIndex]}
                   src={resolveLazerMediaUrl(allMedia[currentMediaIndex])}
                   alt="post media"
-                  className="w-full h-full object-contain shadow-[0_50px_150px_rgba(0,0,0,1)]"
+                  className="max-w-full max-h-[500px] lg:max-h-full object-contain rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.5)] animate-in fade-in duration-300"
                 />
               )}
             </div>
           ) : (
-            <div className="text-white/5 font-black text-9xl tracking-tighter select-none">ALPHA</div>
-          )}
-        </div>
+            /* ── Text-only: post content displayed big & beautiful ── */
+            (() => {
+              const { cleanContent, frameStyle, watermark, watermarkAnim, bgm } = parsePostMetadata(raw.content || '');
+              return (
+                <div className="w-full h-full flex flex-col justify-start overflow-y-auto custom-scrollbar p-8 lg:p-10 pt-10 relative">
+                  {/* Large decorative accent glow — bottom corner */}
+                  <div className="absolute bottom-0 left-0 right-0 h-64 pointer-events-none" style={{
+                    background: `radial-gradient(ellipse 80% 60% at 40% 120%, ${c}18, transparent 70%)`,
+                  }} />
+                  {/* Faint brand watermark */}
+                  <div className="absolute bottom-8 right-8 font-black text-[5rem] lg:text-[7rem] tracking-tighter select-none leading-none opacity-[0.03] pointer-events-none"
+                    style={{ color: isLight ? '#000' : '#fff' }}>α</div>
 
-        {/* Navigation Buttons */}
-        {allMedia.length > 1 && (
-          <div className="absolute inset-0 pointer-events-none z-[60] flex items-center justify-between px-4 lg:px-10">
-            <div className="w-10 h-10 lg:w-14 lg:h-14 flex items-center justify-center">
+                  {bgm && (
+                    <div className="mb-5 relative z-10">
+                      <PostBgmBadge bgm={bgm} accentColor={c} isLight={isLight} />
+                    </div>
+                  )}
+
+                  <div className={`relative z-10 leading-snug font-bold tracking-tight w-full break-words [overflow-wrap:anywhere] [word-break:break-word] animate-in fade-in slide-in-from-top-4 duration-500`}
+                    style={{ fontSize: 'clamp(1.35rem, 3vw, 2.2rem)' }}>
+                    <PostFrameRenderer
+                      content={cleanContent}
+                      frameStyle={frameStyle}
+                      watermark={watermark}
+                      watermarkAnim={watermarkAnim}
+                      postTitleFont={raw.titleFont}
+                      postTitleColor={raw.titleColor}
+                      isLight={isLight}
+                      themeColor={c}
+                      fontsList={PREMIUM_FONTS}
+                      collapsible={false}
+                    />
+                  </div>
+
+                  {/* Reaction bar inside left panel for text-only posts */}
+                  <div className="flex items-center gap-3 mt-6 relative z-10">
+                    <button
+                      onClick={() => toggleReaction(raw.id)}
+                      className={`flex items-center gap-2.5 px-4 py-2 rounded-2xl border cursor-pointer text-xs font-black transition-all hover:scale-105 active:scale-95 ${raw.isLiked ? 'animate-heart-burst' : ''}`}
+                      style={{
+                        background: raw.isLiked ? `${c}20` : (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)'),
+                        borderColor: raw.isLiked ? `${c}55` : (isLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)'),
+                        color: raw.isLiked ? c : (isLight ? '#666' : 'rgba(255,255,255,0.55)'),
+                        boxShadow: raw.isLiked ? `0 4px 16px ${c}35` : 'none',
+                      }}>
+                      <IconHeart filled={raw.isLiked} size={18} />
+                      <span className="text-sm font-black">{raw._count?.reactions || 0}</span>
+                    </button>
+                    <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.2em] uppercase"
+                      style={{ color: isLight ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)' }}>
+                      <IconComment />
+                      {postComments.length} ECOS
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
+          )}
+
+          {/* Media dot-indicators */}
+          {allMedia.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+              {allMedia.map((_: any, i: number) => (
+                <div key={i}
+                  className="rounded-full transition-all duration-300 cursor-pointer"
+                  style={{
+                    width: i === currentMediaIndex ? 20 : 6,
+                    height: 6,
+                    background: i === currentMediaIndex ? c : (isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.3)'),
+                  }}
+                  onClick={() => setCurrentMediaIndex(i)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Nav arrows */}
+          {allMedia.length > 1 && (
+            <>
               {currentMediaIndex > 0 && (
                 <button onClick={(e) => { e.stopPropagation(); prevMedia(); }}
-                  className="w-10 h-10 lg:w-14 lg:h-14 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/80 text-white border border-white/10 cursor-pointer backblur-3xl transition-all  pointer-events-auto hover:scale-110 active:scale-95">
-                  <svg width="20" height="20" className="lg:w-8 lg:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white cursor-pointer transition-all hover:scale-110 active:scale-95"
+                  style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
                 </button>
               )}
-            </div>
-            <div className="w-10 h-10 lg:w-14 lg:h-14 flex items-center justify-center">
               {currentMediaIndex < allMedia.length - 1 && (
                 <button onClick={(e) => { e.stopPropagation(); nextMedia(); }}
-                  className="w-10 h-10 lg:w-14 lg:h-14 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/80 text-white border border-white/10 cursor-pointer backblur-3xl transition-all  pointer-events-auto hover:scale-110 active:scale-95">
-                  <svg width="20" height="20" className="lg:w-8 lg:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white cursor-pointer transition-all hover:scale-110 active:scale-95"
+                  style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
+                </button>
+              )}
+            </>
+          )}
+
+          {/* Close button */}
+          <button onClick={() => setSelectedPostId(null)}
+            className="absolute top-3 right-3 z-30 w-9 h-9 rounded-2xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: isLight ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.10)',
+              border: isLight ? '1px solid rgba(0,0,0,0.10)' : '1px solid rgba(255,255,255,0.20)',
+              color: isLight ? '#333' : '#fff',
+              backdropFilter: 'blur(10px)',
+            }}>
+            <IconClose size={16} />
+          </button>
+        </div>
+
+        {/* ── Right Panel: Interaction Sidebar ──────────────────────────────── */}
+        <div className="w-full lg:w-[400px] xl:w-[440px] shrink-0 flex flex-col overflow-hidden relative">
+
+          {/* Author Header */}
+          <div className="px-6 py-5 flex items-center justify-between shrink-0"
+            style={{ borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)'}` }}>
+            <div className="flex items-center gap-3">
+              <button onClick={() => onProfileClick?.(raw.authorId)} className="cursor-pointer bg-transparent border-none p-0 transition-transform hover:rotate-6 hover:scale-110">
+                <Avatar src={authorInfo.avatar} name={authorInfo.name} className="w-11 h-11 rounded-2xl border-2" style={{ borderColor: c }} />
+              </button>
+              <div>
+                <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onProfileClick?.(raw.authorId)}>
+                  <DisplayName profile={authorInfo.profile} fallbackName={authorInfo.name} className="font-black text-sm tracking-tight" />
+                  <IconVerified />
+                </div>
+                <div className={`text-[10px] font-bold opacity-40 uppercase tracking-[0.18em] ${textSecondary}`}>
+                  @{authorInfo.profile?.username || 'user'} · {new Date(raw.createdAt).toLocaleDateString('pt-PT')}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => onCapturePost?.(raw)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
+                style={{
+                  background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
+                  border: isLight ? '1px solid rgba(0,0,0,0.09)' : '1px solid rgba(255,255,255,0.15)',
+                  color: isLight ? '#555' : 'rgba(255,255,255,0.7)',
+                }}
+                title="Capturar para Status"
+              >
+                <IconCamera size={14} />
+              </button>
+              {raw.authorId === authUser?.id && (
+                <button
+                  onClick={() => { onEditPost?.(raw); setSelectedPostId(null); }}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
+                  style={{
+                    background: `${c}18`,
+                    border: `1px solid ${c}40`,
+                    color: c,
+                  }}
+                  title="Editar"
+                >
+                  <IconEdit />
                 </button>
               )}
             </div>
           </div>
-        )}
 
-        {/* Close Button */}
-        <button onClick={() => setSelectedPostId(null)}
-          className="absolute top-6 left-6 lg:top-10 lg:left-10 z-[70] w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/80 text-white border border-white/10 cursor-pointer backblur-3xl transition-all ">
-          <IconClose size={20} />
-        </button>
-      </div>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pb-32">
 
-      {/* Cinematic Interaction Panel (Floating Glass Sidebar) */}
-      <div className={`w-full lg:w-[450px] xl:w-[500px] h-auto lg:h-[calc(100vh-40px)] lg:m-5 flex flex-col glass-card rounded-[32px] border border-white/10  relative z-[100] transition-all duration-700 animate-in slide-in-from-right-20 mb-20 lg:mb-5 ${cardBg}`}>
-
-        {/* Author Spotlight Header */}
-        <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4">
-            <button onClick={() => onProfileClick?.(raw.authorId)} className="cursor-pointer bg-transparent border-none p-0 transition-transform hover:rotate-6 hover:scale-110">
-              <Avatar src={authorInfo.avatar} name={authorInfo.name} className="w-12 h-12 rounded-2xl border-2" style={{ borderColor: c }} />
-            </button>
-            <div>
-              <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onProfileClick?.(raw.authorId)}>
-                <DisplayName profile={authorInfo.profile} fallbackName={authorInfo.name} className="font-black text-base animate-glow-pulse tracking-tight" />
-                <IconVerified />
-              </div>
-              <div className={`text-[10px] font-bold opacity-30 uppercase tracking-[0.2em] ${textSecondary}`}>@{authorInfo.profile?.username || 'user'}</div>
-            </div>
-          </div>
-          <button className="bg-white/5 w-10 h-10 rounded-xl border-none cursor-pointer flex items-center justify-center opacity-30 hover:opacity-100 transition-all hover:scale-110 text-white"><IconDots size={20} /></button>
-        </div>
-
-        <div className="flex-1 lg:overflow-y-auto custom-scrollbar flex flex-col">
-          <div className="px-8 py-8 border-b border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent">
-            <div className={`text-xl lg:text-2xl leading-relaxed mb-8 font-medium tracking-tight animate-glow-pulse  ${textPrimary}`}>
-              {formatContent(raw.content, raw.titleFont, raw.titleColor, isLight)}
-            </div>
-
-            <div className="flex items-center gap-8">
-              <button onClick={() => toggleReaction(raw.id)} className={`flex items-center gap-3 bg-white/5 hover:bg-white/10 px-5 py-2.5 rounded-2xl border border-white/5 cursor-pointer text-xs font-black transition-all hover:scale-110 ${raw.isLiked ? 'animate-heart-burst' : ''}`} style={{ color: c }}>
-                <IconHeart filled={raw.isLiked} size={22} />
-                <span className="text-sm">{raw._count?.reactions || 0}</span>
-              </button>
-              <div className="flex items-center gap-3 opacity-30 text-[10px] font-black tracking-[0.2em] uppercase">
-                <div className="scale-110"><IconComment /></div> {postComments.length} ECOAR
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 px-6 py-4 space-y-4">
-            {postComments.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center opacity-10 py-20 text-center">
-                <div className="scale-[2.5] mb-8"><IconComment /></div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em]">O silêncio é absoluto.<br />Sê o primeiro a ecoar.</p>
-              </div>
-            ) : (
-              postComments.filter(cm => !cm.parentId).map((cm: any) => (
-                <div key={cm.id} className={`glass-card p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all group/comment ${cardBg}`}>
-                  <CommentItem cm={cm} allComments={postComments} postId={selectedPostId}
-                    postAuthorId={raw.authorId} authUser={authUser} myProfile={myProfile}
-                    isLight={isLight} c={c} textPrimary={textPrimary} textSecondary={textSecondary}
-                    borderCol={borderCol} cardBg="bg-transparent" hiddenComments={hiddenComments}
-                    setHiddenComments={setHiddenComments}
-                    onReply={(cm) => { setReplyingTo(cm); modalInputRef.current?.focus(); }} />
+            {/* Post Text + Reaction bar — only shown when post HAS media (otherwise it's in the left panel) */}
+            {allMedia.length > 0 && (
+              <div className="px-6 py-5" style={{ borderBottom: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}` }}>
+                {(() => {
+                  const { cleanContent, frameStyle, watermark, watermarkAnim, bgm } = parsePostMetadata(raw.content || '');
+                  return (
+                    <>
+                      {bgm && (
+                        <div className="mb-3">
+                          <PostBgmBadge bgm={bgm} accentColor={c} isLight={isLight} />
+                        </div>
+                      )}
+                      <div className={`text-sm lg:text-base leading-relaxed font-medium tracking-tight w-full min-w-0 break-words [overflow-wrap:anywhere] [word-break:break-word] mb-4 ${textPrimary}`}>
+                        <PostFrameRenderer
+                          content={cleanContent}
+                          frameStyle={frameStyle}
+                          watermark={watermark}
+                          watermarkAnim={watermarkAnim}
+                          postTitleFont={raw.titleFont}
+                          postTitleColor={raw.titleColor}
+                          isLight={isLight}
+                          themeColor={c}
+                          fontsList={PREMIUM_FONTS}
+                          collapsible={false}
+                        />
+                      </div>
+                    </>
+                  );
+                })()}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => toggleReaction(raw.id)}
+                    className={`flex items-center gap-2.5 px-4 py-2 rounded-2xl border cursor-pointer text-xs font-black transition-all hover:scale-105 active:scale-95 ${raw.isLiked ? 'animate-heart-burst' : ''}`}
+                    style={{
+                      background: raw.isLiked ? `${c}18` : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'),
+                      borderColor: raw.isLiked ? `${c}50` : (isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)'),
+                      color: raw.isLiked ? c : (isLight ? '#666' : 'rgba(255,255,255,0.6)'),
+                      boxShadow: raw.isLiked ? `0 4px 16px ${c}30` : 'none',
+                    }}>
+                    <IconHeart filled={raw.isLiked} size={18} />
+                    <span className="text-sm font-black">{raw._count?.reactions || 0}</span>
+                  </button>
+                  <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.2em] uppercase"
+                    style={{ color: isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.25)' }}>
+                    <IconComment />
+                    {postComments.length} ECOS
+                  </div>
                 </div>
-              ))
+              </div>
+            )}
+
+            {/* Comments Section — always shown, full height when text-only post */}
+            <div className="px-5 py-4 space-y-3">
+              {postComments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center"
+                  style={{ color: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)' }}>
+                  <div className="scale-[2] mb-5"><IconComment /></div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] leading-relaxed">
+                    O silêncio é absoluto.<br />Sê o primeiro a ecoar.
+                  </p>
+                </div>
+              ) : (
+                postComments.filter(cm => !cm.parentId).map((cm: any) => (
+                  <div key={cm.id} className="rounded-2xl p-4 transition-all"
+                    style={{
+                      background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)'}`,
+                    }}>
+                    <CommentItem cm={cm} allComments={postComments} postId={selectedPostId}
+                      postAuthorId={raw.authorId} authUser={authUser} myProfile={myProfile}
+                      isLight={isLight} c={c} textPrimary={textPrimary} textSecondary={textSecondary}
+                      borderCol={borderCol} cardBg="bg-transparent" hiddenComments={hiddenComments}
+                      setHiddenComments={setHiddenComments}
+                      onReply={(cm) => { setReplyingTo(cm); modalInputRef.current?.focus(); }} />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Comment Input — pinned at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 p-4"
+            style={{
+              background: isLight
+                ? 'linear-gradient(to top, rgba(255,255,255,0.98) 70%, transparent)'
+                : 'linear-gradient(to top, rgba(12,12,20,0.98) 70%, transparent)',
+            }}>
+            <div className="rounded-[20px] border flex flex-col gap-2.5 overflow-hidden"
+              style={{
+                background: isLight ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.06)',
+                borderColor: isLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.14)',
+                backdropFilter: 'blur(16px)',
+              }}>
+              {replyingTo && (
+                <div className="flex items-center justify-between px-4 pt-3">
+                  <span className="text-[10px] font-bold" style={{ color: isLight ? '#888' : '#aaa' }}>
+                    Ecoando <span style={{ color: c }}>@{replyingTo.author?.profile?.username}</span>
+                  </span>
+                  <button onClick={() => setReplyingTo(null)} className="bg-transparent border-none cursor-pointer opacity-50 hover:opacity-100 transition-opacity"
+                    style={{ color: isLight ? '#666' : '#aaa' }}>
+                    <IconClose size={12} />
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-3 px-4 py-3">
+                <Avatar src={myProfile?.avatarUrl} name={myProfile?.username} size="sm"
+                  className="w-8 h-8 rounded-xl shrink-0"
+                  style={{ border: `1.5px solid ${c}50` }} />
+                <input
+                  ref={modalInputRef}
+                  type="text"
+                  placeholder="Escreve o teu eco..."
+                  className={`flex-1 bg-transparent border-none outline-none text-sm py-1 ${textPrimary}`}
+                  style={{ caretColor: c }}
+                  value={modalCommentText}
+                  onChange={e => setModalCommentText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleModalComment()}
+                />
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="bg-transparent border-none cursor-pointer text-lg hover:scale-110 transition-transform">
+                    😊
+                  </button>
+                  <button
+                    onClick={handleModalComment}
+                    disabled={!modalCommentText.trim() || submitting}
+                    className="w-8 h-8 rounded-xl flex items-center justify-center border-none cursor-pointer disabled:opacity-30 transition-all hover:scale-110 active:scale-95"
+                    style={{ background: `linear-gradient(135deg, ${c}, #ec4899)`, color: '#fff', boxShadow: `0 4px 12px ${c}50` }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            {showEmojiPicker && (
+              <div className="absolute bottom-full right-4 mb-2 z-[120] scale-[0.9] origin-bottom-right">
+                <EmojiPicker onSelect={e => { setModalCommentText(prev => prev + e); setShowEmojiPicker(false); }} onClose={() => setShowEmojiPicker(false)} />
+              </div>
             )}
           </div>
-        </div>
-
-        {/* Futuristic Floating Input Bar */}
-        <div className={`absolute bottom-6 left-6 right-6 p-4 glass-card rounded-[24px] border border-white/10  flex flex-col gap-3 z-[110] animate-in slide-in-from-bottom-5 ${cardBg}`}>
-          {replyingTo && (
-            <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-dashed border-white/10">
-              <span className={`text-[10px] font-bold tracking-tight ${textSecondary}`}>Ecoando para <span style={{ color: c }}>@{replyingTo.author?.profile?.username}</span></span>
-              <button onClick={() => setReplyingTo(null)} className="bg-transparent border-none cursor-pointer opacity-40 hover:opacity-100 text-white"><IconClose size={14} /></button>
-            </div>
-          )}
-          <div className="flex items-center gap-4 px-2">
-            <Avatar src={myProfile?.avatarUrl} name={myProfile?.username} size="sm" className="w-10 h-10 rounded-xl border border-white/10" />
-            <input
-              ref={modalInputRef}
-              type="text"
-              placeholder="Escreve o teu eco..."
-              className={`flex-1 bg-transparent border-none outline-none text-sm py-2 ${textPrimary} placeholder:opacity-20`}
-              value={modalCommentText}
-              onChange={e => setModalCommentText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleModalComment()}
-            />
-            <div className="flex items-center gap-3">
-              <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="bg-transparent border-none cursor-pointer text-xl hover:scale-110 transition-transform">😊</button>
-              <button
-                onClick={handleModalComment}
-                disabled={!modalCommentText.trim() || submitting}
-                className="w-10 h-10 rounded-xl flex items-center justify-center border-none cursor-pointer disabled:opacity-20 transition-all hover:scale-110 active:scale-95  shadow-black/40"
-                style={{ background: c, color: '#000' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-              </button>
-            </div>
-          </div>
-          {showEmojiPicker && (
-            <div className="absolute bottom-full right-5 mb-4 z-[120] scale-[0.9] origin-bottom-right ">
-              <EmojiPicker onSelect={e => { setModalCommentText(prev => prev + e); setShowEmojiPicker(false); }} onClose={() => setShowEmojiPicker(false)} />
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -1326,7 +1768,7 @@ const TABS = ['For You', 'Following', 'Anime', 'Manga'];
 
 export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialPostId, onPostOpened }: LazerHomeViewProps) {
   const { user: authUser } = useAuthStore();
-  const { feedPosts, createPost, fetchComments, comments, fetchFriends, fetchMyCommunities, fetchExploreCommunities, trendingTropes, fetchTrendingTropes } = useLazerStore();
+  const { feedPosts, createPost, editPost, fetchComments, comments, fetchFriends, fetchMyCommunities, fetchExploreCommunities, trendingTropes, fetchTrendingTropes } = useLazerStore();
   const { exploreCommunities, watchingNow, fetchWatchingNow, submitCheckIn } = useLazerStore();
 
   const [activeTab, setActiveTab] = useState('For You');
@@ -1345,7 +1787,18 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
   const [activeDiscussion, setActiveDiscussion] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showTropesModal, setShowTropesModal] = useState(false);
+  const [showAdvancedModal, setShowAdvancedModal] = useState(false);
+  const [editingPost, setEditingPost] = useState<any | null>(null);
+  const [capturingPost, setCapturingPost] = useState<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Manga Quote & BGM State
+  const [selectedQuoteKanji, setSelectedQuoteKanji] = useState<string | null>(null);
+  const [showQuotePicker, setShowQuotePicker] = useState(false);
+  const [selectedBgm, setSelectedBgm] = useState<Track | null>(null);
+  const [showBgmPicker, setShowBgmPicker] = useState(false);
+  const [bgmSearch, setBgmSearch] = useState('');
+  const { tracks: musicTracks, fetchTracks: fetchMusicTracks } = useMusicStore();
 
   const isLight = user?.themeMode === 'light';
   const c = user?.themeColor || '#e879f9';
@@ -1357,7 +1810,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
   // Current user profile (for composer & comments)
   const myProfile = authUser?.profile || null;
 
-  const PREMIUM_COLORS = [...PREMIUM_COLORS_LIST, { id: 'dynamic', value: isLight ? '#000' : '#fff', label: isLight ? 'Black' : 'Pure' }];
+  const composerColors = [...PREMIUM_COLORS, { id: 'dynamic', value: isLight ? '#000' : '#fff', label: isLight ? 'Black' : 'Pure' }];
 
   useEffect(() => {
     fetchFriends();
@@ -1404,8 +1857,16 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
       .map(t => t.replace('#', '').trim())
       .filter(Boolean);
 
+    let finalPostText = postText;
+    if (selectedQuoteKanji) {
+      finalPostText = `[manga-quote:${selectedQuoteKanji}]\n` + finalPostText;
+    }
+    if (selectedBgm) {
+      finalPostText = finalPostText + `\n[bgm:${selectedBgm.id}:${selectedBgm.title}:${selectedBgm.artist}]`;
+    }
+
     await createPost(
-      postText,
+      finalPostText,
       mediaFiles.length > 0 ? mediaFiles : undefined,
       tropeNames.length > 0 ? tropeNames : undefined,
       isSparkle,
@@ -1413,6 +1874,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
       selectedColor || undefined
     );
     setPostText(''); setMediaPreviews([]); setMediaFiles([]);
+    setSelectedQuoteKanji(null); setSelectedBgm(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setTag(''); setIsSparkle(false); setShowTag(false); setSelectedFont('default'); setSelectedColor('');
     setIsPosting(false);
@@ -1451,6 +1913,9 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
           0%, 100% { text-shadow: 0 0 5px rgba(255,255,255,0.1); }
           50% { text-shadow: 0 0 15px rgba(255,255,255,0.4); }
         }
+        @keyframes bgm-bar-1 { 0% { height: 20%; } 100% { height: 100%; } }
+        @keyframes bgm-bar-2 { 0% { height: 95%; } 100% { height: 25%; } }
+        @keyframes bgm-bar-3 { 0% { height: 40%; } 100% { height: 100%; } }
         .animate-heart-burst { animation: heart-burst 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .animate-glow-pulse { animation: glow-pulse 3s infinite ease-in-out; }
       `}</style>
@@ -1459,7 +1924,9 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         feedPosts={feedPosts} comments={comments} authUser={authUser} myProfile={myProfile}
         isLight={isLight} c={c} textPrimary={textPrimary} textSecondary={textSecondary}
         borderCol={borderCol} cardBg={cardBg} onProfileClick={onProfileClick}
-        initialIndex={initialMediaIndex} />
+        initialIndex={initialMediaIndex}
+        onEditPost={(p: any) => setEditingPost(p)}
+        onCapturePost={(p: any) => setCapturingPost(p)} />
 
       <div className="h-full w-full font-['Nunito',sans-serif] relative rounded-none md:rounded-[3rem] border-0 md:border liquid-glass-shell flex flex-col overflow-hidden transition-all duration-300">
         {/* Crista de luz especular no topo do arco Liquid Glass */}
@@ -1472,6 +1939,61 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
             onTropeClick={(t) => { setActiveTag(t); setActiveTab(''); setShowTropesModal(false); }}
           />
         )}
+        {(showAdvancedModal || editingPost) && (
+          <AdvancedPostModal
+            isOpen={showAdvancedModal || !!editingPost}
+            initialPost={editingPost}
+            onClose={() => {
+              setShowAdvancedModal(false);
+              setEditingPost(null);
+            }}
+            onSubmit={async (data) => {
+              if (editingPost) {
+                const res = await editPost(
+                  editingPost.id,
+                  data.content,
+                  data.mediaFiles,
+                  data.tropeNames,
+                  data.titleFont,
+                  data.titleColor
+                );
+                if (res) {
+                  setEditingPost(null);
+                  setShowAdvancedModal(false);
+                }
+                return !!res;
+              } else {
+                const res = await createPost(
+                  data.content,
+                  data.mediaFiles,
+                  data.tropeNames,
+                  data.isSparkle,
+                  data.titleFont,
+                  data.titleColor
+                );
+                if (res) {
+                  setShowAdvancedModal(false);
+                }
+                return !!res;
+              }
+            }}
+            c={c}
+            isLight={isLight}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
+            borderCol={borderCol}
+            cardBg={cardBg}
+          />
+        )}
+
+        <AestheticCaptureModal
+          isOpen={Boolean(capturingPost)}
+          onClose={() => setCapturingPost(null)}
+          mode="post"
+          post={capturingPost}
+          themeColor={c}
+          isLight={isLight}
+        />
 
         <div className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 custom-scrollbar">
           <div className="w-full grid grid-cols-1 lg:grid-cols-[210px_1fr_210px] xl:grid-cols-[240px_1fr_280px] gap-6 items-start">
@@ -1523,13 +2045,37 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
               </div>
 
               {/* Composer */}
-              <div className="rounded-3xl p-4 sm:p-5 glass-card">
+              <div className={`rounded-3xl p-4 sm:p-5 glass-card relative ${showQuotePicker || showBgmPicker || showEmojiPicker ? 'z-40' : 'z-20'}`}>
                 <div className="flex gap-3 items-start">
                   <Avatar src={myProfile?.avatarUrl} name={myProfile?.displayName || myProfile?.username || 'U'} className="w-[42px] h-[42px] rounded-full shrink-0" />
                   <div className="flex-1">
                     <textarea className={`w-full border-none resize-none text-sm bg-transparent min-h-[48px] outline-none ${textPrimary}`}
                       placeholder="O que está a acontecer no teu universo?..."
                       value={postText} onChange={e => setPostText(e.target.value)} rows={2} />
+
+                    {/* Manga Quote & BGM Preview Badges */}
+                    {(selectedQuoteKanji || selectedBgm) && (
+                      <div className="flex flex-wrap gap-2 my-2">
+                        {selectedQuoteKanji && (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border animate-in fade-in"
+                            style={{ borderColor: `${c}60`, background: `${c}15`, color: c }}>
+                            <span>❝ MANGA QUOTE: {selectedQuoteKanji} ❞</span>
+                            <button onClick={() => setSelectedQuoteKanji(null)} className="cursor-pointer bg-transparent border-none p-0 opacity-60 hover:opacity-100 text-current ml-1 flex items-center">
+                              <IconClose size={12} />
+                            </button>
+                          </div>
+                        )}
+                        {selectedBgm && (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border animate-in fade-in"
+                            style={{ borderColor: `${c}60`, background: `${c}15`, color: c }}>
+                            <span>🎵 {selectedBgm.title} - {selectedBgm.artist}</span>
+                            <button onClick={() => setSelectedBgm(null)} className="cursor-pointer bg-transparent border-none p-0 opacity-60 hover:opacity-100 text-current ml-1 flex items-center">
+                              <IconClose size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Media Previews */}
                     {mediaPreviews.length > 0 && (
@@ -1573,20 +2119,180 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
                             style={{ borderColor: borderCol, color: c }}><IconEmoji /></button>
                           {showEmojiPicker && <div className="absolute top-full left-0 mt-2 z-50"><EmojiPicker onSelect={e => { setPostText(p => p + e); setShowEmojiPicker(false); }} onClose={() => setShowEmojiPicker(false)} /></div>}
                         </div>
+
+                        {/* Manga Quote Button */}
+                        <div className="relative">
+                          <button onClick={() => setShowQuotePicker(!showQuotePicker)}
+                            className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                            style={{ borderColor: selectedQuoteKanji ? c : borderCol, color: selectedQuoteKanji ? c : (isLight ? '#666' : '#999') }}
+                            title="Manga Quote / Citação">
+                            <IconMangaQuote />
+                          </button>
+                          {showQuotePicker && (
+                            <>
+                              <div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px] sm:bg-transparent sm:backdrop-blur-none" onClick={() => setShowQuotePicker(false)} />
+                              <div
+                                className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-[320px] mx-auto sm:translate-y-0 sm:max-w-none sm:mx-0 sm:absolute sm:inset-auto sm:left-0 sm:top-full sm:mt-2 sm:w-64 p-3 rounded-2xl z-50 animate-in zoom-in-95 duration-150 overflow-hidden"
+                                style={{
+                                  background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.06)',
+                                  backdropFilter: 'blur(28px) saturate(160%)',
+                                  WebkitBackdropFilter: 'blur(28px) saturate(160%)',
+                                  border: isLight ? '1px solid rgba(255, 255, 255, 0.95)' : '1px solid rgba(255, 255, 255, 0.22)',
+                                  borderTop: isLight ? '1.5px solid rgba(255, 255, 255, 1)' : '1.5px solid rgba(255, 255, 255, 0.45)',
+                                  borderBottom: isLight ? '1px solid rgba(0, 0, 0, 0.08)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                  boxShadow: isLight
+                                    ? '0 20px 40px -4px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 1)'
+                                    : '0 24px 48px -6px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)',
+                                }}
+                              >
+                                <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+                                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider px-1 py-0.5 mb-2">
+                                  <span className={textSecondary}>Kanji Watermark</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${isLight ? 'bg-black/5 text-black/70' : 'bg-white/10 text-white/80'}`}>{MANGA_QUOTE_KANJI.length} estilos</span>
+                                    <button onClick={() => setShowQuotePicker(false)} className={`bg-transparent border-none ${textSecondary} hover:${textPrimary} cursor-pointer p-0.5 flex items-center transition-colors`}>
+                                      <IconClose size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5 max-h-60 sm:max-h-72 overflow-y-auto custom-scrollbar pr-0.5">
+                                  {MANGA_QUOTE_KANJI.map((q) => {
+                                    const isSelected = selectedQuoteKanji === q.kanji;
+                                    return (
+                                      <button
+                                        key={q.kanji}
+                                        onClick={() => {
+                                          setSelectedQuoteKanji(q.kanji);
+                                          setShowQuotePicker(false);
+                                        }}
+                                        className="flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer hover:scale-105 active:scale-95"
+                                        style={{
+                                          borderColor: isSelected ? q.color : (isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.12)'),
+                                          background: isSelected
+                                            ? `${q.color}22`
+                                            : (isLight ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.04)'),
+                                          backdropFilter: 'blur(10px)',
+                                          WebkitBackdropFilter: 'blur(10px)',
+                                        }}
+                                      >
+                                        <span className="text-base font-black" style={{ color: q.color || c }}>{q.kanji}</span>
+                                        <span className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${textSecondary}`}>{q.label}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* BGM Track Button */}
+                        <div className="relative">
+                          <button onClick={() => {
+                            if (!musicTracks.length) fetchMusicTracks();
+                            setShowBgmPicker(!showBgmPicker);
+                          }}
+                            className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                            style={{ borderColor: selectedBgm ? c : borderCol, color: selectedBgm ? c : (isLight ? '#666' : '#999') }}
+                            title="Anexar Trilha Sonora / BGM">
+                            <IconMusicNote />
+                          </button>
+                          {showBgmPicker && (
+                            <>
+                              <div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px] sm:bg-transparent sm:backdrop-blur-none" onClick={() => setShowBgmPicker(false)} />
+                              <div
+                                className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-[340px] mx-auto sm:translate-y-0 sm:max-w-none sm:mx-0 sm:absolute sm:inset-auto sm:left-0 sm:top-full sm:mt-2 sm:w-72 max-h-80 flex flex-col p-3 rounded-2xl z-50 animate-in zoom-in-95 duration-150 overflow-hidden"
+                                style={{
+                                  background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.06)',
+                                  backdropFilter: 'blur(28px) saturate(160%)',
+                                  WebkitBackdropFilter: 'blur(28px) saturate(160%)',
+                                  border: isLight ? '1px solid rgba(255, 255, 255, 0.95)' : '1px solid rgba(255, 255, 255, 0.22)',
+                                  borderTop: isLight ? '1.5px solid rgba(255, 255, 255, 1)' : '1.5px solid rgba(255, 255, 255, 0.45)',
+                                  borderBottom: isLight ? '1px solid rgba(0, 0, 0, 0.08)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                  boxShadow: isLight
+                                    ? '0 20px 40px -4px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 1)'
+                                    : '0 24px 48px -6px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)',
+                                }}
+                              >
+                                <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${textSecondary}`}>Escolher BGM</span>
+                                  <button onClick={() => setShowBgmPicker(false)} className={`bg-transparent border-none ${textSecondary} hover:${textPrimary} cursor-pointer`}><IconClose size={12} /></button>
+                                </div>
+                                <input
+                                  type="text"
+                                  placeholder="Procurar faixa..."
+                                  value={bgmSearch}
+                                  onChange={e => setBgmSearch(e.target.value)}
+                                  className={`w-full text-xs px-2.5 py-1.5 rounded-xl border outline-none mb-2 ${textPrimary}`}
+                                  style={{
+                                    background: isLight ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.05)',
+                                    borderColor: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.15)',
+                                  }}
+                                />
+                                <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar max-h-48 pr-1">
+                                  {musicTracks.filter(t => !bgmSearch || t.title.toLowerCase().includes(bgmSearch.toLowerCase()) || t.artist.toLowerCase().includes(bgmSearch.toLowerCase())).length === 0 ? (
+                                    <div className={`text-center py-4 text-xs ${textSecondary}`}>Nenhuma faixa encontrada</div>
+                                  ) : (
+                                    musicTracks.filter(t => !bgmSearch || t.title.toLowerCase().includes(bgmSearch.toLowerCase()) || t.artist.toLowerCase().includes(bgmSearch.toLowerCase())).map(t => (
+                                      <button
+                                        key={t.id}
+                                        onClick={() => {
+                                          setSelectedBgm(t);
+                                          setShowBgmPicker(false);
+                                        }}
+                                        className="w-full flex items-center justify-between p-2 rounded-xl border transition-all text-left cursor-pointer group"
+                                        style={{
+                                          background: isLight ? 'rgba(255, 255, 255, 0.55)' : 'rgba(255, 255, 255, 0.04)',
+                                          borderColor: isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.1)',
+                                        }}
+                                      >
+                                        <div className="truncate mr-2">
+                                          <div className={`text-xs font-bold ${textPrimary} group-hover:text-emerald-400 transition-colors truncate`}>{t.title}</div>
+                                          <div className={`text-[10px] ${textSecondary} truncate`}>{t.artist}</div>
+                                        </div>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isLight ? 'bg-black/5 text-black/70' : 'bg-white/10 text-white/80'} shrink-0`}>BGM</span>
+                                      </button>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
                         <CustomFontSelector selected={selectedFont} onSelect={setSelectedFont} fonts={PREMIUM_FONTS} borderColor={borderCol} textColor={textPrimary} isLightMode={isLight} />
                         <div className="flex gap-1 items-center px-2 py-1 rounded-lg border-[1.5px]" style={{ borderColor: borderCol }}>
-                          {PREMIUM_COLORS.map(col => (
+                          {composerColors.map(col => (
                             <button key={col.id} onClick={() => setSelectedColor(selectedColor === col.value ? '' : col.value)}
                               className="w-3.5 h-3.5 rounded-full border-none cursor-pointer transition-all hover:scale-125"
                               style={{ background: col.value, outline: selectedColor === col.value ? '2px solid #fff' : 'none', opacity: selectedColor === col.value ? 1 : 0.5 }} />
                           ))}
                         </div>
                       </div>
-                      <button onClick={handleCreate} disabled={(!postText.trim() && mediaFiles.length === 0) || isPosting}
-                        className="text-black border-none rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity disabled:opacity-50 hover:opacity-90 "
-                        style={{ background: `linear-gradient(135deg, ${c}dd, ${c})` }}>
-                        {isPosting ? 'A publicar...' : 'Publicar'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAdvancedModal(true)}
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black transition-all cursor-pointer hover:scale-105 active:scale-95 border"
+                          style={{
+                            background: isLight ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.06)',
+                            borderColor: `${c}50`,
+                            color: c,
+                            boxShadow: `0 2px 12px -2px ${c}30`,
+                          }}
+                          title="Abrir Estúdio Completo de Publicação com Pré-visualização em Tempo Real"
+                        >
+                          <IconSparkle />
+                          <span className="hidden sm:inline">Publicação Avançada</span>
+                          <span className="sm:hidden">Avançada</span>
+                        </button>
+                        <button onClick={handleCreate} disabled={(!postText.trim() && mediaFiles.length === 0) || isPosting}
+                          className="text-black border-none rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity disabled:opacity-50 hover:opacity-90 "
+                          style={{ background: `linear-gradient(135deg, ${c}dd, ${c})` }}>
+                          {isPosting ? 'A publicar...' : 'Publicar'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1621,7 +2327,9 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
                           textPrimary={textPrimary} textSecondary={textSecondary}
                           cardBg={cardBg} borderCol={borderCol}
                           setSelectedPostId={setSelectedPostId}
-                          setInitialMediaIndex={setInitialMediaIndex} />
+                          setInitialMediaIndex={setInitialMediaIndex}
+                          onEditPost={(p: any) => setEditingPost(p)}
+                          onCapturePost={(p: any) => setCapturingPost(p)} />
                       </div>
                     </div>
                   ))}
