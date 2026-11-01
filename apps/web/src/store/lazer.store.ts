@@ -45,7 +45,9 @@ export interface LazerPost {
   isSparkle: boolean; isPinned: boolean;
   isLiked?: boolean; // persists in store, never reset between renders
   titleFont?: string | null; titleColor?: string | null; createdAt: string;
-  _count?: { reactions: number; comments: number };
+  _count?: { reactions: number; comments: number; forks?: number };
+  forkedFromId?: string | null;
+  forkedFrom?: LazerPost | null;
 }
 
 export interface LazerComment {
@@ -96,7 +98,7 @@ interface LazerStoreState {
   spotifyPlayback: any | null;
   fetchFeed: () => Promise<void>;
   fetchUserPosts: (userId: string) => Promise<void>;
-  createPost: (content: string, imageUrl?: string | string[], tropeNames?: string[], isSparkle?: boolean, titleFont?: string, titleColor?: string, communityId?: string) => Promise<boolean>;
+  createPost: (content: string, imageUrl?: string | string[], tropeNames?: string[], isSparkle?: boolean, titleFont?: string, titleColor?: string, communityId?: string, forkedFromId?: string) => Promise<boolean>;
   deletePost: (id: string) => Promise<boolean>;
   editPost: (id: string, content: string, imageUrl?: string | string[], tropeNames?: string[], titleFont?: string, titleColor?: string) => Promise<boolean>;
   fetchNotifications: () => Promise<void>;
@@ -219,11 +221,11 @@ export const useLazerStore = create<LazerStoreState>((set, get) => ({
     finally { set({ isLoading: false }); }
   },
 
-  createPost: async (content, imageUrl, tropeNames, isSparkle, titleFont, titleColor, communityId) => {
+  createPost: async (content, imageUrl, tropeNames, isSparkle, titleFont, titleColor, communityId, forkedFromId) => {
     try {
       const res = await fetch(`${API}/api/v1/lazer/posts`, {
         method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ content, imageUrl, tropeNames, isSparkle, titleFont, titleColor, communityId }),
+        body: JSON.stringify({ content, imageUrl, tropeNames, isSparkle, titleFont, titleColor, communityId, forkedFromId }),
       });
       if (res.ok) {
         const newPost = await res.json();

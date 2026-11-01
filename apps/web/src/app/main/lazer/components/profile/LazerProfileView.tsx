@@ -8,8 +8,10 @@ import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
 import { useLazerStore } from '@/store/lazer.store';
 import { uploadUserPersona, resolveUrl } from '@/lib/api';
+import { formatTimeAgo } from '@/lib/format';
 import { useMusicStore } from '@/store/music.store';
 import { AestheticCaptureModal } from '../modals/AestheticCaptureModal';
+import { PostFrameRenderer, parsePostMetadata } from '../home/PostFrameStyles';
 
 const t = (s: string) => s;
 
@@ -20,9 +22,11 @@ interface ProfileViewProps {
   onPostClick?: (postId: string) => void;
   viewingUserId?: string;
   onChatClick?: (userId: string) => void;
+  customPosts?: any[];
+  onClose?: () => void;
 }
 
-export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId, onChatClick }: ProfileViewProps) {
+export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId, onChatClick, customPosts, onClose }: ProfileViewProps) {
   const [showAiModal, setShowAiModal] = useState(false);
   const [showCaptureModal, setShowCaptureModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'chronicles' | 'media' | 'about' | 'music'>('chronicles');
@@ -31,7 +35,8 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
   const [profileTracks, setProfileTracks] = useState<any[]>([]);
   const [profilePlaylists, setProfilePlaylists] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isFriend, sendFriendRequest, userPosts } = useLazerStore();
+  const { isFriend, hasSentRequest, sendFriendRequest, userPosts: globalPosts } = useLazerStore();
+  const userPosts = customPosts !== undefined ? customPosts : globalPosts;
   const { playTrack } = useMusicStore();
 
   // Load music for profile
@@ -78,10 +83,39 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
   const cardBg = isLight ? 'glass-panel-light' : 'glass-panel-dark';
 
   return (
-    <div className="w-full h-auto lg:h-full lg:max-h-[675px] max-w-[1200px] flex flex-col overflow-visible lg:overflow-hidden pl-0 pr-0 py-0 lg:ml-0 lg:pr-0 font-['Nunito',sans-serif]">
+    <div className="w-full h-full lg:h-[675px] max-w-[1200px] flex flex-col overflow-hidden pl-0 pr-0 py-0 lg:ml-0 lg:pr-0 font-['Nunito',sans-serif]">
       {/* Main Glass Foreground */}
-      <div className={`flex-1 border-0 md:border-[1.5px] rounded-none md:rounded-[3rem] block lg:flex overflow-visible lg:overflow-hidden relative animate-in fade-in duration-700 z-10 ${cardBg} min-h-0`}
-        style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div
+        className={`flex-1 border-0 md:border-[1.5px] rounded-none md:rounded-[3rem] flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative animate-in fade-in duration-700 z-10 ${cardBg} min-h-0`}
+        style={{ borderColor: 'rgba(255,255,255,0.06)', WebkitOverflowScrolling: 'touch' }}>
+
+        {/* Floating Close & Back buttons when modal is opened (sem topbar e sem escurecimento) */}
+        {onClose && (
+          <div className="absolute top-3 left-3 right-3 z-40 flex items-center justify-between pointer-events-none">
+            <button
+              type="button"
+              onClick={onClose}
+              className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-md border border-white/20 transition-all cursor-pointer hover:scale-105 active:scale-95 text-xs font-bold"
+              title="Voltar"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 5l-7 7 7 7" />
+              </svg>
+              <span>Voltar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="pointer-events-auto w-8 h-8 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 text-white/80 hover:text-white backdrop-blur-md border border-white/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
+              title="Fechar (Esc)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {/* IDENTITY SECTION */}
         {activeTab !== 'about' && (
@@ -277,7 +311,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
         <div className="w-full lg:w-auto lg:flex-1 block lg:flex lg:flex-col min-w-0 relative h-auto lg:h-full overflow-visible lg:overflow-hidden shrink-0 lg:shrink pb-20 lg:pb-0">
 
           {/* Header & Tabs */}
-          <header className="px-6 lg:px-10 pt-6 lg:pt-10 pb-0 flex flex-col lg:flex-row lg:items-center justify-between border-b border-white/5 shrink-0 overflow-x-auto no-scrollbar">
+          <header className="px-6 lg:px-10 pt-4 lg:pt-10 pb-0 flex flex-col lg:flex-row lg:items-center justify-between border-b border-white/5 shrink-0 overflow-x-auto no-scrollbar sticky top-0 z-20 backdrop-blur-xl bg-black/40 lg:static lg:bg-transparent lg:backdrop-blur-none">
             <nav className="flex gap-6 lg:gap-10 w-max lg:w-auto">
               {[
                 { id: 'posts', label: 'Postagens' },
@@ -318,97 +352,183 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                     
                     <div className="flex flex-col gap-32 relative">
                       {user.chronicles.map((item, i) => (
-                        <div key={item.id} className={`flex w-full items-center ${item.side === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
-                          
-                          {/* Image Card Side */}
-                          <div className="w-[45%]">
-                            <div className="group relative p-1 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-700 overflow-hidden shadow-2xl hover:-translate-y-2">
-                              <div className="aspect-[16/9] rounded-[2rem] overflow-hidden relative bg-white/5">
-                                
-                                {/* Media Renderer */}
-                                {(() => {
+                        <React.Fragment key={item.id}>
+                        {(() => {
+                          const isVideo = (url: string) =>
+                            /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
+                          const media = item.img;
+                          const rawArr = Array.isArray(media) ? media : media ? [media] : [];
+                          const mediaArr = rawArr.map(resolveUrl).filter(Boolean);
+                          const hasMedia = mediaArr.length > 0;
 
-                                  const isVideo = (url: string) => 
-                                    /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
-                                  const media = item.img;
-                                  const rawArr = Array.isArray(media) ? media : media ? [media] : [];
-                                  const mediaArr = rawArr.map(resolveUrl).filter(Boolean);
+                          const rawPost = userPosts.find((p: any) => p.id === item.id);
+                          const { cleanContent, frameStyle, watermark, watermarkAnim } = parsePostMetadata(item.quote || '');
+                          const isAdvanced = frameStyle !== 'standard';
 
-                                  if (mediaArr.length === 0) {
-                                    return (
-                                      <div className="absolute inset-0 flex items-center justify-center"
-                                           style={{ background: `linear-gradient(135deg, ${c}20, transparent)` }}>
-                                        <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-white/10">
-                                          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                        </div>
-                                      </div>
-                                    );
-                                  }
-
-                                  if (mediaArr.length === 1) {
-                                    const url = mediaArr[0];
-                                    return isVideo(url) ? (
-                                      <video src={url} className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-700" autoPlay muted loop playsInline />
-                                    ) : (
-                                      <img src={url} className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[0.3] group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 scale-110 group-hover:scale-100" alt="" />
-                                    );
-                                  }
-
-                                  const visible = mediaArr.slice(0, 4);
-                                  const extra = mediaArr.length - 4;
-                                  return (
-                                    <div className="absolute inset-0 grid gap-0.5 grid-cols-2">
-                                      {visible.map((url, mi) => (
-                                        <div key={mi} className={`relative overflow-hidden ${visible.length === 3 && mi === 0 ? 'row-span-2' : ''}`}>
-                                          {isVideo(url) ? (
-                                            <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
-                                          ) : (
-                                            <img src={url} className="w-full h-full object-cover" alt="" />
-                                          )}
-                                          {mi === 3 && extra > 0 && (
-                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                              <span className="text-white font-black text-lg">+{extra}</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
+                          // ─── Layout Só-Texto: integrado na árvore alternada (sem quebrar a timeline) ───
+                          if (!hasMedia) {
+                            return (
+                              <div key={item.id} className={`flex w-full items-center ${item.side === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                {/* Side A: Card da Crónica na Árvore (45%) */}
+                                <div className="w-[45%]">
+                                  {isAdvanced ? (
+                                    <div className="w-full transition-all duration-500 hover:-translate-y-1">
+                                      <PostFrameRenderer
+                                        content={cleanContent}
+                                        frameStyle={frameStyle}
+                                        watermark={watermark}
+                                        watermarkAnim={watermarkAnim}
+                                        postTitleFont={rawPost?.titleFont}
+                                        postTitleColor={rawPost?.titleColor}
+                                        isLight={isLight}
+                                        themeColor={c}
+                                        collapsible={false}
+                                      />
                                     </div>
-                                  );
-                                })()}
+                                  ) : (
+                                    <div
+                                      className="group relative p-6 rounded-[2.2rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-700 overflow-hidden shadow-2xl hover:-translate-y-1"
+                                      style={{ background: `linear-gradient(135deg, ${c}15 0%, rgba(255,255,255,0.03) 100%)`, borderColor: `${c}25` }}
+                                    >
+                                      {/* Aspas decorativas transparentes ao fundo */}
+                                      <span className="absolute -top-2 left-4 text-6xl font-serif font-black leading-none opacity-10 select-none pointer-events-none" style={{ color: c }}>&ldquo;</span>
+                                      <span className="absolute -bottom-6 right-4 text-6xl font-serif font-black leading-none opacity-10 select-none pointer-events-none" style={{ color: c }}>&rdquo;</span>
 
-                                {/* Overlay gradient */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+                                      {item.title && (
+                                        <p className="text-[9px] font-black uppercase tracking-[0.25em] mb-2.5 relative z-10" style={{ color: `${c}cc` }}>
+                                          {item.title}
+                                        </p>
+                                      )}
 
-                                {item.title && (
-                                  <div className="absolute bottom-5 left-7 right-7 z-10">
-                                    <h3 className="text-sm font-black text-white tracking-tight group-hover:translate-x-1 transition-transform drop-shadow-lg">{item.title}</h3>
+                                      <p className="relative z-10 text-[13px] font-medium text-white/80 leading-relaxed italic">
+                                        &ldquo;{cleanContent}&rdquo;
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Connection Dot & Branch na linha central da árvore (10%) */}
+                                <div className="w-[10%] flex justify-center items-center relative z-10">
+                                  <div className="w-4 h-4 rounded-full border-2 bg-transparent flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-500 hover:scale-125"
+                                       style={{ borderColor: c }}>
+                                     <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: c }} />
+                                  </div>
+                                  <div className={`absolute top-1/2 h-[1px] w-full -z-10 ${item.side === 'right' ? 'right-1/2' : 'left-1/2'}`}
+                                       style={{ background: `linear-gradient(${item.side === 'right' ? 'to left' : 'to right'}, ${c}60, transparent)` }} />
+                                </div>
+
+                                {/* Side B: Metadados poéticos da crônica no outro lado da árvore (45%) */}
+                                <div className={`w-[45%] flex flex-col justify-center ${item.side === 'right' ? 'items-start pl-6' : 'items-end pr-6'}`}>
+                                  <div className="flex flex-col gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />
+                                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/90">
+                                        {item.title ? `#${item.title}` : 'Crónica'}
+                                      </span>
+                                    </div>
+                                    {rawPost?.createdAt && (
+                                      <span className="text-[9px] font-bold text-white/40 tracking-wider">
+                                        {formatTimeAgo(rawPost.createdAt)} · {new Date(rawPost.createdAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // ─── Layout Com Mídia: imagem + texto em árvore alternada ───
+                          return (
+                            <div key={item.id} className={`flex w-full items-center ${item.side === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
+
+                              {/* Image Card Side */}
+                              <div className="w-[45%]">
+                                <div className="group relative p-1 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-700 overflow-hidden shadow-2xl hover:-translate-y-2">
+                                  <div className="aspect-[16/9] rounded-[2rem] overflow-hidden relative bg-white/5">
+
+                                    {mediaArr.length === 1 ? (
+                                      isVideo(mediaArr[0]) ? (
+                                        <video src={mediaArr[0]} className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-700" autoPlay muted loop playsInline />
+                                      ) : (
+                                        <img src={mediaArr[0]} className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[0.3] group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 scale-110 group-hover:scale-100" alt="" />
+                                      )
+                                    ) : (
+                                      (() => {
+                                        const visible = mediaArr.slice(0, 4);
+                                        const extra = mediaArr.length - 4;
+                                        return (
+                                          <div className="absolute inset-0 grid gap-0.5 grid-cols-2">
+                                            {visible.map((url, mi) => (
+                                              <div key={mi} className={`relative overflow-hidden ${visible.length === 3 && mi === 0 ? 'row-span-2' : ''}`}>
+                                                {isVideo(url) ? (
+                                                  <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                                                ) : (
+                                                  <img src={url} className="w-full h-full object-cover" alt="" />
+                                                )}
+                                                {mi === 3 && extra > 0 && (
+                                                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                                    <span className="text-white font-black text-lg">+{extra}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        );
+                                      })()
+                                    )}
+
+                                    {/* Overlay gradient */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+
+                                    {item.title && (
+                                      <div className="absolute bottom-5 left-7 right-7 z-10">
+                                        <h3 className="text-sm font-black text-white tracking-tight group-hover:translate-x-1 transition-transform drop-shadow-lg">{item.title}</h3>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Connection Dot & Branch */}
+                              <div className="w-[10%] flex justify-center items-center relative z-10">
+                                <div className="w-4 h-4 rounded-full border-2 bg-transparent flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-500 hover:scale-125"
+                                     style={{ borderColor: c }}>
+                                   <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: c }} />
+                                </div>
+                                <div className={`absolute top-1/2 h-[1px] w-full -z-10 ${item.side === 'right' ? 'right-1/2' : 'left-1/2'}`}
+                                     style={{ background: `linear-gradient(${item.side === 'right' ? 'to left' : 'to right'}, ${c}60, transparent)` }} />
+                              </div>
+
+                              {/* Quote Text Side / Advanced Frame */}
+                              <div className={`w-[45%] flex flex-col justify-center ${item.side === 'right' ? 'items-end pr-4' : 'items-start pl-4'}`}>
+                                {isAdvanced ? (
+                                  <div className="w-full">
+                                    <PostFrameRenderer
+                                      content={cleanContent}
+                                      frameStyle={frameStyle}
+                                      watermark={watermark}
+                                      watermarkAnim={watermarkAnim}
+                                      postTitleFont={rawPost?.titleFont}
+                                      postTitleColor={rawPost?.titleColor}
+                                      isLight={isLight}
+                                      themeColor={c}
+                                      collapsible={false}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className={`border-l-2 pl-4 ${item.side === 'right' ? 'border-l-0 border-r-2 pl-0 pr-4' : ''}`}
+                                       style={{ borderColor: `${c}60` }}>
+                                    <p className="text-[13px] italic font-medium text-white/50 leading-relaxed">
+                                      &ldquo;{cleanContent}&rdquo;
+                                    </p>
                                   </div>
                                 )}
                               </div>
-                            </div>
-                          </div>
 
-                          {/* Connection Dot & Branch */}
-                          <div className="w-[10%] flex justify-center items-center relative z-10">
-                            <div className="w-4 h-4 rounded-full border-2 bg-transparent flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-500 hover:scale-125"
-                                 style={{ borderColor: c }}>
-                               <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: c }} />
                             </div>
-                            <div className={`absolute top-1/2 h-[1px] w-full -z-10 ${item.side === 'right' ? 'right-1/2' : 'left-1/2'}`}
-                                 style={{ background: `linear-gradient(${item.side === 'right' ? 'to left' : 'to right'}, ${c}60, transparent)` }} />
-                          </div>
-
-                          {/* Quote Text Side */}
-                          <div className={`w-[45%] flex flex-col justify-center ${item.side === 'right' ? 'items-end pr-4' : 'items-start pl-4'}`}>
-                            <div className={`border-l-2 pl-4 ${item.side === 'right' ? 'border-l-0 border-r-2 pl-0 pr-4' : ''}`}
-                                 style={{ borderColor: `${c}60` }}>
-                              <p className="text-[13px] italic font-medium text-white/50 leading-relaxed">
-                                "{item.quote}"
-                              </p>
-                            </div>
-                          </div>
-
-                        </div>
+                          );
+                        })()}
+                        </React.Fragment>
                       ))}
                     </div>
 
@@ -477,8 +597,8 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                           {/* Hover Overlay */}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6">
                             <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                               <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">
-                                 {new Date(m.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                               <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1" title={new Date(m.date).toLocaleString('pt-PT')}>
+                                 {formatTimeAgo(m.date)} · {new Date(m.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
                                </p>
                                <div className="flex items-center gap-2">
                                  <div className="w-6 h-6 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
@@ -921,8 +1041,8 @@ function ProfilePostCard({ post, themeColor, isLight, onPostClick }: { post: any
       <div className="p-6">
         {/* Header - Date & Tropes */}
         <div className="flex items-center justify-between mb-4">
-          <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
-            {new Date(post.createdAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+          <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest" title={new Date(post.createdAt).toLocaleString('pt-PT')}>
+            {formatTimeAgo(post.createdAt)} · {new Date(post.createdAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
           </span>
           <div className="flex gap-2">
             {post.tropes?.slice(0, 2).map((t: any) => (
@@ -934,9 +1054,31 @@ function ProfilePostCard({ post, themeColor, isLight, onPostClick }: { post: any
         </div>
 
         {/* Content */}
-        <p className="text-sm text-white/80 leading-relaxed mb-6 whitespace-pre-wrap">
-          {post.content}
-        </p>
+        {(() => {
+          const { cleanContent, frameStyle, watermark, watermarkAnim } = parsePostMetadata(post.content || '');
+          if (frameStyle !== 'standard') {
+            return (
+              <div className="mb-6">
+                <PostFrameRenderer
+                  content={cleanContent}
+                  frameStyle={frameStyle}
+                  watermark={watermark}
+                  watermarkAnim={watermarkAnim}
+                  postTitleFont={post.titleFont}
+                  postTitleColor={post.titleColor}
+                  isLight={isLight}
+                  themeColor={themeColor}
+                  collapsible={true}
+                />
+              </div>
+            );
+          }
+          return (
+            <p className="text-sm text-white/80 leading-relaxed mb-6 whitespace-pre-wrap">
+              {cleanContent}
+            </p>
+          );
+        })()}
 
         {/* Media Grid */}
         {media.length > 0 && (

@@ -13,6 +13,7 @@ import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FriendsModal } from './components/modals/FriendsModal';
 import { CommunityModal } from './components/modals/CommunityModal';
 import { MessagesModal } from './components/modals/MessagesModal';
+import { UserProfileModal } from './components/modals/UserProfileModal';
 import { useAlphaCoreStore } from '@/store/useAlphaCoreStore';
 import { AlphaCoreAvatar } from '@/components/alpha-core/AlphaCoreAvatar';
 import AlphaCoreChat from '@/components/alpha-core/AlphaCoreChat';
@@ -34,7 +35,7 @@ export default function LazerPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showSavedMessage, setShowSavedMessage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [viewingUser, setViewingUser] = useState<any>(null);
+  const [modalProfileUserId, setModalProfileUserId] = useState<string | null>(null);
   const [autoOpenPostId, setAutoOpenPostId] = useState<string | null>(null);
   // Track when notifications were last "seen" — stops pulsing when panel is open
   const [notifsSeen, setNotifsSeen] = useState(false);
@@ -90,8 +91,8 @@ export default function LazerPage() {
   useEffect(() => { fetchFeed(); fetchFriends(); }, []);
 
   useEffect(() => {
-    if (activeView === 'profile') {
-      fetchUserPosts(viewingUser?.id || authUser?.id || '');
+    if (activeView === 'profile' && authUser?.id) {
+      fetchUserPosts(authUser.id);
     }
     // Mark notifs as seen when panel opens
     if (activeView === 'notifications') {
@@ -99,7 +100,7 @@ export default function LazerPage() {
     } else {
       setNotifsSeen(false);
     }
-  }, [activeView, viewingUser?.id, authUser?.id]);
+  }, [activeView, authUser?.id]);
 
   // Reset mobile messages view when leaving messages
   useEffect(() => {
@@ -108,9 +109,10 @@ export default function LazerPage() {
     }
   }, [activeView]);
 
-  // Scroll to top whenever the view changes
+  // Scroll to top and ensure any other user's profile modal is closed whenever the view changes
   const contentRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    setModalProfileUserId(null);
     if (contentRef.current) {
       contentRef.current.scrollTo({ top: 0, behavior: 'instant' });
     }
@@ -118,31 +120,28 @@ export default function LazerPage() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeView]);
 
-  const navigateToProfile = async (userId: string) => {
-    if (userId === authUser?.id) {
-      setViewingUser(null);
+  const handleSelectView = (view: ActiveView) => {
+    setModalProfileUserId(null);
+    setActiveView(view);
+  };
+
+  const navigateToProfile = (userId: string) => {
+    if (!userId || userId === authUser?.id) {
+      setModalProfileUserId(null);
       setActiveView('profile');
       return;
     }
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${apiUrl}/api/v1/users/id/${userId}`, {
-        headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setViewingUser(json.data);
-        setActiveView('profile');
-      }
-    } catch (e) { console.error('navigateToProfile error', e); }
+    setModalProfileUserId(userId);
   };
 
   const navigateToPost = (postId: string) => {
+    setModalProfileUserId(null);
     setAutoOpenPostId(postId);
     setActiveView('feed');
   };
 
   const startPrivateChat = async (userId: string) => {
+    setModalProfileUserId(null);
     const { startConversation } = useChatStore.getState();
     const conversationId = await startConversation(userId);
     if (conversationId) {
@@ -168,7 +167,14 @@ export default function LazerPage() {
       relics: laz.relics || ['🗡️', '🛡️'],
       nameFont: p.nameFont || 'default', nameEffect: p.nameEffect || 'none', nameColor: p.nameColor || '#e879f9',
       themeColor: laz.themeColor || '#e879f9', themeMode: laz.themeMode || 'dark',
-      bannerColor: p.bannerColor, chronicles: [],
+      bannerColor: p.bannerColor,
+      chronicles: userPosts.map((post: any, idx: number) => {
+        let img = post.imageUrl ?? null;
+        if (typeof img === 'string' && img.startsWith('[')) {
+          try { img = JSON.parse(img); } catch { /* keep as string */ }
+        }
+        return { id: post.id, side: idx % 2 === 0 ? 'left' : 'right', title: post.tag || '', quote: post.content, img };
+      }),
       spotifyEnabled: p.spotifyEnabled || false,
       lastPlayedTrack: p.lastPlayedTrack || null,
       foregroundUrl: laz.personaUrl || null,
@@ -180,57 +186,7 @@ export default function LazerPage() {
         themeColor: authUser.alphaAI.bannerColor || '#a78bfa',
       } : undefined,
     };
-  }, [authUser]);
-
-  const viewingProfileData = useMemo<LazerUserProfile>(() => {
-    if (!viewingUser) {
-      return {
-        ...myProfileData,
-        chronicles: userPosts.map((post: any, idx: number) => {
-          let img = post.imageUrl ?? null;
-          if (typeof img === 'string' && img.startsWith('[')) {
-            try { img = JSON.parse(img); } catch { /* keep as string */ }
-          }
-          return { id: post.id, side: idx % 2 === 0 ? 'left' : 'right', title: post.tag || '', quote: post.content, img };
-        }),
-      };
-    }
-    const p = viewingUser.profile || viewingUser as any;
-    const laz = p.lazerData || {};
-    return {
-      userId: viewingUser.id || '',
-      displayName: p.displayName || p.username || 'Utilizador',
-      username: p.username || 'unknown',
-      status: p.status || '', bio: p.bio || '',
-      avatarUrl: p.avatarUrl || null, bannerUrl: p.bannerUrl || null,
-      listening: laz.listening || '', stats: laz.stats || DEMO_USER.stats,
-      primaryAction: 'Adicionar Amigo',
-      quickActions: laz.quickActions || ['Match', 'Message', 'Battle', 'Trade'],
-      communities: laz.communities || [], sectionLabel: laz.sectionLabel || 'COLEÇÃO',
-      relics: laz.relics || ['🗡️', '🛡️'],
-      nameFont: p.nameFont || 'default', nameEffect: p.nameEffect || 'none', nameColor: p.nameColor || '#e879f9',
-      themeColor: laz.themeColor || p.nameColor || '#e879f9',
-      themeMode: myProfileData.themeMode,
-      bannerColor: p.bannerColor,
-      spotifyEnabled: p.spotifyEnabled || false,
-      lastPlayedTrack: p.lastPlayedTrack || null,
-      foregroundUrl: laz.personaUrl || null,
-      bgImageUrl: laz.bgImageUrl || null,
-      aiAssistant: viewingUser.user?.alphaAI?.isActive ? {
-        name: viewingUser.user.alphaAI.name,
-        botname: viewingUser.user.alphaAI.botname,
-        avatarUrl: viewingUser.user.alphaAI.avatarUrl,
-        themeColor: viewingUser.user.alphaAI.bannerColor || '#a78bfa',
-      } : undefined,
-      chronicles: userPosts.map((post: any, idx: number) => {
-        let img = post.imageUrl ?? null;
-        if (typeof img === 'string' && img.startsWith('[')) {
-          try { img = JSON.parse(img); } catch { /* keep as string */ }
-        }
-        return { id: post.id, side: idx % 2 === 0 ? 'left' : 'right', title: post.tag || '', quote: post.content, img };
-      }),
-    };
-  }, [viewingUser, userPosts, myProfileData]);
+  }, [authUser, userPosts]);
 
   async function handleSaveProfile(newUser: LazerUserProfile, files: { avatar: File | null; banner: File | null; bgImage: File | null }) {
     setIsSaving(true);
@@ -321,9 +277,6 @@ export default function LazerPage() {
   const showNotifBadge = totalNotifs > 0 && activeView !== 'notifications' && !notifsSeen;
   const showFriendBadge = pendingRequests > 0 && activeView !== 'friends';
 
-  // isOwnProfile — only true when viewing self
-  const isOwnProfile = !viewingUser;
-
   return (
     <div className="w-full relative flex bg-[#09090b] h-[100dvh] overflow-hidden md:pl-1 lg:pl-2 md:gap-[2px]" style={{ overscrollBehavior: 'none' }}>
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -332,7 +285,7 @@ export default function LazerPage() {
       {/* Sidebar (Estrutura) */}
       <LazerSidebar
         activeView={activeView}
-        setActiveView={setActiveView}
+        setActiveView={handleSelectView}
         themeColor={c}
         alphaStatus={alphaStatus}
         onAlphaClick={openChat}
@@ -353,10 +306,10 @@ export default function LazerPage() {
         )}
         {activeView === 'profile' && (
           <LazerProfileView
-            user={viewingProfileData}
-            isOwnProfile={isOwnProfile}
-            onEdit={isOwnProfile ? () => setIsEditing(true) : undefined}
-            viewingUserId={viewingUser?.id}
+            user={myProfileData}
+            isOwnProfile={true}
+            onEdit={() => setIsEditing(true)}
+            viewingUserId={authUser?.id}
             onPostClick={navigateToPost}
             onChatClick={startPrivateChat} />
         )}
@@ -400,6 +353,26 @@ export default function LazerPage() {
           <LazerShell variant="full" themeMode={themeMode} maxWidth="1050px">
             <LazerArtView />
           </LazerShell>
+        )}
+
+        {/* Modal do perfil de outro utilizador (respeita a sidebar e a borda principal) */}
+        {modalProfileUserId && (
+          <div
+            onClick={() => setModalProfileUserId(null)}
+            className="absolute inset-0 z-40 p-0 sm:p-1 md:py-4 md:pr-4 md:pl-0 lg:py-5 lg:pr-5 lg:pl-0 pb-20 md:pb-4 lg:pb-5 flex flex-col animate-in fade-in duration-300 pointer-events-auto"
+          >
+            <div className="w-full h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <UserProfileModal
+                userId={modalProfileUserId}
+                onClose={() => setModalProfileUserId(null)}
+                onPostClick={navigateToPost}
+                onChatClick={startPrivateChat}
+                themeColor={c}
+                themeMode={themeMode}
+                myBgImageUrl={myProfileData.bgImageUrl}
+              />
+            </div>
+          </div>
         )}
 
         {isEditing && (

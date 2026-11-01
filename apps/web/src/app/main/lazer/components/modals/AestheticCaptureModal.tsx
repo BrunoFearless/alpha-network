@@ -6,6 +6,7 @@ import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
 import { PostFrameRenderer, parsePostMetadata } from '../home/PostFrameStyles';
 import { resolveUrl } from '@/lib/api';
+import { formatTimeAgo } from '@/lib/format';
 
 type CaptureFormat = 'story' | 'feed' | 'horizontal' | 'banner';
 type CanvasThemeId = 'obsidian' | 'aura' | 'midnight' | 'cyber' | 'emerald' | 'sunset';
@@ -529,7 +530,7 @@ export function AestheticCaptureModal({
                         </svg>
                       </div>
                       <span className="text-[11px] text-white/50 font-bold truncate">
-                        @{authorHandle}{showDate ? ` · ${post?.createdAt ? new Date(post.createdAt).toLocaleDateString('pt-PT') : 'Hoje'}` : ''}
+                        @{authorHandle}{showDate ? ` · ${post?.createdAt ? `${formatTimeAgo(post.createdAt)} · ${new Date(post.createdAt).toLocaleDateString('pt-PT')}` : 'Hoje'}` : ''}
                       </span>
                     </div>
 

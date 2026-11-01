@@ -125,6 +125,10 @@ model LazerPost {
   reactions   LazerReaction[]
   tropes      LazerTrope[]    @relation("LazerPostToLazerTrope")
 
+  forkedFromId String?
+  forkedFrom   LazerPost?      @relation("PostForks", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks        LazerPost[]     @relation("PostForks")
+
   @@map("lazer_posts")
 }
 

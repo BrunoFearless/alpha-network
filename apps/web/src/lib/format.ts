@@ -20,3 +20,36 @@ export function formatTime(date: string | Date): string {
 export function formatDate(date: string | Date): string {
   return new Date(date).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+/**
+ * Retorna o tempo decorrido no formato padrão das redes sociais:
+ * "10s", "30min", "2d", "3 semanas", "5 meses", "3 anos"
+ */
+export function formatTimeAgo(date: string | Date | number): string {
+  if (!date) return '';
+  const d = typeof date === 'number' ? new Date(date) : new Date(date);
+  const time = d.getTime();
+  if (isNaN(time)) return '';
+  const diffSec = Math.max(0, Math.floor((Date.now() - time) / 1000));
+
+  if (diffSec < 10) return 'agora';
+  if (diffSec < 60) return `${diffSec}s`;
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}min`;
+
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d`;
+
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffWeeks < 4) return `${diffWeeks} ${diffWeeks === 1 ? 'semana' : 'semanas'}`;
+
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths} ${diffMonths === 1 ? 'mês' : 'meses'}`;
+
+  const diffYears = Math.floor(diffDays / 365);
+  return `${diffYears} ${diffYears === 1 ? 'ano' : 'anos'}`;
+}

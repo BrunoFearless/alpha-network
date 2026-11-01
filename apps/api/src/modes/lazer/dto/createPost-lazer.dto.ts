@@ -21,4 +21,8 @@ export class CreatePostLazerDto {
   @IsString()
   @IsOptional()
   communityId?: string;
+
+  @IsString()
+  @IsOptional()
+  forkedFromId?: string;
 }

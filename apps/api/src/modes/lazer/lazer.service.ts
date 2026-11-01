@@ -32,6 +32,16 @@ const POST_INCLUDE = {
     select: {
       reactions: true,
       comments: true,
+      forks: true,
+    },
+  },
+  forkedFrom: {
+    include: {
+      author: {
+        include: {
+          profile: true,
+        },
+      },
     },
   },
   tropes: true,
@@ -73,6 +83,7 @@ export class LazerService {
         titleColor: dto.titleColor,
         authorId: userId,
         communityId: dto.communityId || null,
+        forkedFromId: dto.forkedFromId || null,
         tropes: tropeConnections.length > 0 ? { connect: tropeConnections } : undefined,
       },
       include: POST_INCLUDE,

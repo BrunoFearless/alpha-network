@@ -124,6 +124,15 @@ const IconShare = ({ size = 16 }: { size?: number }) => (
     <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
   </svg>
 );
+const IconFork = ({ size = 16, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="18" r="3" />
+    <circle cx="6" cy="6" r="3" />
+    <circle cx="18" cy="6" r="3" />
+    <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9" />
+    <path d="M12 12v3" />
+  </svg>
+);
 
 const PREMIUM_FONTS = [
   { id: 'default', label: 'Default', family: "'Nunito', sans-serif" },
@@ -157,6 +166,7 @@ interface AdvancedPostModalProps {
     isSparkle?: boolean;
     titleFont?: string;
     titleColor?: string;
+    forkedFromId?: string;
   }) => Promise<boolean>;
   c: string;
   isLight: boolean;
@@ -165,6 +175,7 @@ interface AdvancedPostModalProps {
   borderCol: string;
   cardBg: string;
   initialPost?: any | null;
+  forkSourcePost?: any | null;
 }
 
 export function AdvancedPostModal({
@@ -178,10 +189,12 @@ export function AdvancedPostModal({
   borderCol,
   cardBg,
   initialPost,
+  forkSourcePost,
 }: AdvancedPostModalProps) {
   const authUser = useAuthStore(s => s.user);
   const myProfile = authUser?.profile;
   const isEditMode = Boolean(initialPost);
+  const isForkMode = Boolean(forkSourcePost);
 
   // Active view on mobile: 'editor' | 'preview'
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
@@ -220,30 +233,31 @@ export function AdvancedPostModal({
     if (isOpen) {
       if (!musicTracks.length) fetchMusicTracks();
 
-      if (initialPost) {
-        const { cleanContent, frameStyle: parsedStyle, watermark: parsedWatermark, watermarkAnim: parsedAnim, bgm } = parsePostMetadata(initialPost.content || '');
+      const source = initialPost || forkSourcePost;
+      if (source) {
+        const { cleanContent, frameStyle: parsedStyle, watermark: parsedWatermark, watermarkAnim: parsedAnim, bgm } = parsePostMetadata(source.content || '');
 
         setPostText(cleanContent);
         setFrameStyle(parsedStyle);
         setCustomWatermark(parsedWatermark || '');
         setWatermarkAnim(parsedAnim || 'none');
         setSelectedBgm(bgm ? ({ id: bgm.id, title: bgm.title, artist: bgm.artist } as Track) : null);
-        setSelectedFont(initialPost.titleFont || 'default');
-        setSelectedColor(initialPost.titleColor || '');
-        setIsSparkle(!!initialPost.isSparkle);
+        setSelectedFont(source.titleFont || 'default');
+        setSelectedColor(source.titleColor || '');
+        setIsSparkle(!!source.isSparkle);
 
-        if (initialPost.imageUrl) {
+        if (source.imageUrl) {
           let mediaArr: string[] = [];
           try {
-            if (typeof initialPost.imageUrl === 'string' && initialPost.imageUrl.startsWith('[')) {
-              mediaArr = JSON.parse(initialPost.imageUrl);
-            } else if (Array.isArray(initialPost.imageUrl)) {
-              mediaArr = initialPost.imageUrl;
+            if (typeof source.imageUrl === 'string' && source.imageUrl.startsWith('[')) {
+              mediaArr = JSON.parse(source.imageUrl);
+            } else if (Array.isArray(source.imageUrl)) {
+              mediaArr = source.imageUrl;
             } else {
-              mediaArr = [initialPost.imageUrl];
+              mediaArr = [source.imageUrl];
             }
           } catch {
-            mediaArr = [initialPost.imageUrl];
+            mediaArr = [source.imageUrl];
           }
           const resolvedMedia = mediaArr.map((m: string) => resolveUrl(m));
           setMediaPreviews(resolvedMedia);
@@ -253,8 +267,8 @@ export function AdvancedPostModal({
           setMediaFiles([]);
         }
 
-        if (initialPost.tropes && Array.isArray(initialPost.tropes)) {
-          setTagsList(initialPost.tropes.map((t: any) => t.name || t));
+        if (source.tropes && Array.isArray(source.tropes)) {
+          setTagsList(source.tropes.map((t: any) => t.name || t));
         } else {
           setTagsList([]);
         }
@@ -272,7 +286,7 @@ export function AdvancedPostModal({
         setTagsList([]);
       }
     }
-  }, [isOpen, initialPost]);
+  }, [isOpen, initialPost, forkSourcePost]);
 
   if (!isOpen) return null;
 
@@ -359,6 +373,7 @@ export function AdvancedPostModal({
       isSparkle,
       titleFont: selectedFont !== 'default' ? selectedFont : undefined,
       titleColor: selectedColor || undefined,
+      forkedFromId: forkSourcePost ? forkSourcePost.id : undefined,
     });
 
     setIsPublishing(false);
@@ -396,17 +411,19 @@ export function AdvancedPostModal({
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-md transition-transform hover:rotate-12"
-              style={{ background: `linear-gradient(135deg, ${activeColor}, #ec4899)` }}
+              style={{ background: isForkMode ? 'linear-gradient(135deg, #a855f7, #6366f1)' : `linear-gradient(135deg, ${activeColor}, #ec4899)` }}
             >
-              <IconSparkles size={20} />
+              {isForkMode ? <IconFork size={20} /> : <IconSparkles size={20} />}
             </div>
             <div>
               <h2 className={`font-black text-base sm:text-lg tracking-tight uppercase ${textPrimary}`}>
-                {isEditMode ? 'Editar Publicação' : 'Estúdio de Criação Avançado'}
+                {isEditMode ? 'Editar Publicação' : isForkMode ? 'Bifurcar Publicação (Fork)' : 'Estúdio de Criação Avançado'}
               </h2>
               <p className={`text-xs ${textSecondary}`}>
                 {isEditMode
                   ? 'Ajuste textos, modelos dinâmicos, marcas d\'água e trilha sonora'
+                  : isForkMode
+                  ? `Criando derivação criativa de @${forkSourcePost?.author?.profile?.username || 'autor'}`
                   : 'Design interativo, enquadramentos de conteúdo e pré-visualização em tempo real'}
               </p>
             </div>
@@ -446,6 +463,25 @@ export function AdvancedPostModal({
             </button>
           </div>
         </div>
+
+        {/* Fork Source Banner */}
+        {isForkMode && forkSourcePost && (
+          <div
+            className="flex items-center justify-between px-6 py-2.5 border-b text-xs font-bold animate-in fade-in"
+            style={{
+              background: isLight ? 'rgba(168,85,247,0.08)' : 'rgba(168,85,247,0.15)',
+              borderColor: 'rgba(168,85,247,0.3)',
+              color: isLight ? '#7e22ce' : '#d8b4fe',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <IconFork size={15} />
+              <span>
+                A criar fork de <strong className="underline">@{forkSourcePost.author?.profile?.username || 'autor'}</strong>. A tua pub manterá o badge de linhagem e créditos.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Modal Body: Split Screen */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden min-h-0">
@@ -1254,8 +1290,8 @@ export function AdvancedPostModal({
                 <span>A processar...</span>
               ) : (
                 <>
-                  <IconSparkles size={14} />
-                  <span>{isEditMode ? 'Guardar Alterações' : 'Publicar no Feed'}</span>
+                  {isForkMode ? <IconFork size={14} /> : <IconSparkles size={14} />}
+                  <span>{isEditMode ? 'Guardar Alterações' : isForkMode ? 'Publicar Fork' : 'Publicar no Feed'}</span>
                 </>
               )}
             </button>
