@@ -1452,8 +1452,8 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
     <div
       className="px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between shrink-0 z-30 border-b sticky top-0"
       style={{
-        borderColor: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.08)',
-        background: isLight ? 'rgba(255,255,255,0.75)' : 'rgba(18,18,22,0.75)',
+        borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.10)',
+        background: isLight ? 'rgba(255,255,255,0.60)' : 'rgba(255,255,255,0.05)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
       }}
@@ -1486,9 +1486,9 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
           onClick={() => onCapturePost?.(raw)}
           className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
           style={{
-            background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
-            border: isLight ? '1px solid rgba(0,0,0,0.09)' : '1px solid rgba(255,255,255,0.15)',
-            color: isLight ? '#555' : 'rgba(255,255,255,0.7)',
+            background: isLight ? 'rgba(255,255,255,0.60)' : 'rgba(255,255,255,0.08)',
+            border: isLight ? '1px solid rgba(255,255,255,0.80)' : '1px solid rgba(255,255,255,0.15)',
+            color: isLight ? '#222' : 'rgba(255,255,255,0.85)',
           }}
           title="Capturar para Status"
         >
@@ -1549,7 +1549,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
     const srcId = src.authorId;
     return (
       <div className="px-5 sm:px-6 py-2.5 border-b flex items-center gap-2.5 shrink-0"
-        style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)', background: `${postColor}08` }}>
+        style={{ borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)', background: `${postColor}08` }}>
         <IconFork size={12} style={{ color: postColor, flexShrink: 0, opacity: 0.7 }} />
         <span className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: postColor }}>Fork de</span>
         <button
@@ -1573,7 +1573,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
     const { cleanContent, frameStyle, watermark, watermarkAnim, bgm } = parsePostMetadata(raw.content || '');
     if (!cleanContent && !bgm) return null;
     return (
-      <div className="px-5 sm:px-6 py-3.5 border-b shrink-0" style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)' }}>
+      <div className="px-5 sm:px-6 py-3.5 border-b shrink-0" style={{ borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)' }}>
         {bgm && (
           <div className="mb-2.5">
             <PostBgmBadge bgm={bgm} accentColor={postColor} isLight={isLight} />
@@ -1601,14 +1601,14 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
 
   const renderReactionBar = () => (
     <div className="flex items-center gap-3 px-5 sm:px-6 py-3 border-b shrink-0"
-      style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)' }}>
+      style={{ borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)' }}>
       <button
         onClick={() => toggleReaction(raw.id)}
         className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border cursor-pointer text-xs font-black transition-all hover:scale-105 active:scale-95 ${raw.isLiked ? 'animate-heart-burst' : ''}`}
         style={{
-          background: raw.isLiked ? `${postColor}18` : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'),
-          borderColor: raw.isLiked ? `${postColor}50` : (isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)'),
-          color: raw.isLiked ? postColor : (isLight ? '#666' : 'rgba(255,255,255,0.75)'),
+          background: raw.isLiked ? `${postColor}18` : (isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.06)'),
+          borderColor: raw.isLiked ? `${postColor}50` : (isLight ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.12)'),
+          color: raw.isLiked ? postColor : (isLight ? '#222' : 'rgba(255,255,255,0.80)'),
         }}>
         <IconHeart filled={raw.isLiked} size={16} />
         <span className="text-xs font-black">{raw._count?.reactions || 0}</span>
@@ -1653,10 +1653,9 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
             : 'rgba(255, 255, 255, 0.06)',
           backdropFilter: 'blur(40px) saturate(210%) contrast(105%)',
           WebkitBackdropFilter: 'blur(40px) saturate(210%) contrast(105%)',
-          border: isLight ? '1.5px solid rgba(255, 255, 255, 0.70)' : '1px solid rgba(255, 255, 255, 0.20)',
+          border: isLight ? '1.5px solid rgba(255, 255, 255, 0.85)' : '1px solid rgba(255, 255, 255, 0.25)',
           borderTop: isLight ? '2px solid rgba(255, 255, 255, 0.95)' : '1.5px solid rgba(255, 255, 255, 0.45)',
-          borderBottom: isLight ? '1px solid rgba(0, 0, 0, 0.05)' : '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: isLight
+                    boxShadow: isLight
             ? 'inset 0 1.5px 1px 0 rgba(255,255,255,0.85)'
             : 'inset 0 1.5px 1px 0 rgba(255,255,255,0.35)',
         }}
@@ -1679,8 +1678,8 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
         {hasMedia ? (
           /* Pure Media Stage (Left Panel) */
           <div
-            className="w-full lg:flex-1 relative flex flex-col items-center justify-center shrink-0 border-b lg:border-b-0 lg:border-r min-h-0 h-[44vh] sm:h-[48vh] lg:h-full overflow-hidden z-10 select-none bg-black/15 dark:bg-black/35"
-            style={{ borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)' }}
+            className="w-full lg:flex-1 relative flex flex-col items-center justify-center shrink-0 border-b lg:border-b-0 lg:border-r min-h-0 h-[44vh] sm:h-[48vh] lg:h-full overflow-hidden z-10 select-none bg-transparent"
+            style={{ borderColor: isLight ? 'rgba(255,255,255,0.60)' : 'rgba(255,255,255,0.12)' }}
           >
             {/* Mobile Quick-Close button on top of media */}
             <button
@@ -1706,7 +1705,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                     key={allMedia[currentMediaIndex]}
                     src={resolveLazerMediaUrl(allMedia[currentMediaIndex])}
                     accentColor={postColor}
-                    className="w-full max-h-full rounded-2xl overflow-hidden shadow-2xl"
+                    className="w-full max-h-full rounded-2xl overflow-hidden border border-white/10"
                     showControlsEnabled={true}
                     initialMuted={false}
                   />
@@ -1721,9 +1720,9 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                     key={allMedia[currentMediaIndex]}
                     src={resolveLazerMediaUrl(allMedia[currentMediaIndex])}
                     alt="post media"
-                    className="max-w-full max-h-full object-contain rounded-2xl animate-in fade-in duration-300 transition-transform duration-300 group-hover/media:scale-[1.01] shadow-2xl"
+                    className="max-w-full max-h-full object-contain rounded-2xl animate-in fade-in duration-300 transition-transform duration-300 group-hover/media:scale-[1.01] border border-white/10"
                   />
-                  <div className="absolute top-2.5 right-2.5 opacity-0 group-hover/media:opacity-100 transition-all duration-200 bg-black/60 hover:bg-black/80 text-white p-2 rounded-xl backdrop-blur-md pointer-events-none scale-90 group-hover/media:scale-100 shadow-md">
+                  <div className="absolute top-2.5 right-2.5 opacity-0 group-hover/media:opacity-100 transition-all duration-200 bg-white/25 hover:bg-white/40 text-white p-2 rounded-xl backdrop-blur-md pointer-events-none scale-90 group-hover/media:scale-100 border border-white/20">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="15 3 21 3 21 9"></polyline>
                       <polyline points="9 21 3 21 3 15"></polyline>
@@ -1736,7 +1735,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
 
               {/* Media dot-indicators */}
               {allMedia.length > 1 && (
-                <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+                <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 px-3 py-1.5 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/25">
                   {allMedia.map((_: any, i: number) => (
                     <div key={i}
                       className="rounded-full transition-all duration-300 cursor-pointer"
@@ -1757,14 +1756,14 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                   {currentMediaIndex > 0 && (
                     <button onClick={(e) => { e.stopPropagation(); prevMedia(); }}
                       className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white cursor-pointer transition-all hover:scale-110 active:scale-95 shadow-lg"
-                      style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)' }}>
+                      style={{ background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.20)', color: isLight ? '#111' : '#fff', border: '1px solid rgba(255,255,255,0.40)', backdropFilter: 'blur(12px)' }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
                     </button>
                   )}
                   {currentMediaIndex < allMedia.length - 1 && (
                     <button onClick={(e) => { e.stopPropagation(); nextMedia(); }}
                       className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white cursor-pointer transition-all hover:scale-110 active:scale-95 shadow-lg"
-                      style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)' }}>
+                      style={{ background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.20)', color: isLight ? '#111' : '#fff', border: '1px solid rgba(255,255,255,0.40)', backdropFilter: 'blur(12px)' }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
                     </button>
                   )}
@@ -1776,7 +1775,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
           /* Text-only post displayed big & beautiful (Left Panel) */
           <div
             className="w-full lg:flex-1 relative flex flex-col items-stretch justify-start shrink-0 border-b lg:border-b-0 lg:border-r min-h-0 max-h-[48vh] sm:max-h-[52vh] lg:max-h-full lg:h-full overflow-y-auto custom-scrollbar z-10"
-            style={{ borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)' }}
+            style={{ borderColor: isLight ? 'rgba(255,255,255,0.60)' : 'rgba(255,255,255,0.12)' }}
           >
             {renderAuthorHeader(false)}
             {renderForkBanner()}
@@ -1819,9 +1818,9 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                         onClick={() => toggleReaction(raw.id)}
                         className={`flex items-center gap-2.5 px-4 py-2 rounded-2xl border cursor-pointer text-xs font-black transition-all hover:scale-105 active:scale-95 ${raw.isLiked ? 'animate-heart-burst' : ''}`}
                         style={{
-                          background: raw.isLiked ? `${postColor}22` : (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)'),
-                          borderColor: raw.isLiked ? `${postColor}60` : (isLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)'),
-                          color: raw.isLiked ? postColor : (isLight ? '#666' : 'rgba(255,255,255,0.55)'),
+                          background: raw.isLiked ? `${postColor}22` : (isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)'),
+                          borderColor: raw.isLiked ? `${postColor}60` : (isLight ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.15)'),
+                          color: raw.isLiked ? postColor : (isLight ? '#222' : 'rgba(255,255,255,0.75)'),
                           boxShadow: raw.isLiked ? `0 4px 16px ${postColor}40` : 'none',
                         }}>
                         <IconHeart filled={raw.isLiked} size={18} />
@@ -1860,8 +1859,8 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                 <div
                   className="px-5 py-3 sm:py-3.5 flex items-center justify-between shrink-0 border-b sticky top-0 z-20"
                   style={{
-                    borderColor: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)',
-                    background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(20,20,25,0.85)',
+                    borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)',
+                    background: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.04)',
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
                   }}
@@ -1873,8 +1872,8 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                     <span
                       className="text-[10px] font-black px-2 py-0.5 rounded-full"
                       style={{
-                        background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
-                        color: isLight ? '#555' : 'rgba(255,255,255,0.6)',
+                        background: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.10)',
+                        color: isLight ? '#222' : 'rgba(255,255,255,0.75)',
                       }}
                     >
                       {postComments.length}
@@ -1899,8 +1898,8 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                     postComments.filter(cm => !cm.parentId).map((cm: any) => (
                       <div key={cm.id} className="rounded-2xl p-3 sm:p-3.5 transition-all"
                         style={{
-                          background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)'}`,
+                          background: isLight ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${isLight ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.08)'}`,
                         }}>
                         <CommentItem cm={cm} allComments={postComments} postId={selectedPostId}
                           postAuthorId={raw.authorId} authUser={authUser} myProfile={myProfile}
@@ -1920,7 +1919,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
               <div
                 className="px-5 py-3 sm:py-3.5 flex items-center justify-between shrink-0 border-b"
                 style={{
-                  borderColor: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)',
+                  borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)',
                   background: 'transparent',
                 }}
               >
@@ -1931,8 +1930,8 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                   <span
                     className="text-[10px] font-black px-2 py-0.5 rounded-full"
                     style={{
-                      background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
-                      color: isLight ? '#555' : 'rgba(255,255,255,0.6)',
+                      background: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.10)',
+                      color: isLight ? '#222' : 'rgba(255,255,255,0.75)',
                     }}
                   >
                     {postComments.length}
@@ -1991,7 +1990,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
             className="shrink-0 w-full z-30 pointer-events-auto rounded-b-[1.75rem] sm:rounded-b-[2.5rem] lg:rounded-bl-none lg:rounded-br-[2.5rem] overflow-hidden relative"
             style={{
               background: 'transparent',
-              borderTop: isLight ? '1px solid rgba(0, 0, 0, 0.08)' : '1px solid rgba(255, 255, 255, 0.12)',
+              borderTop: isLight ? '1px solid rgba(255, 255, 255, 0.50)' : '1px solid rgba(255, 255, 255, 0.10)',
               boxShadow: 'none',
             }}
           >
