@@ -310,6 +310,7 @@ export default function LazerPage() {
             isOwnProfile={true}
             onEdit={() => setIsEditing(true)}
             viewingUserId={authUser?.id}
+            onProfileClick={navigateToProfile}
             onPostClick={navigateToPost}
             onChatClick={startPrivateChat} />
         )}
@@ -365,6 +366,7 @@ export default function LazerPage() {
               <UserProfileModal
                 userId={modalProfileUserId}
                 onClose={() => setModalProfileUserId(null)}
+                onProfileClick={navigateToProfile}
                 onPostClick={navigateToPost}
                 onChatClick={startPrivateChat}
                 themeColor={c}

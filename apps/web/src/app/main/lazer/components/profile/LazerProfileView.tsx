@@ -12,6 +12,10 @@ import { formatTimeAgo } from '@/lib/format';
 import { useMusicStore } from '@/store/music.store';
 import { AestheticCaptureModal } from '../modals/AestheticCaptureModal';
 import { PostFrameRenderer, parsePostMetadata } from '../home/PostFrameStyles';
+import { ArtDetailModal } from '../art/ArtDetailModal';
+import { useWatchStore } from '@/store/watch.store';
+import { PostDetailModal } from '../home/LazerHomeView';
+import { useAuthStore } from '@/store/auth.store';
 
 const t = (s: string) => s;
 
@@ -24,12 +28,26 @@ interface ProfileViewProps {
   onChatClick?: (userId: string) => void;
   customPosts?: any[];
   onClose?: () => void;
+  onProfileClick?: (userId: string) => void;
 }
 
-export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId, onChatClick, customPosts, onClose }: ProfileViewProps) {
+export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, viewingUserId, onChatClick, customPosts, onClose, onProfileClick }: ProfileViewProps) {
   const [showAiModal, setShowAiModal] = useState(false);
   const [showCaptureModal, setShowCaptureModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'chronicles' | 'media' | 'about' | 'music'>('chronicles');
+  const [mediaSubTab, setMediaSubTab] = useState<'all' | 'pubs' | 'forks' | 'art' | 'watch'>('all');
+  const [mediaArts, setMediaArts] = useState<any[]>([]);
+  const [mediaVideos, setMediaVideos] = useState<any[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [selectedArtForModal, setSelectedArtForModal] = useState<any | null>(null);
+  const [inPlacePostId, setInPlacePostId] = useState<string | null>(null);
+  const [inPlaceMediaIndex, setInPlaceMediaIndex] = useState(0);
+  const { user: authUser } = useAuthStore();
+
+  const handleOpenPostInPlace = (postId: string, mediaIndex = 0) => {
+    setInPlaceMediaIndex(mediaIndex);
+    setInPlacePostId(postId);
+  };
   const [localPersonaUrl, setLocalPersonaUrl] = useState<string | null>(null);
   const [uploadingPersona, setUploadingPersona] = useState(false);
   const [profileTracks, setProfileTracks] = useState<any[]>([]);
@@ -38,11 +56,12 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
   const { isFriend, hasSentRequest, sendFriendRequest, userPosts: globalPosts } = useLazerStore();
   const userPosts = customPosts !== undefined ? customPosts : globalPosts;
   const { playTrack } = useMusicStore();
+  const { setPipVideo } = useWatchStore();
 
   // Load music for profile
   useEffect(() => {
     if (activeTab !== 'music') return;
-    const userId = user.userId;
+    const userId = user.userId || (user as any).id;
     if (!userId) return;
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     Promise.all([
@@ -53,6 +72,43 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
       setProfilePlaylists(p.success ? p.data : []);
     }).catch(() => {});
   }, [activeTab, user]);
+
+  // Load art and watch when media tab is opened
+  useEffect(() => {
+    if (activeTab !== 'media') return;
+    const userId = user.userId || (user as any).id;
+    if (!userId) return;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+    let isMounted = true;
+    const needArt = mediaArts.length === 0;
+    const needWatch = mediaVideos.length === 0;
+
+    if (!needArt && !needWatch) return;
+
+    setMediaLoading(true);
+
+    Promise.all([
+      needArt
+        ? fetch(`${apiBase}/api/v1/art/arts?authorId=${userId}&limit=50`).then(r => r.json()).catch(() => null)
+        : Promise.resolve(null),
+      needWatch
+        ? fetch(`${apiBase}/api/v1/watch/videos/user/${userId}`).then(r => r.json()).catch(() => null)
+        : Promise.resolve(null),
+    ]).then(([artRes, watchRes]) => {
+      if (!isMounted) return;
+      if (artRes?.success) {
+        setMediaArts(artRes.data?.arts || artRes.data || []);
+      }
+      if (watchRes?.success) {
+        setMediaVideos(watchRes.data || []);
+      }
+    }).finally(() => {
+      if (isMounted) setMediaLoading(false);
+    });
+
+    return () => { isMounted = false; };
+  }, [activeTab, user, mediaArts.length, mediaVideos.length]);
 
   const rawPersona = localPersonaUrl || user.foregroundUrl || (user as any).personaUrl;
   const displayPersona = rawPersona ? resolveUrl(rawPersona) : null;
@@ -83,11 +139,11 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
   const cardBg = isLight ? 'glass-panel-light' : 'glass-panel-dark';
 
   return (
-    <div className="w-full h-full lg:h-[675px] max-w-[1200px] flex flex-col overflow-hidden pl-0 pr-0 py-0 lg:ml-0 lg:pr-0 font-['Nunito',sans-serif]">
+    <div className="w-full flex-1 min-h-0 h-full lg:h-[675px] max-w-[1200px] flex flex-col overflow-hidden pl-0 pr-0 py-0 lg:ml-0 lg:pr-0 font-['Nunito',sans-serif]">
       {/* Main Glass Foreground */}
       <div
-        className={`flex-1 border-0 md:border-[1.5px] rounded-none md:rounded-[3rem] flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative animate-in fade-in duration-700 z-10 ${cardBg} min-h-0`}
-        style={{ borderColor: 'rgba(255,255,255,0.06)', WebkitOverflowScrolling: 'touch' }}>
+        className={`flex-1 w-full min-h-0 border-0 md:border-[1.5px] rounded-none md:rounded-[3rem] overflow-hidden relative animate-in fade-in duration-700 z-10 ${cardBg} flex flex-col`}
+        style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
 
         {/* Floating Close & Back buttons when modal is opened (sem topbar e sem escurecimento) */}
         {onClose && (
@@ -117,6 +173,11 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
           </div>
         )}
 
+        {/* Inner Scrollable Viewport (Separated from glass-panel-dark to enable mobile scroll) */}
+        <div
+          className="flex-1 w-full h-full min-h-0 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row"
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+        >
         {/* IDENTITY SECTION */}
         {activeTab !== 'about' && (
           <aside className="w-full lg:w-[350px] h-auto lg:h-full border-b lg:border-b-0 lg:border-r border-white/5 block lg:flex lg:flex-col overflow-visible lg:overflow-y-auto no-scrollbar relative z-20 shrink-0">
@@ -311,7 +372,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
         <div className="w-full lg:w-auto lg:flex-1 block lg:flex lg:flex-col min-w-0 relative h-auto lg:h-full overflow-visible lg:overflow-hidden shrink-0 lg:shrink pb-20 lg:pb-0">
 
           {/* Header & Tabs */}
-          <header className="px-6 lg:px-10 pt-4 lg:pt-10 pb-0 flex flex-col lg:flex-row lg:items-center justify-between border-b border-white/5 shrink-0 overflow-x-auto no-scrollbar sticky top-0 z-20 backdrop-blur-xl bg-black/40 lg:static lg:bg-transparent lg:backdrop-blur-none">
+          <header className="px-6 lg:px-10 pt-4 lg:pt-10 pb-0 flex flex-col lg:flex-row lg:items-center justify-between border-b border-white/5 shrink-0 overflow-x-auto no-scrollbar">
             <nav className="flex gap-6 lg:gap-10 w-max lg:w-auto">
               {[
                 { id: 'posts', label: 'Postagens' },
@@ -443,7 +504,10 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
 
                               {/* Image Card Side */}
                               <div className="w-[45%]">
-                                <div className="group relative p-1 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-700 overflow-hidden shadow-2xl hover:-translate-y-2">
+                                <div 
+                                  className="group relative p-1 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-700 overflow-hidden shadow-2xl hover:-translate-y-2 cursor-pointer"
+                                  onClick={() => handleOpenPostInPlace(item.id)}
+                                >
                                   <div className="aspect-[16/9] rounded-[2rem] overflow-hidden relative bg-white/5">
 
                                     {mediaArr.length === 1 ? (
@@ -553,63 +617,221 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
             )}
 
             {activeTab === 'media' && (
-              <div className="p-8 animate-in fade-in zoom-in-95 duration-1000">
+              <div className="p-4 sm:p-6 lg:p-8 animate-in fade-in zoom-in-95 duration-700">
                 {(() => {
-
                   const isVid = (url: string) => /\.(mp4|webm|ogg|mov|avi|mkv)(\?|$)/i.test(url) || url.startsWith('data:video');
 
-                  const allMedia = userPosts.flatMap(p => {
+                  const extractMediaFromPost = (p: any, type: 'pubs' | 'forks') => {
                     let raw = p.imageUrl;
                     if (typeof raw === 'string' && raw.startsWith('[')) {
                       try { raw = JSON.parse(raw); } catch { return []; }
                     }
                     const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
-                    return arr.map(url => ({ 
-                      url: resolveUrl(url), 
-                      postId: p.id, 
+                    return arr.map((url: string, idx: number) => ({
+                      id: `${p.id}-${idx}`,
+                      url: resolveUrl(url),
+                      postId: p.id,
                       date: p.createdAt,
-                      isVideo: isVid(resolveUrl(url))
+                      isVideo: isVid(resolveUrl(url)),
+                      type,
+                      rawPost: p,
+                      title: p.content || '',
+                    })).filter(m => m.url);
+                  };
+
+                  const pubMedia = userPosts
+                    .filter(p => !p.forkedFromId && !p.forkedFrom)
+                    .flatMap(p => extractMediaFromPost(p, 'pubs'));
+
+                  const forkMedia = userPosts
+                    .filter(p => !!(p.forkedFromId || p.forkedFrom))
+                    .flatMap(p => extractMediaFromPost(p, 'forks'));
+
+                  const artMedia = mediaArts.flatMap(a => {
+                    let rawUrls = a.imageUrls;
+                    if (typeof rawUrls === 'string' && rawUrls.startsWith('[')) {
+                      try { rawUrls = JSON.parse(rawUrls); } catch { rawUrls = null; }
+                    }
+                    const urls = Array.isArray(rawUrls) && rawUrls.length > 0 ? rawUrls : (a.imageUrl ? [a.imageUrl] : []);
+                    return urls.map((u: string, idx: number) => ({
+                      id: `art-${a.id}-${idx}`,
+                      url: resolveUrl(u),
+                      artId: a.id,
+                      art: a,
+                      date: a.createdAt,
+                      isVideo: false,
+                      type: 'art' as const,
+                      title: a.title || 'Sem título',
+                      category: a.category,
                     }));
                   }).filter(m => m.url);
 
-                  if (allMedia.length === 0) {
-                    return (
-                      <div className="text-center py-20 opacity-30">
-                        <p className="text-xs font-black uppercase tracking-[0.3em]">{t('Nenhuma mídia encontrada')}</p>
-                      </div>
-                    );
-                  }
+                  const watchMedia = mediaVideos.map(v => ({
+                    id: `watch-${v.id}`,
+                    url: v.thumbnailUrl ? resolveUrl(v.thumbnailUrl) : resolveUrl(v.videoUrl),
+                    videoUrl: resolveUrl(v.videoUrl),
+                    videoId: v.id,
+                    video: v,
+                    date: v.createdAt,
+                    isVideo: true,
+                    type: 'watch' as const,
+                    title: v.title || 'Vídeo Watch',
+                    duration: v.duration,
+                    views: v.views,
+                  })).filter(m => m.url);
+
+                  const allMedia = [...pubMedia, ...forkMedia, ...artMedia, ...watchMedia].sort(
+                    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+                  );
+
+                  const displayedMedia = 
+                    mediaSubTab === 'all' ? allMedia :
+                    mediaSubTab === 'pubs' ? pubMedia :
+                    mediaSubTab === 'forks' ? forkMedia :
+                    mediaSubTab === 'art' ? artMedia :
+                    watchMedia;
+
+                  const handleCardClick = (m: any) => {
+                    if (m.type === 'art') {
+                      setSelectedArtForModal(m.art);
+                    } else if (m.type === 'watch') {
+                      setPipVideo(m.video);
+                    } else {
+                      handleOpenPostInPlace(m.postId);
+                    }
+                  };
 
                   return (
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {allMedia.map((m, i) => (
-                        <div 
-                          key={`${m.postId}-${i}`}
-                          className="group relative aspect-square rounded-[2rem] overflow-hidden bg-white/5 border border-white/5 hover:border-white/20 transition-all duration-500 cursor-pointer shadow-xl hover:-translate-y-1"
-                          onClick={() => onPostClick?.(m.postId)}
-                        >
-                          {m.isVideo ? (
-                            <video src={m.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" autoPlay muted loop playsInline />
-                          ) : (
-                            <img src={m.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="" />
-                          )}
-                          
-                          {/* Hover Overlay */}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6">
-                            <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                               <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1" title={new Date(m.date).toLocaleString('pt-PT')}>
-                                 {formatTimeAgo(m.date)} · {new Date(m.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
-                               </p>
-                               <div className="flex items-center gap-2">
-                                 <div className="w-6 h-6 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                                 </div>
-                                 <span className="text-[10px] font-black text-white tracking-widest uppercase">{t('Ver Post')}</span>
-                               </div>
-                            </div>
-                          </div>
+                    <div className="flex flex-col gap-6">
+                      {/* Sub-Tabs Navigation for Media Isolation */}
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 border-b border-white/5">
+                        {[
+                          { id: 'all', label: 'Todas', count: allMedia.length },
+                          { id: 'pubs', label: 'Pubs', count: pubMedia.length },
+                          { id: 'forks', label: 'Forks', count: forkMedia.length },
+                          { id: 'art', label: 'Alpha Art', count: artMedia.length },
+                          { id: 'watch', label: 'Watch', count: watchMedia.length },
+                        ].map((sub) => {
+                          const isActive = mediaSubTab === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => setMediaSubTab(sub.id as any)}
+                              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black tracking-wider uppercase transition-all duration-300 cursor-pointer shrink-0 ${
+                                isActive
+                                  ? 'bg-white/15 text-white shadow-lg border border-white/20'
+                                  : 'text-white/40 hover:text-white/80 hover:bg-white/5 border border-transparent'
+                              }`}
+                              style={isActive ? { borderColor: `${c}60`, color: '#fff' } : undefined}
+                            >
+                              <span>{sub.label}</span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold transition-all ${
+                                  isActive ? 'text-white' : 'text-white/40'
+                                }`}
+                                style={{ background: isActive ? `${c}30` : 'rgba(255,255,255,0.06)', color: isActive ? c : undefined }}
+                              >
+                                {sub.count}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Content Area */}
+                      {mediaLoading && displayedMedia.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-3">
+                          <div
+                            className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+                            style={{ borderColor: `${c} transparent ${c} ${c}` }}
+                          />
+                          <p className="text-xs font-bold text-white/40 uppercase tracking-widest">
+                            A carregar mídias...
+                          </p>
                         </div>
-                      ))}
+                      ) : displayedMedia.length === 0 ? (
+                        <div className="text-center py-20 opacity-40">
+                          <p className="text-xs font-black uppercase tracking-[0.3em]">
+                            {mediaSubTab === 'pubs' && 'Nenhuma mídia em publicações originais'}
+                            {mediaSubTab === 'forks' && 'Nenhum fork com imagem ou vídeo'}
+                            {mediaSubTab === 'art' && 'Nenhuma obra publicada no Alpha Art'}
+                            {mediaSubTab === 'watch' && 'Nenhum vídeo publicado no Watch'}
+                            {mediaSubTab === 'all' && 'Nenhuma mídia encontrada'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {displayedMedia.map((m: any, i: number) => (
+                            <div 
+                              key={`${m.id}-${i}`}
+                              className="group relative aspect-square rounded-[2rem] overflow-hidden bg-white/5 border border-white/5 hover:border-white/20 transition-all duration-500 cursor-pointer shadow-xl hover:-translate-y-1"
+                              onClick={() => handleCardClick(m)}
+                            >
+                              {m.isVideo ? (
+                                <video src={m.videoUrl || m.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" autoPlay muted loop playsInline />
+                              ) : (
+                                <img src={m.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="" />
+                              )}
+
+                              {/* Source Badge (Top Left) */}
+                              <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                                {m.type === 'pubs' && (
+                                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-black/50 text-white/90 backdrop-blur-md border border-white/10">
+                                    Pub
+                                  </span>
+                                )}
+                                {m.type === 'forks' && (
+                                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-200 backdrop-blur-md border border-purple-400/20">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                      <circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 15V9a6 6 0 0 0 6 6h3"/><line x1="18" y1="9" x2="18" y2="15"/>
+                                    </svg>
+                                    Fork
+                                  </span>
+                                )}
+                                {m.type === 'art' && (
+                                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-pink-500/30 text-pink-200 backdrop-blur-md border border-pink-400/20">
+                                    Art
+                                  </span>
+                                )}
+                                {m.type === 'watch' && (
+                                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500/30 text-red-200 backdrop-blur-md border border-red-400/20">
+                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
+                                      <polygon points="5 3 19 12 5 21 5 3" />
+                                    </svg>
+                                    Watch
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Hover Overlay */}
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-5">
+                                <div className="translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
+                                  {m.title && (
+                                    <p className="text-[11px] font-bold text-white line-clamp-1 mb-1">
+                                      {m.title}
+                                    </p>
+                                  )}
+                                  <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-2" title={new Date(m.date).toLocaleString('pt-PT')}>
+                                    {formatTimeAgo(m.date)} · {new Date(m.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                                      {m.type === 'watch' ? (
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-white"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                                      ) : (
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] font-black text-white tracking-widest uppercase">
+                                      {m.type === 'art' ? 'Ver Obra' : m.type === 'watch' ? 'Assistir Vídeo' : t('Ver Post')}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
@@ -625,7 +847,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                       post={post} 
                       themeColor={c} 
                       isLight={isLight}
-                      onPostClick={onPostClick}
+                      onPostClick={handleOpenPostInPlace}
                     />
                   ))
                 ) : (
@@ -831,7 +1053,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                          const img = userPosts[1].imageUrl ? (userPosts[1].imageUrl.startsWith('[') ? JSON.parse(userPosts[1].imageUrl)[0] : userPosts[1].imageUrl) : '';
                          return (
                            <div className="w-48 h-48 md:w-64 md:h-64 rounded-[2.5rem] bg-white/5 backdrop-blur-sm border border-white/10 p-2 shadow-2xl transform rotate-12 blur-[3px] opacity-40 hover:opacity-100 hover:blur-none hover:rotate-6 transition-all duration-700 cursor-pointer"
-                                onClick={() => onPostClick && onPostClick(userPosts[1].id)}>
+                                onClick={() => handleOpenPostInPlace(userPosts[1].id)}>
                              <div className="w-full h-full rounded-[2rem] overflow-hidden">
                                <img src={img.startsWith('http') || img.startsWith('data:') ? img : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${img}`} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700" alt="" />
                              </div>
@@ -847,7 +1069,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                          const img = userPosts[2].imageUrl ? (userPosts[2].imageUrl.startsWith('[') ? JSON.parse(userPosts[2].imageUrl)[0] : userPosts[2].imageUrl) : '';
                          return (
                            <div className="w-32 h-32 md:w-48 md:h-48 rounded-[2rem] bg-white/10 backdrop-blur-md border border-white/20 p-2 shadow-2xl transform -rotate-12 opacity-50 hover:opacity-100 hover:-rotate-3 transition-all duration-700 cursor-pointer"
-                                onClick={() => onPostClick && onPostClick(userPosts[2].id)}>
+                                onClick={() => handleOpenPostInPlace(userPosts[2].id)}>
                              <div className="w-full h-full rounded-[1.5rem] overflow-hidden">
                                <img src={img.startsWith('http') || img.startsWith('data:') ? img : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${img}`} className="w-full h-full object-cover transition-all duration-700" alt="" />
                              </div>
@@ -936,7 +1158,7 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
                          const img = userPosts[0].imageUrl ? (userPosts[0].imageUrl.startsWith('[') ? JSON.parse(userPosts[0].imageUrl)[0] : userPosts[0].imageUrl) : '';
                          return (
                            <div className="w-40 h-40 md:w-56 md:h-56 rounded-[2rem] bg-white/20 backdrop-blur-2xl border border-white/30 p-2.5 shadow-[0_30px_60px_rgba(0,0,0,0.5)] transform -rotate-6 hover:rotate-0 hover:scale-110 transition-all duration-700 cursor-pointer"
-                                onClick={() => onPostClick && onPostClick(userPosts[0].id)}>
+                                onClick={() => handleOpenPostInPlace(userPosts[0].id)}>
                              <div className="w-full h-full rounded-[1.5rem] overflow-hidden relative group/polaroid">
                                <img src={img.startsWith('http') || img.startsWith('data:') ? img : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${img}`} className="w-full h-full object-cover" alt="" />
                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/polaroid:opacity-100 transition-opacity flex items-end justify-center pb-4">
@@ -985,6 +1207,8 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
           </main>
         </div>
 
+        </div>
+
       </div>
 
       {showAiModal && user.aiAssistant && (
@@ -1005,6 +1229,32 @@ export function LazerProfileView({ user, isOwnProfile, onEdit, onPostClick, view
         themeColor={c}
         isLight={isLight}
       />
+
+      {selectedArtForModal && (
+        <ArtDetailModal
+          art={selectedArtForModal}
+          onClose={() => setSelectedArtForModal(null)}
+          onSave={() => {}}
+        />
+      )}
+
+      {inPlacePostId && (
+        <PostDetailModal
+          selectedPostId={inPlacePostId}
+          setSelectedPostId={setInPlacePostId}
+          onProfileClick={onProfileClick}
+          isLight={isLight}
+          c={c}
+          cardBg={cardBg}
+          borderCol="border-white/10"
+          textPrimary={isLight ? 'text-black/90' : 'text-white/90'}
+          textSecondary={isLight ? 'text-black/50' : 'text-white/50'}
+          authUser={authUser}
+          myProfile={authUser?.profile}
+          initialIndex={inPlaceMediaIndex}
+          customPosts={userPosts}
+        />
+      )}
 
       <style jsx>{`
         @keyframes bounce-slow {

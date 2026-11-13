@@ -11,6 +11,7 @@ interface UserProfileModalProps {
   onClose: () => void;
   onPostClick?: (postId: string) => void;
   onChatClick?: (userId: string) => void;
+  onProfileClick?: (userId: string) => void;
   themeColor?: string;
   themeMode?: 'light' | 'dark';
   myBgImageUrl?: string | null;
@@ -21,6 +22,7 @@ export function UserProfileModal({
   onClose,
   onPostClick,
   onChatClick,
+  onProfileClick,
   themeColor = '#e879f9',
   themeMode = 'dark',
   myBgImageUrl,
@@ -167,7 +169,7 @@ export function UserProfileModal({
           </button>
         </div>
       ) : (
-        <div className="w-full h-full flex-1 min-h-0 relative z-10 flex">
+        <div className="w-full h-full flex-1 min-h-0 relative z-10 flex flex-col overflow-hidden">
           <LazerProfileView
             user={profileData}
             isOwnProfile={false}
@@ -176,6 +178,7 @@ export function UserProfileModal({
             onClose={onClose}
             onPostClick={onPostClick}
             onChatClick={onChatClick}
+            onProfileClick={onProfileClick}
           />
         </div>
       )}

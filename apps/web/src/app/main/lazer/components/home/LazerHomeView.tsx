@@ -1352,8 +1352,9 @@ function MyCommunities({ c, isLight, textPrimary, textSecondary, borderCol, card
     </div>
   );
 }
-function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, isLight, c, cardBg, borderCol, textPrimary, textSecondary, authUser, myProfile, initialIndex = 0, onEditPost, onCapturePost, onForkPost }: any) {
-  const { feedPosts, comments, fetchComments, addComment, toggleReaction } = useLazerStore();
+export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, isLight, c, cardBg, borderCol, textPrimary, textSecondary, authUser, myProfile, initialIndex = 0, onEditPost, onCapturePost, onForkPost, customPosts }: any) {
+  const { feedPosts, userPosts: storeUserPosts, comments, fetchComments, addComment, toggleReaction } = useLazerStore();
+  const [fetchedPost, setFetchedPost] = useState<any | null>(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(initialIndex);
   const [fullscreenMedia, setFullscreenMedia] = useState(false);
   const [modalCommentText, setModalCommentText] = useState('');
@@ -1363,7 +1364,21 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
   const [hiddenComments, setHiddenComments] = useState<Set<string>>(new Set());
   const modalInputRef = useRef<HTMLInputElement>(null);
 
-  const raw = feedPosts.find(p => p.id === selectedPostId);
+  const availablePosts = customPosts || storeUserPosts || [];
+  const raw = feedPosts.find(p => p.id === selectedPostId) || availablePosts.find((p: any) => p.id === selectedPostId) || fetchedPost;
+
+  useEffect(() => {
+    if (selectedPostId && !raw) {
+      const api = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      fetch(`${api}/api/v1/lazer/posts/${selectedPostId}`)
+        .then(r => r.json())
+        .then(res => {
+          if (res?.success && res.data) setFetchedPost(res.data);
+          else if (res?.id) setFetchedPost(res);
+        })
+        .catch(() => {});
+    }
+  }, [selectedPostId, raw]);
   const isVideo = (url?: string) => url ? (url.match(/\.(mp4|webm|mov|ogg)(\?|$)/i) || url.startsWith('data:video')) : false;
 
   useEffect(() => {
@@ -1431,11 +1446,188 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
     setSubmitting(false);
   };
 
+  const hasMedia = allMedia.length > 0;
+
+  const renderAuthorHeader = (showClose: boolean = true) => (
+    <div
+      className="px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between shrink-0 z-30 border-b sticky top-0"
+      style={{
+        borderColor: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.08)',
+        background: isLight ? 'rgba(255,255,255,0.75)' : 'rgba(18,18,22,0.75)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+      }}
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
+        <button
+          onClick={() => onProfileClick?.(raw.authorId)}
+          className="cursor-pointer bg-transparent border-none p-0 transition-transform hover:rotate-6 hover:scale-105 shrink-0"
+        >
+          <Avatar
+            src={authorInfo.avatar}
+            name={authorInfo.name}
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 object-cover"
+            style={{ borderColor: postColor }}
+          />
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onProfileClick?.(raw.authorId)}>
+            <DisplayName profile={authorInfo.profile} fallbackName={authorInfo.name} className="font-black text-sm tracking-tight truncate" />
+            <IconVerified />
+          </div>
+          <div className={`text-[10px] font-bold opacity-50 uppercase tracking-[0.14em] truncate ${textSecondary}`} title={new Date(raw.createdAt).toLocaleString('pt-PT')}>
+            @{authorInfo.profile?.username || 'user'} · {formatTimeAgo(raw.createdAt)}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          onClick={() => onCapturePost?.(raw)}
+          className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
+          style={{
+            background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
+            border: isLight ? '1px solid rgba(0,0,0,0.09)' : '1px solid rgba(255,255,255,0.15)',
+            color: isLight ? '#555' : 'rgba(255,255,255,0.7)',
+          }}
+          title="Capturar para Status"
+        >
+          <IconCamera size={14} />
+        </button>
+        {raw.authorId !== authUser?.id && (
+          <button
+            onClick={() => { onForkPost?.(raw); setSelectedPostId(null); }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: `${postColor}18`,
+              border: `1px solid ${postColor}40`,
+              color: postColor,
+            }}
+            title="Fazer Fork desta Pub"
+          >
+            <IconFork size={14} />
+          </button>
+        )}
+        {raw.authorId === authUser?.id && (
+          <button
+            onClick={() => { onEditPost?.(raw); setSelectedPostId(null); }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: `${postColor}18`,
+              border: `1px solid ${postColor}40`,
+              color: postColor,
+            }}
+            title="Editar"
+          >
+            <IconEdit />
+          </button>
+        )}
+        {showClose && (
+          <button
+            onClick={() => setSelectedPostId(null)}
+            className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
+              border: isLight ? '1px solid rgba(0,0,0,0.09)' : '1px solid rgba(255,255,255,0.15)',
+              color: isLight ? '#555' : 'rgba(255,255,255,0.7)',
+            }}
+            title="Fechar"
+          >
+            <IconClose size={14} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderForkBanner = () => {
+    if (!(raw as any)?.forkedFrom) return null;
+    const src = (raw as any).forkedFrom;
+    const srcAuthor = src.author?.profile;
+    const srcName = srcAuthor?.displayName || srcAuthor?.username || 'utilizador';
+    const srcAvatar = srcAuthor?.avatarUrl ? resolveUrl(srcAuthor.avatarUrl) : undefined;
+    const srcId = src.authorId;
+    return (
+      <div className="px-5 sm:px-6 py-2.5 border-b flex items-center gap-2.5 shrink-0"
+        style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)', background: `${postColor}08` }}>
+        <IconFork size={12} style={{ color: postColor, flexShrink: 0, opacity: 0.7 }} />
+        <span className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: postColor }}>Fork de</span>
+        <button
+          onClick={() => onProfileClick?.(srcId)}
+          className="flex items-center gap-1.5 cursor-pointer bg-transparent border-none p-0 transition-all hover:opacity-80 hover:scale-[1.02]"
+        >
+          {srcAvatar ? (
+            <img src={srcAvatar} alt={srcName} className="w-5 h-5 rounded-full object-cover border" style={{ borderColor: `${postColor}50` }} />
+          ) : (
+            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black" style={{ background: `${postColor}30`, color: postColor }}>
+              {srcName[0]?.toUpperCase()}
+            </div>
+          )}
+          <span className="text-[12px] font-black" style={{ color: postColor }}>@{srcAuthor?.username || srcName}</span>
+        </button>
+      </div>
+    );
+  };
+
+  const renderMediaCaption = () => {
+    const { cleanContent, frameStyle, watermark, watermarkAnim, bgm } = parsePostMetadata(raw.content || '');
+    if (!cleanContent && !bgm) return null;
+    return (
+      <div className="px-5 sm:px-6 py-3.5 border-b shrink-0" style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)' }}>
+        {bgm && (
+          <div className="mb-2.5">
+            <PostBgmBadge bgm={bgm} accentColor={postColor} isLight={isLight} />
+          </div>
+        )}
+        {cleanContent && (
+          <div className={`text-xs sm:text-sm leading-relaxed font-medium tracking-tight w-full break-words [overflow-wrap:anywhere] [word-break:break-word] ${textPrimary}`}>
+            <PostFrameRenderer
+              content={cleanContent}
+              frameStyle={frameStyle}
+              watermark={watermark}
+              watermarkAnim={watermarkAnim}
+              postTitleFont={raw.titleFont}
+              postTitleColor={raw.titleColor}
+              isLight={isLight}
+              themeColor={postColor}
+              fontsList={PREMIUM_FONTS}
+              collapsible={false}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderReactionBar = () => (
+    <div className="flex items-center gap-3 px-5 sm:px-6 py-3 border-b shrink-0"
+      style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)' }}>
+      <button
+        onClick={() => toggleReaction(raw.id)}
+        className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border cursor-pointer text-xs font-black transition-all hover:scale-105 active:scale-95 ${raw.isLiked ? 'animate-heart-burst' : ''}`}
+        style={{
+          background: raw.isLiked ? `${postColor}18` : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'),
+          borderColor: raw.isLiked ? `${postColor}50` : (isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)'),
+          color: raw.isLiked ? postColor : (isLight ? '#666' : 'rgba(255,255,255,0.75)'),
+        }}>
+        <IconHeart filled={raw.isLiked} size={16} />
+        <span className="text-xs font-black">{raw._count?.reactions || 0}</span>
+      </button>
+      <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.2em] uppercase"
+        style={{ color: isLight ? 'rgba(0,0,0,0.30)' : 'rgba(255,255,255,0.40)' }}>
+        <IconComment />
+        {postComments.length} ECOS
+      </div>
+    </div>
+  );
+
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-2 sm:p-5 md:p-8 animate-in fade-in duration-300"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-2 sm:p-5 md:p-8 animate-in fade-in duration-300 backdrop-blur-md"
       style={{
-        background: isLight ? 'rgba(0, 0, 0, 0.10)' : 'rgba(0, 0, 0, 0.20)',
+        background: isLight ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.55)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
       }}
       onClick={() => setSelectedPostId(null)}
     >
@@ -1483,383 +1675,320 @@ function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileClick, is
           }}
         />
 
-        {/* ── Left Panel: Post Header + Media / Content ─────────────────────────────── */}
-        <div
-          className="w-full lg:flex-1 relative flex flex-col items-stretch justify-start shrink-0 border-b lg:border-b-0 lg:border-r min-h-0 max-h-[44vh] sm:max-h-[50vh] lg:max-h-full lg:h-full overflow-y-auto custom-scrollbar z-10"
-          style={{ borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)' }}
-        >
-          {/* ── Author Profile Header (Above Content) ── */}
+        {/* ── Left Panel: Media Stage OR Big Text Display ─────────────────────────── */}
+        {hasMedia ? (
+          /* Pure Media Stage (Left Panel) */
           <div
-            className="px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between shrink-0 z-30 border-b sticky top-0"
-            style={{
-              borderColor: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.08)',
-              background: 'transparent',
-            }}
+            className="w-full lg:flex-1 relative flex flex-col items-center justify-center shrink-0 border-b lg:border-b-0 lg:border-r min-h-0 h-[44vh] sm:h-[48vh] lg:h-full overflow-hidden z-10 select-none bg-black/15 dark:bg-black/35"
+            style={{ borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)' }}
           >
-            <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
-              <button
-                onClick={() => onProfileClick?.(raw.authorId)}
-                className="cursor-pointer bg-transparent border-none p-0 transition-transform hover:rotate-6 hover:scale-105 shrink-0"
-              >
-                <Avatar
-                  src={authorInfo.avatar}
-                  name={authorInfo.name}
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 object-cover"
-                  style={{ borderColor: postColor }}
-                />
-              </button>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onProfileClick?.(raw.authorId)}>
-                  <DisplayName profile={authorInfo.profile} fallbackName={authorInfo.name} className="font-black text-sm tracking-tight truncate" />
-                  <IconVerified />
-                </div>
-                <div className={`text-[10px] font-bold opacity-50 uppercase tracking-[0.14em] truncate ${textSecondary}`} title={new Date(raw.createdAt).toLocaleString('pt-PT')}>
-                  @{authorInfo.profile?.username || 'user'} · {formatTimeAgo(raw.createdAt)} · {new Date(raw.createdAt).toLocaleDateString('pt-PT')}
-                </div>
-              </div>
-            </div>
+            {/* Mobile Quick-Close button on top of media */}
+            <button
+              onClick={() => setSelectedPostId(null)}
+              className="lg:hidden absolute top-3 right-3 z-30 w-8 h-8 rounded-full flex items-center justify-center text-white cursor-pointer transition-all active:scale-95 shadow-lg"
+              style={{
+                background: 'rgba(0,0,0,0.55)',
+                border: '1px solid rgba(255,255,255,0.25)',
+                backdropFilter: 'blur(8px)',
+              }}
+              title="Fechar"
+            >
+              <IconClose size={14} />
+            </button>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => onCapturePost?.(raw)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
-                style={{
-                  background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
-                  border: isLight ? '1px solid rgba(0,0,0,0.09)' : '1px solid rgba(255,255,255,0.15)',
-                  color: isLight ? '#555' : 'rgba(255,255,255,0.7)',
-                }}
-                title="Capturar para Status"
-              >
-                <IconCamera size={14} />
-              </button>
-              {raw.authorId !== authUser?.id && (
-                <button
-                  onClick={() => { onForkPost?.(raw); setSelectedPostId(null); }}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
-                  style={{
-                    background: `${postColor}18`,
-                    border: `1px solid ${postColor}40`,
-                    color: postColor,
-                  }}
-                  title="Fazer Fork desta Pub"
+            <div className="w-full h-full flex items-center justify-center p-3 sm:p-6 relative">
+              {isVideo(allMedia[currentMediaIndex]) ? (
+                <div
+                  className="relative group/media cursor-pointer w-full h-full flex items-center justify-center"
+                  onClick={() => setFullscreenMedia(true)}
                 >
-                  <IconFork size={14} />
-                </button>
-              )}
-              {raw.authorId === authUser?.id && (
-                <button
-                  onClick={() => { onEditPost?.(raw); setSelectedPostId(null); }}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
-                  style={{
-                    background: `${postColor}18`,
-                    border: `1px solid ${postColor}40`,
-                    color: postColor,
-                  }}
-                  title="Editar"
+                  <ModernVideoPlayer
+                    key={allMedia[currentMediaIndex]}
+                    src={resolveLazerMediaUrl(allMedia[currentMediaIndex])}
+                    accentColor={postColor}
+                    className="w-full max-h-full rounded-2xl overflow-hidden shadow-2xl"
+                    showControlsEnabled={true}
+                    initialMuted={false}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="relative group/media cursor-zoom-in max-w-full max-h-full flex items-center justify-center"
+                  onClick={() => setFullscreenMedia(true)}
+                  title="Clique para ver em ecrã inteiro"
                 >
-                  <IconEdit />
-                </button>
+                  <img
+                    key={allMedia[currentMediaIndex]}
+                    src={resolveLazerMediaUrl(allMedia[currentMediaIndex])}
+                    alt="post media"
+                    className="max-w-full max-h-full object-contain rounded-2xl animate-in fade-in duration-300 transition-transform duration-300 group-hover/media:scale-[1.01] shadow-2xl"
+                  />
+                  <div className="absolute top-2.5 right-2.5 opacity-0 group-hover/media:opacity-100 transition-all duration-200 bg-black/60 hover:bg-black/80 text-white p-2 rounded-xl backdrop-blur-md pointer-events-none scale-90 group-hover/media:scale-100 shadow-md">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 3 21 3 21 9"></polyline>
+                      <polyline points="9 21 3 21 3 15"></polyline>
+                      <line x1="21" y1="3" x2="14" y2="10"></line>
+                      <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                  </div>
+                </div>
               )}
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedPostId(null)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
-                style={{
-                  background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
-                  border: isLight ? '1px solid rgba(0,0,0,0.09)' : '1px solid rgba(255,255,255,0.15)',
-                  color: isLight ? '#555' : 'rgba(255,255,255,0.7)',
-                }}
-                title="Fechar"
-              >
-                <IconClose size={14} />
-              </button>
+
+              {/* Media dot-indicators */}
+              {allMedia.length > 1 && (
+                <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+                  {allMedia.map((_: any, i: number) => (
+                    <div key={i}
+                      className="rounded-full transition-all duration-300 cursor-pointer"
+                      style={{
+                        width: i === currentMediaIndex ? 20 : 6,
+                        height: 6,
+                        background: i === currentMediaIndex ? postColor : 'rgba(255,255,255,0.4)',
+                      }}
+                      onClick={() => setCurrentMediaIndex(i)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Nav arrows */}
+              {allMedia.length > 1 && (
+                <>
+                  {currentMediaIndex > 0 && (
+                    <button onClick={(e) => { e.stopPropagation(); prevMedia(); }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white cursor-pointer transition-all hover:scale-110 active:scale-95 shadow-lg"
+                      style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+                    </button>
+                  )}
+                  {currentMediaIndex < allMedia.length - 1 && (
+                    <button onClick={(e) => { e.stopPropagation(); nextMedia(); }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white cursor-pointer transition-all hover:scale-110 active:scale-95 shadow-lg"
+                      style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
+        ) : (
+          /* Text-only post displayed big & beautiful (Left Panel) */
+          <div
+            className="w-full lg:flex-1 relative flex flex-col items-stretch justify-start shrink-0 border-b lg:border-b-0 lg:border-r min-h-0 max-h-[48vh] sm:max-h-[52vh] lg:max-h-full lg:h-full overflow-y-auto custom-scrollbar z-10"
+            style={{ borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)' }}
+          >
+            {renderAuthorHeader(false)}
+            {renderForkBanner()}
+            <div className="w-full flex-1 flex flex-col justify-start p-5 sm:p-8 lg:p-10 pt-6 sm:pt-8 lg:pt-10 relative custom-scrollbar">
+              {/* Large decorative accent glow — bottom corner */}
+              <div className="absolute bottom-0 left-0 right-0 h-64 pointer-events-none" style={{
+                background: `radial-gradient(ellipse 80% 60% at 40% 120%, ${postColor}22, transparent 70%)`,
+              }} />
+              {/* Faint brand watermark */}
+              <div className="absolute bottom-8 right-8 font-black text-[5rem] lg:text-[7rem] tracking-tighter select-none leading-none opacity-[0.03] pointer-events-none"
+                style={{ color: isLight ? '#000' : '#fff' }}>α</div>
 
-          {/* Fork Credit Banner — PostDetailModal */}
-          {(raw as any)?.forkedFrom && (() => {
-            const src = (raw as any).forkedFrom;
-            const srcAuthor = src.author?.profile;
-            const srcName = srcAuthor?.displayName || srcAuthor?.username || 'utilizador';
-            const srcAvatar = srcAuthor?.avatarUrl ? resolveUrl(srcAuthor.avatarUrl) : undefined;
-            const srcId = src.authorId;
-            return (
-              <div className="px-5 sm:px-6 py-2.5 border-b flex items-center gap-2.5"
-                style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)', background: `${postColor}08` }}>
-                <IconFork size={12} style={{ color: postColor, flexShrink: 0, opacity: 0.7 }} />
-                <span className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: postColor }}>Fork de</span>
-                <button
-                  onClick={() => onProfileClick?.(srcId)}
-                  className="flex items-center gap-1.5 cursor-pointer bg-transparent border-none p-0 transition-all hover:opacity-80 hover:scale-[1.02]"
-                >
-                  {srcAvatar ? (
-                    <img src={srcAvatar} alt={srcName} className="w-5 h-5 rounded-full object-cover border" style={{ borderColor: `${postColor}50` }} />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black" style={{ background: `${postColor}30`, color: postColor }}>
-                      {srcName[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <span className="text-[12px] font-black" style={{ color: postColor }}>@{srcAuthor?.username || srcName}</span>
-                </button>
-              </div>
-            );
-          })()}
-
-          {allMedia.length > 0 ? (
-            /* ── Caption (Top) + Media viewer (Bottom) + Reaction bar ── */
-            <div className="w-full flex-1 flex flex-col justify-start">
-              {/* Post Caption / Text (when media is present) — ABOVE the media */}
               {(() => {
                 const { cleanContent, frameStyle, watermark, watermarkAnim, bgm } = parsePostMetadata(raw.content || '');
-                if (!cleanContent && !bgm) return null;
                 return (
-                  <div className="px-5 sm:px-6 py-3.5 border-b shrink-0" style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)' }}>
+                  <>
                     {bgm && (
-                      <div className="mb-2.5">
+                      <div className="mb-5 relative z-10">
                         <PostBgmBadge bgm={bgm} accentColor={postColor} isLight={isLight} />
                       </div>
                     )}
-                    {cleanContent && (
-                      <div className={`text-xs sm:text-sm leading-relaxed font-medium tracking-tight w-full break-words [overflow-wrap:anywhere] [word-break:break-word] ${textPrimary}`}>
-                        <PostFrameRenderer
-                          content={cleanContent}
-                          frameStyle={frameStyle}
-                          watermark={watermark}
-                          watermarkAnim={watermarkAnim}
-                          postTitleFont={raw.titleFont}
-                          postTitleColor={raw.titleColor}
-                          isLight={isLight}
-                          themeColor={postColor}
-                          fontsList={PREMIUM_FONTS}
-                          collapsible={false}
-                        />
+                    <div className="relative z-10 leading-snug font-bold tracking-tight w-full break-words [overflow-wrap:anywhere] [word-break:break-word] animate-in fade-in slide-in-from-top-4 duration-500"
+                      style={{ fontSize: 'clamp(1.35rem, 3vw, 2.2rem)' }}>
+                      <PostFrameRenderer
+                        content={cleanContent}
+                        frameStyle={frameStyle}
+                        watermark={watermark}
+                        watermarkAnim={watermarkAnim}
+                        postTitleFont={raw.titleFont}
+                        postTitleColor={raw.titleColor}
+                        isLight={isLight}
+                        themeColor={postColor}
+                        fontsList={PREMIUM_FONTS}
+                        collapsible={false}
+                      />
+                    </div>
+                    {/* Reaction bar inside left panel for text-only posts */}
+                    <div className="flex items-center gap-3 mt-6 relative z-10">
+                      <button
+                        onClick={() => toggleReaction(raw.id)}
+                        className={`flex items-center gap-2.5 px-4 py-2 rounded-2xl border cursor-pointer text-xs font-black transition-all hover:scale-105 active:scale-95 ${raw.isLiked ? 'animate-heart-burst' : ''}`}
+                        style={{
+                          background: raw.isLiked ? `${postColor}22` : (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)'),
+                          borderColor: raw.isLiked ? `${postColor}60` : (isLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)'),
+                          color: raw.isLiked ? postColor : (isLight ? '#666' : 'rgba(255,255,255,0.55)'),
+                          boxShadow: raw.isLiked ? `0 4px 16px ${postColor}40` : 'none',
+                        }}>
+                        <IconHeart filled={raw.isLiked} size={18} />
+                        <span className="text-sm font-black">{raw._count?.reactions || 0}</span>
+                      </button>
+                      <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.2em] uppercase"
+                        style={{ color: isLight ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)' }}>
+                        <IconComment />
+                        {postComments.length} ECOS
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  </>
                 );
               })()}
-
-              {/* Media viewer — BELOW the caption/text */}
-              <div className="w-full flex-1 flex items-center justify-center animate-in zoom-in-[0.97] duration-500 p-3 sm:p-5 relative min-h-0">
-                {isVideo(allMedia[currentMediaIndex]) ? (
-                  <div
-                    className="relative group/media cursor-pointer w-full flex items-center justify-center"
-                    onClick={() => setFullscreenMedia(true)}
-                  >
-                    <ModernVideoPlayer
-                      key={allMedia[currentMediaIndex]}
-                      src={resolveLazerMediaUrl(allMedia[currentMediaIndex])}
-                      accentColor={postColor}
-                      className="w-full max-h-[34vh] sm:max-h-[42vh] lg:max-h-full rounded-2xl overflow-hidden"
-                      showControlsEnabled={true}
-                      initialMuted={false}
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="relative group/media cursor-zoom-in max-w-full max-h-[34vh] sm:max-h-[42vh] lg:max-h-full flex items-center justify-center"
-                    onClick={() => setFullscreenMedia(true)}
-                    title="Clique para ver em ecrã inteiro"
-                  >
-                    <img
-                      key={allMedia[currentMediaIndex]}
-                      src={resolveLazerMediaUrl(allMedia[currentMediaIndex])}
-                      alt="post media"
-                      className="max-w-full max-h-[34vh] sm:max-h-[42vh] lg:max-h-full object-contain rounded-2xl animate-in fade-in duration-300 transition-transform duration-300 group-hover/media:scale-[1.01]"
-                    />
-                    <div className="absolute top-2.5 right-2.5 opacity-0 group-hover/media:opacity-100 transition-all duration-200 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-xl backdrop-blur-md pointer-events-none scale-90 group-hover/media:scale-100">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="15 3 21 3 21 9"></polyline>
-                        <polyline points="9 21 3 21 3 15"></polyline>
-                        <line x1="21" y1="3" x2="14" y2="10"></line>
-                        <line x1="3" y1="21" x2="10" y2="14"></line>
-                      </svg>
-                    </div>
-                  </div>
-                )}
-
-                {/* Media dot-indicators */}
-                {allMedia.length > 1 && (
-                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
-                    {allMedia.map((_: any, i: number) => (
-                      <div key={i}
-                        className="rounded-full transition-all duration-300 cursor-pointer"
-                        style={{
-                          width: i === currentMediaIndex ? 20 : 6,
-                          height: 6,
-                          background: i === currentMediaIndex ? postColor : (isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.3)'),
-                        }}
-                        onClick={() => setCurrentMediaIndex(i)}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Nav arrows */}
-                {allMedia.length > 1 && (
-                  <>
-                    {currentMediaIndex > 0 && (
-                      <button onClick={(e) => { e.stopPropagation(); prevMedia(); }}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white cursor-pointer transition-all hover:scale-110 active:scale-95"
-                        style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.20)', backdropFilter: 'blur(8px)' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
-                      </button>
-                    )}
-                    {currentMediaIndex < allMedia.length - 1 && (
-                      <button onClick={(e) => { e.stopPropagation(); nextMedia(); }}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white cursor-pointer transition-all hover:scale-110 active:scale-95"
-                        style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.20)', backdropFilter: 'blur(8px)' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Reaction bar for media posts */}
-              <div className="flex items-center gap-3 px-5 sm:px-6 py-3 border-t shrink-0 mt-auto"
-                style={{ borderColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)' }}>
-                <button
-                  onClick={() => toggleReaction(raw.id)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border cursor-pointer text-xs font-black transition-all hover:scale-105 active:scale-95 ${raw.isLiked ? 'animate-heart-burst' : ''}`}
-                  style={{
-                    background: raw.isLiked ? `${postColor}18` : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'),
-                    borderColor: raw.isLiked ? `${postColor}50` : (isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)'),
-                    color: raw.isLiked ? postColor : (isLight ? '#666' : 'rgba(255,255,255,0.75)'),
-                  }}>
-                  <IconHeart filled={raw.isLiked} size={16} />
-                  <span className="text-xs font-black">{raw._count?.reactions || 0}</span>
-                </button>
-                <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.2em] uppercase"
-                  style={{ color: isLight ? 'rgba(0,0,0,0.30)' : 'rgba(255,255,255,0.40)' }}>
-                  <IconComment />
-                  {postComments.length} ECOS
-                </div>
-              </div>
             </div>
-          ) : (
-            /* ── Text-only: post content displayed big & beautiful ── */
-            (() => {
-              const { cleanContent, frameStyle, watermark, watermarkAnim, bgm } = parsePostMetadata(raw.content || '');
-              return (
-                <div className="w-full flex-1 flex flex-col justify-start p-5 sm:p-8 lg:p-10 pt-6 sm:pt-8 lg:pt-10 relative custom-scrollbar">
-                  {/* Large decorative accent glow — bottom corner */}
-                  <div className="absolute bottom-0 left-0 right-0 h-64 pointer-events-none" style={{
-                    background: `radial-gradient(ellipse 80% 60% at 40% 120%, ${postColor}22, transparent 70%)`,
-                  }} />
-                  {/* Faint brand watermark */}
-                  <div className="absolute bottom-8 right-8 font-black text-[5rem] lg:text-[7rem] tracking-tighter select-none leading-none opacity-[0.03] pointer-events-none"
-                    style={{ color: isLight ? '#000' : '#fff' }}>α</div>
+          </div>
+        )}
 
-                  {bgm && (
-                    <div className="mb-5 relative z-10">
-                      <PostBgmBadge bgm={bgm} accentColor={postColor} isLight={isLight} />
-                    </div>
-                  )}
+        {/* ── Right Panel: Side Panel (Author + Caption + Comments when media, or Comments when text-only) ── */}
+        <div className="w-full lg:w-[420px] xl:w-[460px] flex-1 lg:h-full flex flex-col min-h-0 overflow-hidden relative z-10">
+          {hasMedia ? (
+            <>
+              {/* ── Author Header in Side Panel ── */}
+              {renderAuthorHeader(true)}
+              {renderForkBanner()}
 
-                  <div className="relative z-10 leading-snug font-bold tracking-tight w-full break-words [overflow-wrap:anywhere] [word-break:break-word] animate-in fade-in slide-in-from-top-4 duration-500"
-                    style={{ fontSize: 'clamp(1.35rem, 3vw, 2.2rem)' }}>
-                    <PostFrameRenderer
-                      content={cleanContent}
-                      frameStyle={frameStyle}
-                      watermark={watermark}
-                      watermarkAnim={watermarkAnim}
-                      postTitleFont={raw.titleFont}
-                      postTitleColor={raw.titleColor}
-                      isLight={isLight}
-                      themeColor={postColor}
-                      fontsList={PREMIUM_FONTS}
-                      collapsible={false}
-                    />
-                  </div>
+              {/* ── Scrollable Body: Caption + Reactions + Comments List ── */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col min-h-0">
+                {/* Caption & BGM */}
+                {renderMediaCaption()}
 
-                  {/* Reaction bar inside left panel for text-only posts */}
-                  <div className="flex items-center gap-3 mt-6 relative z-10">
-                    <button
-                      onClick={() => toggleReaction(raw.id)}
-                      className={`flex items-center gap-2.5 px-4 py-2 rounded-2xl border cursor-pointer text-xs font-black transition-all hover:scale-105 active:scale-95 ${raw.isLiked ? 'animate-heart-burst' : ''}`}
+                {/* Reaction Bar */}
+                {renderReactionBar()}
+
+                {/* Comments Section Header */}
+                <div
+                  className="px-5 py-3 sm:py-3.5 flex items-center justify-between shrink-0 border-b sticky top-0 z-20"
+                  style={{
+                    borderColor: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)',
+                    background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(20,20,25,0.85)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: postColor }}>
+                      ECOS
+                    </span>
+                    <span
+                      className="text-[10px] font-black px-2 py-0.5 rounded-full"
                       style={{
-                        background: raw.isLiked ? `${postColor}22` : (isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)'),
-                        borderColor: raw.isLiked ? `${postColor}60` : (isLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.12)'),
-                        color: raw.isLiked ? postColor : (isLight ? '#666' : 'rgba(255,255,255,0.55)'),
-                        boxShadow: raw.isLiked ? `0 4px 16px ${postColor}40` : 'none',
-                      }}>
-                      <IconHeart filled={raw.isLiked} size={18} />
-                      <span className="text-sm font-black">{raw._count?.reactions || 0}</span>
-                    </button>
-                    <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.2em] uppercase"
-                      style={{ color: isLight ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)' }}>
-                      <IconComment />
-                      {postComments.length} ECOS
-                    </div>
+                        background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+                        color: isLight ? '#555' : 'rgba(255,255,255,0.6)',
+                      }}
+                    >
+                      {postComments.length}
+                    </span>
                   </div>
+                  <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">
+                    Respostas
+                  </span>
                 </div>
-              );
-            })()
-          )}
-        </div>
 
-        {/* ── Right Panel: Ecos / Comments Section ──────────────────────────────── */}
-        <div className="w-full lg:w-[400px] xl:w-[440px] flex-1 lg:h-full flex flex-col min-h-0 overflow-hidden relative z-10">
-
-          {/* Comments Header */}
-          <div
-            className="px-5 py-3 sm:py-3.5 flex items-center justify-between shrink-0 border-b"
-            style={{
-              borderColor: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)',
-              background: 'transparent',
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: postColor }}>
-                ECOS
-              </span>
-              <span
-                className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                {/* Comments List */}
+                <div className="p-3 sm:p-4 space-y-3">
+                  {postComments.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center"
+                      style={{ color: isLight ? 'rgba(0,0,0,0.30)' : 'rgba(255,255,255,0.45)' }}>
+                      <div className="scale-[1.6] mb-3 opacity-60"><IconComment /></div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.25em] leading-relaxed">
+                        O silêncio é absoluto.<br />Sê o primeiro a ecoar.
+                      </p>
+                    </div>
+                  ) : (
+                    postComments.filter(cm => !cm.parentId).map((cm: any) => (
+                      <div key={cm.id} className="rounded-2xl p-3 sm:p-3.5 transition-all"
+                        style={{
+                          background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)'}`,
+                        }}>
+                        <CommentItem cm={cm} allComments={postComments} postId={selectedPostId}
+                          postAuthorId={raw.authorId} authUser={authUser} myProfile={myProfile}
+                          isLight={isLight} c={c} textPrimary={textPrimary} textSecondary={textSecondary}
+                          borderCol={borderCol} cardBg="bg-transparent" hiddenComments={hiddenComments}
+                          setHiddenComments={setHiddenComments}
+                          onReply={(cm) => { setReplyingTo(cm); modalInputRef.current?.focus(); }} />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* When text-only: Comments Header at the top of the right panel with close button */}
+              <div
+                className="px-5 py-3 sm:py-3.5 flex items-center justify-between shrink-0 border-b"
                 style={{
-                  background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
-                  color: isLight ? '#555' : 'rgba(255,255,255,0.6)',
+                  borderColor: isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.07)',
+                  background: 'transparent',
                 }}
               >
-                {postComments.length}
-              </span>
-            </div>
-            <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">
-              Respostas
-            </span>
-          </div>
-
-          {/* Comments List (Scrollable, never overlaps comment bar) */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-3 min-h-0">
-            {postComments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center"
-                style={{ color: isLight ? 'rgba(0,0,0,0.30)' : 'rgba(255,255,255,0.45)' }}>
-                <div className="scale-[1.8] mb-4 opacity-60"><IconComment /></div>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] leading-relaxed">
-                  O silêncio é absoluto.<br />Sê o primeiro a ecoar.
-                </p>
-              </div>
-            ) : (
-              postComments.filter(cm => !cm.parentId).map((cm: any) => (
-                <div key={cm.id} className="rounded-2xl p-3 sm:p-3.5 transition-all"
-                  style={{
-                    background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)'}`,
-                  }}>
-                  <CommentItem cm={cm} allComments={postComments} postId={selectedPostId}
-                    postAuthorId={raw.authorId} authUser={authUser} myProfile={myProfile}
-                    isLight={isLight} c={c} textPrimary={textPrimary} textSecondary={textSecondary}
-                    borderCol={borderCol} cardBg="bg-transparent" hiddenComments={hiddenComments}
-                    setHiddenComments={setHiddenComments}
-                    onReply={(cm) => { setReplyingTo(cm); modalInputRef.current?.focus(); }} />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: postColor }}>
+                    ECOS
+                  </span>
+                  <span
+                    className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                    style={{
+                      background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
+                      color: isLight ? '#555' : 'rgba(255,255,255,0.6)',
+                    }}
+                  >
+                    {postComments.length}
+                  </span>
                 </div>
-              ))
-            )}
-          </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest hidden sm:inline">
+                    Respostas
+                  </span>
+                  <button
+                    onClick={() => setSelectedPostId(null)}
+                    className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
+                    style={{
+                      background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
+                      border: isLight ? '1px solid rgba(0,0,0,0.09)' : '1px solid rgba(255,255,255,0.15)',
+                      color: isLight ? '#555' : 'rgba(255,255,255,0.7)',
+                    }}
+                    title="Fechar"
+                  >
+                    <IconClose size={14} />
+                  </button>
+                </div>
+              </div>
 
-          {/* Comment Input — docked flush at the bottom border, fixed, nothing can overlap it */}
+              {/* Comments List (Scrollable) */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-3 min-h-0">
+                {postComments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center"
+                    style={{ color: isLight ? 'rgba(0,0,0,0.30)' : 'rgba(255,255,255,0.45)' }}>
+                    <div className="scale-[1.8] mb-4 opacity-60"><IconComment /></div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] leading-relaxed">
+                      O silêncio é absoluto.<br />Sê o primeiro a ecoar.
+                    </p>
+                  </div>
+                ) : (
+                  postComments.filter(cm => !cm.parentId).map((cm: any) => (
+                    <div key={cm.id} className="rounded-2xl p-3 sm:p-3.5 transition-all"
+                      style={{
+                        background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)'}`,
+                      }}>
+                      <CommentItem cm={cm} allComments={postComments} postId={selectedPostId}
+                        postAuthorId={raw.authorId} authUser={authUser} myProfile={myProfile}
+                        isLight={isLight} c={c} textPrimary={textPrimary} textSecondary={textSecondary}
+                        borderCol={borderCol} cardBg="bg-transparent" hiddenComments={hiddenComments}
+                        setHiddenComments={setHiddenComments}
+                        onReply={(cm) => { setReplyingTo(cm); modalInputRef.current?.focus(); }} />
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+          {/* Comment Input — docked at the bottom of the right panel */}
           <div
-            className="shrink-0 w-full z-30 pointer-events-auto rounded-b-[1.75rem] sm:rounded-b-[2.5rem] lg:rounded-bl-none lg:rounded-br-[2.5rem] overflow-hidden"
+            className="shrink-0 w-full z-30 pointer-events-auto rounded-b-[1.75rem] sm:rounded-b-[2.5rem] lg:rounded-bl-none lg:rounded-br-[2.5rem] overflow-hidden relative"
             style={{
               background: 'transparent',
               borderTop: isLight ? '1px solid rgba(0, 0, 0, 0.08)' : '1px solid rgba(255, 255, 255, 0.12)',
