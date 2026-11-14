@@ -9,8 +9,8 @@ import { DEMO_USER, LazerUserProfile } from './components/profile/types';
 import { ThemeBg } from './components/profile/ThemeBg';
 import { LazerHomeView } from './components/home/LazerHomeView';
 import { ExploreModal } from './components/modals/ExploreModal';
-import { NotificationsModal } from './components/modals/NotificationsModal';
-import { FriendsModal } from './components/modals/FriendsModal';
+import { LazerNotificationsView } from './components/notifications/LazerNotificationsView';
+import { LazerFriendsView } from './components/friends/LazerFriendsView';
 import { CommunityModal } from './components/modals/CommunityModal';
 import { MessagesModal } from './components/modals/MessagesModal';
 import { UserProfileModal } from './components/modals/UserProfileModal';
@@ -25,6 +25,7 @@ import { LazerWatchView } from './components/watch/LazerWatchView';
 import { AlphaWatchPiP } from './components/watch/AlphaWatchPiP';
 import { LazerArtView } from './components/art/LazerArtView';
 import { LazerMessagesView } from './components/messages/LazerMessagesView';
+import { LazerCommunityView } from './components/community/LazerCommunityView';
 import { resolveUrl } from '@/lib/api';
 
 type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community' | 'messages' | 'music' | 'watch' | 'art';
@@ -283,8 +284,8 @@ export default function LazerPage() {
       <div className="fixed inset-0 pointer-events-none z-0">
         <ThemeBg color={c} mode={themeMode} />
       </div>
-      {/* Sidebar (Estrutura) - Ocultada nos modos com sidebar própria (Music, Explore, Watch, Art e Messages) */}
-      {!['music', 'explore', 'watch', 'art', 'messages'].includes(activeView) && (
+      {/* Sidebar (Estrutura) - Ocultada nos modos com sidebar própria (Music, Explore, Watch, Art, Messages, Community, Notifications e Friends) */}
+      {!['music', 'explore', 'watch', 'art', 'messages', 'community', 'notifications', 'friends'].includes(activeView) && (
         <LazerSidebar
           activeView={activeView}
           setActiveView={handleSelectView}
@@ -301,7 +302,7 @@ export default function LazerPage() {
       <div
         ref={contentRef}
         className={`flex-1 animate-in fade-in duration-300 relative h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 ${
-          ['music', 'explore', 'watch', 'art', 'messages'].includes(activeView) ? 'md:pl-4 lg:pl-5' : 'md:pl-0 lg:pl-0'
+          ['music', 'explore', 'watch', 'art', 'messages', 'community', 'notifications', 'friends'].includes(activeView) ? 'md:pl-4 lg:pl-5' : 'md:pl-0 lg:pl-0'
         } lg:py-5 lg:pr-5 pb-20 md:pb-4 lg:pb-5 flex flex-col`}
         style={{ overscrollBehavior: 'none' }}
       >
@@ -339,18 +340,40 @@ export default function LazerPage() {
           />
         )}
         {activeView === 'notifications' && (
-          <NotificationsModal onClose={() => setActiveView('feed')} onPostClick={navigateToPost}
-            onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
+          <LazerNotificationsView
+            onClose={() => setActiveView('feed')}
+            onSelectView={handleSelectView}
+            themeColor={c}
+            themeMode={themeMode}
+            userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
+            userName={authUser?.profile?.displayName || authUser?.profile?.username}
+            onPostClick={navigateToPost}
+            onProfileClick={navigateToProfile}
+          />
         )}
         {activeView === 'friends' && (
-          <FriendsModal onClose={() => setActiveView('feed')}
-            onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
+          <LazerFriendsView
+            onClose={() => setActiveView('feed')}
+            onSelectView={handleSelectView}
+            themeColor={c}
+            themeMode={themeMode}
+            userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
+            userName={authUser?.profile?.displayName || authUser?.profile?.username}
+            onProfileClick={navigateToProfile}
+            onChatClick={startPrivateChat}
+          />
         )}
         {activeView === 'community' && (
-          <CommunityModal onClose={() => setActiveView('feed')}
-            themeColor={c} themeMode={themeMode}
+          <LazerCommunityView
+            onClose={() => setActiveView('feed')}
+            onSelectView={handleSelectView}
+            themeColor={c}
+            themeMode={themeMode}
+            userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
+            userName={authUser?.profile?.displayName || authUser?.profile?.username}
             initialCommunityId={communityId}
-            onProfileClick={navigateToProfile} />
+            onProfileClick={navigateToProfile}
+          />
         )}
         {activeView === 'messages' && (
           <LazerMessagesView
