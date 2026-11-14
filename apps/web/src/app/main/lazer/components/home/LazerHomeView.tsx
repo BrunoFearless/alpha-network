@@ -79,7 +79,7 @@ const IconFork = ({ size = 16, style, className }: { size?: number; style?: Reac
 );
 
 // ─── Modern Video Player ──────────────────────────────────────────────────────
-function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = true, accentColor = '#7c4dff', showControlsEnabled = true, initialMuted = true }: any) {
+function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = true, accentColor = '#7c4dff', showControlsEnabled = true, initialMuted = true, objectFit = 'contain' }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(autoPlay);
@@ -196,7 +196,7 @@ function ModernVideoPlayer({ src, className, onClick, autoPlay = true, loop = tr
         playsInline
         preload="metadata"
         onTimeUpdate={handleProgress}
-        className="w-full h-full object-contain"
+        className={`w-full h-full ${objectFit === 'cover' ? 'object-cover' : 'object-contain'}`}
       />
 
       {/* Central Controls Overlay */}
@@ -858,7 +858,8 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
                       src={mediaUrl}
                       accentColor={c}
                       onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(0); }}
-                      className="w-full max-h-[350px] rounded-[20px] border border-white/10 relative z-10"
+                      className="w-full h-[350px] rounded-[20px] border border-white/10 relative z-10 overflow-hidden"
+                      objectFit="cover"
                       showControlsEnabled={false}
                       initialMuted={true}
                     />
@@ -867,7 +868,7 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
                       onClick={() => { setSelectedPostId(post.id); setInitialMediaIndex(0); }}
                       src={mediaUrl}
                       alt="post"
-                      className="w-full max-h-[350px] object-contain block rounded-[20px] border border-white/10 relative z-10 cursor-pointer transition-transform duration-300 group-hover/ambilight:scale-[1.01]"
+                      className="w-full h-[350px] object-cover block rounded-[20px] border border-white/10 relative z-10 cursor-pointer transition-transform duration-300 group-hover/ambilight:scale-[1.01]"
                     />
                   )}
                 </div>
@@ -1364,13 +1365,46 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
   const [hiddenComments, setHiddenComments] = useState<Set<string>>(new Set());
   const modalInputRef = useRef<HTMLInputElement>(null);
 
-  const availablePosts = customPosts || storeUserPosts || [];
-  const raw = feedPosts.find(p => p.id === selectedPostId) || availablePosts.find((p: any) => p.id === selectedPostId) || fetchedPost;
+  // ── Animation state for smooth open/close spring physics ──
+  const [activePostId, setActivePostId] = useState<string | null>(selectedPostId);
+  const [isClosing, setIsClosing] = useState(false);
+  const [isAnimateIn, setIsAnimateIn] = useState(false);
+
+  const currentId = selectedPostId || activePostId;
+
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setIsAnimateIn(false);
+    setTimeout(() => {
+      setSelectedPostId(null);
+      setIsClosing(false);
+      setActivePostId(null);
+    }, 300);
+  }, [isClosing, setSelectedPostId]);
 
   useEffect(() => {
-    if (selectedPostId && !raw) {
+    if (selectedPostId) {
+      setActivePostId(selectedPostId);
+      setIsClosing(false);
+      let raf2: number;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setIsAnimateIn(true));
+      });
+      return () => { cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2); };
+    } else if (!isClosing) {
+      setIsAnimateIn(false);
+      setActivePostId(null);
+    }
+  }, [selectedPostId, isClosing]);
+
+  const availablePosts = customPosts || storeUserPosts || [];
+  const raw = feedPosts.find(p => p.id === currentId) || availablePosts.find((p: any) => p.id === currentId) || fetchedPost;
+
+  useEffect(() => {
+    if (currentId && !raw) {
       const api = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      fetch(`${api}/api/v1/lazer/posts/${selectedPostId}`)
+      fetch(`${api}/api/v1/lazer/posts/${currentId}`)
         .then(r => r.json())
         .then(res => {
           if (res?.success && res.data) setFetchedPost(res.data);
@@ -1378,26 +1412,12 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
         })
         .catch(() => {});
     }
-  }, [selectedPostId, raw]);
+  }, [currentId, raw]);
   const isVideo = (url?: string) => url ? (url.match(/\.(mp4|webm|mov|ogg)(\?|$)/i) || url.startsWith('data:video')) : false;
 
   useEffect(() => {
-    if (selectedPostId && !comments[selectedPostId]) fetchComments(selectedPostId);
-  }, [selectedPostId, comments, fetchComments]);
-
-  const nextMedia = () => { if (currentMediaIndex < allMedia.length - 1) setCurrentMediaIndex((v: number) => v + 1); };
-  const prevMedia = () => { if (currentMediaIndex > 0) setCurrentMediaIndex((v: number) => v - 1); };
-
-  useEffect(() => {
-    if (!fullscreenMedia) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFullscreenMedia(false);
-      if (e.key === 'ArrowRight') nextMedia();
-      if (e.key === 'ArrowLeft') prevMedia();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [fullscreenMedia, currentMediaIndex]);
+    if (currentId && !comments[currentId]) fetchComments(currentId);
+  }, [currentId, comments, fetchComments]);
 
   const allMedia = useMemo(() => {
     if (!raw?.imageUrl) return [];
@@ -1410,8 +1430,75 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
     }
   }, [raw?.imageUrl]);
 
+  // ── Slide animation for multi-media navigation ──
+  const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
+  const [isSliding, setIsSliding] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const currentMediaIndexRef = useRef(currentMediaIndex);
+  currentMediaIndexRef.current = currentMediaIndex;
+
+  const allMediaRef = useRef(allMedia);
+  allMediaRef.current = allMedia;
+
+  const isSlidingRef = useRef(false);
+
+  const goToMedia = useCallback((newIndex: number, dir: 'left' | 'right') => {
+    const cur = currentMediaIndexRef.current;
+    if (isSlidingRef.current || newIndex === cur) return;
+    isSlidingRef.current = true;
+    setSlideDir(dir);
+    setIsSliding(true);
+    setTimeout(() => {
+      setCurrentMediaIndex(newIndex);
+      setSlideDir(null);
+      setIsSliding(false);
+      isSlidingRef.current = false;
+    }, 200);
+  }, []);
+
+  const nextMedia = useCallback(() => {
+    const cur = currentMediaIndexRef.current;
+    const len = allMediaRef.current.length;
+    if (cur < len - 1) {
+      goToMedia(cur + 1, 'left');
+    }
+  }, [goToMedia]);
+
+  const prevMedia = useCallback(() => {
+    const cur = currentMediaIndexRef.current;
+    if (cur > 0) {
+      goToMedia(cur - 1, 'right');
+    }
+  }, [goToMedia]);
+
   useEffect(() => {
-    if (selectedPostId) {
+    if (!currentId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Do not intercept arrows if user is typing in a comment or text field
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (e.key === 'Escape') {
+        if (fullscreenMedia) setFullscreenMedia(false);
+        else handleClose();
+        return;
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        nextMedia();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prevMedia();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentId, fullscreenMedia, handleClose, nextMedia, prevMedia]);
+
+  useEffect(() => {
+    if (currentId) {
       document.body.style.overflow = 'hidden';
       setCurrentMediaIndex(initialIndex);
     } else {
@@ -1420,9 +1507,9 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [selectedPostId, initialIndex]);
+  }, [currentId, initialIndex]);
 
-  if (!selectedPostId || !raw) return null;
+  if (!currentId || !raw) return null;
 
   const authorInfo = {
     avatar: raw?.author?.profile?.avatarUrl,
@@ -1432,7 +1519,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
 
   const miniDesc = authorInfo.profile?.bio;
 
-  const postComments = comments[selectedPostId] || [];
+  const postComments = comments[currentId || ''] || [];
 
   // The post's own accent color (from AdvancedPostModal titleColor), falling back to user theme
   const postColor = raw?.titleColor || c;
@@ -1450,12 +1537,9 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
 
   const renderAuthorHeader = (showClose: boolean = true) => (
     <div
-      className="px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between shrink-0 z-30 border-b sticky top-0"
+      className="px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between shrink-0 z-30"
       style={{
-        borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.10)',
-        background: isLight ? 'rgba(255,255,255,0.60)' : 'rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        background: 'transparent',
       }}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
@@ -1496,7 +1580,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
         </button>
         {raw.authorId !== authUser?.id && (
           <button
-            onClick={() => { onForkPost?.(raw); setSelectedPostId(null); }}
+            onClick={() => { onForkPost?.(raw); handleClose(); }}
             className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
             style={{
               background: `${postColor}18`,
@@ -1510,7 +1594,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
         )}
         {raw.authorId === authUser?.id && (
           <button
-            onClick={() => { onEditPost?.(raw); setSelectedPostId(null); }}
+            onClick={() => { onEditPost?.(raw); handleClose(); }}
             className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
             style={{
               background: `${postColor}18`,
@@ -1524,12 +1608,12 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
         )}
         {showClose && (
           <button
-            onClick={() => setSelectedPostId(null)}
+            onClick={handleClose}
             className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
             style={{
-              background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',
-              border: isLight ? '1px solid rgba(0,0,0,0.09)' : '1px solid rgba(255,255,255,0.15)',
-              color: isLight ? '#555' : 'rgba(255,255,255,0.7)',
+              background: isLight ? 'rgba(255,255,255,0.60)' : 'rgba(255,255,255,0.08)',
+              border: isLight ? '1px solid rgba(255,255,255,0.80)' : '1px solid rgba(255,255,255,0.15)',
+              color: isLight ? '#222' : 'rgba(255,255,255,0.85)',
             }}
             title="Fechar"
           >
@@ -1573,7 +1657,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
     const { cleanContent, frameStyle, watermark, watermarkAnim, bgm } = parsePostMetadata(raw.content || '');
     if (!cleanContent && !bgm) return null;
     return (
-      <div className="px-5 sm:px-6 py-3.5 border-b shrink-0" style={{ borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)' }}>
+      <div className="px-5 sm:px-6 py-3.5 shrink-0">
         {bgm && (
           <div className="mb-2.5">
             <PostBgmBadge bgm={bgm} accentColor={postColor} isLight={isLight} />
@@ -1600,8 +1684,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
   };
 
   const renderReactionBar = () => (
-    <div className="flex items-center gap-3 px-5 sm:px-6 py-3 border-b shrink-0"
-      style={{ borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)' }}>
+    <div className="flex items-center gap-3 px-5 sm:px-6 py-2.5 shrink-0">
       <button
         onClick={() => toggleReaction(raw.id)}
         className={`flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border cursor-pointer text-xs font-black transition-all hover:scale-105 active:scale-95 ${raw.isLiked ? 'animate-heart-burst' : ''}`}
@@ -1623,18 +1706,31 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-2 sm:p-5 md:p-8 animate-in fade-in duration-300 backdrop-blur-md"
+      className={`fixed inset-0 z-[1000] flex items-center justify-center p-2 sm:p-5 md:p-8 ${
+        isAnimateIn && !isClosing ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}
       style={{
-        background: isLight ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.55)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        background: isLight ? 'rgba(0, 0, 0, 0.42)' : 'rgba(0, 0, 0, 0.62)',
+        backdropFilter: isAnimateIn && !isClosing ? 'blur(16px)' : 'blur(0px)',
+        WebkitBackdropFilter: isAnimateIn && !isClosing ? 'blur(16px)' : 'blur(0px)',
+        transition: 'opacity 300ms cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 300ms cubic-bezier(0.16, 1, 0.3, 1)',
       }}
-      onClick={() => setSelectedPostId(null)}
+      onClick={handleClose}
     >
       {/* Ambient glow that bleeds behind the modal from the media */}
       {allMedia.length > 0 && (
-        <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden opacity-30">
-          <div className="absolute inset-[-15%] blur-[130px] saturate-[3.5] brightness-110">
+        <div
+          className={`absolute inset-0 pointer-events-none -z-10 overflow-hidden transition-all duration-500 ease-out ${
+            isAnimateIn && !isClosing ? 'opacity-50 scale-100' : 'opacity-0 scale-95'
+          }`}
+        >
+          <div
+            className="absolute inset-[-10%] blur-[90px] saturate-[1.3] brightness-105"
+            style={{
+              opacity: isSliding ? 0 : 1,
+              transition: 'opacity 200ms ease',
+            }}
+          >
             {isVideo(allMedia[currentMediaIndex]) ? (
               <video src={resolveLazerMediaUrl(allMedia[currentMediaIndex])} muted loop autoPlay className="w-full h-full object-cover" />
             ) : (
@@ -1646,18 +1742,23 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
 
       {/* ── Liquid Glass Modal Shell ── */}
       <div
-        className="w-full max-w-6xl h-[94vh] sm:h-[92vh] max-h-[920px] rounded-[1.75rem] sm:rounded-[2.5rem] flex flex-col lg:flex-row overflow-hidden relative animate-in zoom-in-95 duration-300"
+        className={`w-full max-w-6xl h-[94vh] sm:h-[92vh] max-h-[920px] rounded-[1.75rem] sm:rounded-[2.5rem] flex flex-col lg:flex-row overflow-hidden relative shadow-2xl will-change-transform transition-all duration-300 ${
+          isAnimateIn && !isClosing
+            ? 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-[0.92] translate-y-8'
+        }`}
         style={{
+          transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
           background: isLight
-            ? 'rgba(255, 255, 255, 0.35)'
-            : 'rgba(255, 255, 255, 0.06)',
-          backdropFilter: 'blur(40px) saturate(210%) contrast(105%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(210%) contrast(105%)',
+            ? 'rgba(255, 255, 255, 0.38)'
+            : 'rgba(255, 255, 255, 0.07)',
+          backdropFilter: 'blur(36px) saturate(130%) contrast(102%)',
+          WebkitBackdropFilter: 'blur(36px) saturate(130%) contrast(102%)',
           border: isLight ? '1.5px solid rgba(255, 255, 255, 0.85)' : '1px solid rgba(255, 255, 255, 0.25)',
           borderTop: isLight ? '2px solid rgba(255, 255, 255, 0.95)' : '1.5px solid rgba(255, 255, 255, 0.45)',
-                    boxShadow: isLight
-            ? 'inset 0 1.5px 1px 0 rgba(255,255,255,0.85)'
-            : 'inset 0 1.5px 1px 0 rgba(255,255,255,0.35)',
+          boxShadow: isLight
+            ? 'inset 0 1.5px 1px 0 rgba(255,255,255,0.85), 0 25px 60px -15px rgba(0,0,0,0.25)'
+            : 'inset 0 1.5px 1px 0 rgba(255,255,255,0.35), 0 25px 60px -15px rgba(0,0,0,0.65)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -1683,7 +1784,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
           >
             {/* Mobile Quick-Close button on top of media */}
             <button
-              onClick={() => setSelectedPostId(null)}
+              onClick={handleClose}
               className="lg:hidden absolute top-3 right-3 z-30 w-8 h-8 rounded-full flex items-center justify-center text-white cursor-pointer transition-all active:scale-95 shadow-lg"
               style={{
                 background: 'rgba(0,0,0,0.55)',
@@ -1695,7 +1796,30 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
               <IconClose size={14} />
             </button>
 
-            <div className="w-full h-full flex items-center justify-center p-3 sm:p-6 relative">
+            <div
+              className="w-full h-full flex items-center justify-center p-3 sm:p-6 relative overflow-hidden"
+              onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+              onTouchEnd={(e) => {
+                if (touchStartX === null) return;
+                const dx = e.changedTouches[0].clientX - touchStartX;
+                if (Math.abs(dx) > 40) { if (dx < 0) nextMedia(); else prevMedia(); }
+                setTouchStartX(null);
+              }}
+            >
+              {/* Animated slide wrapper */}
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{
+                  transform: isSliding && slideDir === 'left'
+                    ? 'translateX(-5%) scale(0.97)'
+                    : isSliding && slideDir === 'right'
+                    ? 'translateX(5%) scale(0.97)'
+                    : 'translateX(0) scale(1)',
+                  opacity: isSliding ? 0 : 1,
+                  transition: 'transform 200ms cubic-bezier(0.4, 0, 0.2, 1), opacity 160ms ease',
+                  willChange: 'transform, opacity',
+                }}
+              >
               {isVideo(allMedia[currentMediaIndex]) ? (
                 <div
                   className="relative group/media cursor-pointer w-full h-full flex items-center justify-center"
@@ -1732,6 +1856,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                   </div>
                 </div>
               )}
+              </div>{/* end slide wrapper */}
 
               {/* Media dot-indicators */}
               {allMedia.length > 1 && (
@@ -1744,7 +1869,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                         height: 6,
                         background: i === currentMediaIndex ? postColor : 'rgba(255,255,255,0.4)',
                       }}
-                      onClick={() => setCurrentMediaIndex(i)}
+                      onClick={() => goToMedia(i, i > currentMediaIndex ? 'left' : 'right')}
                     />
                   ))}
                 </div>
@@ -1857,12 +1982,9 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
 
                 {/* Comments Section Header */}
                 <div
-                  className="px-5 py-3 sm:py-3.5 flex items-center justify-between shrink-0 border-b sticky top-0 z-20"
+                  className="px-5 py-2.5 sm:py-3 flex items-center justify-between shrink-0"
                   style={{
-                    borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)',
-                    background: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.04)',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)',
+                    background: 'transparent',
                   }}
                 >
                   <div className="flex items-center gap-2">
@@ -1917,7 +2039,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
             <>
               {/* When text-only: Comments Header at the top of the right panel with close button */}
               <div
-                className="px-5 py-3 sm:py-3.5 flex items-center justify-between shrink-0 border-b"
+                className="px-5 py-3 sm:py-3.5 flex items-center justify-between shrink-0"
                 style={{
                   borderColor: isLight ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.08)',
                   background: 'transparent',
@@ -1942,7 +2064,7 @@ export function PostDetailModal({ selectedPostId, setSelectedPostId, onProfileCl
                     Respostas
                   </span>
                   <button
-                    onClick={() => setSelectedPostId(null)}
+                    onClick={handleClose}
                     className="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95"
                     style={{
                       background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)',

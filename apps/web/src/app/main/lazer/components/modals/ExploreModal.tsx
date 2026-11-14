@@ -1,771 +1,1280 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Avatar } from '@/components/ui';
 import { DisplayName } from '@/components/ui/DisplayName';
-import { EmojiRenderer } from '@/components/ui/EmojiRenderer';
-import { ThemeBg } from '../profile/ThemeBg';
 import { useLazerStore } from '@/store/lazer.store';
 import { useAuthStore } from '@/store/auth.store';
-import { YoutubeEmbed } from '@/components/ui/YoutubeEmbed';
 import { DiscoverDetailModal } from './DiscoverDetailModal';
 import { WikiModal } from './WikiModal';
 import { AlphaReaderModal } from './AlphaReaderModal';
-import { LazerShell } from '../layout/LazerShell';
-
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const CATEGORIES = [
-  'All',
-  'Animes',
-  'Mangás',
-  'Jogos',
-  'Cinema',
-  'Imagem',
-  'Watch Mode'
-];
-
-const NAV_TABS = ['All', 'Imagem', 'Watch Mode'];
-
-const getNeonColor = (category: string) => {
-  if (category.includes('Animes')) return '#00f2ff'; // Cyan
-  if (category.includes('Mangás')) return '#bc13fe'; // Purple
-  if (category.includes('Jogos')) return '#39ff14'; // Lime
-  if (category.includes('Cinema')) return '#ff003c'; // Cyber Red
-  return '#ffffff';
-};
-
-// Icons
-const IconFlame = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></svg>;
-const IconMessageSquare = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
-const IconStar = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>;
-const IconSearch = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>;
-
-const PREMIUM_FONTS = [
-  { id: 'default', label: 'Default', family: "'Nunito', sans-serif" },
-  { id: 'serif', label: 'Serif', family: "'Playfair Display', serif" },
-  { id: 'mono', label: 'Mono', family: "'Fira Code', monospace" },
-  { id: 'display', label: 'Display', family: "'Outfit', sans-serif" },
-  { id: 'elegant', label: 'Elegant', family: "'Libre Baskerville', serif" },
-];
-
-function formatContent(content: string, postTitleFont?: string | null, postTitleColor?: string | null, isLight?: boolean) {
-  if (!content) return null;
-  const lines = content.split('\n');
-  const title = lines[0];
-  const body = lines.slice(1).join('\n');
-  const fontData = PREMIUM_FONTS.find(f => f.id === postTitleFont) || PREMIUM_FONTS[0];
-  const titleCol = postTitleColor || (isLight ? '#000000' : '#ffffff');
-  return (
-    <div className="flex flex-col h-full">
-      <div className="font-black text-[22px] xl:text-[26px] leading-[1.05] tracking-tight uppercase mb-2 line-clamp-2" style={{ fontFamily: fontData.family, color: titleCol, textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-        <EmojiRenderer content={title} emojiSize={26} />
-      </div>
-      {body && <div className={`text-[13px] leading-relaxed line-clamp-3 block font-medium opacity-80`} style={{ textShadow: '0 2px 10px rgba(0,0,0,0.4)', color: '#fff' }}><EmojiRenderer content={body} emojiSize={18} /></div>}
-    </div>
-  );
-}
-
-const TRENDING_TROPES = [
-  { rank: 1, tag: '#EnemiesToLovers', count: '15.2k', color: '#f472b6' },
-  { rank: 2, tag: '#SchoolFestival', count: '8.4k', color: '#fb923c' },
-  { rank: 3, tag: '#ChildhoodFriend', count: '5.1k', color: 'rgb(249 115 22)' },
-  { rank: 4, tag: '#RainyConfession', count: '3.2k', color: '#60a5fa' },
-  { rank: 5, tag: '#SliceOfLife', count: '2.9k', color: '#4ade80' },
-];
-
-const WATCHING_NOW = [
-  { title: 'Solo Leveling', ep: 'EP 8', genre: 'Ação', emoji: '⚔️' },
-  { title: 'Frieren', ep: 'EP 22', genre: 'Aventura', emoji: '🌿' },
-  { title: 'Dandadan', ep: 'EP 4', genre: 'Comédia', emoji: '👻' },
-  { title: 'Blue Lock', ep: 'EP 16', genre: 'Desporto', emoji: '⚽' },
-  { title: 'Chainsaw Man', ep: 'EP 12', genre: 'Ação', emoji: '🪚' },
-  { title: 'Oshi no Ko', ep: 'EP 11', genre: 'Drama', emoji: '🌟' },
-  { title: 'Vinland Saga', ep: 'EP 24', genre: 'Seinen', emoji: '🪓' },
-  { title: 'Jujutsu Kaisen', ep: 'EP 23', genre: 'Shonen', emoji: '🤞' },
-  { title: 'Bleach: TYBW', ep: 'EP 26', genre: 'Ação', emoji: '⚔️' },
-  { title: 'Mushoku Tensei', ep: 'EP 12', genre: 'Isekai', emoji: '🪄' },
-  { title: 'Spy x Family', ep: 'EP 25', genre: 'Comédia', emoji: '🕵️' },
-  { title: 'Cyberpunk ER', ep: 'EP 10', genre: 'Sci-Fi', emoji: '🦾' },
-];
-
-const MOCK_TRAILERS = [
-  { title: 'Bleach: TYBW Part 3', imageUrl: 'https://images.alphacoders.com/133/1331005.png', type: 'anime' },
-  { title: 'Overlord: The Sacred Kingdom', imageUrl: 'https://images7.alphacoders.com/135/1351543.png', type: 'anime' },
-  { title: 'Spider-Man: Beyond the Spider-Verse', imageUrl: 'https://images2.alphacoders.com/131/1311545.jpg', type: 'movie' },
-  { title: 'Monster Hunter Wilds', imageUrl: 'https://images.alphacoders.com/134/1344697.jpeg', type: 'game' },
-].sort(() => Math.random() - 0.5);
-
-const MOCK_DISCOVER = [
-  { id: 'Anime', title: 'Anime', imageUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg', type: 'wiki', rating: 'Wiki', releaseYear: 'Info' },
-  { id: 'Manga', title: 'Manga', imageUrl: 'https://i.ytimg.com/vi/L_jWHffIx5E/maxresdefault.jpg', type: 'wiki', rating: 'Wiki', releaseYear: 'Info' },
-  { id: 'Cyberpunk', title: 'Cyberpunk', imageUrl: 'https://i.ytimg.com/vi/8X2kIfS6fb8/maxresdefault.jpg', type: 'wiki', rating: 'Wiki', releaseYear: 'Info' },
-  { id: 'One_Piece', title: 'One Piece', imageUrl: 'https://i.ytimg.com/vi/MCb13bmV32k/maxresdefault.jpg', type: 'wiki', rating: '9.9', releaseYear: '1999' },
-  { id: 'Solo_Leveling', title: 'Solo Leveling', imageUrl: 'https://i.ytimg.com/vi/uYfNOC_E3p0/maxresdefault.jpg', type: 'wiki', rating: '9.8', releaseYear: '2024' },
-].sort(() => Math.random() - 0.5);
-
-const YT_QUERIES = [
-  'anime trailer 2024', 'anime official trailer', 'new anime 2024 trailer', 
-  'shonen jump trailer 2024', 'seasonal anime trailer', 'top upcoming anime 2024',
-  'anime teaser official', 'crunchyroll trailer 2024', 'netflix anime trailer 2024'
-];
-const RANDOM_YT_QUERY = YT_QUERIES[Math.floor(Math.random() * YT_QUERIES.length)];
-
-function getImageUrl(url: string, width = 800) {
-  if (!url) return '';
-  if (url.includes('localhost') || url.startsWith('blob:') || url.startsWith('data:')) return url;
-  // Use weserv.nl as a high-performance proxy with dynamic width
-  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=${width}&fit=cover&output=webp&q=90`;
-}
 
 interface ExploreProps {
   onClose: () => void;
+  onSelectView?: (view: any) => void;
   onPostClick?: (postId: string) => void;
   onProfileClick?: (userId: string) => void;
   onCommunityClick?: (communityId: string) => void;
   themeColor: string;
   themeMode: 'light' | 'dark';
+  userAvatar?: string;
+  userName?: string;
 }
 
-export function ExploreModal({ onClose, onPostClick, onProfileClick, onCommunityClick, themeColor: c, themeMode }: ExploreProps) {
+// ── Curated Media & Data matching the Lo-Fi Reference ──────────────────────
+const HERO_EVENTS = [
+  {
+    id: 'hero-1',
+    badge: 'Trending Event',
+    tags: ['Creative', 'Improve'],
+    title: 'Ngab-ers: Mengaji Bersama',
+    description: 'Mengaji bersama di lapangan smkn 4 bandung dengan pengisi ustad yogi m suardi dan juga sahrul mubarok menjadi pembicara di acara ini',
+    image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1600&q=80',
+    guideTopic: 'Creative_Arts',
+  },
+  {
+    id: 'hero-2',
+    badge: 'Live Session',
+    tags: ['Lo-Fi', 'Audio'],
+    title: 'Cyberpunk Night: Alpha Beats',
+    description: 'Sessão imersiva de síntese sonora e produção visual lo-fi com transmissão ao vivo para todos os cidadãos da rede.',
+    image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=80',
+    guideTopic: 'Cyberpunk',
+  },
+  {
+    id: 'hero-3',
+    badge: 'Workshop',
+    tags: ['Animation', 'Design'],
+    title: 'Sakuga Showcase: Studio Lights',
+    description: 'Análise aprofundada de quadros-chave, iluminação dinâmica e técnicas contemporâneas de animação digital.',
+    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=1600&q=80',
+    guideTopic: 'Anime',
+  },
+];
+
+const ASESMENT_ITEMS = [
+  {
+    id: 'ases-1',
+    title: 'Proxmox : Cara membuat server dan router',
+    category: 'Server',
+    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
+    views: '12.4k',
+  },
+  {
+    id: 'ases-2',
+    title: 'Basis Data : Perintah dalam SQL',
+    category: 'Database',
+    image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80',
+    views: '8.1k',
+  },
+  {
+    id: 'ases-3',
+    title: 'Algoritma : Logika & Pemrograman Modern',
+    category: 'Code',
+    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80',
+    views: '15.9k',
+  },
+];
+
+const DOWNLOAD_ITEMS = [
+  {
+    id: 'dl-1',
+    title: 'Statistika',
+    subtitle: 'Matematika',
+    image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=300&q=80',
+  },
+  {
+    id: 'dl-2',
+    title: 'Basis Data',
+    subtitle: 'Server',
+    image: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=300&q=80',
+  },
+  {
+    id: 'dl-3',
+    title: 'Proxmox',
+    subtitle: 'Cyber Security',
+    image: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=300&q=80',
+  },
+  {
+    id: 'dl-4',
+    title: 'Algoritma',
+    subtitle: 'Logic',
+    image: 'https://images.unsplash.com/photo-1516116211227-bbc1c42f0e0c?auto=format&fit=crop&w=300&q=80',
+  },
+];
+
+const SISWA_ITEMS = [
+  {
+    id: 'siswa-1',
+    code: '221321',
+    name: 'Sahrul',
+    subtitle: 'Kelas Rekayasa Perangkat Lunak angkatan 2023',
+    image: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80',
+    accent: '#f43f5e',
+  },
+  {
+    id: 'siswa-2',
+    code: '220123',
+    name: 'Yogi',
+    subtitle: 'Kelas Desain Komunikasi Visual angkatan 2022',
+    image: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=800&q=80',
+    accent: '#38bdf8',
+  },
+  {
+    id: 'siswa-3',
+    code: '223014',
+    name: 'Fatih',
+    subtitle: 'Kelas Teknik Komputer dan Jaringan angkatan 2023',
+    image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80',
+    accent: '#a855f7',
+  },
+  {
+    id: 'siswa-4',
+    code: '225691',
+    name: 'Nopal',
+    subtitle: 'Kelas Rekayasa Perangkat Lunak angkatan 2024',
+    image: 'https://images.unsplash.com/photo-1483921020237-2ff51e8e4b22?auto=format&fit=crop&w=800&q=80',
+    accent: '#10b981',
+  },
+];
+
+const INITIAL_TASKS = [
+  { id: 't1', group: 'Tasks today', text: 'Send asesment to student', done: true },
+  { id: 't2', group: 'Tasks tomorrow', text: 'Get the copy for the facebook image', done: false },
+  { id: 't3', group: 'Tasks tomorrow', text: 'Send Invision demo to squad', done: false },
+  { id: 't4', group: 'Tasks Friday', text: 'Update styleguide and add colors', done: false },
+  { id: 't5', group: 'Tasks Saturday', text: 'Update styleguide and add colors', done: false },
+  { id: 't6', group: 'Tasks Saturday', text: 'Get the copy for the facebook image', done: false },
+  { id: 't7', group: 'Tasks Saturday', text: 'Send invision demo to squad', done: false },
+];
+
+const SCHEDULE_DAYS = [
+  { dayNum: 14, monthYear: 'December 2025', weekday: 'Monday', count: 13, isSpecial: false },
+  { dayNum: 15, monthYear: 'December 2025', weekday: 'Tuesday', count: 22, isSpecial: false },
+  { dayNum: 16, monthYear: 'December 2025', weekday: 'Wednesday', count: 14, isSpecial: false },
+  { dayNum: 17, monthYear: 'December 2025', weekday: 'Thursday', count: 11, isSpecial: false },
+  { dayNum: 18, monthYear: 'December 2016', weekday: 'Wednesday', count: 14, isSpecial: true },
+  { dayNum: 19, monthYear: 'December 2016', weekday: 'Thursday', count: 11, isSpecial: true },
+];
+
+const NAV_TABS = ['Home', 'Asesment', 'Buku Pelajaran', 'Saran', 'Download'];
+
+export function ExploreModal({
+  onClose,
+  onSelectView,
+  onPostClick,
+  onProfileClick,
+  onCommunityClick,
+  themeColor: c,
+  themeMode,
+  userAvatar,
+  userName,
+}: ExploreProps) {
   const { user: authUser } = useAuthStore();
-  const { feedPosts, sendFriendRequest, cancelFriendRequest, isFriend, hasSentRequest, myCommunities, fetchMyCommunities } = useLazerStore();
+  const { feedPosts } = useLazerStore();
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Active section for ScrollSpy highlighting in the floating sidebar
+  const [activeSection, setActiveSection] = useState<'hero' | 'asesment' | 'siswa' | 'jadwal' | 'download'>('hero');
+
+  // Search & Navigation
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [creators, setCreators] = useState<any[]>([]);
-  const [rankedUsers, setRankedUsers] = useState<any[]>([]);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [activeTab, setActiveTab] = useState('Home');
+  const [sortOrder, setSortOrder] = useState('Kognitif');
 
-  // Watch Mode state
-  const [ytResults, setYtResults] = useState<any[]>([]);
-  const [ytQuery, setYtQuery] = useState('');
-  const [ytLoading, setYtLoading] = useState(false);
-  const [activeVideo, setActiveVideo] = useState<any>(null);
-  const [galSearch, setGalSearch] = useState('');
-  const [galSearchFocus, setGalSearchFocus] = useState(false);
+  // Hero carousel
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [savedHeroes, setSavedHeroes] = useState<Set<string>>(new Set());
 
-  // Discover state
-  const [discoverData, setDiscoverData] = useState<any[]>([]);
-  const [discoverLoading, setDiscoverLoading] = useState(false);
-  const [universalResults, setUniversalResults] = useState<any[]>([]);
-  const [wikiResult, setWikiResult] = useState<any>(null);
+  // Siswa / Creators
+  const [activeMenuCard, setActiveMenuCard] = useState<string | null>(null);
+
+  // Calendar
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date(2025, 11, 1)); // December 2025
+  const [selectedDay, setSelectedDay] = useState<number>(15);
+
+  // Tasks
+  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [isEditingTasks, setIsEditingTasks] = useState(false);
+  const [newTaskText, setNewTaskText] = useState('');
+
+  // Schedule right cards
+  const [selectedScheduleIndex, setSelectedScheduleIndex] = useState(4); // Day 18 selected by default
+
+  // Modals layer
   const [activeDetail, setActiveDetail] = useState<{ type: any; id: string; metadata?: any } | null>(null);
   const [activeWiki, setActiveWiki] = useState<string | null>(null);
   const [activeWebUrl, setActiveWebUrl] = useState<string | null>(null);
   const [readerArticle, setReaderArticle] = useState<any>(null);
-  const [readerLoading, setReaderLoading] = useState(false);
-  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
-  const isWatchMode = activeCategory === 'Watch Mode';
-  const isGalleryMode = activeCategory === 'Imagem';
-  const isDiscoverCategory = ['Animes', 'Mangás', 'Jogos', 'Cinema'].includes(activeCategory);
-
-  // Auto-Suggest State
-  const [tagSuggestions, setTagSuggestions] = useState<any[]>([]);
-  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
-  const [tagLoading, setTagLoading] = useState(false);
-
-  const activeSearchQuery = isGalleryMode ? galSearch : search;
-
+  // Close on Escape key
   useEffect(() => {
-    if (!activeSearchQuery.trim() || activeSearchQuery.trim().length < 2) {
-      setTagSuggestions([]);
-      setShowTagSuggestions(false);
-      return;
-    }
-    const timeoutId = setTimeout(async () => {
-      setTagLoading(true);
-      try {
-        const token = (useAuthStore.getState() as any).accessToken;
-        const res = await fetch(`${API}/api/v1/lazer/discover/tags?q=${encodeURIComponent(activeSearchQuery.trim())}`, {
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-        });
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setTagSuggestions(data);
-          setShowTagSuggestions(true);
-        } else {
-          setTagSuggestions([]);
-          setShowTagSuggestions(false);
-        }
-      } catch {
-        setTagSuggestions([]);
-        setShowTagSuggestions(false);
-      } finally {
-        setTagLoading(false);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (activeDetail) setActiveDetail(null);
+        else if (activeWiki) setActiveWiki(null);
+        else if (activeWebUrl) setActiveWebUrl(null);
+        else onClose();
       }
-    }, 400);
-    return () => clearTimeout(timeoutId);
-  }, [activeSearchQuery]);
-
-  const isLight = themeMode === 'light';
-  const textPrimary = isLight ? 'text-black' : 'text-white';
-  const textSecondary = isLight ? 'text-black/60' : 'text-white/60';
-  const cardBg = isLight ? 'glass-panel-light' : 'glass-panel-dark';
-  const borderCol = 'transparent';
-  const isVideo = (url?: string | null) => url?.match(/\.(mp4|webm|mov)(\?|$)/i);
-
-  // Gallery state
-  const [hubGallery, setHubGallery] = useState<any[]>([]);
-  const [hubGalLoading, setHubGalLoading] = useState(false);
-  const [hubGalPage, setHubGalPage] = useState(1);
-  const [hasMoreGal, setHasMoreGal] = useState(true);
-  const galleryEndRef = useRef<HTMLDivElement>(null);
-
-  // Masonry Stability Logic
-  const [numCols, setNumCols] = useState(4);
-  useEffect(() => {
-    const updateCols = () => {
-      if (typeof window === 'undefined') return;
-      if (window.innerWidth < 640) setNumCols(2);
-      else if (window.innerWidth < 1024) setNumCols(3);
-      else setNumCols(4);
     };
-    updateCols();
-    window.addEventListener('resize', updateCols);
-    return () => window.removeEventListener('resize', updateCols);
-  }, []);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeDetail, activeWiki, activeWebUrl, onClose]);
 
-  const galleryColumns = Array.from({ length: numCols }, () => [] as any[]);
-  hubGallery.forEach((img, i) => { galleryColumns[i % numCols].push(img); });
-
-  useEffect(() => { fetchMyCommunities(); }, []);
-
+  // ScrollSpy listener to dynamically illuminate the active section in the floating sidebar
   useEffect(() => {
-    const handleOpenWiki = (e: any) => { if (e.detail) { setActiveWiki(e.detail); setIsSearching(false); } };
-    window.addEventListener('alpha-open-wiki', handleOpenWiki);
-    return () => window.removeEventListener('alpha-open-wiki', handleOpenWiki);
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const sections = [
+        { id: 'explore-hero-section', name: 'hero' as const },
+        { id: 'explore-asesment-section', name: 'asesment' as const },
+        { id: 'explore-download-section', name: 'download' as const },
+        { id: 'explore-siswa-section', name: 'siswa' as const },
+        { id: 'explore-jadwal-section', name: 'jadwal' as const },
+      ];
+
+      const containerRect = container.getBoundingClientRect();
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const sec = sections[i];
+        const el = document.getElementById(sec.id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top - containerRect.top <= 260) {
+            setActiveSection(sec.name);
+            break;
+          }
+        }
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const fetchHubGal = async (page = 1, append = false) => {
-    if (hubGalLoading) return;
-    setHubGalLoading(true);
-    try {
-      const token = (useAuthStore.getState() as any).accessToken;
-      const query = (galSearch.trim() || search.trim() || 'anime aesthetic 4k art');
-      const res = await fetch(`${API}/api/v1/lazer/discover/gallery?q=${encodeURIComponent(query)}&page=${page}`, {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
-      const json = await res.json();
-      let newImages = Array.isArray(json) ? json : [];
-      
-      // Fallback if Alpha API is empty
-      if (newImages.length === 0) {
-        newImages = [1,2,3,4,5,6,7,8,9,10].map(i => ({
-          url: `https://source.unsplash.com/featured/?anime,art,${i}`,
-          source: 'Alpha Discovery',
-          title: `Art Piece #${i}`
-        }));
+  // Smooth scroll helper
+  const scrollToSection = (id: string, tabName?: string) => {
+    if (tabName) setActiveTab(tabName);
+    if (id === 'explore-hero-section') {
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      setActiveSection('hero');
+    } else {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-
-      if (append) {
-        setHubGallery(prev => {
-          const currentUrls = new Set(prev.map(img => img.url));
-          const unique = newImages.filter(img => !currentUrls.has(img.url));
-          return [...prev, ...unique];
-        });
-      } else { setHubGallery(newImages); }
-      setHasMoreGal(newImages.length > 4);
-    } catch { 
-      setHasMoreGal(false); 
-    } finally { setHubGalLoading(false); }
+    }
   };
 
-  useEffect(() => {
-    if (!isGalleryMode) return;
-    const timeoutId = setTimeout(() => { setHubGalPage(1); setHasMoreGal(true); fetchHubGal(1, false); }, 600);
-    return () => clearTimeout(timeoutId);
-  }, [isGalleryMode, search, galSearch]);
+  // Hero Carousel Navigation
+  const nextHero = useCallback(() => {
+    setHeroIndex((prev) => (prev + 1) % HERO_EVENTS.length);
+  }, []);
 
-  useEffect(() => {
-    if (!isGalleryMode || !hasMoreGal || hubGalLoading) return;
-    const obs = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        const next = hubGalPage + 1;
-        setHubGalPage(next);
-        fetchHubGal(next, true);
-      }
-    }, { threshold: 0.1 });
-    if (galleryEndRef.current) obs.observe(galleryEndRef.current);
-    return () => obs.disconnect();
-  }, [isGalleryMode, hasMoreGal, hubGalPage, hubGalLoading]);
+  const prevHero = useCallback(() => {
+    setHeroIndex((prev) => (prev - 1 + HERO_EVENTS.length) % HERO_EVENTS.length);
+  }, []);
 
-  useEffect(() => {
-    const fetchDiscover = async () => {
-      setDiscoverLoading(true);
-      try {
-        const catMap: any = { 'Animes': 'anime', 'Mangás': 'manga', 'Jogos': 'games', 'Cinema': 'cinema', 'Imagem': 'images', 'All': 'anime' };
-        const category = catMap[activeCategory] || 'anime';
-        
-        const ytQueryMap: any = { 
-          'Animes': `anime trailer ${['2024', 'official', 'trending', 'new'][Math.floor(Math.random() * 4)]}`, 
-          'Mangás': `manga trailer ${['2024', 'official', 'shonen', 'seinen'][Math.floor(Math.random() * 4)]}`, 
-          'Jogos': `gameplay trailer ${['2024', 'official', '4k', 'new'][Math.floor(Math.random() * 4)]}`, 
-          'Cinema': `movie trailer ${['2024', 'official', 'teaser', 'imax'][Math.floor(Math.random() * 4)]}`, 
-          'Imagem': `anime art aesthetic 4k`,
-          'All': `anime trailer ${['2024', 'teaser', 'official'][Math.floor(Math.random() * 3)]}`
-        };
-        if (ytQueryMap[activeCategory]) setYtQuery(ytQueryMap[activeCategory]);
-
-        const token = (useAuthStore.getState() as any).accessToken;
-        const res = await fetch(`${API}/api/v1/lazer/discover/trending?category=${category}`, {
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        });
-        const json = await res.json();
-        
-        if (json.success && json.data?.length > 0) {
-          setDiscoverData(json.data);
-        } else {
-          // Fallback to contextual Wikipedia topics with HIGH VARIETY
-          const contextPool: any = {
-            'Animes': [
-              'Naruto', 'One_Piece', 'Jujutsu_Kaisen', 'Demon_Slayer', 'Dragon_Ball', 
-              'Attack_on_Titan', 'My_Hero_Academia', 'Bleach_(manga)', 'Fullmetal_Alchemist', 
-              'Hunter_×_Hunter', 'Sword_Art_Online', 'Tokyo_Ghoul', 'Fate/stay_night', 
-              'Re:Zero', 'Black_Clover', 'Chainsaw_Man', 'Spy_×_Family', 'Mob_Psycho_100', 
-              'One-Punch_Man', 'Vinland_Saga', 'JoJo%27s_Bizarre_Adventure', 'Code_Geass'
-            ],
-            'Mangás': [
-              'Manga', 'Berserk_(manga)', 'Death_Note', 'Uzumaki', 'Vagabond_(manga)', 
-              'Kingdom_(manga)', 'Goodnight_Punpun', 'Monster_(manga)', 'Slam_Dunk_(manga)', 
-              'Akira_(manga)', '20th_Century_Boys', 'Gantz', 'Oyasumi_Punpun', 'Blue_Lock',
-              'Tokyo_Revengers', 'Haikyu!!', 'Solo_Leveling', 'The_Promised_Neverland'
-            ],
-            'Jogos': [
-              'Elden_Ring', 'The_Legend_of_Zelda', 'Final_Fantasy', 'Resident_Evil', 
-              'Cyberpunk_2077', 'God_of_War', 'Grand_Theft_Auto', 'Dark_Souls', 
-              'Minecraft', 'League_of_Legends', 'Genshin_Impact', 'Valorant', 
-              'Red_Dead_Redemption', 'The_Last_of_Us', 'Metal_Gear_Solid', 'Halo_(franchise)'
-            ],
-            'Cinema': [
-              'The_Matrix', 'Inception', 'Interstellar', 'Blade_Runner_2049', 'Spirited_Away', 
-              'Your_Name', 'Princess_Mononoke', 'Perfect_Blue', 'Pulp_Fiction', 
-              'The_Dark_Knight', 'Parasite_(2019_film)', 'Dune_(2021_film)', 'Oppenheimer_(film)'
-            ],
-            'Imagem': ['Anime_art', 'Digital_art', 'Concept_art', 'Illustration', 'Landscape_painting'],
-            'All': ['Anime', 'Manga', 'Cyberpunk', 'Gamer', 'Studio_Ghibli', 'Cosplay', 'Vocaloid', 'Otaku']
-          };
-          const wikiTopics = (contextPool[activeCategory] || contextPool['All']).sort(() => Math.random() - 0.5).slice(0, 10);
-          
-          const wikiData = await Promise.all(wikiTopics.sort(() => Math.random() - 0.5).map(async (t: string) => {
-            try {
-              const wRes = await fetch(`https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t)}`);
-              const wJson = await wRes.json();
-              return {
-                id: t,
-                title: wJson.title || t.replace(/_/g, ' '),
-                imageUrl: wJson.originalimage?.source || wJson.thumbnail?.source || `https://en.wikipedia.org/static/images/project-logos/enwiki.png`,
-                type: 'wiki',
-                rating: 'Wiki',
-                releaseYear: 'Live'
-              };
-            } catch {
-              return { id: t, title: t.replace(/_/g, ' '), imageUrl: '', type: 'wiki', rating: 'Wiki', releaseYear: 'Live' };
-            }
-          }));
-          setDiscoverData(wikiData);
-        }
-      } catch (err) { 
-        setDiscoverData(MOCK_DISCOVER); 
-      } finally { setDiscoverLoading(false); }
-    };
-    fetchDiscover();
-  }, [activeCategory]);
-
-  useEffect(() => {
-    const fetchYt = async () => {
-      setYtLoading(true);
-      try {
-        const token = (useAuthStore.getState() as any).accessToken;
-        const query = ytQuery || RANDOM_YT_QUERY;
-        const res = await fetch(`${API}/api/v1/lazer/youtube/search?q=${encodeURIComponent(query)}&maxResults=25`, {
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        });
-        const json = await res.json();
-        if (json.success) setYtResults(json.data || []);
-      } catch { } finally { setYtLoading(false); }
-    };
-    fetchYt();
-  }, [ytQuery]);
-
-  useEffect(() => {
-    const map = new Map<string, any>();
-    feedPosts.forEach(p => {
-      if (!map.has(p.authorId)) {
-        map.set(p.authorId, { userId: p.authorId, name: p.author?.profile?.displayName || p.author?.profile?.username || 'User', handle: `@${p.author?.profile?.username || 'user'}`, avatar: p.author?.profile?.avatarUrl || '', profile: p.author?.profile, score: 0 });
-      }
-      const u = map.get(p.authorId);
-      u.score += 10 + ((p._count?.reactions || 0) * 2);
+  const toggleSaveHero = (id: string) => {
+    setSavedHeroes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
-    const sortedUsers = Array.from(map.values()).sort((a, b) => b.score - a.score);
-    setRankedUsers(sortedUsers);
-    setCreators(sortedUsers.slice(0, 3));
-  }, [feedPosts, authUser]);
+  };
 
-  useEffect(() => {
-    if (!search.trim()) { setSearchResults([]); setUniversalResults([]); setWikiResult(null); return; }
-    const timer = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const token = (useAuthStore.getState() as any).accessToken;
-        const userRes = await fetch(`${API}/api/v1/users/search?q=${encodeURIComponent(search)}`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
-        if (userRes.ok) {
-          const data = await userRes.json();
-          const rawData = data.data || data || [];
-          setSearchResults(Array.isArray(rawData) ? rawData.filter((u: any) => (u.userId || u.id) !== authUser?.id) : []);
-        }
-        const discoverRes = await fetch(`${API}/api/v1/lazer/discover/search?q=${encodeURIComponent(search)}`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
-        const dJson = await discoverRes.json();
-        if (dJson.success) {
-          setUniversalResults(Array.isArray(dJson.data) ? dJson.data : []);
-          setWikiResult(dJson.wiki || null);
-        } else { setUniversalResults([]); setWikiResult(null); }
-      } catch (err) { setUniversalResults([]); setSearchResults([]); setWikiResult(null); } finally { setIsSearching(false); }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [search, authUser]);
+  // Toggle Task Completion
+  const toggleTask = (taskId: string) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t))
+    );
+  };
 
-  const myRankIndex = rankedUsers.findIndex(u => u.userId === authUser?.id);
-  const myRank = myRankIndex >= 0 ? myRankIndex + 1 : '-';
-  const displayTopRanks = rankedUsers.slice(0, 5);
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskText.trim()) return;
+    const newTask = {
+      id: `task-${Date.now()}`,
+      group: 'Tasks today',
+      text: newTaskText.trim(),
+      done: false,
+    };
+    setTasks((prev) => [newTask, ...prev]);
+    setNewTaskText('');
+  };
+
+  // Month navigation
+  const prevMonth = () => {
+    setCurrentMonthDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  };
+  const nextMonth = () => {
+    setCurrentMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  };
+
+  const monthName = currentMonthDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+  // Filtered Asesment items by search
+  const filteredAsesment = useMemo(() => {
+    if (!search.trim()) return ASESMENT_ITEMS;
+    const q = search.toLowerCase();
+    return ASESMENT_ITEMS.filter(
+      (a) => a.title.toLowerCase().includes(q) || a.category.toLowerCase().includes(q)
+    );
+  }, [search]);
+
+  // Filtered Siswa items by search
+  const filteredSiswa = useMemo(() => {
+    if (!search.trim()) return SISWA_ITEMS;
+    const q = search.toLowerCase();
+    return SISWA_ITEMS.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.code.includes(q) ||
+        s.subtitle.toLowerCase().includes(q)
+    );
+  }, [search]);
+
+  // Current Hero
+  const currentHero = HERO_EVENTS[heroIndex];
+
+  const isLight = themeMode === 'light';
+  const shellBg = isLight ? 'glass-panel-light' : 'liquid-glass-shell';
 
   return (
-    <>
-      <LazerShell variant="full" themeMode={themeMode}>
-        <div className="absolute inset-0 -z-10"><ThemeBg color={c} mode={themeMode} /></div>
+    <div className="w-full h-full flex items-center justify-center gap-3 sm:gap-4 md:gap-5 overflow-hidden font-['Nunito',sans-serif] animate-in fade-in duration-500 relative">
+      
+      {/* ══════════════════════════════════════════════════════════════════════
+          1. FLOATING EXPLORE SIDEBAR (Pílula Vertical Exclusiva do Explore)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <aside
+        className="hidden md:flex flex-col items-center justify-between w-14 lg:w-16 h-fit py-6 px-2.5 rounded-full border border-white/20 liquid-glass-shell shadow-2xl relative z-40 shrink-0 select-none transition-all duration-300"
+        style={{
+          backdropFilter: 'blur(24px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+        }}
+      >
+        {/* Specular Edge Highlight */}
+        <div className="absolute top-0 left-1/4 right-1/4 h-[1.5px] rounded-full pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent blur-[0.2px]" />
 
-        <div className="flex w-full h-full overflow-hidden">
-          {/* ── COLUMN 2: MAIN CONTENT (Glassified) ── */}
-        <main className="flex-1 flex flex-col min-w-0 relative glass-panel-dark border-y-0 border-x-0 overflow-hidden">
-          <header className="p-10 pb-6 flex flex-col gap-8">
-            <div className="flex items-center gap-8">
-              <div className="relative flex-1 group">
-                <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-white/20 group-focus-within:text-white transition-colors"><IconSearch /></div>
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search movies, animes, creators..."
-                  className="w-full glass-panel-dark border-none py-4 pl-16 pr-8 text-[15px] font-bold text-white outline-none focus:bg-white/10 transition-all" />
-              </div>
-              <nav className="flex items-center gap-6 px-10 py-1 rounded-full glass-panel-dark border-none overflow-x-auto no-scrollbar scroll-smooth">
-                {['All', 'Galeria', 'Watch Mode'].map(cat => {
-                  const isActive = activeCategory === cat;
-                  return (
-                    <button key={cat} onClick={() => setActiveCategory(cat)}
-                      className={`py-4 px-1 bg-transparent border-none cursor-pointer text-[13px] whitespace-nowrap transition-all relative font-black ${isActive ? 'text-white' : 'text-white/40 hover:text-white'}`}>
-                      {cat.replace(/[^a-zA-Z]/g, '') || 'All'}
-                      {isActive && <div className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.8)]" />}
-                    </button>
-                  );
-                })}
-              </nav>
-              <div className="flex items-center gap-5 shrink-0">
-                <button className="w-12 h-12 rounded-full glass-panel-dark border-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all relative group">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" /></svg>
-                  <div className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-black group-hover:scale-125 transition-transform" />
-                </button>
-                <div className="flex items-center gap-4 p-2 pr-6 rounded-full glass-panel-dark border-none hover:bg-white/10 transition-all cursor-pointer group" onClick={() => onProfileClick?.(authUser?.id || '')}>
-                  <Avatar src={authUser?.profile?.avatarUrl} name={authUser?.profile?.username || 'User'} className="w-10 h-10 rounded-full border border-white/10" />
-                  <div className="hidden lg:block">
-                    <p className="text-[12px] font-black text-white leading-none">{(authUser?.profile?.displayName || authUser?.profile?.username || 'User').split(' ')[0]}</p>
-                    <p className="text-[9px] font-black text-white/30 mt-1.5 uppercase tracking-widest">Alpha Citizen</p>
-                  </div>
-                </div>
-                <button onClick={onClose} className="w-12 h-12 rounded-full glass-panel-dark border-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-red-500/20 transition-all">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                </button>
-              </div>
+        {/* Top: Explore Radar Aperture / Avatar */}
+        <button
+          onClick={() => scrollToSection('explore-hero-section', 'Home')}
+          className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#38bdf8] p-0.5 hover:scale-110 active:scale-95 transition-all shadow-[0_0_16px_rgba(56,189,248,0.4)] cursor-pointer group relative bg-black/40"
+          title="Início do Explore"
+        >
+          {userAvatar ? (
+            <img src={userAvatar} alt="" className="w-full h-full object-cover rounded-full" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center rounded-full bg-[#38bdf8]/20 text-[#38bdf8] font-black text-xs">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="4" />
+              </svg>
             </div>
-          </header>
+          )}
+          {/* VisionOS Floating Tooltip */}
+          <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
+            <span>{userName || 'Explorar'} (Topo)</span>
+          </span>
+        </button>
 
-          <div className="flex-1 overflow-y-auto p-10 pt-0 custom-scrollbar">
-            {search.trim() ? (
-              <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
-                <h2 className="text-[12px] font-black text-white/30 mb-8 uppercase tracking-[4px]">Discovery Results</h2>
-                {wikiResult && (
-                  <div className="mb-10 glass-panel-dark rounded-[40px] p-10 border-none relative overflow-hidden group cursor-pointer" onClick={() => setActiveWiki(wikiResult.canonicalTitle || wikiResult.title)}>
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><span className="text-8xl">📖</span></div>
-                    <div className="relative z-10 flex gap-8">
-                      {wikiResult.imageUrl && <img src={wikiResult.imageUrl} alt="" className="w-32 h-44 rounded-3xl object-cover border border-white/10" />}
-                      <div>
-                        <h3 className="text-3xl font-black text-white mb-4 tracking-tighter">{wikiResult.title}</h3>
-                        <p className="text-white/60 text-[14px] leading-relaxed line-clamp-4 max-w-2xl">{wikiResult.extract}</p>
-                        <button className="mt-8 px-8 py-3 rounded-full bg-white/10 border border-white/20 text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all">Read Full Article</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {universalResults.map((u: any, i: number) => (
-                    <div key={i} className="glass-panel-dark rounded-[40px] overflow-hidden flex items-center p-5 gap-6 hover:scale-[1.03] transition-all cursor-pointer group" onClick={() => setActiveDetail({ type: u.type, id: u.id })}>
-                      <div className="w-20 h-20 rounded-3xl overflow-hidden shrink-0 border border-white/10">
-                        <img src={u.imageUrl || u.favicon} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-black text-white truncate">{u.title}</p>
-                        <p className="text-[11px] font-bold text-white/40 mt-1 line-clamp-2 leading-relaxed">{u.description || u.source}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : isGalleryMode ? (
-              <div className="flex gap-6 relative">
-                {galleryColumns.map((col, colIdx) => (
-                  <div key={colIdx} className="flex-1 flex flex-col gap-6">
-                    {col.map((img, i) => (
-                      <div key={i} className="group relative rounded-[40px] overflow-hidden glass-panel-dark border-none cursor-pointer hover:-translate-y-2 transition-all duration-500" onClick={() => setActiveDetail({ type: 'image', id: img.url, metadata: img })}>
-                        <img src={`${API}/api/v1/lazer/proxy/image?url=${encodeURIComponent(img.url)}`} alt="" className="w-full h-auto object-cover group-hover:scale-110 transition-transform duration-1000" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent opacity-0 group-hover:opacity-100 transition-opacity p-8 flex flex-col justify-end">
-                          <p className="text-[12px] font-black text-white uppercase tracking-[2px]">{img.source}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-                <div ref={galleryEndRef} className="absolute bottom-0 h-20 w-full" />
-              </div>
-            ) : (
-              <div className="flex flex-col gap-12">
-                {discoverLoading ? (
-                  <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in zoom-in duration-700">
-                    <div className="relative w-40 h-40 mb-12">
-                      <div className="absolute inset-0 rounded-full border-[6px] border-white/5" />
-                      <div className="absolute inset-0 rounded-full border-[6px] border-t-transparent animate-spin" style={{ borderColor: getNeonColor(activeCategory) }} />
-                      <div className="absolute inset-4 rounded-full bg-white/5 backdrop-blur-3xl flex items-center justify-center border border-white/10 shadow-2xl">
-                         <span className="text-5xl animate-pulse">{activeCategory === 'All' ? '🏮' : activeCategory[0]}</span>
-                      </div>
-                    </div>
-                    <div className="text-center space-y-4">
-                       <h2 className="text-white text-3xl font-black tracking-tighter uppercase italic">Harmonizing {activeCategory.replace(/[🏮📖🎮🍿🎥]/g, '').trim()}</h2>
-                       <div className="flex items-center justify-center gap-3">
-                          <span className="w-2.5 h-2.5 rounded-full bg-white/20 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="w-2.5 h-2.5 rounded-full bg-white/20 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="w-2.5 h-2.5 rounded-full bg-white/20 animate-bounce" style={{ animationDelay: '300ms' }} />
-                       </div>
-                       <p className="text-white/20 text-[11px] font-black uppercase tracking-[5px] mt-8">Connecting to Alpha Core...</p>
-                    </div>
-                    
-                    {/* Ghost Skeleton Grid */}
-                    <div className="mt-20 grid grid-cols-2 md:grid-cols-5 gap-8 opacity-[0.03] grayscale pointer-events-none">
-                       {[1,2,3,4,5].map(i => (
-                         <div key={i} className="w-44 aspect-[3/4] rounded-[44px] bg-white" />
-                       ))}
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {activeCategory === 'All' ? (
-                  <>
-                    {/* ── HERO: VIDEO SPOTLIGHT ── */}
-                    {(() => {
-                      const videoPool = ytResults.length > 0 ? ytResults : MOCK_TRAILERS;
-                      const heroIndex = Math.floor(Math.random() * videoPool.length);
-                      const heroItem = videoPool[heroIndex];
-                      if (!heroItem) return null;
-                      return (
-                        <section className="relative h-[520px] rounded-[56px] overflow-hidden group cursor-pointer shadow-2xl glass-panel-dark border-none mb-16" onClick={() => setActiveDetail({ type: 'tv', id: heroItem.id })}>
-                          <img src={getImageUrl(heroItem.imageUrl || heroItem.thumbnail, 1920)} alt="" className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-105 opacity-80" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-12 flex flex-col justify-end">
-                            <div className="flex items-center gap-3 mb-6">
-                              <span className="px-5 py-2 rounded-full bg-red-600 text-[11px] font-black text-white uppercase tracking-[2px] flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                Featured Trailer
-                              </span>
-                            </div>
-                            <h1 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tighter leading-[0.9] max-w-3xl">{heroItem.title}</h1>
-                            <p className="text-white/60 text-[16px] font-medium max-w-2xl mb-10 line-clamp-2 leading-relaxed">Experience the latest and most trending trailers globally on Alpha Network.</p>
-                            <div className="flex items-center gap-5">
-                              <button className="px-10 py-4.5 rounded-3xl bg-white text-black font-black text-[14px] uppercase flex items-center gap-3 hover:scale-105 transition-all cursor-pointer border-none shadow-xl">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                                Watch Now
-                              </button>
-                            </div>
-                          </div>
-                        </section>
-                      );
-                    })()}
+        <div className="w-6 h-px bg-white/10 my-1" />
 
-                    {/* ── FEATURED CATEGORIES ── */}
-                    <section className="mb-16">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                        {CATEGORIES.slice(1, 5).map((cat) => (
-                          <div key={cat} className="group relative h-48 rounded-[32px] overflow-hidden glass-panel border-white/5 cursor-pointer hover:scale-[1.03] transition-all shadow-xl" onClick={() => setActiveCategory(cat)}>
-                            <img src={getImageUrl(`https://source.unsplash.com/featured/?${cat.toLowerCase()},anime`)} alt="" className="w-full h-full object-cover opacity-40 group-hover:scale-110 transition-transform duration-700" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-6 flex flex-col justify-end">
-                              <span className="text-[12px] font-black text-white/40 uppercase tracking-[3px] mb-2">Explore</span>
-                              <h3 className="text-2xl font-black text-white tracking-tighter" style={{ textShadow: `0 0 20px ${getNeonColor(cat)}60` }}>{cat}</h3>
-                            </div>
-                            <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/10 group-hover:bg-white group-hover:text-black transition-all">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
+        {/* Explore Navigation Action Icons */}
+        <div className="flex flex-col items-center gap-3.5">
+          {/* Icon 1: Bento Grid / Radar (Destaques & Eventos - igual ao VisionOS) */}
+          <button
+            onClick={() => scrollToSection('explore-hero-section', 'Home')}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
+              activeSection === 'hero' && activeTab === 'Home'
+                ? 'text-[#38bdf8] bg-white/15 shadow-[0_0_14px_rgba(56,189,248,0.4)] scale-110 border border-[#38bdf8]/50'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            </svg>
+            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+              <span>Destaques & Eventos</span>
+            </span>
+          </button>
 
-                    {/* ── NEW TRAILERS ── */}
-                    <section className="mb-16">
-                      <div className="flex items-center justify-between mb-8 px-4">
-                        <h2 className="text-[20px] font-black text-white tracking-tight flex items-center gap-3">
-                          <span className="w-1.5 h-6 rounded-full bg-red-600" />
-                          New Trailers
-                        </h2>
-                        <span className="text-[12px] font-black text-white/20 uppercase tracking-[2px]">Updated Today</span>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 px-2">
-                        {(ytResults.length > 0 ? ytResults.slice(0, 4) : MOCK_TRAILERS).map((item: any, i: number) => (
-                          <div key={i} className="group flex flex-col gap-4 cursor-pointer" onClick={() => setActiveDetail({ type: item.type || 'tv', id: item.id })}>
-                            <div className="aspect-video rounded-[32px] overflow-hidden glass-panel-dark border border-white/5 relative shadow-xl">
-                              <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-1000" />
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 bg-black/40">
-                                <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform">
-                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="px-1">
-                              <p className="text-[14px] font-black text-white line-clamp-1 group-hover:text-red-500 transition-colors">{item.title}</p>
-                              <p className="text-[10px] font-bold text-white/30 uppercase mt-1 tracking-widest">Official Trailer</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
+          {/* Icon 2: Book / Asesment Kognitif */}
+          <button
+            onClick={() => scrollToSection('explore-asesment-section', 'Asesment')}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
+              activeSection === 'asesment' || activeTab === 'Asesment'
+                ? 'text-[#38bdf8] bg-white/15 shadow-[0_0_14px_rgba(56,189,248,0.4)] scale-110 border border-[#38bdf8]/50'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+              <polyline points="10 2 10 10 13 7 16 10 16 2" />
+            </svg>
+            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+              <span>Asesment Kognitif</span>
+            </span>
+          </button>
 
-                    {/* ── MIXED DISCOVERY ── */}
-                    <section>
-                      <div className="flex items-center justify-between mb-8 px-2">
-                        <h2 className="text-[24px] font-black text-white tracking-tight">You might like</h2>
-                        <button className="text-[12px] font-black uppercase text-white/30 hover:text-white transition-colors border-none bg-transparent cursor-pointer tracking-widest">See all</button>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 pb-10">
-                        {discoverData.map((item: any, i: number) => (
-                          <div key={i} className="group flex flex-col gap-4 cursor-pointer" onClick={() => item.type === 'wiki' ? setActiveWiki(item.id) : setActiveDetail({ type: item.type || 'anime', id: item.id })}>
-                            <div className="aspect-[3/4] rounded-[44px] overflow-hidden glass-card border-white/5 relative shadow-xl">
-                              <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-115" />
-                            </div>
-                            <div className="px-3 flex items-center justify-between">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[15px] font-black text-white truncate">{item.title}</p>
-                                <p className="text-[11px] font-bold text-white/30 mt-1">{item.releaseYear || '2024'} • ⭐ {item.rating || '9.0'}</p>
-                              </div>
-                              <button className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shrink-0 border-none shadow-lg group-hover:scale-110 transition-transform">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  </>
-                ) : (
-                  <section>
-                    <div className="flex items-center justify-between mb-12 px-2">
-                       <div className="flex flex-col gap-1">
-                          <h2 className="text-5xl font-black text-white tracking-tighter">{activeCategory}</h2>
-                          <p className="text-white/40 text-[14px] font-black uppercase tracking-[3px]">Explore curated content for this category</p>
-                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 pb-10">
-                      {discoverData.map((item: any, i: number) => (
-                        <div key={i} className="group flex flex-col gap-4 cursor-pointer" onClick={() => item.type === 'wiki' ? setActiveWiki(item.id) : setActiveDetail({ type: item.type || 'anime', id: item.id })}>
-                          <div className="aspect-[3/4] rounded-[44px] overflow-hidden glass-card border-white/5 relative shadow-xl">
-                            <img src={getImageUrl(item.imageUrl || item.thumbnail)} alt="" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-115" />
-                          </div>
-                          <div className="px-3 flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[15px] font-black text-white truncate">{item.title}</p>
-                              <p className="text-[11px] font-bold text-white/40 mt-1 uppercase tracking-wider">{item.releaseYear || '2024'} • ⭐ {item.rating || '9.0'}</p>
-                            </div>
-                            <button className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shrink-0 border-none shadow-lg group-hover:scale-110 transition-transform">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-                  </>
-                )}
-              </div>
+          {/* Icon 3: Calendar / Schedule (Jadwal & Agenda) */}
+          <button
+            onClick={() => scrollToSection('explore-jadwal-section')}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
+              activeSection === 'jadwal'
+                ? 'text-[#38bdf8] bg-white/15 shadow-[0_0_14px_rgba(56,189,248,0.4)] scale-110 border border-[#38bdf8]/50'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+              <span>Jadwal (Agenda & Calendário)</span>
+            </span>
+          </button>
+
+          {/* Icon 4: Users / Siswa Kelas (Comunidade de Alunos & Criadores) */}
+          <button
+            onClick={() => scrollToSection('explore-siswa-section')}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
+              activeSection === 'siswa'
+                ? 'text-[#38bdf8] bg-white/15 shadow-[0_0_14px_rgba(56,189,248,0.4)] scale-110 border border-[#38bdf8]/50'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+              <span>Siswa Kelas (Criadores)</span>
+            </span>
+          </button>
+
+          {/* Icon 5: Download / Material de Apoio */}
+          <button
+            onClick={() => scrollToSection('explore-download-section', 'Download')}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
+              activeSection === 'download' || activeTab === 'Download'
+                ? 'text-[#38bdf8] bg-white/15 shadow-[0_0_14px_rgba(56,189,248,0.4)] scale-110 border border-[#38bdf8]/50'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+              <span>Download Buku Pelajaran</span>
+            </span>
+          </button>
+
+          {/* Icon 6: Quick Jump to Alpha Music */}
+          <button
+            onClick={() => onSelectView?.('music')}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-[#1ed760] hover:bg-white/5 transition-all cursor-pointer group relative"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-[#1ed760] text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#1ed760]" />
+              <span>Ouvir Alpha Music</span>
+            </span>
+          </button>
+
+          {/* Icon 7: Home / Feed (Retornar ao Lazer) */}
+          <button
+            onClick={() => onSelectView?.('feed') || onClose()}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/5 transition-all cursor-pointer group relative"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+              <span>Voltar ao Feed do Lazer</span>
+            </span>
+          </button>
+
+          {/* Icon 8: Search Spotlight */}
+          <button
+            onClick={() => {
+              scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+              setTimeout(() => searchInputRef.current?.focus(), 250);
+            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-[#38bdf8] hover:bg-white/5 transition-all cursor-pointer group relative"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
+              <span>Buscar no Explore</span>
+            </span>
+          </button>
+        </div>
+
+        <div className="w-6 h-px bg-white/10 my-1" />
+
+        {/* Bottom indicator dot em ciano neon */}
+        <div className="w-2 h-2 rounded-full bg-[#38bdf8] shadow-[0_0_10px_#38bdf8] animate-pulse" />
+      </aside>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          2. MAIN VISIONOS LIQUID GLASS WINDOW (Painel Principal do Explore)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div
+        className={`flex-1 h-full min-h-0 rounded-none md:rounded-[3rem] border-0 md:border ${shellBg} flex flex-col overflow-hidden relative shadow-2xl transition-all duration-300`}
+      >
+        {/* Crista de luz especular no topo do arco Liquid Glass */}
+        <div className="hidden md:block absolute top-0 left-[6%] right-[6%] h-[1.5px] rounded-full pointer-events-none bg-gradient-to-r from-transparent via-white/50 to-transparent blur-[0.3px] z-30" />
+
+        {/* Subtle Ambient Lighting Blobs in Background */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#38bdf8]/10 blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute top-1/2 right-1/4 w-80 h-80 rounded-full bg-[#f43f5e]/10 blur-[130px] pointer-events-none -z-10" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-[#38bdf8]/10 blur-[120px] pointer-events-none -z-10" />
+
+        {/* ── TOP NAVIGATION BAR ── */}
+        <header className="px-5 sm:px-8 py-4 sm:py-5 flex items-center justify-between gap-4 border-b border-white/[0.08] shrink-0 z-20">
+          {/* Left: Search Input Pill */}
+          <div className="relative flex items-center w-56 sm:w-64 md:w-72">
+            <svg
+              className="absolute left-4 w-4 h-4 text-white/40 pointer-events-none"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search Here..."
+              className="w-full h-11 pl-11 pr-4 rounded-full bg-white/[0.07] hover:bg-white/[0.10] focus:bg-white/[0.12] border border-white/10 text-white text-xs font-semibold placeholder-white/40 outline-none transition-all shadow-inner focus:border-[#38bdf8]/60"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center text-[10px] hover:bg-white/40 transition-colors"
+              >
+                ✕
+              </button>
             )}
           </div>
-        </main>
 
-                {/* ── COLUMN 3: RIGHT SIDEBAR (Stats/Watching) ── */}
-        <aside className="w-[360px] h-full hidden lg:flex flex-col glass-panel-dark border-none relative shrink-0 z-20 overflow-hidden pointer-events-auto">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-8 scroll-smooth overscroll-contain">
-            <section className="mb-12">
-              <h3 className="text-[12px] font-black uppercase tracking-[3px] text-white/50 mb-8">Continue Watching</h3>
-              <div className="flex flex-col gap-6">
-                {WATCHING_NOW.sort(() => Math.random() - 0.5).slice(0, 8).map((w, i) => (
-                  <div key={i} className="flex items-center gap-5 p-5 rounded-[32px] glass-panel-dark border-none hover:bg-white/5 transition-all cursor-pointer group">
-                    <div className="w-16 h-16 rounded-[22px] bg-white/5 flex items-center justify-center text-3xl shrink-0 border border-white/10">{w.emoji}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[15px] font-black text-white truncate">{w.title}</p>
-                      <p className="text-[11px] font-bold text-white/40 mt-1.5 uppercase tracking-wider">{w.ep} • {w.genre}</p>
-                    </div>
-                  </div>
-                ))}
+          {/* Center: Navigation Pills */}
+          <nav className="hidden md:flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            {NAV_TABS.map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? 'bg-[#e2e8f0]/95 text-neutral-900 shadow-[0_4px_16px_rgba(255,255,255,0.25)] scale-[1.02]'
+                      : 'bg-white/[0.05] hover:bg-white/[0.12] text-white/60 hover:text-white border border-white/[0.06]'
+                  }`}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Right: Notifications, Profile Pill & Close Button */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Notification Bell */}
+            <button
+              onClick={() => {}}
+              className="w-10 h-10 rounded-full bg-white/[0.07] hover:bg-white/[0.14] border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all relative cursor-pointer"
+              title="Notificações"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#f43f5e] shadow-[0_0_8px_#f43f5e]" />
+            </button>
+
+            {/* Profile Pill */}
+            <div
+              onClick={() => onProfileClick?.(authUser?.id || '')}
+              className="h-10 pl-1.5 pr-3.5 rounded-full bg-white/[0.07] hover:bg-white/[0.14] border border-white/10 flex items-center gap-2.5 cursor-pointer transition-all group"
+            >
+              <Avatar
+                src={authUser?.profile?.avatarUrl}
+                name={authUser?.profile?.username || 'User'}
+                className="w-7 h-7 rounded-full object-cover border border-white/20"
+              />
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-[11px] font-bold text-white leading-tight truncate max-w-[80px]">
+                  {authUser?.profile?.displayName || authUser?.profile?.username || 'mialfatih'}
+                </span>
+                <span className="text-[9px] font-semibold text-white/40 leading-none">
+                  Admin
+                </span>
               </div>
-            </section>
+              <svg className="w-3.5 h-3.5 text-white/40 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
 
-            <section className="mb-12">
-              <div className="rounded-[32px] glass-panel-dark border-none p-8">
-                <div className="flex items-center gap-3 mb-6"><IconFlame /><h3 className="text-[11px] font-black uppercase tracking-[2px] text-white">Trending Tropes</h3></div>
-                <div className="flex flex-col gap-5">
-                  {TRENDING_TROPES.sort(() => Math.random() - 0.5).slice(0, 5).map((t, i) => (
-                    <div key={i} className="flex items-center justify-between group cursor-pointer">
-                      <span className="text-[13px] font-black group-hover:translate-x-1 transition-transform" style={{ color: t.color }}>{t.tag}</span>
-                      <span className="text-[10px] font-bold text-white/20">{t.count}</span>
+            {/* Modal Close Button */}
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-white/[0.07] hover:bg-red-500/20 hover:border-red-500/40 border border-white/10 flex items-center justify-center text-white/60 hover:text-red-400 transition-all cursor-pointer ml-1"
+              title="Fechar Explorar"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        {/* ── MAIN SCROLLABLE CONTENT BODY ── */}
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8 scroll-smooth">
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+
+            {/* ════ LEFT COLUMN: ASESMENT & DOWNLOADS ════ */}
+            <aside className="w-full lg:w-[270px] xl:w-[290px] flex flex-col gap-5 shrink-0">
+              
+              {/* ── Card 1: Asesment (Destaques) ── */}
+              <div
+                id="explore-asesment-section"
+                className="rounded-[28px] p-4 sm:p-5 flex flex-col gap-3.5 border border-white/[0.12] shadow-xl relative scroll-mt-6"
+                style={{
+                  background: isLight ? 'rgba(255, 255, 255, 0.35)' : 'rgba(255, 255, 255, 0.03)',
+                  backdropFilter: 'blur(16px) saturate(130%)',
+                  WebkitBackdropFilter: 'blur(16px) saturate(130%)',
+                }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-white tracking-tight">Asesment</h3>
+                  <button
+                    onClick={() => setSortOrder(prev => prev === 'Kognitif' ? 'Popular' : 'Kognitif')}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-white/40 hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0"
+                  >
+                    <span>Sort by</span>
+                    <span className="text-white/80 font-bold">{sortOrder}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Stack of Cards */}
+                <div className="flex flex-col gap-3">
+                  {filteredAsesment.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => setActiveWiki(item.title.split(':')[0].trim())}
+                      className="h-24 sm:h-26 rounded-[20px] overflow-hidden relative group cursor-pointer border border-white/[0.08] shadow-md hover:scale-[1.02] transition-transform"
+                    >
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                      {/* Dark Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-3 flex items-end justify-between">
+                        <span className="text-[11px] font-bold text-white leading-tight line-clamp-2 max-w-[80%] drop-shadow-md">
+                          {item.title}
+                        </span>
+                        <div className="w-6 h-6 rounded-full bg-white/30 backdrop-blur-md border border-white/20 flex items-center justify-center text-white group-hover:bg-white group-hover:text-black transition-all shadow-md shrink-0 ml-1">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </section>
 
-            <section className="mt-auto pb-6">
-              <h2 className="text-[12px] font-black text-white/50 tracking-[3px] uppercase mb-8">Top Citizens</h2>
-              <div className="flex flex-col gap-4">
-                {rankedUsers.slice(0, 3).map((u, i) => (
-                  <div key={i} className="glass-panel-dark rounded-[32px] p-5 flex items-center gap-4 hover:bg-white/5 transition-all cursor-pointer group" onClick={() => onProfileClick?.(u.userId)}>
-                    <Avatar src={u.avatar} name={u.name} className="w-12 h-12 rounded-2xl border-2 group-hover:scale-105 transition-transform" style={{ borderColor: c }} />
-                    <div className="flex-1 min-w-0">
-                      <DisplayName profile={u.profile} fallbackName={u.name} className="font-black text-[14px] text-white" />
-                      <p className="text-[10px] font-bold text-white/30 uppercase mt-0.5">Rank #{i + 1}</p>
+              {/* ── Card 2: Download Buku Pelajaran ── */}
+              <div
+                id="explore-download-section"
+                className="rounded-[28px] p-4 sm:p-5 flex flex-col gap-3 border border-white/[0.12] shadow-xl relative scroll-mt-6"
+                style={{
+                  background: isLight ? 'rgba(255, 255, 255, 0.35)' : 'rgba(255, 255, 255, 0.03)',
+                  backdropFilter: 'blur(16px) saturate(130%)',
+                  WebkitBackdropFilter: 'blur(16px) saturate(130%)',
+                }}
+              >
+                <h3 className="text-sm font-bold text-white tracking-tight">Download Buku Pelajaran</h3>
+
+                <div className="flex flex-col gap-2">
+                  {DOWNLOAD_ITEMS.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => setActiveWiki(item.title)}
+                      className="p-2 rounded-[18px] hover:bg-white/[0.06] flex items-center justify-between transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-[14px] overflow-hidden border border-white/10 shrink-0">
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-115 transition-transform duration-500"
+                          />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-bold text-white truncate leading-tight group-hover:text-[#38bdf8] transition-colors">
+                            {item.title}
+                          </span>
+                          <span className="text-[10px] font-semibold text-white/40 truncate">
+                            {item.subtitle}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveWiki(item.title);
+                        }}
+                        className="w-6 h-6 rounded-full bg-white/[0.08] hover:bg-white hover:text-black text-white/60 flex items-center justify-center transition-all shrink-0 border-none cursor-pointer"
+                        title="Abrir conteúdo"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </aside>
+
+            {/* ════ RIGHT MAIN COLUMN: HERO, SISWA & JADWAL ════ */}
+            <main className="flex-1 w-full flex flex-col gap-8 min-w-0">
+
+              {/* ── 1. HERO BANNER ("Trending Event") ── */}
+              <section
+                id="explore-hero-section"
+                className="w-full rounded-[32px] overflow-hidden relative p-6 sm:p-8 md:p-10 border border-white/10 flex flex-col justify-between min-h-[340px] sm:min-h-[380px] shadow-2xl group scroll-mt-6"
+              >
+                {/* Background Image with Ambient Transition */}
+                <img
+                  key={currentHero.id}
+                  src={currentHero.image}
+                  alt={currentHero.title}
+                  className="w-full h-full object-cover absolute inset-0 -z-10 transition-transform duration-[2000ms] group-hover:scale-105 animate-in fade-in duration-500"
+                />
+
+                {/* Dark Vignette & Gradient Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/20 -z-10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30 -z-10" />
+
+                {/* Top Badge */}
+                <div className="flex items-center justify-between relative z-10">
+                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 text-white text-xs font-bold transition-all shadow-lg">
+                    <span>🔥</span>
+                    <span>{currentHero.badge}</span>
+                  </div>
+                </div>
+
+                {/* Center Content */}
+                <div className="relative z-10 flex flex-col items-start gap-2 max-w-2xl my-6">
+                  {/* Category Tags */}
+                  <div className="flex items-center gap-2 mb-1">
+                    {currentHero.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/10 text-white/80 text-[11px] font-semibold"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Big Title */}
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-md">
+                    {currentHero.title}
+                  </h1>
+
+                  {/* Subtitle / Description */}
+                  <p className="text-white/70 text-xs sm:text-sm leading-relaxed max-w-xl font-medium drop-shadow">
+                    {currentHero.description}
+                  </p>
+                </div>
+
+                {/* Bottom Row: Actions & Carousel Controls */}
+                <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+                  {/* Left Action Buttons */}
+                  <div className="flex items-center gap-3">
+                    {/* Primary Button */}
+                    <button
+                      onClick={() => setActiveDetail({ type: 'event', id: currentHero.id, metadata: currentHero })}
+                      className="px-6 py-2.5 rounded-full bg-white text-neutral-900 font-extrabold text-xs flex items-center gap-2 hover:scale-105 active:scale-95 shadow-xl transition-all cursor-pointer border-none"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                      <span>Look</span>
+                    </button>
+
+                    {/* Secondary Button */}
+                    <button
+                      onClick={() => setActiveWiki(currentHero.guideTopic)}
+                      className="px-5 py-2.5 rounded-full bg-black/40 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                      </svg>
+                      <span>Guidebook</span>
+                    </button>
+
+                    {/* Bookmark Button */}
+                    <button
+                      onClick={() => toggleSaveHero(currentHero.id)}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer border ${
+                        savedHeroes.has(currentHero.id)
+                          ? 'bg-[#f43f5e] border-[#f43f5e] text-white shadow-[0_0_15px_#f43f5e]'
+                          : 'bg-black/40 hover:bg-white/20 backdrop-blur-md border-white/20 text-white'
+                      }`}
+                      title="Salvar Evento"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill={savedHeroes.has(currentHero.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2">
+                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Right Carousel Controls */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={prevHero}
+                      className="w-10 h-10 rounded-full bg-black/40 hover:bg-white/25 active:scale-95 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer"
+                      title="Anterior"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="m15 18-6-6 6-6" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={nextHero}
+                      className="w-10 h-10 rounded-full bg-black/40 hover:bg-white/25 active:scale-95 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer"
+                      title="Próximo"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="m9 18 6-6-6-6" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              {/* ── 2. SECTION: SISWA KELAS (4 Vertical Cards) ── */}
+              <section id="explore-siswa-section" className="flex flex-col gap-3.5 scroll-mt-6">
+                {/* Header */}
+                <div className="flex items-center justify-between px-1">
+                  <h2 className="text-lg font-bold text-white tracking-tight">Siswa Kelas</h2>
+                  <button
+                    onClick={() => {}}
+                    className="text-xs font-semibold text-white/40 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+                  >
+                    See all
+                  </button>
+                </div>
+
+                {/* 4 Vertical Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {filteredSiswa.map((siswa) => (
+                    <div
+                      key={siswa.id}
+                      onClick={() => setActiveDetail({ type: 'creator', id: siswa.id, metadata: siswa })}
+                      className="h-64 sm:h-72 rounded-[28px] overflow-hidden relative p-4 flex flex-col justify-between border border-white/[0.09] shadow-xl group hover:scale-[1.02] transition-transform cursor-pointer"
+                    >
+                      {/* Background Image */}
+                      <img
+                        src={siswa.image}
+                        alt={siswa.name}
+                        className="w-full h-full object-cover absolute inset-0 -z-10 group-hover:scale-115 transition-transform duration-1000"
+                      />
+
+                      {/* Vignette Gradients */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/30 -z-10" />
+
+                      {/* Top Row: Mini Avatar/Badge & Options */}
+                      <div className="flex items-center justify-between relative z-10">
+                        <div
+                          className="w-7 h-7 rounded-full flex items-center justify-center border border-white/20 backdrop-blur-md shadow-md text-white font-bold text-[10px]"
+                          style={{ backgroundColor: `${siswa.accent}40` }}
+                        >
+                          {siswa.name[0]}
+                        </div>
+
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuCard(activeMenuCard === siswa.id ? null : siswa.id);
+                            }}
+                            className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-md flex items-center justify-center text-white/80 transition-all border-none cursor-pointer"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                              <circle cx="12" cy="12" r="2" />
+                              <circle cx="19" cy="12" r="2" />
+                              <circle cx="5" cy="12" r="2" />
+                            </svg>
+                          </button>
+
+                          {/* Quick Menu Popover */}
+                          {activeMenuCard === siswa.id && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute right-0 top-8 w-32 rounded-2xl bg-neutral-900/90 backdrop-blur-xl border border-white/10 p-1.5 shadow-2xl z-30 animate-in fade-in zoom-in-95 duration-200"
+                            >
+                              <button
+                                onClick={() => {
+                                  setActiveMenuCard(null);
+                                  setActiveDetail({ type: 'creator', id: siswa.id, metadata: siswa });
+                                }}
+                                className="w-full px-3 py-1.5 rounded-xl text-left text-[11px] font-bold text-white hover:bg-white/10 border-none bg-transparent cursor-pointer"
+                              >
+                                Ver Perfil
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setActiveMenuCard(null);
+                                  setActiveWiki(siswa.name);
+                                }}
+                                className="w-full px-3 py-1.5 rounded-xl text-left text-[11px] font-bold text-white hover:bg-white/10 border-none bg-transparent cursor-pointer"
+                              >
+                                Info da Classe
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bottom Info & Play Button */}
+                      <div className="relative z-10 flex items-end justify-between gap-2">
+                        <div className="flex flex-col min-w-0 pr-1">
+                          <span className="text-[9px] font-mono text-white/50 tracking-wider">
+                            {siswa.code}
+                          </span>
+                          <span className="text-base font-bold text-white tracking-tight truncate leading-tight group-hover:text-[#38bdf8] transition-colors">
+                            {siswa.name}
+                          </span>
+                          <span className="text-[9px] font-medium text-white/60 leading-tight line-clamp-2 mt-0.5">
+                            {siswa.subtitle}
+                          </span>
+                        </div>
+
+                        {/* White Circular Play Button */}
+                        <div className="w-9 h-9 rounded-full bg-white text-neutral-900 flex items-center justify-center shadow-2xl group-hover:scale-115 transition-transform shrink-0">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* ── 3. SECTION: JADWAL (Calendar, Tasks & Weekly Schedule) ── */}
+              <section id="explore-jadwal-section" className="flex flex-col gap-3.5 mb-6 scroll-mt-6">
+                {/* Header */}
+                <h2 className="text-lg font-bold text-white tracking-tight px-1">Jadwal</h2>
+
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
+
+                  {/* ── Part A: Calendar + Tasks (Left 8 Cols) ── */}
+                  <div
+                    className="xl:col-span-8 rounded-[30px] p-5 sm:p-6 flex flex-col md:flex-row gap-6 lg:gap-8 border border-white/[0.12] shadow-xl relative"
+                    style={{
+                      background: isLight ? 'rgba(255, 255, 255, 0.35)' : 'rgba(255, 255, 255, 0.03)',
+                      backdropFilter: 'blur(16px) saturate(130%)',
+                      WebkitBackdropFilter: 'blur(16px) saturate(130%)',
+                    }}
+                  >
+                    {/* Subpart 1: Calendar */}
+                    <div className="w-full md:w-[260px] flex flex-col gap-3 shrink-0">
+                      {/* Month & Year Navigation */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-white">{monthName}</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={prevMonth}
+                            className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors border-none cursor-pointer"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="m15 18-6-6 6-6" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={nextMonth}
+                            className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors border-none cursor-pointer"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="m9 18 6-6-6-6" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Day Names Header */}
+                      <div className="grid grid-cols-7 text-center text-[10px] font-bold text-white/40 my-1">
+                        <span>S</span>
+                        <span>M</span>
+                        <span>T</span>
+                        <span>W</span>
+                        <span>T</span>
+                        <span>F</span>
+                        <span>S</span>
+                      </div>
+
+                      {/* Days Grid */}
+                      <div className="grid grid-cols-7 gap-y-1.5 gap-x-1 text-center text-xs font-semibold">
+                        {/* Previous month filler days */}
+                        <span className="text-white/20 py-1">27</span>
+                        <span className="text-white/20 py-1">28</span>
+                        <span className="text-white/20 py-1">29</span>
+                        <span className="text-white/20 py-1">30</span>
+                        
+                        {/* Month days */}
+                        {[...Array(31)].map((_, i) => {
+                          const day = i + 1;
+                          const isSpecialActive = day === 6 || day === 15;
+                          const isSpecialPill = day === 11;
+                          const isSelected = selectedDay === day;
+
+                          return (
+                            <button
+                              key={day}
+                              onClick={() => setSelectedDay(day)}
+                              className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center text-[11px] font-bold transition-all cursor-pointer border-none ${
+                                isSelected || isSpecialActive
+                                  ? 'bg-[#38bdf8] text-neutral-900 shadow-[0_0_12px_rgba(56,189,248,0.6)] font-black scale-105'
+                                  : isSpecialPill
+                                  ? 'bg-[#38bdf8]/35 text-[#38bdf8]'
+                                  : 'text-white/70 hover:bg-white/10 hover:text-white bg-transparent'
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Subpart 2: Tasks List */}
+                    <div className="flex-1 flex flex-col justify-between border-t md:border-t-0 md:border-l border-white/[0.08] pt-4 md:pt-0 md:pl-6 min-w-0">
+                      <div className="flex flex-col gap-3 overflow-y-auto max-h-56 custom-scrollbar pr-1">
+                        {/* Grouped Tasks */}
+                        {['Tasks today', 'Tasks tomorrow', 'Tasks Friday', 'Tasks Saturday'].map((groupName) => {
+                          const groupTasks = tasks.filter((t) => t.group === groupName);
+                          if (groupTasks.length === 0) return null;
+
+                          return (
+                            <div key={groupName} className="flex flex-col gap-1.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                                {groupName}
+                              </span>
+                              <div className="flex flex-col gap-1">
+                                {groupTasks.map((t) => (
+                                  <label
+                                    key={t.id}
+                                    onClick={() => toggleTask(t.id)}
+                                    className="flex items-center gap-2 cursor-pointer group select-none"
+                                  >
+                                    <div
+                                      className={`w-3.5 h-3.5 rounded flex items-center justify-center transition-colors shrink-0 ${
+                                        t.done
+                                          ? 'bg-[#38bdf8] text-black'
+                                          : 'border border-white/30 group-hover:border-white/60 bg-transparent'
+                                      }`}
+                                    >
+                                      {t.done && (
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                                          <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <span
+                                      className={`text-[11px] leading-tight transition-colors ${
+                                        t.done ? 'text-white/40 line-through' : 'text-white/80 group-hover:text-white'
+                                      }`}
+                                    >
+                                      {t.text}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Edit Tasks Section / Button */}
+                      <div className="flex items-center justify-between pt-3 border-t border-white/[0.08] mt-2">
+                        {isEditingTasks ? (
+                          <form onSubmit={handleAddTask} className="flex items-center gap-2 w-full">
+                            <input
+                              type="text"
+                              value={newTaskText}
+                              onChange={(e) => setNewTaskText(e.target.value)}
+                              placeholder="Nova tarefa..."
+                              className="flex-1 h-8 px-3 rounded-lg bg-white/10 text-white text-xs outline-none border border-white/20 focus:border-[#38bdf8]"
+                              autoFocus
+                            />
+                            <button
+                              type="submit"
+                              className="px-3 py-1.5 rounded-lg bg-[#38bdf8] text-neutral-900 text-[10px] font-bold uppercase border-none cursor-pointer"
+                            >
+                              Adicionar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingTasks(false)}
+                              className="px-2 py-1.5 rounded-lg bg-white/10 text-white/60 text-[10px] border-none cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          </form>
+                        ) : (
+                          <>
+                            <span className="text-[10px] text-white/40 font-semibold">
+                              {tasks.filter((t) => t.done).length}/{tasks.length} concluídas
+                            </span>
+                            <button
+                              onClick={() => setIsEditingTasks(true)}
+                              className="px-5 py-1.5 rounded-lg bg-[#38bdf8] hover:bg-[#0ea5e9] text-neutral-900 font-extrabold text-[11px] uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(56,189,248,0.4)] border-none cursor-pointer"
+                            >
+                              EDIT
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
-          </div>
-        </aside>
-      </div>
-    </LazerShell>
 
-      {/* Secondary Modals Layer */}
-      {activeDetail && (
-        <DiscoverDetailModal type={activeDetail.type} id={activeDetail.id} onClose={() => setActiveDetail(null)} themeColor={c} themeMode={themeMode} q={activeDetail.metadata?.prompt} />
-      )}
-      {activeWiki && (
-        <WikiModal initialTitle={activeWiki} onClose={() => setActiveWiki(null)} themeColor={c} themeMode={themeMode} />
-      )}
-      {activeWebUrl && readerArticle && (
-        <AlphaReaderModal article={readerArticle} originalUrl={activeWebUrl} themeColor={c} themeMode={themeMode} onClose={() => { setActiveWebUrl(null); setReaderArticle(null); }} />
-      )}
-      {redirectUrl && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-2xl">
-          <div className={`max-w-md w-full rounded-[40px] border-[2px] p-10 flex flex-col items-center text-center relative overflow-hidden ${isLight ? 'bg-white' : 'bg-[#0a0a0a]'}`} style={{ borderColor: `${c}40` }}>
-            <div className="w-20 h-20 rounded-[30px] bg-white/5 flex items-center justify-center border border-white/10 mb-8"><span className="text-4xl">🌐</span></div>
-            <h2 className={`text-2xl font-black tracking-tighter uppercase mb-4 ${textPrimary}`}>Sair da Rede?</h2>
-            <p className={`text-[13px] font-bold leading-relaxed mb-10 opacity-70 ${textPrimary}`}>Este site exige navegação externa ou bloqueou a leitura nativa do Alpha.</p>
-            <div className="flex flex-col w-full gap-3">
-              <button onClick={() => { window.open(redirectUrl, '_blank'); setRedirectUrl(null); }} className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-white border-none cursor-pointer" style={{ background: c }}>Sim, Visitar Site</button>
-              <button onClick={() => setRedirectUrl(null)} className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest bg-transparent border-[2px] cursor-pointer ${textPrimary}`} style={{ borderColor: borderCol }}>Não, Voltar</button>
-            </div>
+                  {/* ── Part B: Weekly Day Cards Stack (Right 4 Cols) ── */}
+                  <div className="xl:col-span-4 flex flex-col gap-2.5">
+                    {SCHEDULE_DAYS.map((dayItem, idx) => {
+                      const isSelected = selectedScheduleIndex === idx;
+
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => setSelectedScheduleIndex(idx)}
+                          className={`rounded-[20px] px-5 py-3 flex items-center justify-between transition-all cursor-pointer shadow-md ${
+                            isSelected
+                              ? 'bg-[#38bdf8]/30 border border-[#38bdf8]/50 shadow-[0_0_20px_rgba(56,189,248,0.25)] scale-[1.01]'
+                              : dayItem.isSpecial
+                              ? 'bg-[#38bdf8]/15 border border-[#38bdf8]/25 hover:bg-[#38bdf8]/25'
+                              : isLight
+                              ? 'bg-white/40 hover:bg-white/60 border border-black/10'
+                              : 'bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.10]'
+                          }`}
+                          style={{
+                            backdropFilter: 'blur(16px) saturate(130%)',
+                            WebkitBackdropFilter: 'blur(16px) saturate(130%)',
+                          }}
+                        >
+                          {/* Number & Weekday */}
+                          <div className="flex items-center gap-3.5">
+                            <span className="text-2xl font-black text-white tracking-tight w-8">
+                              {dayItem.dayNum}
+                            </span>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-semibold text-white/40 leading-none">
+                                {dayItem.monthYear}
+                              </span>
+                              <span className="text-xs font-bold text-white/90 leading-tight mt-0.5">
+                                {dayItem.weekday}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Badge Count */}
+                          <div
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-black shadow-md ${
+                              isSelected || dayItem.isSpecial
+                                ? 'bg-white text-[#0284c7]'
+                                : 'bg-[#f43f5e] text-white shadow-[0_0_10px_rgba(244,63,94,0.4)]'
+                            }`}
+                          >
+                            {dayItem.count}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                </div>
+              </section>
+
+            </main>
+
           </div>
         </div>
+
+      </div>
+
+      {/* ── Secondary Interactive Modals Layer ── */}
+      {activeDetail && (
+        <DiscoverDetailModal
+          type={activeDetail.type}
+          id={activeDetail.id}
+          onClose={() => setActiveDetail(null)}
+          themeColor={c}
+          themeMode={themeMode}
+          q={activeDetail.metadata?.prompt || activeDetail.metadata?.title}
+        />
       )}
-    </>
+
+      {activeWiki && (
+        <WikiModal
+          initialTitle={activeWiki}
+          onClose={() => setActiveWiki(null)}
+          themeColor={c}
+          themeMode={themeMode}
+        />
+      )}
+
+      {activeWebUrl && readerArticle && (
+        <AlphaReaderModal
+          article={readerArticle}
+          originalUrl={activeWebUrl}
+          themeColor={c}
+          themeMode={themeMode}
+          onClose={() => {
+            setActiveWebUrl(null);
+            setReaderArticle(null);
+          }}
+        />
+      )}
+    </div>
   );
 }

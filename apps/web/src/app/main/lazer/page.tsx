@@ -282,20 +282,28 @@ export default function LazerPage() {
       <div className="fixed inset-0 pointer-events-none z-0">
         <ThemeBg color={c} mode={themeMode} />
       </div>
-      {/* Sidebar (Estrutura) */}
-      <LazerSidebar
-        activeView={activeView}
-        setActiveView={handleSelectView}
-        themeColor={c}
-        alphaStatus={alphaStatus}
-        onAlphaClick={openChat}
-        userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
-        userName={authUser?.profile?.displayName || authUser?.profile?.username}
-        hideMobileNav={activeView === 'messages' && messagesMobileView === 'chat'}
-      />
+      {/* Sidebar (Estrutura) - Ocultada nos modos com sidebar própria (Music, Explore e Watch) */}
+      {!['music', 'explore', 'watch'].includes(activeView) && (
+        <LazerSidebar
+          activeView={activeView}
+          setActiveView={handleSelectView}
+          themeColor={c}
+          alphaStatus={alphaStatus}
+          onAlphaClick={openChat}
+          userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
+          userName={authUser?.profile?.displayName || authUser?.profile?.username}
+          hideMobileNav={activeView === 'messages' && messagesMobileView === 'chat'}
+        />
+      )}
 
       {/* Main Content Area */}
-      <div ref={contentRef} className="flex-1 animate-in fade-in duration-300 relative h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 md:pl-0 lg:py-5 lg:pr-5 lg:pl-0 pb-20 md:pb-4 lg:pb-5 flex flex-col" style={{ overscrollBehavior: 'none' }}>
+      <div
+        ref={contentRef}
+        className={`flex-1 animate-in fade-in duration-300 relative h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 ${
+          ['music', 'explore', 'watch'].includes(activeView) ? 'md:pl-4 lg:pl-5' : 'md:pl-0 lg:pl-0'
+        } lg:py-5 lg:pr-5 pb-20 md:pb-4 lg:pb-5 flex flex-col`}
+        style={{ overscrollBehavior: 'none' }}
+      >
         {activeView === 'feed' && (
           <LazerHomeView
             user={myProfileData}
@@ -317,9 +325,17 @@ export default function LazerPage() {
 
         {/* Full-screen modals */}
         {activeView === 'explore' && (
-          <ExploreModal onClose={() => setActiveView('feed')} onPostClick={navigateToPost}
+          <ExploreModal
+            onClose={() => setActiveView('feed')}
+            onSelectView={handleSelectView}
+            onPostClick={navigateToPost}
             onCommunityClick={navigateToCommunity}
-            onProfileClick={navigateToProfile} themeColor={c} themeMode={themeMode} />
+            onProfileClick={navigateToProfile}
+            themeColor={c}
+            themeMode={themeMode}
+            userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
+            userName={authUser?.profile?.displayName || authUser?.profile?.username}
+          />
         )}
         {activeView === 'notifications' && (
           <NotificationsModal onClose={() => setActiveView('feed')} onPostClick={navigateToPost}
@@ -341,14 +357,24 @@ export default function LazerPage() {
             onMobileViewChange={setMessagesMobileView} />
         )}
         {activeView === 'music' && (
-          <LazerShell variant="full" themeMode={themeMode}>
-            <LazerMusicView />
-          </LazerShell>
+          <LazerMusicView
+            onClose={() => setActiveView('feed')}
+            onSelectView={handleSelectView}
+            themeColor={c}
+            themeMode={themeMode}
+            userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
+            userName={authUser?.profile?.displayName || authUser?.profile?.username || 'Maxim'}
+          />
         )}
         {activeView === 'watch' && (
-          <LazerShell variant="full" themeMode={themeMode}>
-            <LazerWatchView />
-          </LazerShell>
+          <LazerWatchView
+            onClose={() => setActiveView('feed')}
+            onSelectView={handleSelectView}
+            themeColor={c}
+            themeMode={themeMode}
+            userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
+            userName={authUser?.profile?.displayName || authUser?.profile?.username || 'Cinema'}
+          />
         )}
         {activeView === 'art' && (
           <LazerShell variant="full" themeMode={themeMode} maxWidth="1050px">
