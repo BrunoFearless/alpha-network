@@ -9,7 +9,66 @@ import { CollectionModal } from './CollectionModal';
 import { useLazerStore } from '@/store/lazer.store';
 import { resolveUrl } from '@/lib/api';
 
-const CATEGORIES = ['Para Ti', 'Design', 'Arquitetura', 'Ilustração', 'Fotografia', 'Digital Art', 'Natureza', 'Minimalismo', 'Culinária'];
+const CATEGORIES = [
+  'Para Ti',
+  'Design',
+  'Arquitetura',
+  'Ilustração',
+  'Fotografia',
+  'Digital Art',
+  '3D Render',
+  'Natureza',
+  'Minimalismo',
+  'Concept Art',
+];
+
+export interface ArtSpotlight {
+  id: string;
+  title: string;
+  artist: string;
+  artistHandle: string;
+  category: string;
+  tags: string[];
+  description: string;
+  imageUrl: string;
+  likesCount: number;
+}
+
+const DEMO_ART_SPOTLIGHTS: ArtSpotlight[] = [
+  {
+    id: 'spotlight-1',
+    title: 'Bienal Sintética • Horizontes de Vidro e Luz',
+    artist: 'Elena Vance & Alpha Studio',
+    artistHandle: '@elenavance',
+    category: 'Digital Art',
+    tags: ['Glassmorphism', 'Neon Surrealism', '3D Octane', '8K Masterpiece'],
+    description: 'Explorando refração luminosa em arquiteturas flutuantes de cristal e ametista. Curadoria editorial da Alpha Gallery.',
+    imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1600&auto=format&fit=crop',
+    likesCount: 1420,
+  },
+  {
+    id: 'spotlight-2',
+    title: 'Metrópole Eclética • Cyber-Barroco no Éter',
+    artist: 'Marcus Thorne',
+    artistHandle: '@mthorne_art',
+    category: 'Concept Art',
+    tags: ['Cyberpunk', 'Concept Art', 'Matte Painting'],
+    description: 'Um vislumbre sobre catedrais cibernéticas suspensas na neblina crepuscular com traços renascentistas.',
+    imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=1600&auto=format&fit=crop',
+    likesCount: 984,
+  },
+  {
+    id: 'spotlight-3',
+    title: 'Ecos Minerais • Escultura em Cera e Quartzo',
+    artist: 'Aria Katsumi',
+    artistHandle: '@ariakatsumi',
+    category: '3D Render',
+    tags: ['Minimalism', 'Fluid Dynamics', 'Cinema 4D'],
+    description: 'Fusão entre minerais translúcidos e dinamismo orgânico fluido. Vencedora do prêmio Alpha Visuals.',
+    imageUrl: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=1600&auto=format&fit=crop',
+    likesCount: 2310,
+  },
+];
 
 // ── MODULO MESA INFINITA (CANVAS VIEW) ─────────────────────
 function InfiniteCanvas({
@@ -433,7 +492,23 @@ function InfiniteCanvas({
   );
 }
 
-export function LazerArtView() {
+export interface LazerArtViewProps {
+  onClose?: () => void;
+  onSelectView?: (view: any) => void;
+  themeColor?: string;
+  themeMode?: 'dark' | 'light';
+  userAvatar?: string;
+  userName?: string;
+}
+
+export function LazerArtView({
+  onClose,
+  onSelectView,
+  themeColor = '#a855f7',
+  themeMode = 'dark',
+  userAvatar,
+  userName = 'Artista',
+}: LazerArtViewProps = {}) {
   const { arts, savedArts, collections, isLoading, searchQuery, activeCategory, fetchArts, fetchSavedArts, fetchUserCollections, setActiveCategory, setSearchQuery, updateCollectionViewMode, updateCollectionLayout, forkCollection } = useArtStore();
   const { user: authUser, accessToken } = useAuthStore();
   const { isFriend, hasSentRequest, sendFriendRequest, cancelFriendRequest, removeFriend, fetchFriends } = useLazerStore();
@@ -443,6 +518,17 @@ export function LazerArtView() {
   const [selectedArt, setSelectedArt] = useState<Art | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState<Art | null>(null);
+
+  const [spotlightIndex, setSpotlightIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const activeSpotlight = DEMO_ART_SPOTLIGHTS[spotlightIndex] || DEMO_ART_SPOTLIGHTS[0];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSpotlightIndex((prev) => (prev + 1) % DEMO_ART_SPOTLIGHTS.length);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [personalizedArts, setPersonalizedArts] = useState<Art[]>([]);
 
@@ -647,8 +733,11 @@ export function LazerArtView() {
   }, [arts, viewMode, activeCategory, searchQuery, selectedAuthor]);
 
 
+  const isLight = themeMode === 'light';
+  const shellBg = isLight ? 'glass-panel-light' : 'liquid-glass-shell';
+
   return (
-    <div className="w-full h-full flex flex-col overflow-y-auto no-scrollbar bg-transparent">
+    <div className="w-full h-full flex items-center justify-center gap-3 sm:gap-4 md:gap-5 overflow-hidden font-['Nunito',sans-serif] animate-in fade-in duration-500 relative">
       <style>{`
         @keyframes premium-fade-in {
           from {
@@ -768,87 +857,382 @@ export function LazerArtView() {
           scrollbar-width: none;
         }
       `}</style>
-      
-      {/* ── HEADER ── */}
-      <header className="sticky top-0 z-[100] bg-white/[0.02] backdrop-blur-xl px-4 sm:px-8 py-4 sm:py-6 flex flex-col gap-4 sm:gap-6">
-        <div className="flex items-center gap-3 sm:gap-6">
-           <button 
-             onClick={() => { setViewMode('feed'); setSelectedCollection(null); setSelectedAuthor(null); setActiveParentCollection(null); }}
-             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${viewMode === 'feed' && !selectedAuthor ? 'bg-white text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
-             title="Feed Principal"
-           >
-             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-           </button>
 
-           {selectedAuthor ? (
-             <div className="flex-1 flex items-center justify-start">
-               <button 
-                 onClick={() => setSelectedAuthor(null)}
-                 className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
-               >
-                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
-                 Voltar ao Feed
-               </button>
-             </div>
-           ) : (
-             <div className="relative flex-1 group">
-               <svg className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-white/40 transition-colors" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-               <input 
-                 type="text" 
-                 placeholder="Pesquisar inspirações... (Prima Enter)"
-                 value={localSearch}
-                 onChange={(e) => setLocalSearch(e.target.value)}
-                 onKeyDown={(e) => {
-                   if (e.key === 'Enter') {
-                     setSelectedAuthor(null);
-                     setSearchQuery(localSearch);
-                   }
-                 }}
-                 className="w-full h-10 sm:h-12 pl-10 sm:pl-12 pr-4 sm:pr-6 rounded-full bg-white/5 border border-white/5 focus:bg-white/10 focus:border-white/20 text-white placeholder-white/20 text-sm transition-all focus:outline-none"
-               />
-             </div>
-           )}
+      {/* ══════════════════════════════════════════════════════════════════════
+          1. FLOATING ART CAPSULE SIDEBAR (Padrão Lazer Pill Lateral)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <aside
+        className="hidden md:flex flex-col items-center justify-between w-14 lg:w-16 h-fit py-6 px-2.5 rounded-full border border-white/20 liquid-glass-shell shadow-2xl relative z-40 shrink-0 select-none transition-all duration-300"
+        style={{
+          backdropFilter: 'blur(24px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+        }}
+      >
+        {/* Specular Edge Highlight */}
+        <div className="absolute top-0 left-1/4 right-1/4 h-[1.5px] rounded-full pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent blur-[0.2px]" />
 
-           <button 
-             onClick={() => setShowUploadModal(true)}
-             className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all hover:scale-105 active:scale-95"
-             title="Criar"
-           >
-             <span className="text-2xl leading-none font-light">+</span>
-           </button>
+        {/* Top: Art Palette / Avatar */}
+        <button
+          onClick={() => {
+            setViewMode('feed');
+            setSelectedCollection(null);
+            setSelectedAuthor(null);
+            setActiveParentCollection(null);
+            scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#a855f7] p-0.5 hover:scale-110 active:scale-95 transition-all shadow-[0_0_16px_rgba(168,85,247,0.45)] cursor-pointer group relative bg-white/5"
+          title="Início do Alpha Art"
+        >
+          {userAvatar ? (
+            <img src={userAvatar} alt="" className="w-full h-full object-cover rounded-full" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center rounded-full bg-[#a855f7]/20 text-[#c084fc] font-black text-xs">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+              </svg>
+            </div>
+          )}
+        </button>
 
-           <button 
-             onClick={() => setViewMode('profile')}
-             className={`w-12 h-12 rounded-full overflow-hidden border-2 transition-all hover:scale-105 active:scale-95 ${viewMode === 'profile' ? 'border-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'border-transparent shadow-none'}`}
-             title="Minhas Coleções"
-           >
-              {authUser?.profile?.avatarUrl ? (
-                <img src={resolveUrl(authUser.profile.avatarUrl)} className="w-full h-full object-cover" alt="" />
-              ) : (
-                <div className="w-full h-full bg-white/10 flex items-center justify-center text-white font-bold text-xs">{(authUser?.profile?.username || 'A')[0].toUpperCase()}</div>
-              )}
-           </button>
+        <div className="w-6 h-px bg-white/10 my-1" />
+
+        {/* Navigation Action Icons */}
+        <div className="flex flex-col items-center gap-3.5">
+          {/* Feed / Galeria */}
+          <button
+            onClick={() => {
+              setViewMode('feed');
+              setSelectedCollection(null);
+              setSelectedAuthor(null);
+              setActiveParentCollection(null);
+              scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
+              viewMode === 'feed' && !selectedAuthor && !selectedCollection
+                ? 'text-[#a855f7] bg-white/15 shadow-[0_0_14px_rgba(168,85,247,0.4)] scale-110 border border-[#a855f7]/50'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+            title="Galeria de Artes"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </button>
+
+          {/* Portfólio / Pastas */}
+          <button
+            onClick={() => {
+              setViewMode('profile');
+              setProfileTab('collections');
+              setSelectedAuthor(null);
+              setSelectedCollection(null);
+              setActiveParentCollection(null);
+              scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
+              viewMode === 'profile' && !selectedAuthor
+                ? 'text-[#a855f7] bg-white/15 shadow-[0_0_14px_rgba(168,85,247,0.4)] scale-110 border border-[#a855f7]/50'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+            title="Meu Portfólio & Pastas"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+
+          {/* Mesa Infinita (Canvas) */}
+          <button
+            onClick={() => {
+              const canvasCol = collections.find(c => c.viewMode === 'canvas') || collections[0];
+              if (canvasCol) {
+                setSelectedCollection(canvasCol);
+                setViewMode('profile');
+              } else {
+                setViewMode('profile');
+              }
+            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative text-white/50 hover:text-[#a855f7] hover:bg-white/5"
+            title="Mesa Infinita (Canvas)"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <polygon points="12 2 2 7 12 12 22 7 12 2" />
+              <polyline points="2 17 12 22 22 17" />
+              <polyline points="2 12 12 17 22 12" />
+            </svg>
+          </button>
+
+          {/* Expor Nova Arte */}
+          {accessToken && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-gradient-to-r from-[#a855f7] to-[#ec4899] hover:scale-110 active:scale-95 shadow-[0_0_16px_rgba(168,85,247,0.4)] transition-all cursor-pointer group relative"
+              title="Expor Arte"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          )}
+
+          {/* Shortcut to Alpha Music */}
+          <button
+            onClick={() => onSelectView?.('music')}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-[#1ed760] hover:bg-white/5 transition-all cursor-pointer group relative"
+            title="Ouvir Alpha Music"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+          </button>
+
+          {/* Shortcut to Alpha Watch */}
+          <button
+            onClick={() => onSelectView?.('watch')}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-[#ef4444] hover:bg-white/5 transition-all cursor-pointer group relative"
+            title="Alpha Watch Cinema"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 10l4.553-2.277A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" />
+            </svg>
+          </button>
+
+          {/* Sair para o Feed */}
+          <button
+            onClick={() => onSelectView?.('feed') || onClose?.()}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/5 transition-all cursor-pointer group relative"
+            title="Voltar ao Feed do Lazer"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </button>
         </div>
 
-        {viewMode === 'feed' && !selectedAuthor && (
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            {CATEGORIES.map(cat => (
-              <button 
-                key={cat}
-                onClick={() => { setSelectedAuthor(null); setActiveCategory(cat); }}
-                className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === cat && !selectedAuthor ? 'bg-white text-black' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
+        <div className="w-6 h-px bg-white/10 my-1" />
+
+        {/* Bottom indicator jewel */}
+        <div className="w-2 h-2 rounded-full bg-[#a855f7] shadow-[0_0_10px_#a855f7] animate-pulse" />
+      </aside>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          2. MAIN LIQUID GLASS SHELL WINDOW (Alpha Art Gallery)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div
+        className={`flex-1 h-full min-h-0 rounded-none md:rounded-[3rem] border-0 md:border md:border-white/15 ${shellBg} flex flex-col overflow-hidden relative shadow-2xl transition-all duration-300`}
+        style={{
+          backdropFilter: 'blur(36px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(36px) saturate(140%)',
+        }}
+      >
+        {/* Specular Edge Highlight */}
+        <div className="hidden md:block absolute top-0 left-[6%] right-[6%] h-[1.5px] rounded-full pointer-events-none bg-gradient-to-r from-transparent via-white/50 to-transparent blur-[0.3px] z-30" />
+
+        {/* ── TOP GLASS NAVBAR (Luminous Glass, Not Darkened!) ── */}
+        <header className="sticky top-0 z-30 bg-white/[0.03] backdrop-blur-2xl px-5 sm:px-8 py-3.5 border-b border-white/[0.08] flex items-center justify-between gap-3 sm:gap-6 shrink-0">
+          {/* Left: Brand Badge & Breadcrumbs */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {selectedAuthor ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedAuthor(null)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all text-xs font-bold cursor-pointer"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="m15 18-6-6 6-6" />
+                  </svg>
+                  <span>Voltar</span>
+                </button>
+                <span className="text-white/60 text-xs font-bold hidden sm:inline-block truncate max-w-[150px]">
+                  {selectedAuthor.name}
+                </span>
+              </div>
+            ) : selectedCollection ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedCollection(null);
+                    setActiveParentCollection(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all text-xs font-bold cursor-pointer"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="m15 18-6-6 6-6" />
+                  </svg>
+                  <span>Pastas</span>
+                </button>
+                <span className="text-white/60 text-xs font-bold hidden sm:inline-block truncate max-w-[150px]">
+                  {selectedCollection.title}
+                </span>
+              </div>
+            ) : (
+              <div 
+                onClick={() => {
+                  setViewMode('feed');
+                  setSelectedCollection(null);
+                  setSelectedAuthor(null);
+                  setActiveParentCollection(null);
+                }}
+                className="flex items-center gap-2.5 cursor-pointer group"
               >
-                {cat}
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#a855f7] to-[#ec4899] flex items-center justify-center text-white shadow-[0_0_15px_rgba(168,85,247,0.4)] group-hover:scale-105 transition-transform">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+                    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+                    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+                    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+                    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+                  </svg>
+                </div>
+                <span className="text-base font-black text-white tracking-tight flex items-center gap-1">
+                  Alpha <span className="text-[#c084fc]">Art</span>
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Center: Search Bar (Luminous Glass) */}
+          <div className="flex-1 max-w-xl relative flex items-center group">
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-[#c084fc] transition-colors pointer-events-none"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Pesquisar ideias, estética, 3D, ilustrações..."
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setSelectedAuthor(null);
+                  setSearchQuery(localSearch);
+                }
+              }}
+              className="w-full h-10 pl-11 pr-10 rounded-full bg-white/[0.06] hover:bg-white/[0.10] focus:bg-white/[0.14] border border-white/10 focus:border-[#a855f7]/60 text-white placeholder-white/40 text-xs sm:text-sm font-medium outline-none transition-all shadow-inner"
+            />
+            {localSearch && (
+              <button
+                onClick={() => {
+                  setLocalSearch('');
+                  setSearchQuery('');
+                }}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center text-[10px] hover:bg-white/40 cursor-pointer"
+              >
+                ✕
               </button>
-            ))}
+            )}
+          </div>
+
+          {/* Right: Expor Arte, Portfólio & Close */}
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            {/* Expor Arte Button */}
+            {accessToken && (
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#a855f7] to-[#ec4899] text-white font-extrabold text-xs hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all cursor-pointer"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>Expor Arte</span>
+              </button>
+            )}
+
+            {/* Profile Pill / Portfólio */}
+            <div
+              onClick={() => {
+                setViewMode('profile');
+                setSelectedAuthor(null);
+              }}
+              className="h-10 pl-1.5 pr-3.5 rounded-full bg-white/[0.07] hover:bg-white/[0.14] border border-white/10 flex items-center gap-2.5 cursor-pointer transition-all group"
+              title="Meu Portfólio de Arte"
+            >
+              <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 border border-white/20">
+                {userAvatar ? (
+                  <img src={userAvatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white/70">
+                    {(userName || 'A')[0]}
+                  </div>
+                )}
+              </div>
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-[11px] font-bold text-white leading-tight truncate max-w-[80px]">
+                  {userName}
+                </span>
+                <span className="text-[9px] font-semibold text-white/40 leading-none">
+                  Portfólio
+                </span>
+              </div>
+            </div>
+
+            {/* Close Button to return to Lazer Feed */}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="w-10 h-10 rounded-full bg-white/[0.07] hover:bg-red-500/20 hover:border-red-500/40 border border-white/10 flex items-center justify-center text-white/60 hover:text-red-400 transition-all cursor-pointer"
+                title="Fechar Alpha Art"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* ── CATEGORY CHIP BAR (Luminous Glass) ── */}
+        {viewMode === 'feed' && !selectedAuthor && (
+          <div className="px-5 sm:px-8 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar border-b border-white/[0.06] bg-white/[0.02] shrink-0">
+            {CATEGORIES.map((cat) => {
+              const isActive = activeCategory === cat && !selectedAuthor;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setSelectedAuthor(null);
+                    setActiveCategory(cat);
+                  }}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? 'bg-gradient-to-r from-[#a855f7] to-[#9333ea] text-white shadow-[0_0_12px_rgba(168,85,247,0.35)] scale-[1.02]'
+                      : 'bg-white/[0.05] hover:bg-white/[0.10] text-white/70 hover:text-white border border-white/[0.06]'
+                  }`}
+                >
+                  {cat}
+                </button>
+              );
+            })}
           </div>
         )}
 
-
-      </header>
-
-      {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 px-3 sm:px-8 pt-4 pb-20">
+        {/* ── NATIVE FLUID SCROLL BODY ── */}
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          <div className="flex flex-col gap-6 pb-16">
         
         {viewMode === 'feed' ? (
           <>
@@ -941,7 +1325,7 @@ export function LazerArtView() {
               </div>
             )}
             {isLoading && arts.length === 0 ? (
-              <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-3 sm:gap-4">
+              <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-3 sm:gap-4">
                  {Array.from({ length: 15 }).map((_, i) => (
                    <div key={i} className="break-inside-avoid mb-4 rounded-2xl bg-white/5 animate-pulse" style={{ height: `${200 + Math.random() * 200}px` }} />
                  ))}
@@ -952,7 +1336,7 @@ export function LazerArtView() {
                  <p className="font-black uppercase tracking-[0.2em] text-xs">Sem resultados encontrados</p>
               </div>
             ) : (
-              <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-3 sm:gap-4">
+              <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-3 sm:gap-4">
                 {personalizedArts.map(art => (
                   <ArtCard 
                     key={art.id} 
@@ -1174,7 +1558,7 @@ export function LazerArtView() {
                       {selectedCollection.authorId === authUser?.id && (
                         <button 
                           onClick={() => setShowAddArtModal(true)}
-                          className="px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-[0_4px_12px_rgba(220,38,38,0.3)]"
+                          className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#a855f7] to-[#9333ea] text-white text-[9px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-[0_4px_16px_rgba(168,85,247,0.35)]"
                         >
                           + Adicionar Artes
                         </button>
@@ -1263,7 +1647,7 @@ export function LazerArtView() {
                                     ))}
                                 </div>
                               )}
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                              <div className="absolute inset-0 bg-white/[0.08] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                                   <span className="px-6 py-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-black uppercase tracking-widest shadow-xl">
                                     Abrir Subgrupo
                                   </span>
@@ -1315,7 +1699,7 @@ export function LazerArtView() {
                       <div className="flex flex-col gap-6">
                         <div className="flex items-center justify-between border-b border-white/10 pb-3">
                           <div className="flex items-center gap-3">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-red-500">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-[#c084fc]">
                               <polygon points="12 2 2 7 12 12 22 7 12 2"/>
                               <polyline points="2 17 12 22 22 17"/>
                               <polyline points="2 12 12 17 22 12"/>
@@ -1359,7 +1743,7 @@ export function LazerArtView() {
                                     ))}
                                 </div>
                               )}
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                              <div className="absolute inset-0 bg-white/[0.08] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                                   <span className="px-6 py-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-black uppercase tracking-widest shadow-xl">
                                     Abrir Grupo
                                   </span>
@@ -1456,7 +1840,7 @@ export function LazerArtView() {
                                     ))}
                                 </div>
                               )}
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                              <div className="absolute inset-0 bg-white/[0.08] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                                   <span className="px-6 py-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-black uppercase tracking-widest shadow-xl">
                                     Abrir Coleção
                                   </span>
@@ -1555,7 +1939,9 @@ export function LazerArtView() {
             </div>
           );
         })()}
-      </main>
+          </div>
+        </div>
+      </div>
 
       {/* ── MODALS ── */}
       {selectedArt && (

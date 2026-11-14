@@ -431,11 +431,10 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 sm:p-6" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-xl animate-in fade-in duration-300" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-xl animate-in fade-in duration-300" />
       <div
         className="relative w-full max-w-lg rounded-[2.5rem] border border-white/20 liquid-glass-shell shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden"
         style={{
-          background: 'rgba(18, 18, 24, 0.75)',
           backdropFilter: 'blur(36px) saturate(150%)',
           WebkitBackdropFilter: 'blur(36px) saturate(150%)',
         }}
@@ -537,7 +536,7 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                 </button>
 
                 {showCategoryDropdown && (
-                  <div className="absolute top-[105%] left-0 right-0 p-1.5 bg-neutral-950/95 backdrop-blur-2xl rounded-2xl border border-white/15 shadow-2xl z-[150] max-h-48 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200">
+                  <div className="absolute top-[105%] left-0 right-0 p-1.5 bg-neutral-900/90 liquid-glass-shell backdrop-blur-2xl rounded-2xl border border-white/20 shadow-2xl z-[150] max-h-48 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200">
                     {CATEGORIES.filter((c) => !c.includes('Todos') && !c.includes('Tendências')).map((c) => (
                       <button
                         key={c}
@@ -633,11 +632,10 @@ function EditModal({ video, onClose, onSuccess }: { video: Video; onClose: () =>
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 sm:p-6" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-xl animate-in fade-in duration-300" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-xl animate-in fade-in duration-300" />
       <div
         className="relative w-full max-w-lg rounded-[2.5rem] border border-white/20 liquid-glass-shell shadow-2xl animate-in zoom-in-95 duration-300 p-6 sm:p-8"
         style={{
-          background: 'rgba(18, 18, 24, 0.85)',
           backdropFilter: 'blur(36px) saturate(150%)',
           WebkitBackdropFilter: 'blur(36px) saturate(150%)',
         }}
@@ -826,7 +824,7 @@ export function LazerWatchView({
     <div className="w-full h-full flex items-center justify-center gap-3 sm:gap-4 md:gap-5 overflow-hidden font-['Nunito',sans-serif] animate-in fade-in duration-500 relative">
       
       {/* ══════════════════════════════════════════════════════════════════════
-          1. FLOATING WATCH CAPSULE SIDEBAR (Pílula Vertical Exclusiva do Cinema)
+          1. FLOATING WATCH CAPSULE SIDEBAR (Padrão Lazer Pill Lateral)
       ══════════════════════════════════════════════════════════════════════ */}
       <aside
         className="hidden md:flex flex-col items-center justify-between w-14 lg:w-16 h-fit py-6 px-2.5 rounded-full border border-white/20 liquid-glass-shell shadow-2xl relative z-40 shrink-0 select-none transition-all duration-300"
@@ -838,39 +836,32 @@ export function LazerWatchView({
         {/* Specular Edge Highlight */}
         <div className="absolute top-0 left-1/4 right-1/4 h-[1.5px] rounded-full pointer-events-none bg-gradient-to-r from-transparent via-white/80 to-transparent blur-[0.2px]" />
 
-        {/* Top: Cinema Aperture / User Avatar */}
+        {/* Top: Watch Play Badge / Avatar */}
         <button
           onClick={() => {
             setActiveTab('all');
+            setActiveCategory('Todos');
             scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#ef4444] p-0.5 hover:scale-110 active:scale-95 transition-all shadow-[0_0_16px_rgba(239,68,68,0.45)] cursor-pointer group relative bg-black/40"
-          title="Início do Cinema"
+          className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#ef4444] p-0.5 hover:scale-110 active:scale-95 transition-all shadow-[0_0_16px_rgba(239,68,68,0.45)] cursor-pointer group relative bg-white/5"
+          title="Início do Alpha Watch"
         >
           {userAvatar ? (
             <img src={userAvatar} alt="" className="w-full h-full object-cover rounded-full" />
           ) : (
             <div className="w-full h-full flex items-center justify-center rounded-full bg-[#ef4444]/20 text-[#ef4444] font-black text-xs">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="3" />
-                <line x1="12" y1="2" x2="12" y2="5" />
-                <line x1="12" y1="19" x2="12" y2="22" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
               </svg>
             </div>
           )}
-          {/* VisionOS Floating Tooltip */}
-          <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
-            <span>Alpha Watch Cinema</span>
-          </span>
         </button>
 
         <div className="w-6 h-px bg-white/10 my-1" />
 
-        {/* Cinema Navigation Action Icons */}
+        {/* Watch Navigation Icons */}
         <div className="flex flex-col items-center gap-3.5">
-          {/* Icon 1: Film / Clapperboard (Cinema Feed) */}
+          {/* Feed / Todos */}
           <button
             onClick={() => {
               setActiveTab('all');
@@ -878,27 +869,21 @@ export function LazerWatchView({
               scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
-              activeTab === 'all'
+              activeTab === 'all' && activeCategory === 'Todos'
                 ? 'text-[#ef4444] bg-white/15 shadow-[0_0_14px_rgba(239,68,68,0.4)] scale-110 border border-[#ef4444]/50'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
+            title="Início & Filmes"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
               <line x1="7" y1="2" x2="7" y2="22" />
               <line x1="17" y1="2" x2="17" y2="22" />
               <line x1="2" y1="12" x2="22" y2="12" />
-              <line x1="2" y1="7" x2="7" y2="7" />
-              <line x1="2" y1="17" x2="7" y2="17" />
-              <line x1="17" y1="17" x2="22" y2="17" />
-              <line x1="17" y1="7" x2="22" y2="7" />
             </svg>
-            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-              <span>Feed Cinema & Destaques</span>
-            </span>
           </button>
 
-          {/* Icon 2: Zap / Lightning (Alpha Shorts) */}
+          {/* Shorts */}
           <button
             onClick={() => {
               setActiveTab('shorts');
@@ -910,16 +895,14 @@ export function LazerWatchView({
                 ? 'text-[#ef4444] bg-white/15 shadow-[0_0_14px_rgba(239,68,68,0.4)] scale-110 border border-[#ef4444]/50'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
+            title="Alpha Shorts"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
-            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-              <span>Alpha Shorts (Verticais)</span>
-            </span>
           </button>
 
-          {/* Icon 3: Flame (Tendências / Em Alta) */}
+          {/* Em Alta / Tendências */}
           <button
             onClick={() => {
               setActiveTab('trending');
@@ -930,16 +913,14 @@ export function LazerWatchView({
                 ? 'text-[#ef4444] bg-white/15 shadow-[0_0_14px_rgba(239,68,68,0.4)] scale-110 border border-[#ef4444]/50'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
+            title="Em Alta & Tendências"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
             </svg>
-            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-              <span>Em Alta & Tendências</span>
-            </span>
           </button>
 
-          {/* Icon 4: Bookmark (Minha Lista / Salvos) */}
+          {/* Minha Lista / Salvos */}
           <button
             onClick={() => setActiveTab('saved')}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
@@ -947,92 +928,50 @@ export function LazerWatchView({
                 ? 'text-[#ef4444] bg-white/15 shadow-[0_0_14px_rgba(239,68,68,0.4)] scale-110 border border-[#ef4444]/50'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
+            title="Minha Lista"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
             </svg>
-            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-              <span>Minha Lista ({savedVideoIds.size})</span>
-            </span>
           </button>
 
-          {/* Icon 5: Studio / Upload (+ Publicar Obra) */}
+          {/* Publicar Vídeo */}
           {accessToken && (
             <button
               onClick={() => setShowUpload(true)}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-gradient-to-tr from-[#ef4444] to-[#8b5cf6] hover:scale-110 active:scale-95 shadow-[0_0_16px_rgba(239,68,68,0.4)] transition-all cursor-pointer group relative"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-[#ef4444] hover:bg-[#dc2626] hover:scale-110 active:scale-95 shadow-[0_0_16px_rgba(239,68,68,0.4)] transition-all cursor-pointer group relative"
+              title="Publicar Vídeo"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
-                <span>Alpha Studio (Publicar)</span>
-              </span>
             </button>
           )}
 
-          {/* Icon 6: Switch to Alpha Music */}
+          {/* Shortcut to Alpha Music */}
           <button
             onClick={() => onSelectView?.('music')}
             className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-[#1ed760] hover:bg-white/5 transition-all cursor-pointer group relative"
+            title="Ouvir Alpha Music"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 18V5l12-2v13" />
               <circle cx="6" cy="18" r="3" />
               <circle cx="18" cy="16" r="3" />
             </svg>
-            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-[#1ed760] text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#1ed760]" />
-              <span>Ouvir Alpha Music</span>
-            </span>
           </button>
 
-          {/* Icon 7: Switch to Explore */}
-          <button
-            onClick={() => onSelectView?.('explore')}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-[#38bdf8] hover:bg-white/5 transition-all cursor-pointer group relative"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-            </svg>
-            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-[#38bdf8] text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
-              <span>Explorar & Estudos</span>
-            </span>
-          </button>
-
-          {/* Icon 8: Back to Lazer Feed */}
+          {/* Sair para o Feed */}
           <button
             onClick={() => onSelectView?.('feed') || onClose?.()}
             className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/5 transition-all cursor-pointer group relative"
+            title="Voltar ao Feed do Lazer"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-              <span>Voltar ao Feed do Lazer</span>
-            </span>
-          </button>
-
-          {/* Icon 9: Spotlight Search */}
-          <button
-            onClick={() => {
-              scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-              setTimeout(() => searchInputRef.current?.focus(), 200);
-            }}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-[#ef4444] hover:bg-white/5 transition-all cursor-pointer group relative"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-            <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-              <span>Pesquisar Vídeos</span>
-            </span>
           </button>
         </div>
 
@@ -1046,7 +985,11 @@ export function LazerWatchView({
           2. MAIN VISIONOS LIQUID GLASS WINDOW (Painel Principal do Cinema)
       ══════════════════════════════════════════════════════════════════════ */}
       <div
-        className={`flex-1 h-full min-h-0 rounded-none md:rounded-[3rem] border-0 md:border ${shellBg} flex flex-col overflow-hidden relative shadow-2xl transition-all duration-300`}
+        className={`flex-1 h-full min-h-0 rounded-none md:rounded-[3rem] border-0 md:border md:border-white/15 ${shellBg} flex flex-col overflow-hidden relative shadow-2xl transition-all duration-300`}
+        style={{
+          backdropFilter: 'blur(36px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(36px) saturate(140%)',
+        }}
       >
         {/* Crista de luz especular superior */}
         <div className="hidden md:block absolute top-0 left-[6%] right-[6%] h-[1.5px] rounded-full pointer-events-none bg-gradient-to-r from-transparent via-white/50 to-transparent blur-[0.3px] z-30" />
@@ -1069,107 +1012,94 @@ export function LazerWatchView({
         ) : (
           /* ── CINEMA BROWSE FEED ── */
           <div className="w-full h-full flex flex-col min-h-0 overflow-hidden">
-            {/* ── TOP CINEMA HEADER ── */}
-            <header className="px-5 sm:px-8 py-4 sm:py-5 flex items-center justify-between gap-4 border-b border-white/[0.08] shrink-0 z-20">
-              {/* Left: Brand + Search Pill */}
-              <div className="flex items-center gap-3 w-full max-w-md">
-                <div className="relative flex items-center w-full">
-                  <svg className="absolute left-4 w-4 h-4 text-white/40 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
+            {/* ── TOP YOUTUBE-STYLE HEADER ── */}
+            <header className="px-5 sm:px-8 py-3.5 flex items-center justify-between gap-4 border-b border-white/[0.08] shrink-0 z-20 bg-white/[0.03] backdrop-blur-2xl">
+              {/* Left: YouTube Brand */}
+              <div 
+                onClick={() => { setActiveTab('all'); setActiveCategory('Todos'); }}
+                className="flex items-center gap-2.5 shrink-0 cursor-pointer group"
+              >
+                <div className="w-8 h-6 rounded-lg bg-[#ef4444] flex items-center justify-center text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] group-hover:scale-105 transition-transform">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
                   </svg>
+                </div>
+                <span className="text-base font-black text-white tracking-tight flex items-center gap-1">
+                  Alpha <span className="text-[#ef4444]">Watch</span>
+                </span>
+              </div>
+
+              {/* Center: Wide YouTube Search Bar */}
+              <div className="flex-1 max-w-2xl mx-auto flex items-center justify-center px-2">
+                <div className="relative flex items-center w-full max-w-lg">
                   <input
                     ref={searchInputRef}
                     type="text"
                     value={localSearch}
                     onChange={(e) => handleSearch(e.target.value)}
-                    placeholder="Pesquisar filmes, shorts, canais ou tags..."
-                    className="w-full h-11 pl-11 pr-4 rounded-full bg-white/[0.07] hover:bg-white/[0.10] focus:bg-white/[0.12] border border-white/10 text-white text-xs font-semibold placeholder-white/40 outline-none transition-all shadow-inner focus:border-[#ef4444]/60"
+                    placeholder="Pesquisar no Alpha Watch..."
+                    className="w-full h-10 pl-4 pr-20 rounded-full bg-white/[0.07] hover:bg-white/[0.10] focus:bg-white/[0.12] border border-white/10 text-white text-xs font-semibold placeholder-white/40 outline-none transition-all shadow-inner focus:border-[#ef4444]"
                   />
                   {localSearch && (
                     <button
                       onClick={() => handleSearch('')}
-                      className="absolute right-3 w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center text-[10px] hover:bg-white/40 transition-colors"
+                      className="absolute right-12 w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center text-[10px] hover:bg-white/40 transition-colors"
                     >
                       ✕
                     </button>
                   )}
+                  <button
+                    onClick={() => searchInputRef.current?.focus()}
+                    className="absolute right-0 h-10 w-11 rounded-r-full bg-white/[0.05] hover:bg-white/[0.12] border-l border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer"
+                    title="Pesquisar"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.35-4.35" />
+                    </svg>
+                  </button>
                 </div>
               </div>
 
-              {/* Center: Interactive Category Pills */}
-              <nav className="hidden lg:flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                {CATEGORIES.map((cat) => {
-                  const isActive = activeCategory === cat;
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        setActiveCategory(cat);
-                        if (cat.includes('Shorts')) setActiveTab('shorts');
-                        else if (cat.includes('Tendências')) setActiveTab('trending');
-                        else setActiveTab('all');
-                      }}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                        isActive
-                          ? 'bg-[#ef4444] text-white shadow-[0_4px_16px_rgba(239,68,68,0.4)] scale-[1.02]'
-                          : 'bg-white/[0.05] hover:bg-white/[0.12] text-white/60 hover:text-white border border-white/[0.06]'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  );
-                })}
-              </nav>
-
               {/* Right: Studio Upload, Profile & Close */}
-              <div className="flex items-center gap-3 shrink-0">
-                {/* Desktop Upload Button */}
+              <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                {/* Desktop Upload Button (YouTube "+ Criar") */}
                 {accessToken && (
                   <button
                     onClick={() => setShowUpload(true)}
-                    className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#ef4444] to-[#8b5cf6] text-white font-extrabold text-xs hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(239,68,68,0.35)] transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/10 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
+                    title="Criar / Publicar Vídeo"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polygon points="23 7 16 12 23 17 23 7" />
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                     </svg>
-                    <span>Publicar</span>
+                    <span className="hidden sm:inline">Criar</span>
                   </button>
                 )}
 
-                {/* Profile Pill */}
+                {/* Profile Avatar */}
                 <div
                   onClick={() => onSelectView?.('profile')}
-                  className="h-10 pl-1.5 pr-3.5 rounded-full bg-white/[0.07] hover:bg-white/[0.14] border border-white/10 flex items-center gap-2.5 cursor-pointer transition-all group"
+                  className="w-9 h-9 rounded-full overflow-hidden bg-white/10 border border-white/20 hover:border-[#ef4444] cursor-pointer transition-all hover:scale-105"
                   title="Meu Perfil"
                 >
-                  <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 border border-white/20">
-                    {userAvatar ? (
-                      <img src={userAvatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white/70">
-                        {(userName || 'A')[0]}
-                      </div>
-                    )}
-                  </div>
-                  <div className="hidden sm:flex flex-col text-left">
-                    <span className="text-[11px] font-bold text-white leading-tight truncate max-w-[80px]">
-                      {userName}
-                    </span>
-                    <span className="text-[9px] font-semibold text-white/40 leading-none">
-                      Cinema
-                    </span>
-                  </div>
+                  {userAvatar ? (
+                    <img src={userAvatar} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white/70">
+                      {(userName || 'A')[0]}
+                    </div>
+                  )}
                 </div>
 
                 {/* Close Button */}
                 <button
                   onClick={onClose}
-                  className="w-10 h-10 rounded-full bg-white/[0.07] hover:bg-red-500/20 hover:border-red-500/40 border border-white/10 flex items-center justify-center text-white/60 hover:text-red-400 transition-all cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-white/[0.07] hover:bg-red-500/20 hover:border-red-500/40 border border-white/10 flex items-center justify-center text-white/60 hover:text-red-400 transition-all cursor-pointer"
                   title="Fechar Alpha Watch"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M18 6 6 18M6 6l12 12" />
                   </svg>
                 </button>
@@ -1186,140 +1116,30 @@ export function LazerWatchView({
             >
               <div className="flex flex-col gap-10 pb-16">
               
-              {/* ── 1. HERO PREMIERE SPOTLIGHT BANNER (Apenas na aba 'all' ou sem busca ativa) ── */}
-              {activeTab === 'all' && !localSearch && (
-                <section className="w-full rounded-[32px] overflow-hidden relative p-6 sm:p-10 md:p-12 border border-white/15 flex flex-col justify-between min-h-[380px] sm:min-h-[440px] shadow-2xl group transition-all duration-700">
-                  {/* Background Backdrop Image */}
-                  <img
-                    key={activeSpotlight.id}
-                    src={activeSpotlight.thumbnailUrl}
-                    alt={activeSpotlight.title}
-                    className="w-full h-full object-cover absolute inset-0 -z-10 transition-transform duration-[2000ms] group-hover:scale-105 animate-in fade-in duration-700"
-                  />
-
-                  {/* Multilayer Dark Vignette & Dramatic Cinematic Gradients */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/60 to-black/25 -z-10" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/40 -z-10" />
-
-                  {/* Top Badges */}
-                  <div className="flex items-center justify-between relative z-10">
-                    <div className="flex items-center gap-2">
-                      <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#ef4444] to-[#dc2626] text-white text-xs font-black shadow-[0_0_16px_rgba(239,68,68,0.5)]">
-                        <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                        <span>PREMIERE EM DESTAQUE</span>
-                      </div>
-                      <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white font-mono text-[10px] font-bold">
-                        4K ULTRA HD
-                      </span>
-                      <span className="hidden sm:inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white font-mono text-[10px] font-bold">
-                        DOLBY VISION
-                      </span>
-                    </div>
-
-                    {/* Spotlight Indicators */}
-                    <div className="flex items-center gap-1.5">
-                      {DEMO_SPOTLIGHTS.map((s, idx) => (
-                        <button
-                          key={s.id}
-                          onClick={() => setSpotlightIndex(idx)}
-                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            spotlightIndex === idx ? 'w-8 bg-[#ef4444]' : 'w-2 bg-white/30 hover:bg-white/60'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Center Content / Typography */}
-                  <div className="relative z-10 flex flex-col items-start gap-2 max-w-2xl my-6">
-                    {/* Tags */}
-                    <div className="flex items-center gap-2 mb-1">
-                      {activeSpotlight.tags.map((tag) => (
-                        <span key={tag} className="px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/10 text-white/80 text-[11px] font-bold">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight drop-shadow-lg">
-                      {activeSpotlight.title}
-                    </h1>
-
-                    <p className="text-white/70 text-xs sm:text-sm leading-relaxed max-w-xl font-medium drop-shadow-md">
-                      {activeSpotlight.description}
-                    </p>
-
-                    {/* Author Pill */}
-                    <div className="flex items-center gap-2 mt-2 py-1 px-3 rounded-full bg-white/10 backdrop-blur-md border border-white/15">
-                      <div className="w-5 h-5 rounded-full overflow-hidden bg-white/20">
-                        {activeSpotlight.author?.profile?.avatarUrl && (
-                          <img src={activeSpotlight.author.profile.avatarUrl} alt="" className="w-full h-full object-cover" />
-                        )}
-                      </div>
-                      <span className="text-xs font-bold text-white">
-                        {activeSpotlight.author?.profile?.displayName}
-                      </span>
-                      <span className="text-[10px] text-white/50 font-medium">
-                        · {fmtViews(activeSpotlight.views)} visualizações
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Bottom Row: Actions & Carousel Controls */}
-                  <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-3">
-                      {/* Play Button */}
-                      <button
-                        onClick={() => setCurrentVideo(activeSpotlight)}
-                        className="px-7 py-3 rounded-full bg-white text-neutral-950 font-black text-xs flex items-center gap-2 hover:scale-105 active:scale-95 shadow-[0_10px_30px_rgba(255,255,255,0.3)] transition-all cursor-pointer border-none"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                        <span>Assistir Agora</span>
-                      </button>
-
-                      {/* Add to My List */}
-                      <button
-                        onClick={(e) => toggleSaveVideo(activeSpotlight.id, e)}
-                        className={`px-5 py-3 rounded-full backdrop-blur-md border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                          savedVideoIds.has(activeSpotlight.id)
-                            ? 'bg-[#ef4444] border-[#ef4444] text-white shadow-[0_0_15px_#ef4444]'
-                            : 'bg-black/40 hover:bg-white/20 border-white/20 text-white'
-                        }`}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill={savedVideoIds.has(activeSpotlight.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2">
-                          <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-                        </svg>
-                        <span>{savedVideoIds.has(activeSpotlight.id) ? 'Na Minha Lista' : '+ Minha Lista'}</span>
-                      </button>
-                    </div>
-
-                    {/* Navigation Arrows */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={prevSpotlight}
-                        className="w-10 h-10 rounded-full bg-black/40 hover:bg-white/25 active:scale-95 backdrop-blur-md border border-white/15 flex items-center justify-center text-white transition-all cursor-pointer"
-                        title="Anterior"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="m15 18-6-6 6-6" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={nextSpotlight}
-                        className="w-10 h-10 rounded-full bg-black/40 hover:bg-white/25 active:scale-95 backdrop-blur-md border border-white/15 flex items-center justify-center text-white transition-all cursor-pointer"
-                        title="Próximo"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="m9 18 6-6-6-6" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </section>
-              )}
+              {/* ── YOUTUBE CATEGORY CHIP BAR ── */}
+              <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1 shrink-0 -mt-2">
+                {CATEGORIES.map((cat) => {
+                  const isActive = activeCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setActiveCategory(cat);
+                        if (cat.includes('Shorts')) setActiveTab('shorts');
+                        else if (cat.includes('Tendências')) setActiveTab('trending');
+                        else setActiveTab('all');
+                      }}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        isActive
+                          ? 'bg-white text-black shadow-md scale-[1.02]'
+                          : 'bg-white/[0.08] hover:bg-white/[0.15] text-white/80 hover:text-white border border-white/[0.06]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
 
               {/* ── 2. ALPHA SHORTS / REELS SHELF ── */}
               {shortsList.length > 0 && activeTab !== 'saved' && (
@@ -1358,11 +1178,11 @@ export function LazerWatchView({
                           alt={short.title}
                           className="w-full h-full object-cover absolute inset-0 -z-10 group-hover:scale-110 transition-transform duration-700"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/20 -z-10" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent -z-10" />
 
                         {/* Top: 9:16 Badge & Play Hover */}
                         <div className="flex items-center justify-between relative z-10">
-                          <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[9px] font-black text-white uppercase tracking-wider border border-white/15">
+                          <span className="px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-[9px] font-black text-white uppercase tracking-wider border border-white/20">
                             ⚡ {fmtDuration(short.duration)}
                           </span>
                         </div>
@@ -1459,18 +1279,18 @@ export function LazerWatchView({
                         <div
                           key={video.id}
                           onClick={() => setCurrentVideo(video)}
-                          className="group relative flex flex-col rounded-[26px] overflow-hidden bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_40px_rgba(239,68,68,0.2)] cursor-pointer"
+                          className="group relative flex flex-col rounded-2xl overflow-hidden bg-transparent hover:bg-white/[0.04] p-1.5 transition-all duration-200 cursor-pointer"
                         >
                           {/* Thumbnail Aspect 16:9 */}
-                          <div className="relative aspect-video overflow-hidden bg-black/40">
+                          <div className="relative aspect-video rounded-xl overflow-hidden bg-white/5 border border-white/10">
                             {video.thumbnailUrl ? (
                               <img
                                 src={resolveUrl(video.thumbnailUrl)}
                                 alt={video.title}
-                                className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               />
                             ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-[#ef4444]/20 via-[#8b5cf6]/20 to-black/60 flex items-center justify-center">
+                              <div className="w-full h-full bg-gradient-to-br from-[#ef4444]/20 via-[#8b5cf6]/20 to-transparent flex items-center justify-center">
                                 <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" className="text-white/20">
                                   <path d="M8 5v14l11-7z" />
                                 </svg>
@@ -1478,12 +1298,12 @@ export function LazerWatchView({
                             )}
 
                             {/* Duration Badge */}
-                            <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-white text-[10px] font-mono font-bold border border-white/10">
+                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-white/15 backdrop-blur-md text-white text-[10px] font-mono font-bold border border-white/20">
                               {fmtDuration(video.duration)}
                             </div>
 
                             {/* Hover Play Icon Overlay */}
-                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="absolute inset-0 bg-white/[0.06] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <div className="w-12 h-12 rounded-full bg-white/25 backdrop-blur-md border border-white/40 flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                                   <path d="M8 5v14l11-7z" />
@@ -1498,7 +1318,7 @@ export function LazerWatchView({
                                 className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all ${
                                   isSaved
                                     ? 'bg-[#ef4444] text-white shadow-[0_0_10px_#ef4444]'
-                                    : 'bg-black/60 hover:bg-white/30 text-white/80 hover:text-white border border-white/15'
+                                    : 'bg-white/10 hover:bg-white/25 text-white/90 hover:text-white border border-white/20'
                                 }`}
                                 title={isSaved ? 'Remover da lista' : 'Salvar na Minha Lista'}
                               >
@@ -1513,7 +1333,7 @@ export function LazerWatchView({
                                     e.stopPropagation();
                                     setEditingVideo(video);
                                   }}
-                                  className="w-8 h-8 rounded-full bg-black/60 hover:bg-white/30 text-white/80 hover:text-white border border-white/15 flex items-center justify-center backdrop-blur-md transition-all"
+                                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 text-white/90 hover:text-white border border-white/20 flex items-center justify-center backdrop-blur-md transition-all"
                                   title="Editar"
                                 >
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

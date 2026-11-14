@@ -282,8 +282,8 @@ export default function LazerPage() {
       <div className="fixed inset-0 pointer-events-none z-0">
         <ThemeBg color={c} mode={themeMode} />
       </div>
-      {/* Sidebar (Estrutura) - Ocultada nos modos com sidebar própria (Music, Explore e Watch) */}
-      {!['music', 'explore', 'watch'].includes(activeView) && (
+      {/* Sidebar (Estrutura) - Ocultada nos modos com sidebar própria (Music, Explore, Watch e Art) */}
+      {!['music', 'explore', 'watch', 'art'].includes(activeView) && (
         <LazerSidebar
           activeView={activeView}
           setActiveView={handleSelectView}
@@ -300,7 +300,7 @@ export default function LazerPage() {
       <div
         ref={contentRef}
         className={`flex-1 animate-in fade-in duration-300 relative h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 ${
-          ['music', 'explore', 'watch'].includes(activeView) ? 'md:pl-4 lg:pl-5' : 'md:pl-0 lg:pl-0'
+          ['music', 'explore', 'watch', 'art'].includes(activeView) ? 'md:pl-4 lg:pl-5' : 'md:pl-0 lg:pl-0'
         } lg:py-5 lg:pr-5 pb-20 md:pb-4 lg:pb-5 flex flex-col`}
         style={{ overscrollBehavior: 'none' }}
       >
@@ -377,9 +377,14 @@ export default function LazerPage() {
           />
         )}
         {activeView === 'art' && (
-          <LazerShell variant="full" themeMode={themeMode} maxWidth="1050px">
-            <LazerArtView />
-          </LazerShell>
+          <LazerArtView
+            onClose={() => setActiveView('feed')}
+            onSelectView={handleSelectView}
+            themeColor={c}
+            themeMode={themeMode}
+            userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
+            userName={authUser?.profile?.displayName || authUser?.profile?.username || 'Artista'}
+          />
         )}
 
         {/* Modal do perfil de outro utilizador (respeita a sidebar e a borda principal) */}
