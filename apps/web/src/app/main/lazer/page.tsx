@@ -24,6 +24,7 @@ import { AlphaMusicPlayer } from './components/music/AlphaMusicPlayer';
 import { LazerWatchView } from './components/watch/LazerWatchView';
 import { AlphaWatchPiP } from './components/watch/AlphaWatchPiP';
 import { LazerArtView } from './components/art/LazerArtView';
+import { LazerMessagesView } from './components/messages/LazerMessagesView';
 import { resolveUrl } from '@/lib/api';
 
 type ActiveView = 'feed' | 'explore' | 'profile' | 'notifications' | 'friends' | 'community' | 'messages' | 'music' | 'watch' | 'art';
@@ -282,8 +283,8 @@ export default function LazerPage() {
       <div className="fixed inset-0 pointer-events-none z-0">
         <ThemeBg color={c} mode={themeMode} />
       </div>
-      {/* Sidebar (Estrutura) - Ocultada nos modos com sidebar própria (Music, Explore, Watch e Art) */}
-      {!['music', 'explore', 'watch', 'art'].includes(activeView) && (
+      {/* Sidebar (Estrutura) - Ocultada nos modos com sidebar própria (Music, Explore, Watch, Art e Messages) */}
+      {!['music', 'explore', 'watch', 'art', 'messages'].includes(activeView) && (
         <LazerSidebar
           activeView={activeView}
           setActiveView={handleSelectView}
@@ -300,7 +301,7 @@ export default function LazerPage() {
       <div
         ref={contentRef}
         className={`flex-1 animate-in fade-in duration-300 relative h-[100dvh] overflow-hidden p-0 sm:p-1 md:py-4 md:pr-4 ${
-          ['music', 'explore', 'watch', 'art'].includes(activeView) ? 'md:pl-4 lg:pl-5' : 'md:pl-0 lg:pl-0'
+          ['music', 'explore', 'watch', 'art', 'messages'].includes(activeView) ? 'md:pl-4 lg:pl-5' : 'md:pl-0 lg:pl-0'
         } lg:py-5 lg:pr-5 pb-20 md:pb-4 lg:pb-5 flex flex-col`}
         style={{ overscrollBehavior: 'none' }}
       >
@@ -352,9 +353,14 @@ export default function LazerPage() {
             onProfileClick={navigateToProfile} />
         )}
         {activeView === 'messages' && (
-          <MessagesModal onClose={() => setActiveView('feed')}
-            themeColor={c} themeMode={themeMode}
-            onMobileViewChange={setMessagesMobileView} />
+          <LazerMessagesView
+            onClose={() => setActiveView('feed')}
+            onSelectView={handleSelectView}
+            themeColor={c}
+            themeMode={themeMode}
+            userAvatar={authUser?.profile?.avatarUrl ? resolveUrl(authUser.profile.avatarUrl) : undefined}
+            userName={authUser?.profile?.displayName || authUser?.profile?.username}
+          />
         )}
         {activeView === 'music' && (
           <LazerMusicView
