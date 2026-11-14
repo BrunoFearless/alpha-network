@@ -252,28 +252,27 @@ function CommunityPreviewCard({ community, onClick, c, isLight, borderCol, cardB
   const banner = community.bannerUrl;
 
   return (
-    <div onClick={onClick} className={`group cursor-pointer rounded-[24px] overflow-hidden border-[1.5px] transition-all hover:scale-[1.02] ${cardBg}`}
-      style={{ borderColor: borderCol }}>
-      <div className="h-20 relative bg-cover bg-center" style={{ backgroundImage: banner ? `url(${banner})` : `linear-gradient(135deg, ${c}dd, ${c}44)` }}>
+    <div onClick={onClick} className="group cursor-pointer rounded-[24px] overflow-hidden border border-white/10 hover:border-white/25 transition-all hover:scale-[1.02] bg-white/[0.03] hover:bg-white/[0.06] backdrop-blur-xl shadow-lg">
+      <div className="h-20 relative bg-cover bg-center overflow-hidden" style={{ backgroundImage: banner ? `url(${banner})` : `linear-gradient(135deg, ${c}dd, ${c}44)` }}>
         {banner?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={banner} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />}
-        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent group-hover:opacity-75 transition-opacity" />
       </div>
       <div className="px-4 pb-4 pt-10 relative">
         <div className="absolute -top-7 left-4">
-          <div className="w-14 h-14 rounded-[18px] border-[3px] overflow-hidden bg-cover bg-center"
-            style={{ borderColor: isLight ? '#fff' : '#09090b', backgroundColor: icon ? 'transparent' : c, backgroundImage: icon ? `url(${icon})` : 'none' }}>
+          <div className="w-14 h-14 rounded-2xl border-2 border-white/30 overflow-hidden bg-cover bg-center shadow-md bg-white/10 backdrop-blur-md"
+            style={{ backgroundColor: icon ? 'transparent' : c, backgroundImage: icon ? `url(${icon})` : 'none' }}>
             {!icon && <span className="flex items-center justify-center h-full text-2xl">🌐</span>}
             {icon?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={icon} autoPlay muted loop playsInline className="w-full h-full object-cover" />}
           </div>
         </div>
         <div className="flex flex-col">
-          <h4 className={`font-black text-sm uppercase tracking-tight truncate ${textPrimary}`}>{community.name}</h4>
+          <h4 className="font-black text-sm uppercase tracking-tight truncate text-white group-hover:text-emerald-300 transition-colors">{community.name}</h4>
           <div className="flex items-center gap-3 mt-1.5 ">
             <div className="flex items-center gap-1 font-bold text-[10px] uppercase tracking-wider" style={{ color: c }}>
               <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: c }} />
               {community.onlineCount ?? 0} online
             </div>
-            <div className={`text-[10px] font-bold uppercase tracking-wider ${textSecondary}`}>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">
               {community.membersCount?.toLocaleString() ?? 0} membros
             </div>
           </div>
@@ -655,19 +654,19 @@ function PostCard({ post, isOwner, openModal, onProfileClick, authUser, myProfil
   const tropesList = rawPost?.tropes || post.tropes || [];
 
   return (
-    <div className="glass-card rounded-3xl transition-all duration-500 overflow-hidden relative" style={isPinned ? { borderColor: c } : undefined}>
-      <div className="glass-shine-effect" />
+    <div className="rounded-[2.4rem] bg-white/[0.03] hover:bg-white/[0.06] border border-white/15 hover:border-white/25 backdrop-blur-2xl transition-all duration-300 overflow-hidden relative shadow-xl hover:shadow-2xl" style={isPinned ? { borderColor: `${c}80` } : undefined}>
+      <div className="glass-shine-effect pointer-events-none" />
       <MangaBurstCanvas burstEvent={burstEvent} />
       {isPinned && (
-        <div className="flex items-center gap-1.5 px-5 pt-3 pb-0 text-[11px] font-bold tracking-wide" style={{ color: c }}>
-          <IconPin /> Publicação fixada
+        <div className="flex items-center gap-2 px-6 pt-4 pb-0 text-xs font-black tracking-wide" style={{ color: c }}>
+          <IconPin /> Publicação fixada no topo
         </div>
       )}
-      <div className="p-5">
+      <div className="p-5 sm:p-6">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-3">
-          <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => onProfileClick?.(post.authorId)}>
-            <Avatar src={authorInfo.avatar} name={authorInfo.name} className="w-[42px] h-[42px] rounded-full object-cover shrink-0" />
+        <div className="flex items-center gap-3.5 mb-3.5">
+          <div className="cursor-pointer hover:scale-105 transition-transform" onClick={() => onProfileClick?.(post.authorId)}>
+            <Avatar src={authorInfo.avatar} name={authorInfo.name} className="w-12 h-12 rounded-2xl border border-white/20 object-cover shrink-0 shadow-md" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 cursor-pointer flex-wrap" onClick={() => onProfileClick?.(post.authorId)}>
@@ -1097,27 +1096,30 @@ function TrendingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
   const { trendingTropes } = useLazerStore();
 
   return (
-    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
-      <div className="flex items-center gap-2 mb-3">
-        <IconFlame />
-        <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Trending Tropes</h3>
-        <button onClick={onVerTodas} className="ml-auto text-[10px] font-black uppercase tracking-widest bg-transparent border-none cursor-pointer" style={{ color: c }}>Ver todas</button>
+    <div className="rounded-[2.2rem] p-5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 backdrop-blur-2xl transition-all shadow-xl">
+      <div className="flex items-center gap-2 mb-3.5">
+        <div className="w-7 h-7 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+          <IconFlame />
+        </div>
+        <h3 className="text-xs font-black uppercase tracking-wider text-white">Trending Tropes</h3>
+        <button onClick={onVerTodas} className="ml-auto text-[10px] font-black uppercase tracking-widest bg-transparent border-none cursor-pointer hover:underline" style={{ color: c }}>Ver todas</button>
       </div>
       <div className="flex flex-col gap-2">
         {trendingTropes.length === 0 ? (
-          <p className={`text-[10px] text-center py-4 italic ${textSecondary} opacity-50`}>Ainda não há tropos em alta.</p>
+          <p className="text-[11px] text-center py-4 italic text-white/40">Ainda não há tropos em alta.</p>
         ) : (
           trendingTropes.slice(0, 5).map((t, idx) => (
             <button key={t.id} onClick={() => onTagClick(t.name)}
-              className="flex items-center gap-2.5 w-full bg-transparent border-none cursor-pointer text-left rounded-xl px-2 py-1.5 transition-all hover:scale-[1.02] group"
-              style={{ background: 'transparent' }}
-              onMouseEnter={e => (e.currentTarget.style.background = `${c}15`)}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-              <span className="font-black text-[13px] w-5 text-center opacity-50" style={{ color: idx === 0 ? '#fbbf24' : (isLight ? '#aaa' : '#555') }}>{idx + 1}</span>
-              <span className="flex-1 flex gap-1 items-center font-bold text-[12px]" style={{ color: c }}>
-                <span>{t.iconEmoji}</span> #{t.name}
+              className="flex items-center gap-2.5 w-full bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 hover:border-white/15 rounded-xl px-2.5 py-2 transition-all cursor-pointer group text-left"
+            >
+              <span className="font-black text-xs w-5 text-center" style={{ color: idx === 0 ? '#fbbf24' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#b45309' : 'rgba(255,255,255,0.4)' }}>
+                {idx + 1}
               </span>
-              <span className={`text-[10px] font-bold ${textSecondary}`}>{t.metrics?.sparkles + t.metrics?.talking || 0} ✨</span>
+              <span className="flex-1 flex gap-1.5 items-center font-bold text-xs" style={{ color: c }}>
+                <span>{t.iconEmoji}</span>
+                <span className="truncate group-hover:underline">#{t.name}</span>
+              </span>
+              <span className="text-[10px] font-bold text-white/50">{t.metrics?.sparkles + t.metrics?.talking || 0} ✨</span>
             </button>
           ))
         )}
@@ -1149,45 +1151,47 @@ function WatchingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
     setIsSubmitting(true);
     await onSubmitCheckIn(item.title, item.ep, item.emoji, item.genre);
     setIsSubmitting(false);
-    setSelected(null); // Fecha a selecção após sucesso
+    setSelected(null);
   };
 
   return (
-    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
-      <div className="flex items-center gap-2 mb-3">
-        <IconTv />
+    <div className="rounded-[2.2rem] p-5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 backdrop-blur-2xl transition-all shadow-xl">
+      <div className="flex items-center gap-2 mb-3.5">
+        <div className="w-7 h-7 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20">
+          <IconTv />
+        </div>
         <div className="flex-1">
-          <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary} leading-none`}>A ver agora</h3>
-          <p className={`text-[9px] ${textSecondary} mt-0.5`}>Simulcast Sync</p>
+          <h3 className="text-xs font-black uppercase tracking-wider text-white leading-none">A ver agora</h3>
+          <p className="text-[9px] text-white/50 mt-0.5">Simulcast Sync</p>
         </div>
         <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse" />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         {watchingNow?.length === 0 ? (
-          <p className={`text-[10px] text-center py-4 italic ${textSecondary} opacity-50`}>A carregar grelha...</p>
+          <p className="text-[11px] text-center py-4 italic text-white/40">A carregar grelha...</p>
         ) : (
           watchingNow?.map((w: any, i: number) => (
-            <div key={w.id} className="w-full flex flex-col gap-1">
+            <div key={w.id} className="w-full flex flex-col gap-1.5">
               <button onClick={() => setSelected(selected === i ? null : i)}
-                className="flex items-center gap-3 w-full rounded-xl px-2.5 py-2 transition-all border-[1.5px] cursor-pointer text-left"
+                className="flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 transition-all border border-white/5 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.06] cursor-pointer text-left"
                 style={{
-                  background: selected === i ? `${c}10` : 'transparent',
-                  borderColor: selected === i ? `${c}40` : 'transparent',
+                  background: selected === i ? `${c}15` : undefined,
+                  borderColor: selected === i ? `${c}50` : undefined,
                 }}>
-                <span className="text-xl">{w.emoji}</span>
+                <span className="text-2xl">{w.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[12px] font-bold truncate ${textPrimary}`}>{w.title}</p>
+                  <p className="text-xs font-black truncate text-white">{w.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[10px] ${textSecondary}`}>{w.ep}</span>
+                    <span className="text-[10px] text-white/50">{w.ep}</span>
                     <div className="flex -space-x-1.5">
                       {w.recentAvatars?.map((av: string, i: number) => (
-                        <div key={i} className="w-4 h-4 rounded-full overflow-hidden border border-white dark:border-[#1e1e1e]">
+                        <div key={i} className="w-4 h-4 rounded-full overflow-hidden border border-white/20 bg-black/40">
                           <img src={av} alt="" className="w-full h-full object-cover" />
                         </div>
                       ))}
                     </div>
                     {w.totalCheckIns > 3 && (
-                      <span className={`text-[9px] font-bold ${textSecondary} ml-1`}>+{w.totalCheckIns - 3}</span>
+                      <span className="text-[9px] font-bold text-white/50 ml-1">+{w.totalCheckIns - 3}</span>
                     )}
                   </div>
                 </div>
@@ -1197,9 +1201,9 @@ function WatchingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
 
               {/* Expand Check-in Panel */}
               {selected === i && (
-                <div className="mx-2 mb-1 p-2 rounded-xl border border-dashed flex flex-col items-center gap-2 animate-in slide-in-from-top-2" style={{ borderColor: `${c}30`, background: `${c}08` }}>
-                  <p className={`text-[10px] font-bold text-center ${textPrimary}`}>Fazer check-in neste episódio?</p>
-                  <button onClick={() => handleCheckIn(w, i)} disabled={isSubmitting} className="w-full py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-white border-none cursor-pointer hover:scale-105 transition-transform" style={{ background: c }}>
+                <div className="mx-2 mb-1 p-3 rounded-2xl border flex flex-col items-center gap-2 animate-in slide-in-from-top-2" style={{ borderColor: `${c}30`, background: `${c}10` }}>
+                  <p className="text-[11px] font-bold text-center text-white">Fazer check-in neste episódio?</p>
+                  <button onClick={() => handleCheckIn(w, i)} disabled={isSubmitting} className="w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-black border-none cursor-pointer hover:scale-105 transition-transform" style={{ background: '#fff' }}>
                     {isSubmitting ? '...' : 'Sim, Estou a ver ✓'}
                   </button>
                 </div>
@@ -1210,54 +1214,53 @@ function WatchingWidget({ c, isLight, textPrimary, textSecondary, borderCol, car
       </div>
 
       {/* Custom Add Button / Form */}
-      <div className="mt-2">
+      <div className="mt-2.5">
         {!isCustomOpen ? (
-          <button onClick={() => setIsCustomOpen(true)} className={`w-full py-2 rounded-xl border border-dashed text-[10px] font-bold cursor-pointer transition-all ${textSecondary} hover:${textPrimary}`} style={{ borderColor: borderCol, background: 'transparent' }}>
+          <button onClick={() => setIsCustomOpen(true)} className="w-full py-2.5 rounded-2xl border border-dashed border-white/20 text-[10px] font-bold cursor-pointer transition-all text-white/60 hover:text-white hover:border-white/40 bg-transparent">
             + Adicionar outro...
           </button>
         ) : (
-          <div className="p-2.5 rounded-xl border flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200" style={{ borderColor: borderCol, background: `${c}08` }}>
+          <div className="p-3 rounded-2xl border border-white/20 flex flex-col gap-2.5 bg-white/[0.04] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex gap-2">
-              <input value={customEmoji} onChange={e => setCustomEmoji(e.target.value)} maxLength={2} className="w-8 text-center bg-transparent border-b outline-none text-lg" style={{ borderColor: `${c}40`, color: isLight ? '#000' : '#fff' }} placeholder="⚽" />
-              <input value={customTitle} onChange={e => setCustomTitle(e.target.value)} autoFocus className="flex-1 bg-transparent border-b outline-none text-[11px] font-bold" style={{ borderColor: `${c}40`, color: isLight ? '#000' : '#fff' }} placeholder="Nome da obra (Ex: One Piece)" />
+              <input value={customEmoji} onChange={e => setCustomEmoji(e.target.value)} maxLength={2} className="w-9 text-center bg-transparent border-b border-white/20 outline-none text-xl text-white" placeholder="⚽" />
+              <input value={customTitle} onChange={e => setCustomTitle(e.target.value)} autoFocus className="flex-1 bg-transparent border-b border-white/20 outline-none text-xs font-bold text-white placeholder-white/40" placeholder="Nome da obra (Ex: One Piece)" />
             </div>
-            <input value={customEp} onChange={e => setCustomEp(e.target.value)} className="w-full bg-transparent border-b outline-none text-[10px]" style={{ borderColor: `${c}40`, color: isLight ? '#000' : '#fff' }} placeholder="Nº do Episódio (Ex: EP 1000)" />
+            <input value={customEp} onChange={e => setCustomEp(e.target.value)} className="w-full bg-transparent border-b border-white/20 outline-none text-[11px] text-white placeholder-white/40" placeholder="Nº do Episódio (Ex: EP 1000)" />
 
             <div className="flex gap-2 mt-1">
-              <button onClick={() => setIsCustomOpen(false)} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold border-none cursor-pointer ${textSecondary}`} style={{ background: isLight ? '#e5e7eb' : '#27272a' }}>Cancelar</button>
-              <button onClick={handleCustomSubmit} disabled={isSubmitting || !customTitle.trim() || !customEp.trim()} className="flex-1 py-1.5 rounded-lg text-[10px] font-bold border-none cursor-pointer text-white disabled:opacity-50" style={{ background: c }}>
+              <button onClick={() => setIsCustomOpen(false)} className="flex-1 py-1.5 rounded-xl text-[10px] font-bold border-none cursor-pointer text-white/70 bg-white/10 hover:bg-white/15">Cancelar</button>
+              <button onClick={handleCustomSubmit} disabled={isSubmitting || !customTitle.trim() || !customEp.trim()} className="flex-1 py-1.5 rounded-xl text-[10px] font-bold border-none cursor-pointer text-black disabled:opacity-50" style={{ background: '#fff' }}>
                 {isSubmitting ? '...' : 'Adicionar ✓'}
               </button>
             </div>
           </div>
         )}
       </div>
-
-      <p className={`text-center text-[9px] mt-3 ${textSecondary} opacity-50 uppercase tracking-widest`}>Assinala no teu perfil</p>
     </div>
   );
 }
 
 function HotDiscussionsWidget({ c, isLight, textPrimary, textSecondary, borderCol, cardBg, onDiscussionClick }: any) {
   return (
-    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
-      <div className="flex items-center gap-2 mb-3">
-        <IconMessageSquare />
-        <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Hot Discussions</h3>
+    <div className="rounded-[2.2rem] p-5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 backdrop-blur-2xl transition-all shadow-xl">
+      <div className="flex items-center gap-2 mb-3.5">
+        <div className="w-7 h-7 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center border border-orange-500/20">
+          <IconMessageSquare />
+        </div>
+        <h3 className="text-xs font-black uppercase tracking-wider text-white">Hot Discussions</h3>
       </div>
       <div className="flex flex-col gap-2">
         {HOT_DISCUSSIONS.map((d, i) => (
           <button key={i} onClick={() => onDiscussionClick(d.title)}
-            className="flex flex-col w-full bg-transparent border-none cursor-pointer text-left rounded-xl px-2 py-2 transition-all"
-            onMouseEnter={e => (e.currentTarget.style.background = `${c}10`)}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-            <p className={`text-[12px] font-bold ${textPrimary} mb-1`}>{d.title}</p>
+            className="flex flex-col w-full bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 hover:border-white/15 rounded-2xl p-2.5 transition-all text-left cursor-pointer group"
+          >
+            <p className="text-xs font-black text-white group-hover:text-amber-300 transition-colors mb-1.5">{d.title}</p>
             <div className="flex items-center gap-3">
-              <span className={`text-[10px] ${textSecondary}`}>{d.replies} respostas</span>
-              <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: isLight ? '#eee' : '#333' }}>
+              <span className="text-[10px] text-white/50">{d.replies} respostas</span>
+              <div className="flex-1 h-1 rounded-full overflow-hidden bg-white/10">
                 <div className="h-full rounded-full" style={{ width: `${d.heat}%`, background: `linear-gradient(90deg, ${c}, #f97316)` }} />
               </div>
-              <span className="text-[10px] font-bold" style={{ color: '#f97316' }}>🔥{d.heat}</span>
+              <span className="text-[10px] font-black text-orange-400">🔥{d.heat}</span>
             </div>
           </button>
         ))}
@@ -1277,14 +1280,16 @@ function ActiveNowWidget({ c, isLight, textPrimary, textSecondary, borderCol, ca
     .slice(0, 5);
 
   return (
-    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
-      <div className="flex items-center gap-2 mb-3">
-        <IconUsers />
-        <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Ativos agora</h3>
-        <div className="w-2 h-2 rounded-full ml-auto animate-pulse" style={{ background: '#22c55e' }} />
+    <div className="rounded-[2.2rem] p-5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 backdrop-blur-2xl transition-all shadow-xl">
+      <div className="flex items-center gap-2 mb-3.5">
+        <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+          <IconUsers />
+        </div>
+        <h3 className="text-xs font-black uppercase tracking-wider text-white">Ativos agora</h3>
+        <div className="w-2 h-2 rounded-full ml-auto animate-pulse bg-emerald-400 shadow-[0_0_8px_#34d399]" />
       </div>
       {recentlyActive.length === 0 ? (
-        <p className={`text-[11px] italic ${textSecondary} opacity-50 text-center py-2`}>Nenhum utilizador ativo ainda</p>
+        <p className="text-[11px] italic text-white/40 text-center py-2">Nenhum utilizador ativo ainda</p>
       ) : (
         <div className="flex flex-col gap-2">
           {recentlyActive.map((p: any) => {
@@ -1292,14 +1297,14 @@ function ActiveNowWidget({ c, isLight, textPrimary, textSecondary, borderCol, ca
             const name = profile?.displayName || profile?.username || 'Utilizador';
             return (
               <button key={p.authorId} onClick={() => onProfileClick?.(p.authorId)}
-                className="flex items-center gap-2.5 w-full bg-transparent border-none cursor-pointer rounded-xl px-1 py-1 transition-all hover:opacity-80">
+                className="flex items-center gap-3 w-full bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 hover:border-white/15 rounded-2xl p-2 transition-all cursor-pointer text-left group">
                 <div className="relative shrink-0">
                   <Avatar src={profile?.avatarUrl} name={name} size="xs" />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2" style={{ background: '#22c55e', borderColor: isLight ? '#fff' : '#09090b' }} />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-black bg-emerald-400" />
                 </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <DisplayName profile={profile} fallbackName={name} style={{ fontSize: 12, fontWeight: 700, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} />
-                  <p className={`text-[10px] truncate ${textSecondary}`}>publicou há pouco</p>
+                <div className="flex-1 min-w-0">
+                  <DisplayName profile={profile} fallbackName={name} className="text-xs font-black truncate text-white group-hover:text-emerald-300 transition-colors" />
+                  <p className="text-[10px] truncate text-white/50">publicou há pouco</p>
                 </div>
               </button>
             );
@@ -1314,26 +1319,26 @@ function MyCommunities({ c, isLight, textPrimary, textSecondary, borderCol, card
   const { myCommunities } = useLazerStore();
 
   return (
-    <div className={`glass-card rounded-3xl p-4 ${cardBg}`}>
-      <button className="flex items-center gap-2 mb-3 w-full bg-transparent border-none cursor-pointer hover:opacity-70 transition-opacity p-0" onClick={() => onCommunityClick?.()}>
-        <IconHash />
-        <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary} flex-1 text-left`}>Minhas Communities</h3>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+    <div className="rounded-[2.2rem] p-5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 backdrop-blur-2xl transition-all shadow-xl">
+      <button className="flex items-center gap-2 mb-3.5 w-full bg-transparent border-none cursor-pointer hover:opacity-80 transition-opacity p-0" onClick={() => onCommunityClick?.()}>
+        <div className="w-7 h-7 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center border border-sky-500/20">
+          <IconHash />
+        </div>
+        <h3 className="text-xs font-black uppercase tracking-wider text-white flex-1 text-left">Minhas Comunidades</h3>
+        <span className="text-xs text-white/40 group-hover:text-white transition-colors">↗</span>
       </button>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         {myCommunities.length === 0 ? (
-          <p className={`text-[10px] italic py-2 text-center ${textSecondary} opacity-40`}>Ainda não entraste em nenhuma community.</p>
+          <p className="text-[11px] italic py-3 text-center text-white/40">Ainda não entraste em nenhuma comunidade.</p>
         ) : (
-          myCommunities.slice(0, 6).map((com) => {
+          myCommunities.slice(0, 5).map((com) => {
             const icon = com.iconUrl;
             return (
               <button key={com.id}
                 onClick={() => onCommunityClick?.(com.id)}
-                className="flex items-center gap-2.5 w-full bg-transparent border-none cursor-pointer rounded-xl px-2 py-2 transition-all text-left group"
-                onMouseEnter={e => (e.currentTarget.style.background = `${c}15`)}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-lg shrink-0 overflow-hidden border"
-                  style={{ background: `${c}25`, borderColor: `${c}30` }}>
+                className="flex items-center gap-3 w-full bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 hover:border-white/15 rounded-2xl p-2 transition-all text-left cursor-pointer group"
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 overflow-hidden border border-white/20 bg-white/10 shadow-sm">
                   {icon ? (
                     icon.match(/\.(mp4|webm|mov)(\?|$)/i)
                       ? <video src={icon} autoPlay muted loop playsInline className="w-full h-full object-cover" />
@@ -1341,8 +1346,8 @@ function MyCommunities({ c, isLight, textPrimary, textSecondary, borderCol, card
                   ) : <span className="text-sm">🌐</span>}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[12px] font-bold truncate ${textPrimary}`}>{com.name}</p>
-                  <p className={`text-[10px] ${textSecondary}`}>{com.membersCount ?? 0} membros</p>
+                  <p className="text-xs font-black truncate text-white group-hover:text-emerald-300 transition-colors">{com.name}</p>
+                  <p className="text-[10px] text-white/50">{com.membersCount ?? 0} membros</p>
                 </div>
                 <div className="w-1.5 h-1.5 rounded-full opacity-40 group-hover:opacity-100 transition-opacity" style={{ background: c }} />
               </button>
@@ -2362,14 +2367,27 @@ interface LazerHomeViewProps {
   onPostOpened?: () => void;
 }
 
-const TABS = ['For You', 'Following', 'Anime', 'Manga'];
+const TABS = [
+  { id: 'For You', label: '🔥 Em Alta' },
+  { id: 'Following', label: '👥 Seguindo' },
+  { id: 'Anime', label: '✨ Anime' },
+  { id: 'Manga', label: '📖 Mangá' },
+  { id: 'Media', label: '📸 Mídia' },
+  { id: 'Discussions', label: '💬 Debates' },
+];
 
 export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialPostId, onPostOpened }: LazerHomeViewProps) {
   const { user: authUser } = useAuthStore();
-  const { feedPosts, createPost, editPost, fetchComments, comments, fetchFriends, fetchMyCommunities, fetchExploreCommunities, trendingTropes, fetchTrendingTropes } = useLazerStore();
-  const { exploreCommunities, watchingNow, fetchWatchingNow, submitCheckIn } = useLazerStore();
+  const {
+    feedPosts, createPost, editPost, fetchComments, comments,
+    fetchFriends, fetchMyCommunities, fetchExploreCommunities,
+    trendingTropes, fetchTrendingTropes, exploreCommunities,
+    watchingNow, fetchWatchingNow, submitCheckIn, isFriend, myCommunities
+  } = useLazerStore();
+  const { currentTrack, isPlaying } = useMusicStore();
 
   const [activeTab, setActiveTab] = useState('For You');
+  const [searchQuery, setSearchQuery] = useState('');
   const [postText, setPostText] = useState('');
   const [showTag, setShowTag] = useState(false);
   const [tag, setTag] = useState('');
@@ -2443,7 +2461,6 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
     if (!postText.trim() && mediaFiles.length === 0) return;
     setIsPosting(true);
 
-    // Convert tags #a #b into an array ['a', 'b']
     const tropeNames = tag.split(' ')
       .map(t => t.replace('#', '').trim())
       .filter(Boolean);
@@ -2467,21 +2484,47 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
     if (!comments[postId]) await fetchComments(postId);
   };
 
-  const displayPosts = feedPosts.filter(p => {
-    if (activeTag) {
-      const tagToMatch = activeTag.replace('#', '').toLowerCase();
-      const hasTrope = p.tropes?.some((t: any) => t.name.toLowerCase() === tagToMatch);
-      if (!hasTrope) return false;
-    }
-    if (activeTab !== 'For You' && activeTab !== 'Following') {
-      const tabMap: Record<string, string> = { 'Anime': 'anime', 'Manga': 'manga' };
-      if (tabMap[activeTab]) {
-        const hasTrope = p.tropes?.some((t: any) => t.name.toLowerCase() === tabMap[activeTab]);
+  const displayPosts = useMemo(() => {
+    return feedPosts.filter(p => {
+      // 1. Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const contentMatch = p.content?.toLowerCase().includes(q);
+        const authorProfile = p.author?.profile;
+        const authorMatch = authorProfile?.displayName?.toLowerCase().includes(q) ||
+                            authorProfile?.username?.toLowerCase().includes(q);
+        const tropeMatch = p.tropes?.some((t: any) => t.name.toLowerCase().includes(q));
+        if (!contentMatch && !authorMatch && !tropeMatch) return false;
+      }
+      // 2. Active tag filter
+      if (activeTag) {
+        const tagToMatch = activeTag.replace('#', '').toLowerCase();
+        const hasTrope = p.tropes?.some((t: any) => t.name.toLowerCase() === tagToMatch);
         if (!hasTrope) return false;
       }
-    }
-    return true;
-  });
+      // 3. Tab filter
+      if (activeTab === 'Following') {
+        const isFollowedOrMe = isFriend(p.authorId) || p.authorId === authUser?.id;
+        if (!isFollowedOrMe) return false;
+      } else if (activeTab === 'Media') {
+        const img = p.imageUrl;
+        const hasMedia = img && (
+          (Array.isArray(img) && img.length > 0) ||
+          (typeof img === 'string' && (img.startsWith('[') ? (JSON.parse(img || '[]') as any[]).length > 0 : img.length > 0))
+        );
+        if (!hasMedia) return false;
+      } else if (activeTab === 'Discussions') {
+        if ((p._count?.comments || 0) === 0) return false;
+      } else if (activeTab !== 'For You') {
+        const tabMap: Record<string, string> = { 'Anime': 'anime', 'Manga': 'manga' };
+        if (tabMap[activeTab]) {
+          const hasTrope = p.tropes?.some((t: any) => t.name.toLowerCase() === tabMap[activeTab]);
+          if (!hasTrope) return false;
+        }
+      }
+      return true;
+    });
+  }, [feedPosts, searchQuery, activeTag, activeTab, isFriend, authUser?.id]);
 
   return (
     <>
@@ -2501,6 +2544,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         .animate-heart-burst { animation: heart-burst 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .animate-glow-pulse { animation: glow-pulse 3s infinite ease-in-out; }
       `}</style>
+
       <PostDetailModal
         selectedPostId={selectedPostId} setSelectedPostId={setSelectedPostId}
         feedPosts={feedPosts} comments={comments} authUser={authUser} myProfile={myProfile}
@@ -2511,9 +2555,10 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
         onCapturePost={(p: any) => setCapturingPost(p)}
         onForkPost={(p: any) => setForkingPost(p)} />
 
-      <div className="h-full w-full font-['Nunito',sans-serif] relative rounded-none md:rounded-[3rem] border-0 md:border liquid-glass-shell flex flex-col overflow-hidden transition-all duration-300">
-        {/* Crista de luz especular no topo do arco Liquid Glass */}
+      <div className="h-full w-full font-['Nunito',sans-serif] relative rounded-none md:rounded-[3rem] border-0 md:border border-white/20 liquid-glass-shell flex flex-col overflow-hidden transition-all duration-300">
+        {/* Specular crest light arc */}
         <div className="hidden md:block absolute top-0 left-[6%] right-[6%] h-[1.5px] rounded-full pointer-events-none bg-gradient-to-r from-transparent via-white/50 to-transparent blur-[0.3px] z-30" />
+
         {showTropesModal && (
           <TropesModal
             c={c}
@@ -2522,6 +2567,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
             onTropeClick={(t) => { setActiveTag(t); setActiveTab(''); setShowTropesModal(false); }}
           />
         )}
+
         {(showAdvancedModal || editingPost || forkingPost) && (
           <AdvancedPostModal
             isOpen={showAdvancedModal || !!editingPost || !!forkingPost}
@@ -2583,26 +2629,190 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
           isLight={isLight}
         />
 
-        <div className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 custom-scrollbar">
-          <div className="w-full grid grid-cols-1 lg:grid-cols-[210px_1fr_210px] xl:grid-cols-[240px_1fr_280px] gap-6 items-start">
+        {/* ── Top Ambient Command Center ── */}
+        <div className="relative px-4 sm:px-6 py-3.5 border-b border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 backdrop-blur-xl bg-white/[0.02]">
+          {/* Left: Mode Title + Live Status */}
+          <div className="flex items-center gap-3.5">
+            <div
+              className="w-10 h-10 rounded-2xl border border-white/20 flex items-center justify-center shadow-lg relative shrink-0"
+              style={{
+                background: `radial-gradient(circle at 30% 30%, ${c}88, rgba(255,255,255,0.05))`,
+              }}
+            >
+              <span className="text-lg">🪐</span>
+              <span
+                className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-ping opacity-75"
+                style={{ background: c }}
+              />
+              <span
+                className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-[#09090b]"
+                style={{ background: c }}
+              />
+            </div>
 
-            {/* Left sidebar */}
-            <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
-              <div className="rounded-3xl overflow-hidden glass-card">
-                <div className="h-[100px] relative overflow-hidden" style={{ backgroundImage: user?.bannerUrl ? `url('${resolveUrl(user.bannerUrl)}')` : `linear-gradient(135deg, ${c}80, ${c}20)`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                  {user?.bannerUrl?.match(/\.(mp4|webm|mov)(\?|$)/i) && <video src={resolveUrl(user.bannerUrl)} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover z-0" />}
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-black tracking-tight text-white uppercase flex items-center gap-2">
+                  Alpha Stream
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-white/10 text-white/80 border border-white/15">
+                    Core
+                  </span>
+                </h1>
+              </div>
+              <p className="text-xs text-white/50 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Rede Cósmica Sincronizada · {feedPosts.length} transmissões ativas
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Live Interactive Search & Pro Studio Pill */}
+          <div className="flex items-center gap-3 flex-1 max-w-md justify-end">
+            {/* Live Search Input */}
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-white/40">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Pesquisar transmissões, autores, tags..."
+                className="w-full pl-9 pr-8 py-2 rounded-full text-xs font-medium text-white placeholder-white/40 bg-white/[0.04] hover:bg-white/[0.08] focus:bg-white/[0.1] border border-white/15 focus:border-white/30 outline-none transition-all backdrop-blur-xl"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-2.5 flex items-center text-white/40 hover:text-white cursor-pointer"
+                >
+                  <IconClose size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Pro Studio Button */}
+            <button
+              onClick={() => setShowAdvancedModal(true)}
+              className="px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider text-black flex items-center gap-1.5 transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              style={{
+                background: `linear-gradient(135deg, #ffffff, ${c})`,
+              }}
+            >
+              <IconSparkle />
+              <span className="hidden sm:inline">Estúdio Alpha</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Main 3-Column Spatial Grid ── */}
+        <div className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 custom-scrollbar">
+          <div className="w-full grid grid-cols-1 lg:grid-cols-[230px_1fr_240px] xl:grid-cols-[260px_1fr_290px] gap-6 items-start">
+
+            {/* ── Left Column: Alpha Identity & Spatial Pilot Station ── */}
+            <aside className="hidden lg:flex flex-col gap-5 sticky top-6">
+              {/* User Holo-Card */}
+              <div className="rounded-[2.4rem] overflow-hidden bg-white/[0.03] hover:bg-white/[0.06] border border-white/15 hover:border-white/25 backdrop-blur-2xl transition-all duration-300 shadow-xl relative group">
+                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white/10 via-transparent to-transparent pointer-events-none" />
+
+                {/* Banner */}
+                <div
+                  className="h-24 relative overflow-hidden"
+                  style={{
+                    backgroundImage: user?.bannerUrl
+                      ? `url('${resolveUrl(user.bannerUrl)}')`
+                      : `linear-gradient(135deg, ${c}88, rgba(255,255,255,0.05))`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                >
+                  {user?.bannerUrl?.match(/\.(mp4|webm|mov)(\?|$)/i) && (
+                    <video
+                      src={resolveUrl(user.bannerUrl)}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      className="absolute inset-0 w-full h-full object-cover z-0"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                 </div>
-                <div className="px-4 pb-4 relative text-center flex flex-col items-center">
-                  <div className={`mt-[-42px] mb-2 w-[84px] h-[84px] rounded-full border-[3px] overflow-hidden shrink-0  ${cardBg}`} style={{ borderColor: borderCol }}>
-                    <Avatar src={user?.avatarUrl} name={user?.displayName || user?.username || 'U'} className="w-full h-full object-cover" />
+
+                {/* Avatar & Info */}
+                <div className="px-5 pb-5 relative text-center flex flex-col items-center">
+                  <div
+                    onClick={() => onProfileClick?.(authUser?.id || '')}
+                    className="mt-[-40px] mb-2.5 w-20 h-20 rounded-2xl border-2 border-white/40 ring-4 ring-black/30 shadow-[0_8px_24px_rgba(0,0,0,0.4)] overflow-hidden shrink-0 cursor-pointer bg-white/10 backdrop-blur-md hover:scale-105 transition-transform relative z-10"
+                  >
+                    <Avatar
+                      src={user?.avatarUrl}
+                      name={user?.displayName || user?.username || 'U'}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  <DisplayName profile={user} fallbackName={user?.displayName || 'Alpha'} className="font-extrabold text-base flex justify-center w-full mb-1" />
-                  <div className={`text-xs mb-4 font-medium ${textSecondary}`}>@{user?.username || 'user'}</div>
-                  <div className="grid grid-cols-3 w-full text-center pt-3 border-t-[1.5px]" style={{ borderColor: borderCol }}>
-                    {(user?.stats?.slice(0, 3) || [{ label: 'POSTS', value: feedPosts.filter(p => p.authorId === authUser?.id).length.toString() }]).map(s => (
-                      <div key={s.label} className="cursor-pointer">
-                        <div className={`font-extrabold text-[15px] ${textPrimary}`}>{s.value}</div>
-                        <div className={`text-[9px] font-bold tracking-widest mt-1 uppercase ${textSecondary}`}>{s.label}</div>
+
+                  <div
+                    onClick={() => onProfileClick?.(authUser?.id || '')}
+                    className="cursor-pointer group/title w-full flex flex-col items-center"
+                  >
+                    <DisplayName
+                      profile={user}
+                      fallbackName={user?.displayName || 'Alpha'}
+                      className="font-black text-base group-hover/title:text-emerald-300 transition-colors flex justify-center w-full"
+                    />
+                    <div className="text-xs text-white/50 font-bold mt-0.5">@{user?.username || 'user'}</div>
+                  </div>
+
+                  {user?.bio && (
+                    <p className="text-[11px] text-white/70 line-clamp-2 mt-2 leading-relaxed px-1">
+                      {user.bio}
+                    </p>
+                  )}
+
+                  {/* Relics showcase */}
+                  {user?.relics && user.relics.length > 0 && (
+                    <div className="flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                      {user.relics.map((r, i) => (
+                        <span key={i} className="text-sm hover:scale-125 transition-transform cursor-pointer">
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Now Playing Bar if track active */}
+                  {currentTrack && (
+                    <div className="w-full mt-3 p-2 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-left">
+                      <div
+                        className={`w-7 h-7 rounded-full bg-black/60 border border-white/20 flex items-center justify-center shrink-0 ${isPlaying ? 'animate-spin' : ''}`}
+                        style={{ animationDuration: '4s' }}
+                      >
+                        <div className="w-2 h-2 rounded-full" style={{ background: c }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-black text-white truncate">{currentTrack.title}</p>
+                        <p className="text-[9px] text-white/50 uppercase tracking-wider truncate">{currentTrack.artist}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stats Matrix */}
+                  <div className="grid grid-cols-3 w-full text-center pt-3.5 mt-3.5 border-t border-white/[0.08]">
+                    {(user?.stats?.slice(0, 3) || [
+                      { label: 'POSTS', value: feedPosts.filter(p => p.authorId === authUser?.id).length.toString() },
+                      { label: 'AMIGOS', value: '12' },
+                      { label: 'ECOS', value: '88' },
+                    ]).map((s) => (
+                      <div key={s.label} className="cursor-pointer group/stat">
+                        <div className="font-black text-sm text-white group-hover/stat:text-emerald-300 transition-colors">
+                          {s.value}
+                        </div>
+                        <div className="text-[9px] font-bold tracking-widest mt-0.5 uppercase text-white/40">
+                          {s.label}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2610,50 +2820,109 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
               </div>
 
               {/* My Communities */}
-              <MyCommunities c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg} onCommunityClick={onCommunityClick} />
+              <MyCommunities
+                c={c}
+                isLight={isLight}
+                textPrimary={textPrimary}
+                textSecondary={textSecondary}
+                borderCol={borderCol}
+                cardBg={cardBg}
+                onCommunityClick={onCommunityClick}
+              />
             </aside>
 
-            {/* Center feed */}
+            {/* ── Center Column: The Stream of Chronicles ── */}
             <main className="flex flex-col gap-5 w-full">
-              {/* Tabs */}
-              <div className="flex gap-4 pt-1 px-4 sm:px-6 rounded-b-3xl sm:rounded-3xl overflow-x-auto mb-1 liquid-glass-border">
-                {TABS.map(tab => (
-                  <button key={tab} onClick={() => { setActiveTab(tab); setActiveTag(null); }}
-                    className="py-3 px-1 mt-1 bg-transparent border-none cursor-pointer text-sm whitespace-nowrap transition-all"
-                    style={{ borderBottom: activeTab === tab ? `3px solid ${c}` : '3px solid transparent', marginBottom: '-2px', color: activeTab === tab ? c : (isLight ? '#9e9e9e' : '#666'), fontWeight: activeTab === tab ? 800 : 500 }}>
-                    {tab}
-                  </button>
-                ))}
+              {/* Tabs Segmented Capsule */}
+              <div className="p-1.5 rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-2xl flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
+                {TABS.map((tab) => {
+                  const isTabActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        setActiveTag(null);
+                      }}
+                      className={`px-4 py-2 rounded-full text-xs font-black whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isTabActive
+                          ? 'bg-white text-black shadow-lg scale-[1.02]'
+                          : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+
                 {activeTag && (
-                  <button onClick={() => setActiveTag(null)} className="py-3 px-1 mt-1 bg-transparent border-none cursor-pointer text-sm whitespace-nowrap flex items-center gap-1.5"
-                    style={{ borderBottom: `3px solid ${c}`, marginBottom: '-2px', color: c, fontWeight: 800 }}>
-                    {activeTag} <IconClose size={12} />
+                  <button
+                    onClick={() => setActiveTag(null)}
+                    className="px-3 py-1.5 rounded-full text-xs font-bold text-white bg-emerald-500/20 border border-emerald-500/40 flex items-center gap-1.5 cursor-pointer ml-auto"
+                  >
+                    <span>{activeTag}</span>
+                    <IconClose size={12} />
                   </button>
                 )}
               </div>
 
-              {/* Composer */}
-              <div className={`rounded-3xl p-4 sm:p-5 glass-card relative ${showEmojiPicker ? 'z-40' : 'z-20'}`}>
-                <div className="flex gap-3 items-start">
-                  <Avatar src={myProfile?.avatarUrl} name={myProfile?.displayName || myProfile?.username || 'U'} className="w-[42px] h-[42px] rounded-full shrink-0" />
-                  <div className="flex-1">
-                    <textarea className={`w-full border-none resize-none text-sm bg-transparent min-h-[48px] outline-none ${textPrimary}`}
-                      placeholder="O que está a acontecer no teu universo?..."
-                      value={postText} onChange={e => setPostText(e.target.value)} rows={2} />
+              {/* ── The Cosmic Studio (Composer) ── */}
+              <div
+                className={`rounded-[2.4rem] p-5 bg-white/[0.03] hover:bg-white/[0.05] border border-white/15 hover:border-white/25 backdrop-blur-2xl transition-all duration-300 shadow-2xl relative ${
+                  showEmojiPicker ? 'z-40' : 'z-20'
+                } ${isSparkle ? 'ring-2 ring-amber-400/30' : ''}`}
+              >
+                <div className="flex gap-4 items-start">
+                  <div
+                    onClick={() => onProfileClick?.(authUser?.id || '')}
+                    className="cursor-pointer hover:scale-105 transition-transform shrink-0"
+                  >
+                    <Avatar
+                      src={myProfile?.avatarUrl}
+                      name={myProfile?.displayName || myProfile?.username || 'U'}
+                      className="w-11 h-11 rounded-2xl border border-white/20 object-cover shadow-md"
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-black text-white/50 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />
+                        Transmissão Cósmica
+                      </span>
+                      {isSparkle && (
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/30 animate-pulse">
+                          ✨ Sparkle Aura Ativa
+                        </span>
+                      )}
+                    </div>
+
+                    <textarea
+                      className="w-full border-none resize-none text-sm bg-transparent min-h-[56px] outline-none text-white placeholder-white/35 font-medium leading-relaxed"
+                      placeholder="O que está a acontecer no teu universo? Partilha histórias, ideias ou criações..."
+                      value={postText}
+                      onChange={(e) => setPostText(e.target.value)}
+                      rows={2}
+                    />
 
                     {/* Media Previews */}
                     {mediaPreviews.length > 0 && (
-                      <div className="flex gap-2 overflow-x-auto pb-3 mt-1 custom-scrollbar">
+                      <div className="flex gap-2.5 overflow-x-auto pb-3 mt-2 custom-scrollbar">
                         {mediaPreviews.map((p, idx) => (
-                          <div key={idx} className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden border  group/preview" style={{ borderColor: borderCol }}>
+                          <div
+                            key={idx}
+                            className="relative shrink-0 w-28 h-28 rounded-2xl overflow-hidden border border-white/20 shadow-lg group/preview"
+                          >
                             {p.match(/\.(mp4|webm|mov|ogg)(\?|$)/i) || p.startsWith('data:video') ? (
                               <video src={p} className="w-full h-full object-cover" muted />
                             ) : (
                               <img src={p} alt="preview" className="w-full h-full object-cover" />
                             )}
-                            <button onClick={() => handleRemoveMedia(idx)}
-                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center border-none cursor-pointer hover:bg-black/80 transition-all backblur-md">
-                              <IconClose size={10} />
+                            <button
+                              onClick={() => handleRemoveMedia(idx)}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 hover:bg-red-500 text-white flex items-center justify-center border-none cursor-pointer transition-all backdrop-blur-md shadow-md"
+                            >
+                              <IconClose size={12} />
                             </button>
                           </div>
                         ))}
@@ -2661,59 +2930,123 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
                     )}
 
                     {showTag && (
-                      <input type="text" placeholder="#tag..." value={tag} onChange={e => setTag(e.target.value)}
-                        className={`w-full mt-2 text-xs px-3 py-1.5 rounded-lg border bg-transparent outline-none ${textPrimary}`} style={{ borderColor: borderCol }} />
+                      <input
+                        type="text"
+                        placeholder="#tag ou #tropes..."
+                        value={tag}
+                        onChange={(e) => setTag(e.target.value)}
+                        className="w-full mt-2 text-xs px-3.5 py-2 rounded-xl border border-white/15 bg-white/[0.04] text-white placeholder-white/40 outline-none backdrop-blur-md"
+                      />
                     )}
 
-                    <div className="flex items-center justify-between pt-3 mt-2 border-t-[1.5px]" style={{ borderColor: borderCol }}>
-                      <div className="flex gap-2 flex-wrap">
-                        <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden" onChange={handleMediaPick} />
-                        <button onClick={() => fileInputRef.current?.click()}
-                          className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                          style={{ borderColor: mediaPreviews.length > 0 ? c : borderCol, color: c }}><IconImage /></button>
-                        <button onClick={() => setIsSparkle(!isSparkle)}
-                          className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                          style={{ borderColor: borderCol, color: isSparkle ? '#fbbf24' : c }}><IconSparkle /></button>
-                        <button onClick={() => setShowTag(!showTag)}
-                          className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                          style={{ borderColor: borderCol, color: c }}><IconTag /></button>
+                    {/* Composer Action Toolbar */}
+                    <div className="flex flex-wrap items-center justify-between pt-3.5 mt-3 border-t border-white/[0.08] gap-3">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept="image/*,video/*"
+                          className="hidden"
+                          onChange={handleMediaPick}
+                        />
+
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className={`w-9 h-9 rounded-xl border border-white/10 hover:border-white/25 flex items-center justify-center transition-all cursor-pointer ${
+                            mediaPreviews.length > 0 ? 'bg-white/15 text-white' : 'bg-white/5 text-white/70 hover:text-white'
+                          }`}
+                          title="Adicionar Imagem ou Vídeo"
+                        >
+                          <IconImage />
+                        </button>
+
+                        <button
+                          onClick={() => setIsSparkle(!isSparkle)}
+                          className={`w-9 h-9 rounded-xl border border-white/10 hover:border-white/25 flex items-center justify-center transition-all cursor-pointer ${
+                            isSparkle ? 'bg-amber-400/20 text-amber-300 border-amber-400/40' : 'bg-white/5 text-white/70 hover:text-white'
+                          }`}
+                          title="Efeito Sparkle Holográfico"
+                        >
+                          <IconSparkle />
+                        </button>
+
+                        <button
+                          onClick={() => setShowTag(!showTag)}
+                          className={`w-9 h-9 rounded-xl border border-white/10 hover:border-white/25 flex items-center justify-center transition-all cursor-pointer ${
+                            showTag ? 'bg-white/15 text-white' : 'bg-white/5 text-white/70 hover:text-white'
+                          }`}
+                          title="Adicionar Tags e Tropos"
+                        >
+                          <IconTag />
+                        </button>
+
                         <div className="relative">
-                          <button onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            className="w-8 h-8 rounded-lg border-[1.5px] bg-transparent cursor-pointer flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                            style={{ borderColor: borderCol, color: c }}><IconEmoji /></button>
-                          {showEmojiPicker && <div className="absolute top-full left-0 mt-2 z-50"><EmojiPicker onSelect={e => { setPostText(p => p + e); setShowEmojiPicker(false); }} onClose={() => setShowEmojiPicker(false)} /></div>}
+                          <button
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className="w-9 h-9 rounded-xl border border-white/10 hover:border-white/25 bg-white/5 text-white/70 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                            title="Inserir Emoji"
+                          >
+                            <IconEmoji />
+                          </button>
+                          {showEmojiPicker && (
+                            <div className="absolute top-full left-0 mt-2 z-50">
+                              <EmojiPicker
+                                onSelect={(e) => {
+                                  setPostText((p) => p + e);
+                                  setShowEmojiPicker(false);
+                                }}
+                                onClose={() => setShowEmojiPicker(false)}
+                              />
+                            </div>
+                          )}
                         </div>
 
-                        <CustomFontSelector selected={selectedFont} onSelect={setSelectedFont} fonts={PREMIUM_FONTS} borderColor={borderCol} textColor={textPrimary} isLightMode={isLight} />
-                        <div className="flex gap-1 items-center px-2 py-1 rounded-lg border-[1.5px]" style={{ borderColor: borderCol }}>
-                          {composerColors.map(col => (
-                            <button key={col.id} onClick={() => setSelectedColor(selectedColor === col.value ? '' : col.value)}
+                        <CustomFontSelector
+                          selected={selectedFont}
+                          onSelect={setSelectedFont}
+                          fonts={PREMIUM_FONTS}
+                          borderColor="rgba(255,255,255,0.15)"
+                          textColor="text-white"
+                          isLightMode={false}
+                        />
+
+                        <div className="flex gap-1 items-center px-2 py-1.5 rounded-xl border border-white/15 bg-white/5">
+                          {composerColors.map((col) => (
+                            <button
+                              key={col.id}
+                              onClick={() => setSelectedColor(selectedColor === col.value ? '' : col.value)}
                               className="w-3.5 h-3.5 rounded-full border-none cursor-pointer transition-all hover:scale-125"
-                              style={{ background: col.value, outline: selectedColor === col.value ? '2px solid #fff' : 'none', opacity: selectedColor === col.value ? 1 : 0.5 }} />
+                              style={{
+                                background: col.value,
+                                outline: selectedColor === col.value ? '2px solid #fff' : 'none',
+                                opacity: selectedColor === col.value ? 1 : 0.6,
+                              }}
+                            />
                           ))}
                         </div>
                       </div>
+
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => setShowAdvancedModal(true)}
-                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black transition-all cursor-pointer hover:scale-105 active:scale-95 border"
-                          style={{
-                            background: isLight ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.06)',
-                            borderColor: `${c}50`,
-                            color: c,
-                            boxShadow: `0 2px 12px -2px ${c}30`,
-                          }}
-                          title="Abrir Estúdio Completo de Publicação com Pré-visualização em Tempo Real"
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black transition-all cursor-pointer hover:scale-105 active:scale-95 border border-white/15 bg-white/5 text-white/80 hover:text-white"
+                          title="Abrir Estúdio Completo de Publicação"
                         >
                           <IconSparkle />
-                          <span className="hidden sm:inline">Publicação Avançada</span>
-                          <span className="sm:hidden">Avançada</span>
+                          <span className="hidden sm:inline">Estúdio Avançado</span>
                         </button>
-                        <button onClick={handleCreate} disabled={(!postText.trim() && mediaFiles.length === 0) || isPosting}
-                          className="text-black border-none rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity disabled:opacity-50 hover:opacity-90 "
-                          style={{ background: `linear-gradient(135deg, ${c}dd, ${c})` }}>
-                          {isPosting ? 'A publicar...' : 'Publicar'}
+
+                        <button
+                          onClick={handleCreate}
+                          disabled={(!postText.trim() && mediaFiles.length === 0) || isPosting}
+                          className="px-6 py-2 rounded-full font-black text-xs uppercase tracking-wider text-black cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95 shadow-xl flex items-center gap-1.5"
+                          style={{
+                            background: `linear-gradient(135deg, #ffffff, ${c})`,
+                          }}
+                        >
+                          {isPosting ? 'A publicar...' : 'Publicar ✦'}
                         </button>
                       </div>
                     </div>
@@ -2723,22 +3056,46 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
 
               {/* Active discussion banner */}
               {activeDiscussion && (
-                <div className={`rounded-2xl px-4 py-3 flex items-center justify-between border-[1.5px] ${cardBg}`} style={{ borderColor: `${c}40` }}>
-                  <span className={`text-sm font-bold ${textPrimary}`}>💬 {activeDiscussion}</span>
-                  <button onClick={() => setActiveDiscussion(null)} className="bg-transparent border-none cursor-pointer opacity-50 hover:opacity-100" style={{ color: isLight ? '#000' : '#fff' }}><IconClose /></button>
+                <div className="rounded-2xl px-5 py-3.5 flex items-center justify-between border border-white/15 bg-white/[0.04] backdrop-blur-xl shadow-lg">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base">💬</span>
+                    <span className="text-sm font-black text-white">{activeDiscussion}</span>
+                  </div>
+                  <button onClick={() => setActiveDiscussion(null)} className="text-white/50 hover:text-white cursor-pointer transition-colors">
+                    <IconClose size={14} />
+                  </button>
                 </div>
               )}
 
-              {/* Posts */}
-              <div className="flex flex-col gap-4">
-                {displayPosts.length === 0
-                  ? <div className={`text-center py-10 opacity-60 text-sm ${textPrimary}`}>
-                    {activeTag ? `Nenhuma publicação com ${activeTag}` : 'Nenhuma publicação para mostrar.'}
+              {/* ── Posts Stream ── */}
+              <div className="flex flex-col gap-5">
+                {displayPosts.length === 0 ? (
+                  <div className="py-24 text-center flex flex-col items-center justify-center gap-3 bg-white/[0.02] border border-white/10 rounded-[2.4rem] backdrop-blur-xl">
+                    <div className="w-16 h-16 rounded-full bg-white/5 border border-white/15 flex items-center justify-center text-white/40 text-2xl">
+                      🪐
+                    </div>
+                    <h4 className="text-sm font-black text-white uppercase tracking-widest">
+                      {searchQuery ? `Nenhum resultado para "${searchQuery}"` : activeTag ? `Nenhuma publicação com ${activeTag}` : 'Nenhuma transmissão encontrada'}
+                    </h4>
+                    <p className="text-xs text-white/50 max-w-xs">
+                      {searchQuery
+                        ? 'Tenta pesquisar por outros termos ou limpa a pesquisa.'
+                        : 'Sê o pioneiro a transmitir uma nova história para a constelação Alpha!'}
+                    </p>
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="mt-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold cursor-pointer"
+                      >
+                        Limpar Pesquisa
+                      </button>
+                    )}
                   </div>
-                  : displayPosts.map((post: any) => (
+                ) : (
+                  displayPosts.map((post: any) => (
                     <div key={post.id} className="relative">
                       {post.isSparkle && <div className="absolute -top-1 -right-1 z-10 w-4 h-4 text-yellow-400 rotate-12"><IconSparkle /></div>}
-                      <div className={post.isSparkle ? 'p-[2px] rounded-3xl' : ''} style={{ background: post.isSparkle ? `linear-gradient(135deg, ${c}, transparent, ${c})` : 'transparent' }}>
+                      <div className={post.isSparkle ? 'p-[2px] rounded-[2.4rem]' : ''} style={{ background: post.isSparkle ? `linear-gradient(135deg, ${c}, transparent, ${c})` : 'transparent' }}>
                         <PostCard
                           post={post}
                           isOwner={post.authorId === authUser?.id}
@@ -2756,23 +3113,27 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
                           onForkPost={(p: any) => setForkingPost(p)} />
                       </div>
                     </div>
-                  ))}
+                  ))
+                )}
               </div>
             </main>
 
-            {/* Right sidebar */}
-            <aside className="hidden lg:flex flex-col gap-4 sticky top-6">
-              <div className="rounded-3xl p-4 glass-card">
-                <div className="flex items-center gap-2 mb-4">
-                  <IconFlame />
-                  <h3 className={`text-[11px] font-extrabold uppercase tracking-[1.2px] ${textPrimary}`}>Em Alta</h3>
-                  <button onClick={() => onCommunityClick?.()} className="ml-auto text-[10px] font-black uppercase tracking-widest bg-transparent border-none cursor-pointer" style={{ color: c }}>Ver todas</button>
+            {/* ── Right Column: Alpha Radar & Live Signals ── */}
+            <aside className="hidden lg:flex flex-col gap-5 sticky top-6">
+              {/* Comunidades em Órbita */}
+              <div className="rounded-[2.2rem] p-5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-white/20 backdrop-blur-2xl transition-all shadow-xl">
+                <div className="flex items-center gap-2 mb-3.5">
+                  <div className="w-7 h-7 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+                    <IconFlame />
+                  </div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-white">Comunidades em Órbita</h3>
+                  <button onClick={() => onCommunityClick?.()} className="ml-auto text-[10px] font-black uppercase tracking-widest bg-transparent border-none cursor-pointer hover:underline" style={{ color: c }}>Ver todas</button>
                 </div>
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                   {exploreCommunities.length === 0 ? (
                     <div className="py-8 flex flex-col items-center justify-center gap-2 opacity-30">
                       <div className="text-2xl">🌐</div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest">A carregar...</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white">A carregar...</p>
                     </div>
                   ) : (
                     exploreCommunities.slice(0, 3).map(com => (
@@ -2781,7 +3142,7 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
                         community={com}
                         c={c}
                         isLight={isLight}
-                        cardBg={isLight ? 'bg-white/60' : 'bg-white/5'}
+                        cardBg={cardBg}
                         borderCol={borderCol}
                         textPrimary={textPrimary}
                         textSecondary={textSecondary}
@@ -2792,17 +3153,21 @@ export function LazerHomeView({ user, onProfileClick, onCommunityClick, initialP
                 </div>
               </div>
 
+              {/* Trending Tropes */}
               <TrendingWidget
                 c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary}
                 borderCol={borderCol} cardBg={cardBg}
                 onTagClick={(tag) => { setActiveTag(tag); setActiveTab(''); }}
                 onVerTodas={() => setShowTropesModal(true)} />
 
+              {/* Watching Now Radar */}
               <WatchingWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg} watchingNow={watchingNow} onSubmitCheckIn={submitCheckIn} />
 
+              {/* Hot Discussions */}
               <HotDiscussionsWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}
                 onDiscussionClick={(title: string) => setActiveDiscussion(title)} />
 
+              {/* Active Now Radar */}
               <ActiveNowWidget c={c} isLight={isLight} textPrimary={textPrimary} textSecondary={textSecondary} borderCol={borderCol} cardBg={cardBg}
                 feedPosts={feedPosts} authUserId={authUser?.id} onProfileClick={onProfileClick} />
             </aside>
