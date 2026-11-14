@@ -369,7 +369,7 @@ function timeAgo(dateStr: string) {
 }
 
 const glassInput =
-  'w-full px-5 py-3.5 bg-white/[0.06] hover:bg-white/[0.09] focus:bg-white/[0.12] border border-white/15 rounded-2xl text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#f97316]/60 transition-all shadow-inner';
+  'w-full px-5 py-3.5 bg-white/[0.06] hover:bg-white/[0.09] focus:bg-white/[0.12] border border-white/15 rounded-2xl text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#ef4444]/60 transition-all shadow-inner';
 
 // ── UPLOAD MODAL (ALPHA WATCH STUDIO) ─────────────────────────────────────────
 function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
@@ -447,7 +447,7 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#f97316] to-[#8b5cf6] flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.4)]">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#ef4444] to-[#8b5cf6] flex items-center justify-center shadow-[0_0_15px_rgba(239,68,68,0.4)]">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-white">
                   <path d="M15 10l4.553-2.277A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" />
                 </svg>
@@ -471,11 +471,11 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
               onClick={() => videoInputRef.current?.click()}
               className={`w-full py-6 px-4 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
                 state.videoFile
-                  ? 'border-[#f97316]/70 bg-[#f97316]/10 text-white'
+                  ? 'border-[#ef4444]/70 bg-[#ef4444]/10 text-white'
                   : 'border-white/15 hover:border-white/30 hover:bg-white/[0.03] text-white/50'
               }`}
             >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={state.videoFile ? 'text-[#f97316]' : 'text-white/40'}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={state.videoFile ? 'text-[#ef4444]' : 'text-white/40'}>
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="17 8 12 3 7 8" />
                 <line x1="12" y1="3" x2="12" y2="15" />
@@ -490,10 +490,10 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
             <div
               onClick={() => thumbInputRef.current?.click()}
               className={`w-full h-14 rounded-2xl border flex items-center justify-center gap-3 cursor-pointer transition-all ${
-                state.thumbnailFile ? 'border-amber-400/50 bg-amber-400/10' : 'border-white/10 hover:border-white/20 hover:bg-white/[0.03]'
+                state.thumbnailFile ? 'border-red-400/50 bg-red-400/10' : 'border-white/10 hover:border-white/20 hover:bg-white/[0.03]'
               }`}
             >
-              <svg className={state.thumbnailFile ? 'text-amber-300' : 'text-white/30'} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <svg className={state.thumbnailFile ? 'text-red-300' : 'text-white/30'} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
                 <circle cx="9" cy="9" r="2" />
                 <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
@@ -563,7 +563,7 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                     onClick={() => setState((s) => ({ ...s, format: f }))}
                     className={`px-3 py-2 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all ${
                       state.format === f
-                        ? 'bg-gradient-to-r from-[#f97316] to-[#8b5cf6] text-white shadow-md'
+                        ? 'bg-gradient-to-r from-[#ef4444] to-[#8b5cf6] text-white shadow-md'
                         : 'text-white/40 hover:text-white'
                     }`}
                   >
@@ -586,7 +586,7 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
             <button
               onClick={handleUpload}
               disabled={!state.videoFile || !state.title || uploading}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#f97316] via-[#ea580c] to-[#8b5cf6] text-white font-black text-xs uppercase tracking-widest transition-all hover:shadow-[0_0_30px_rgba(249,115,22,0.4)] disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 mt-2"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#ef4444] via-[#dc2626] to-[#8b5cf6] text-white font-black text-xs uppercase tracking-widest transition-all hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 mt-2"
             >
               {uploading ? 'A Enviar para a Rede Alpha...' : 'Publicar Obra'}
             </button>
@@ -675,7 +675,7 @@ function EditModal({ video, onClose, onSuccess }: { video: Video; onClose: () =>
           <button
             onClick={handleSave}
             disabled={!state.title || saving}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] text-white font-black text-xs uppercase tracking-widest transition-all hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] disabled:opacity-40"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#ef4444] to-[#8b5cf6] text-white font-black text-xs uppercase tracking-widest transition-all hover:shadow-[0_0_25px_rgba(239,68,68,0.4)] disabled:opacity-40"
           >
             {saving ? 'A Guardar...' : 'Guardar Alterações'}
           </button>
@@ -689,7 +689,7 @@ function EditModal({ video, onClose, onSuccess }: { video: Video; onClose: () =>
 export function LazerWatchView({
   onClose,
   onSelectView,
-  themeColor = '#f97316',
+  themeColor = '#ef4444',
   themeMode = 'dark',
   userAvatar,
   userName = 'Cinema',
@@ -844,13 +844,13 @@ export function LazerWatchView({
             setActiveTab('all');
             scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#f97316] p-0.5 hover:scale-110 active:scale-95 transition-all shadow-[0_0_16px_rgba(249,115,22,0.45)] cursor-pointer group relative bg-black/40"
+          className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#ef4444] p-0.5 hover:scale-110 active:scale-95 transition-all shadow-[0_0_16px_rgba(239,68,68,0.45)] cursor-pointer group relative bg-black/40"
           title="Início do Cinema"
         >
           {userAvatar ? (
             <img src={userAvatar} alt="" className="w-full h-full object-cover rounded-full" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center rounded-full bg-[#f97316]/20 text-[#f97316] font-black text-xs">
+            <div className="w-full h-full flex items-center justify-center rounded-full bg-[#ef4444]/20 text-[#ef4444] font-black text-xs">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <circle cx="12" cy="12" r="10" />
                 <circle cx="12" cy="12" r="3" />
@@ -861,7 +861,7 @@ export function LazerWatchView({
           )}
           {/* VisionOS Floating Tooltip */}
           <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#f97316]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
             <span>Alpha Watch Cinema</span>
           </span>
         </button>
@@ -879,7 +879,7 @@ export function LazerWatchView({
             }}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
               activeTab === 'all'
-                ? 'text-[#f97316] bg-white/15 shadow-[0_0_14px_rgba(249,115,22,0.4)] scale-110 border border-[#f97316]/50'
+                ? 'text-[#ef4444] bg-white/15 shadow-[0_0_14px_rgba(239,68,68,0.4)] scale-110 border border-[#ef4444]/50'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -907,7 +907,7 @@ export function LazerWatchView({
             }}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
               activeTab === 'shorts'
-                ? 'text-[#f97316] bg-white/15 shadow-[0_0_14px_rgba(249,115,22,0.4)] scale-110 border border-[#f97316]/50'
+                ? 'text-[#ef4444] bg-white/15 shadow-[0_0_14px_rgba(239,68,68,0.4)] scale-110 border border-[#ef4444]/50'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -927,7 +927,7 @@ export function LazerWatchView({
             }}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
               activeTab === 'trending'
-                ? 'text-[#f97316] bg-white/15 shadow-[0_0_14px_rgba(249,115,22,0.4)] scale-110 border border-[#f97316]/50'
+                ? 'text-[#ef4444] bg-white/15 shadow-[0_0_14px_rgba(239,68,68,0.4)] scale-110 border border-[#ef4444]/50'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -944,7 +944,7 @@ export function LazerWatchView({
             onClick={() => setActiveTab('saved')}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer group relative ${
               activeTab === 'saved'
-                ? 'text-[#f97316] bg-white/15 shadow-[0_0_14px_rgba(249,115,22,0.4)] scale-110 border border-[#f97316]/50'
+                ? 'text-[#ef4444] bg-white/15 shadow-[0_0_14px_rgba(239,68,68,0.4)] scale-110 border border-[#ef4444]/50'
                 : 'text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -960,14 +960,14 @@ export function LazerWatchView({
           {accessToken && (
             <button
               onClick={() => setShowUpload(true)}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-gradient-to-tr from-[#f97316] to-[#8b5cf6] hover:scale-110 active:scale-95 shadow-[0_0_16px_rgba(249,115,22,0.4)] transition-all cursor-pointer group relative"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-gradient-to-tr from-[#ef4444] to-[#8b5cf6] hover:scale-110 active:scale-95 shadow-[0_0_16px_rgba(239,68,68,0.4)] transition-all cursor-pointer group relative"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
               <span className="absolute left-full ml-3 px-3 py-1.5 rounded-full bg-black/90 backdrop-blur-xl border border-white/20 text-white text-xs font-bold whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#f97316]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
                 <span>Alpha Studio (Publicar)</span>
               </span>
             </button>
@@ -1024,7 +1024,7 @@ export function LazerWatchView({
               scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
               setTimeout(() => searchInputRef.current?.focus(), 200);
             }}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-[#f97316] hover:bg-white/5 transition-all cursor-pointer group relative"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white/50 hover:text-[#ef4444] hover:bg-white/5 transition-all cursor-pointer group relative"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
               <circle cx="11" cy="11" r="8" />
@@ -1038,8 +1038,8 @@ export function LazerWatchView({
 
         <div className="w-6 h-px bg-white/10 my-1" />
 
-        {/* Bottom indicator jewel em âmbar neon */}
-        <div className="w-2 h-2 rounded-full bg-[#f97316] shadow-[0_0_10px_#f97316] animate-pulse" />
+        {/* Bottom indicator jewel em vermelho neon */}
+        <div className="w-2 h-2 rounded-full bg-[#ef4444] shadow-[0_0_10px_#ef4444] animate-pulse" />
       </aside>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -1052,9 +1052,9 @@ export function LazerWatchView({
         <div className="hidden md:block absolute top-0 left-[6%] right-[6%] h-[1.5px] rounded-full pointer-events-none bg-gradient-to-r from-transparent via-white/50 to-transparent blur-[0.3px] z-30" />
 
         {/* Ambient Cinema Lighting Blobs */}
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#f97316]/10 blur-[130px] pointer-events-none -z-10" />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#ef4444]/12 blur-[130px] pointer-events-none -z-10" />
         <div className="absolute top-1/2 right-1/4 w-80 h-80 rounded-full bg-[#8b5cf6]/10 blur-[140px] pointer-events-none -z-10" />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-[#f97316]/10 blur-[130px] pointer-events-none -z-10" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-[#ef4444]/12 blur-[130px] pointer-events-none -z-10" />
 
         {/* ── VIDEO PLAYER FULLSCREEN LAYER (quando ativo) ── */}
         {currentVideo ? (
@@ -1084,7 +1084,7 @@ export function LazerWatchView({
                     value={localSearch}
                     onChange={(e) => handleSearch(e.target.value)}
                     placeholder="Pesquisar filmes, shorts, canais ou tags..."
-                    className="w-full h-11 pl-11 pr-4 rounded-full bg-white/[0.07] hover:bg-white/[0.10] focus:bg-white/[0.12] border border-white/10 text-white text-xs font-semibold placeholder-white/40 outline-none transition-all shadow-inner focus:border-[#f97316]/60"
+                    className="w-full h-11 pl-11 pr-4 rounded-full bg-white/[0.07] hover:bg-white/[0.10] focus:bg-white/[0.12] border border-white/10 text-white text-xs font-semibold placeholder-white/40 outline-none transition-all shadow-inner focus:border-[#ef4444]/60"
                   />
                   {localSearch && (
                     <button
@@ -1112,7 +1112,7 @@ export function LazerWatchView({
                       }}
                       className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                         isActive
-                          ? 'bg-[#f97316] text-white shadow-[0_4px_16px_rgba(249,115,22,0.4)] scale-[1.02]'
+                          ? 'bg-[#ef4444] text-white shadow-[0_4px_16px_rgba(239,68,68,0.4)] scale-[1.02]'
                           : 'bg-white/[0.05] hover:bg-white/[0.12] text-white/60 hover:text-white border border-white/[0.06]'
                       }`}
                     >
@@ -1128,7 +1128,7 @@ export function LazerWatchView({
                 {accessToken && (
                   <button
                     onClick={() => setShowUpload(true)}
-                    className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#f97316] to-[#8b5cf6] text-white font-extrabold text-xs hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(249,115,22,0.35)] transition-all cursor-pointer"
+                    className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#ef4444] to-[#8b5cf6] text-white font-extrabold text-xs hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(239,68,68,0.35)] transition-all cursor-pointer"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <line x1="12" y1="5" x2="12" y2="19" />
@@ -1176,8 +1176,15 @@ export function LazerWatchView({
               </div>
             </header>
 
-            {/* ── MAIN SCROLLABLE CINEMA FEED BODY ── */}
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8 space-y-10 scroll-smooth">
+            {/* ── MAIN SCROLLABLE CINEMA FEED BODY (Scroll ultra-fluido e nativo) ── */}
+            <div
+              ref={scrollContainerRef}
+              className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 overscroll-contain"
+              style={{
+                WebkitOverflowScrolling: 'touch',
+              }}
+            >
+              <div className="flex flex-col gap-10 pb-16">
               
               {/* ── 1. HERO PREMIERE SPOTLIGHT BANNER (Apenas na aba 'all' ou sem busca ativa) ── */}
               {activeTab === 'all' && !localSearch && (
@@ -1197,7 +1204,7 @@ export function LazerWatchView({
                   {/* Top Badges */}
                   <div className="flex items-center justify-between relative z-10">
                     <div className="flex items-center gap-2">
-                      <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#f97316] to-[#ea580c] text-white text-xs font-black shadow-[0_0_16px_rgba(249,115,22,0.5)]">
+                      <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#ef4444] to-[#dc2626] text-white text-xs font-black shadow-[0_0_16px_rgba(239,68,68,0.5)]">
                         <span className="w-2 h-2 rounded-full bg-white animate-ping" />
                         <span>PREMIERE EM DESTAQUE</span>
                       </div>
@@ -1216,7 +1223,7 @@ export function LazerWatchView({
                           key={s.id}
                           onClick={() => setSpotlightIndex(idx)}
                           className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            spotlightIndex === idx ? 'w-8 bg-[#f97316]' : 'w-2 bg-white/30 hover:bg-white/60'
+                            spotlightIndex === idx ? 'w-8 bg-[#ef4444]' : 'w-2 bg-white/30 hover:bg-white/60'
                           }`}
                         />
                       ))}
@@ -1278,7 +1285,7 @@ export function LazerWatchView({
                         onClick={(e) => toggleSaveVideo(activeSpotlight.id, e)}
                         className={`px-5 py-3 rounded-full backdrop-blur-md border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
                           savedVideoIds.has(activeSpotlight.id)
-                            ? 'bg-[#f97316] border-[#f97316] text-white shadow-[0_0_15px_#f97316]'
+                            ? 'bg-[#ef4444] border-[#ef4444] text-white shadow-[0_0_15px_#ef4444]'
                             : 'bg-black/40 hover:bg-white/20 border-white/20 text-white'
                         }`}
                       >
@@ -1319,7 +1326,7 @@ export function LazerWatchView({
                 <section id="watch-shorts-section" className="flex flex-col gap-4">
                   <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#f97316] to-[#8b5cf6] flex items-center justify-center shadow-md">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#ef4444] to-[#8b5cf6] flex items-center justify-center shadow-md">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-white">
                           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                         </svg>
@@ -1331,7 +1338,7 @@ export function LazerWatchView({
                     </div>
                     <button
                       onClick={() => setActiveTab(activeTab === 'shorts' ? 'all' : 'shorts')}
-                      className="text-xs font-bold text-[#f97316] hover:text-[#fb923c] transition-colors cursor-pointer bg-transparent border-none"
+                      className="text-xs font-bold text-[#ef4444] hover:text-[#f87171] transition-colors cursor-pointer bg-transparent border-none"
                     >
                       {activeTab === 'shorts' ? 'Mostrar Todos' : 'Ver Todos os Shorts →'}
                     </button>
@@ -1343,7 +1350,7 @@ export function LazerWatchView({
                       <div
                         key={short.id}
                         onClick={() => setCurrentVideo(short)}
-                        className="w-[180px] sm:w-[200px] aspect-[9/16] rounded-[26px] overflow-hidden relative p-3 flex flex-col justify-between border border-white/10 hover:border-[#f97316]/60 shadow-xl group hover:scale-[1.03] hover:shadow-[0_10px_30px_rgba(249,115,22,0.3)] transition-all cursor-pointer shrink-0"
+                        className="w-[180px] sm:w-[200px] aspect-[9/16] rounded-[26px] overflow-hidden relative p-3 flex flex-col justify-between border border-white/10 hover:border-[#ef4444]/60 shadow-xl group hover:scale-[1.03] hover:shadow-[0_10px_30px_rgba(239,68,68,0.3)] transition-all cursor-pointer shrink-0"
                       >
                         {/* Background Thumbnail */}
                         <img
@@ -1419,7 +1426,7 @@ export function LazerWatchView({
                 ) : cinemaGridList.length === 0 ? (
                   /* Empty State Encantador */
                   <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-                    <div className="w-20 h-20 rounded-3xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-[#f97316] shadow-2xl">
+                    <div className="w-20 h-20 rounded-3xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-[#ef4444] shadow-2xl">
                       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
                         <line x1="7" y1="2" x2="7" y2="22" />
@@ -1436,7 +1443,7 @@ export function LazerWatchView({
                     {accessToken && (
                       <button
                         onClick={() => setShowUpload(true)}
-                        className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#f97316] to-[#8b5cf6] text-white font-extrabold text-xs uppercase tracking-wider hover:scale-105 active:scale-95 shadow-xl transition-all cursor-pointer"
+                        className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#ef4444] to-[#8b5cf6] text-white font-extrabold text-xs uppercase tracking-wider hover:scale-105 active:scale-95 shadow-xl transition-all cursor-pointer"
                       >
                         + Estrear Primeiro Vídeo
                       </button>
@@ -1452,7 +1459,7 @@ export function LazerWatchView({
                         <div
                           key={video.id}
                           onClick={() => setCurrentVideo(video)}
-                          className="group relative flex flex-col rounded-[26px] overflow-hidden bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_40px_rgba(249,115,22,0.18)] cursor-pointer"
+                          className="group relative flex flex-col rounded-[26px] overflow-hidden bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_40px_rgba(239,68,68,0.2)] cursor-pointer"
                         >
                           {/* Thumbnail Aspect 16:9 */}
                           <div className="relative aspect-video overflow-hidden bg-black/40">
@@ -1463,7 +1470,7 @@ export function LazerWatchView({
                                 className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700"
                               />
                             ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-[#f97316]/20 via-[#8b5cf6]/20 to-black/60 flex items-center justify-center">
+                              <div className="w-full h-full bg-gradient-to-br from-[#ef4444]/20 via-[#8b5cf6]/20 to-black/60 flex items-center justify-center">
                                 <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" className="text-white/20">
                                   <path d="M8 5v14l11-7z" />
                                 </svg>
@@ -1490,7 +1497,7 @@ export function LazerWatchView({
                                 onClick={(e) => toggleSaveVideo(video.id, e)}
                                 className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all ${
                                   isSaved
-                                    ? 'bg-[#f97316] text-white shadow-[0_0_10px_#f97316]'
+                                    ? 'bg-[#ef4444] text-white shadow-[0_0_10px_#ef4444]'
                                     : 'bg-black/60 hover:bg-white/30 text-white/80 hover:text-white border border-white/15'
                                 }`}
                                 title={isSaved ? 'Remover da lista' : 'Salvar na Minha Lista'}
@@ -1532,7 +1539,7 @@ export function LazerWatchView({
                             </div>
 
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-xs font-black text-white leading-tight line-clamp-2 group-hover:text-[#f97316] transition-colors">
+                              <h3 className="text-xs font-black text-white leading-tight line-clamp-2 group-hover:text-[#ef4444] transition-colors">
                                 {video.title}
                               </h3>
                               <p className="text-[11px] font-semibold text-white/50 mt-1 truncate">
@@ -1549,6 +1556,7 @@ export function LazerWatchView({
                   </div>
                 )}
               </section>
+              </div>
             </div>
           </div>
         )}
